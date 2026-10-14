@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "app": "MyFitApp",
+  "exportedAt": "2026-03-09",
+  "sessions": [
+    {
+      "id": "seance-exemple-1",
+      "name": "Séance du 9 mars 2026",
+      "date": "2026-03-09",
+      "startTime": null,
+      "endTime": null,
+      "durationMinutes": null,
+      "origin": "import",
+      "exercises": [
+        {
+          "sourceName": "Seated row horizontal",
+          "suggestedExercise": "Tirage horizontal / Seated row",
+          "variant": null,
+          "muscleGroup": "dos",
+          "weightKg": 48,
+          "targetReps": 8,
+          "sets": [8, 8, 8],
+          "feelingSymbol": "=",
+          "feeling": "moyen"
+        },
+        {
+          "sourceName": "Epaules latéral raise",
+          "suggestedExercise": "Élévations latérales / Lateral raise",
+          "variant": null,
+          "muscleGroup": "épaules",
+          "weightKg": 9,
+          "targetReps": 8,
+          "sets": [8, 8, 8],
+          "feelingSymbol": "++",
+          "feeling": "tres_bien"
+        },
+        {
+          "sourceName": "Biceps poulie corde",
+          "suggestedExercise": "Curl biceps poulie corde / Cable rope curl",
+          "variant": "poulie, corde",
+          "muscleGroup": "biceps",
+          "weightKg": 15,
+          "targetReps": 8,
+          "sets": [8, 8, 8],
+          "feelingSymbol": "++",
+          "feeling": "tres_bien"
+        },
+        {
+          "sourceName": "Biceps curl banc incliné 70°",
+          "suggestedExercise": "Curl biceps banc incliné",
+          "variant": "banc incliné 70°",
+          "muscleGroup": "biceps",
+          "weightKg": 10,
+          "targetReps": 8,
+          "sets": [8, 8, 8],
+          "feelingSymbol": "-=",
+          "feeling": "mal"
+        },
+        {
+          "sourceName": "Lat pulldown vertical",
+          "suggestedExercise": "Tirage vertical / Lat pulldown",
+          "variant": null,
+          "muscleGroup": "dos",
+          "weightKg": 36,
+          "targetReps": 9,
+          "sets": [9, 9, 9],
+          "feelingSymbol": "-=",
+          "feeling": "mal"
+        },
+        {
+          "sourceName": "Triceps sur banc assis 1 haltere",
+          "suggestedExercise": "Extension triceps haltère assis / Overhead dumbbell extension",
+          "variant": "assis sur banc, 1 haltère",
+          "muscleGroup": "triceps",
+          "weightKg": 14,
+          "targetReps": 8,
+          "sets": [8, 8, 8],
+          "feelingSymbol": "++",
+          "feeling": "tres_bien"
+        }
+      ],
+      "sourceText": "Seated row horizontal\n3x8x48kg =\n\nEpaules latéral raise\n3x8x9kgs ++\n\nBiceps poulie corde\n3×8x15 kgs ++\n\nBiceps curl banc incliné 70°\n3×8×10 kgs -=\n\nLat pulldown vertical\n3×9×36 kgs -=\n\nTriceps sur banc assis 1 haltere\n3x8x14 kgs ++"
+    }
+  ],
+  "settings": {},
+  "bodyTracking": {
+    "heightCm": null,
+    "weighIns": []
+  }
+}
