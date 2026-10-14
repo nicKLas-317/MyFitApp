@@ -1,0 +1,98 @@
+import { useEffect, useState } from 'react';
+import { useApp } from '../../app/store';
+import { navigate, useNow } from '../../app/hooks';
+import { elapsedMs, finishSession } from '../../session/ops';
+import { formatDuration } from '../../session/format';
+import { ExerciseCard } from '../ExerciseCard';
+import { SaveIndicator } from '../SaveIndicator';
+
+export function SessionScreen({ openVariantId }: { openVariantId: string | undefined }) {
+  const { active, commit, setLastFinish } = useApp();
+  const now = useNow();
+  const [openId, setOpenId] = useState<string | undefined>(openVariantId);
+  const [confirmFinish, setConfirmFinish] = useState(false);
+
+  useEffect(() => {
+    if (!openVariantId) return;
+    setOpenId(openVariantId);
+    // Amène l'exercice ouvert à l'écran (ajout ou exercice déjà présent).
+    requestAnimationFrame(() =>
+      document.querySelector(`article[data-variant="${CSS.escape(openVariantId)}"]`)?.scrollIntoView({ block: 'start' }),
+    );
+  }, [openVariantId]);
+
+  if (!active) {
+    return (
+      <main className="screen">
+        <p className="empty">Aucune séance en cours.</p>
+        <a className="btn primary big" href="#/">
+          Accueil
+        </a>
+      </main>
+    );
+  }
+
+  const current = openId ?? active.performances.at(-1)?.variantId;
+
+  async function finish() {
+    if (!active) return;
+    const { session, removed } = finishSession(active, Date.now());
+    setLastFinish({ sessionId: session.id, removed });
+    navigate('recap', session.id);
+    await commit(session);
+  }
+
+  return (
+    <main className="screen session">
+      <header className="session-header">
+        <a href="#/" className="back" aria-label="Accueil">
+          ‹
+        </a>
+        <div className="session-title">
+          <span className="muted small">{active.name}</span>
+          <span className="chrono" role="timer" aria-label="Durée de la séance" data-testid="chrono">
+            {formatDuration(elapsedMs(active, now))}
+          </span>
+        </div>
+        <SaveIndicator />
+      </header>
+
+      {active.performances.length === 0 && <p className="empty muted">Ajoutez un premier exercice.</p>}
+
+      <div className="cards">
+        {active.performances.map((p) => (
+          <ExerciseCard
+            key={p.variantId}
+            session={active}
+            performance={p}
+            open={p.variantId === current}
+            onToggle={() => setOpenId(p.variantId === current ? '' : p.variantId)}
+          />
+        ))}
+      </div>
+
+      <div className="session-actions">
+        <a className="btn primary big" href="#/ajouter">
+          + Ajouter un exercice
+        </a>
+        {confirmFinish ? (
+          <div className="confirm-box">
+            <p>Terminer la séance ?</p>
+            <div className="row">
+              <button type="button" className="btn primary" onClick={() => void finish()}>
+                Oui, terminer
+              </button>
+              <button type="button" className="btn" onClick={() => setConfirmFinish(false)}>
+                Non
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button type="button" className="btn big" onClick={() => setConfirmFinish(true)}>
+            Terminer la séance
+          </button>
+        )}
+      </div>
+    </main>
+  );
+}

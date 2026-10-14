@@ -356,6 +356,8 @@ Prévoir une action claire pour terminer la séance.
 - Recalculer les recommandations futures.
 - Afficher un récapitulatif simple.
 
+**Exercices sans série (précision validée).** À la fin de la séance, les exercices auxquels aucune série n'a été enregistrée sont retirés automatiquement de la séance terminée : ils n'entrent pas dans l'historique et n'ont aucun effet sur le moteur. Le récapitulatif l'indique et propose « Annuler » : les exercices sont alors rétablis dans la séance et comptent comme séances incomplètes (§7.4, §7.11 F).
+
 La séance doit être enregistrée avant de demander un éventuel nom personnalisé.
 
 Proposer un nom généré automatiquement, par exemple :
@@ -581,7 +583,7 @@ Une séance est **standard** si et seulement si elle est complète, faite avec l
 
 **E. Compteur de rouges.** Toute performance rouge au même poids compte, qu'elle soit standard ou non. Un changement de cible au même poids ne remet pas ce compteur à 0. Un changement de poids le remet à 0 ; la séance faite au nouveau poids compte 1 si elle est rouge.
 
-**F. Séance incomplète.** Une séance incomplète au palier actuel est orange : elle remet le compteur de validations à 0 et ne modifie pas le compteur de rouges.
+**F. Séance incomplète.** Une séance incomplète au palier actuel est orange : elle remet le compteur de validations à 0 et ne modifie pas le compteur de rouges. Un exercice sans aucune série est retiré automatiquement à la fin de la séance (§5.6), sauf si l'utilisateur annule ce retrait.
 
 **G. Première performance.** La toute première performance non partielle d'un exercice-variante fixe le palier de départ. Elle est standard si elle est complète, avec le nombre de séries standard et une cible comprise dans la plage de l'exercice (8 à 12 par défaut), même si cette cible n'est pas la borne basse. C'est notamment le cas d'un historique importé qui commence en cours de cycle.
 
@@ -993,6 +995,7 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 71. (H) Une performance partielle n'a aucun statut et ne modifie ni le palier ni les compteurs ; elle reste présente dans l'historique.
 72. (I) Avec une cible manuelle supérieure à 12, deux validations recommandent « poids supérieur » et jamais une cible au-delà de 12.
 73. (J) 52,5 kg et 52.50 kg sont le même poids : pas de changement de palier.
+74. (§5.6) À la fin d'une séance, un exercice sans aucune série est retiré automatiquement et ne modifie pas ses compteurs ; « Annuler » le rétablit, et il compte alors comme séance incomplète.
 
 Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
 

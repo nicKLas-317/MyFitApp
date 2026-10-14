@@ -69,6 +69,8 @@ export interface Session {
   endedAt: number | null;
   /** Horodatage d'enregistrement dans l'application (ms epoch). */
   createdAt: number;
+  /** Horodatage de la dernière modification (ms epoch). */
+  updatedAt: number;
   origin: 'app' | 'import';
   state: 'active' | 'done';
   /** Texte original des notes importées (§11.8). */

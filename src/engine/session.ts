@@ -58,6 +58,7 @@ export function createSessionFromTemplate(
     startedAt: params.now,
     endedAt: null,
     createdAt: params.now,
+    updatedAt: params.now,
     origin: 'app',
     state: 'active',
     performances: planned.map((p) => p.performance),

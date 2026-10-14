@@ -59,6 +59,7 @@ export function session(
     startedAt: null,
     endedAt: null,
     createdAt: 0,
+    updatedAt: 0,
     origin: 'app',
     state: 'done',
     performances,
