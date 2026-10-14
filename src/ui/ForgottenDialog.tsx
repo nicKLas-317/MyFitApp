@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useApp } from '../app/store';
 import { navigate } from '../app/hooks';
-import { finishSession, isForgotten } from '../session/ops';
+import { finishSession, isForgotten, missingFeelings } from '../session/ops';
 import { formatDurationLong, fromDateTimeLocal, toDateTimeLocal } from '../session/format';
+import { MissingFeelings } from './MissingFeelings';
 
 /**
  * Séance oubliée (§6) : ouverte depuis plus de 4 heures à la réouverture.
@@ -15,6 +16,7 @@ export function ForgottenDialog() {
   const [openedAt] = useState(() => Date.now());
   const [endText, setEndText] = useState<string | null>(null);
   const [error, setError] = useState(false);
+  const [missing] = useState(() => (active ? missingFeelings(active).map((p) => p.variantId) : []));
 
   if (!active || active.startedAt === null || dismissed === active.id || !isForgotten(active, openedAt)) return null;
   const startedAt = active.startedAt;
@@ -57,6 +59,7 @@ export function ForgottenDialog() {
             L’heure de fin doit se situer entre le début de la séance et maintenant.
           </p>
         )}
+        <MissingFeelings session={active} variantIds={missing} />
         <div className="row">
           <button type="button" className="btn primary" onClick={() => void finish()}>
             Terminer la séance

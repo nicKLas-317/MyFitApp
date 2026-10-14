@@ -11,6 +11,7 @@ import {
   elapsedMs,
   finishSession,
   isForgotten,
+  missingFeelings,
   parseWeight,
   recordSet,
   removeExercise,
@@ -147,6 +148,31 @@ describe('Séance : exercices et séries (§5.2 à §5.5)', () => {
     removeExercise(s, V, T0);
     finishSession(s, T0);
     expect(s).toEqual(copy);
+  });
+});
+
+describe('Ressenti global (§5.5)', () => {
+  it('75. Le ressenti se remplace par un autre niveau mais ne s’efface pas', () => {
+    const s = setFeeling(withExercise(), V, 'bien', T0);
+    // Même niveau : aucune modification.
+    expect(setFeeling(s, V, 'bien', T0 + 1)).toBe(s);
+    expect(setFeeling(s, V, 'tres_bien', T0 + 1).performances[0]?.feeling).toBe('tres_bien');
+    // « inconnu » n'est pas un ressenti saisissable.
+    // @ts-expect-error — le type RatedFeeling exclut « inconnu »
+    setFeeling(s, V, 'inconnu', T0);
+  });
+
+  it('76. Exercices réalisés sans ressenti relevés avant la fin', () => {
+    let s = withExercise();
+    s = addExercise(s, W, NEW, T0, 10).session;
+    s = addExercise(s, 'leg-curl', NEW, T0, 30).session;
+    s = recordSet(s, V, 8, T0);
+    s = recordSet(s, W, 8, T0);
+    s = setFeeling(s, W, 'bien', T0);
+    // leg-curl n'a aucune série : il sera retiré, inutile de demander son ressenti.
+    expect(missingFeelings(s).map((p) => p.variantId)).toEqual([V]);
+    s = setFeeling(s, V, 'moyen', T0);
+    expect(missingFeelings(s)).toEqual([]);
   });
 });
 

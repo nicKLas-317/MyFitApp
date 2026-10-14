@@ -1,7 +1,8 @@
 import type { Feeling, Status } from '../domain/types';
 import type { Recommendation } from '../engine';
+import type { RatedFeeling } from '../session/ops';
 
-export const FEELINGS: { value: Exclude<Feeling, 'inconnu'>; label: string }[] = [
+export const FEELINGS: { value: RatedFeeling; label: string }[] = [
   { value: 'tres_mal', label: 'Très mal' },
   { value: 'mal', label: 'Mal' },
   { value: 'moyen', label: 'Moyen' },

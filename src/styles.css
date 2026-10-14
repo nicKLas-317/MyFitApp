@@ -679,3 +679,14 @@ input[aria-invalid='true'] {
 .error-screen h1 {
   color: var(--danger);
 }
+
+.missing-feelings {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.missing-feelings p {
+  margin: 0;
+  color: var(--orange);
+}

@@ -15,7 +15,8 @@ import {
   setTarget,
   setWeight,
 } from '../session/ops';
-import { FEELINGS, formatRecommendation } from './labels';
+import { FeelingPicker } from './FeelingPicker';
+import { formatRecommendation } from './labels';
 import { StatusBadge } from './StatusBadge';
 import { WeightField } from './WeightField';
 
@@ -180,22 +181,11 @@ export function ExerciseCard({ session, performance: p, open, onToggle }: Props)
           )}
 
           {done > 0 && (
-            <fieldset className="feeling">
-              <legend>Ressenti global</legend>
-              <div className="feeling-options">
-                {FEELINGS.map((f) => (
-                  <button
-                    key={f.value}
-                    type="button"
-                    className={`chip feeling-${f.value}`}
-                    aria-pressed={p.feeling === f.value}
-                    onClick={() => void commit(setFeeling(session, p.variantId, p.feeling === f.value ? 'inconnu' : f.value, now()))}
-                  >
-                    {f.label}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
+            <FeelingPicker
+              legend="Ressenti global"
+              value={p.feeling}
+              onChange={(f) => void commit(setFeeling(session, p.variantId, f, now()))}
+            />
           )}
 
           <button

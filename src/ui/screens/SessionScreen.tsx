@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../../app/store';
 import { navigate, useNow } from '../../app/hooks';
-import { elapsedMs, finishSession } from '../../session/ops';
+import { elapsedMs, finishSession, missingFeelings } from '../../session/ops';
 import { formatDuration } from '../../session/format';
 import { ExerciseCard } from '../ExerciseCard';
+import { finishLabel, MissingFeelings } from '../MissingFeelings';
 import { SaveIndicator } from '../SaveIndicator';
 
 export function SessionScreen({ openVariantId }: { openVariantId: string | undefined }) {
   const { active, commit, setLastFinish } = useApp();
   const now = useNow();
   const [openId, setOpenId] = useState<string | undefined>(openVariantId);
-  const [confirmFinish, setConfirmFinish] = useState(false);
+  /** Confirmation de fin ouverte : exercices sans ressenti relevés à l'ouverture. */
+  const [confirmFinish, setConfirmFinish] = useState<string[] | null>(null);
 
   useEffect(() => {
     if (!openVariantId) return;
@@ -76,19 +78,24 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
           + Ajouter un exercice
         </a>
         {confirmFinish ? (
-          <div className="confirm-box">
+          <div className="confirm-box" role="group" aria-label="Terminer la séance">
             <p>Terminer la séance ?</p>
+            <MissingFeelings session={active} variantIds={confirmFinish} />
             <div className="row">
               <button type="button" className="btn primary" onClick={() => void finish()}>
-                Oui, terminer
+                {finishLabel(active, confirmFinish)}
               </button>
-              <button type="button" className="btn" onClick={() => setConfirmFinish(false)}>
+              <button type="button" className="btn" onClick={() => setConfirmFinish(null)}>
                 Non
               </button>
             </div>
           </div>
         ) : (
-          <button type="button" className="btn big" onClick={() => setConfirmFinish(true)}>
+          <button
+            type="button"
+            className="btn big"
+            onClick={() => setConfirmFinish(missingFeelings(active).map((p) => p.variantId))}
+          >
             Terminer la séance
           </button>
         )}

@@ -202,6 +202,57 @@ test.describe('Séance, persistance et chronomètre', () => {
     expect((await activeSession(page)).performances[0]?.reps).toEqual([8]);
   });
 
+  test('75. Un nouvel appui sur le ressenti sélectionné ne l’efface pas', async ({ page }) => {
+    await startSession(page);
+    const card = await addExercise(page, 'pec deck', 'Pec deck', '35');
+    await validateSets(card, 1);
+    const bien = card.getByRole('button', { name: 'Bien', exact: true });
+    await bien.click();
+    await bien.click();
+    await expect(bien).toHaveAttribute('aria-pressed', 'true');
+    await expect.poll(async () => (await activeSession(page)).performances[0]?.feeling).toBe('bien');
+    await card.getByRole('button', { name: 'Très bien', exact: true }).click();
+    await expect.poll(async () => (await activeSession(page)).performances[0]?.feeling).toBe('tres_bien');
+  });
+
+  test('76. La confirmation de fin liste les ressentis manquants et permet de les compléter', async ({ page }) => {
+    await startSession(page);
+    await validateSets(await addExercise(page, 'pec deck', 'Pec deck', '35'), 3);
+    await doExercise(await addExercise(page, 'seated row', 'Tirage horizontal', '52'), 3, 'Bien');
+    await validateSets(await addExercise(page, 'curl', 'Curl biceps haltères', '12'), 2);
+
+    await page.getByRole('button', { name: 'Terminer la séance' }).click();
+    const confirm = page.getByRole('group', { name: 'Terminer la séance' });
+    await expect(confirm.getByText('Ressenti manquant (2)')).toBeVisible();
+    await expect(confirm.getByRole('group', { name: 'Pec deck' })).toBeVisible();
+    await expect(confirm.getByRole('group', { name: 'Curl biceps haltères' })).toBeVisible();
+    await expect(confirm.getByRole('group', { name: 'Tirage horizontal' })).toHaveCount(0);
+
+    await confirm.getByRole('group', { name: 'Pec deck' }).getByRole('button', { name: 'Très bien', exact: true }).click();
+    await expect(confirm.getByText('Ressenti manquant (1)')).toBeVisible();
+    await expect(confirm.getByRole('button', { name: 'Terminer sans compléter' })).toBeVisible();
+    await confirm.getByRole('group', { name: 'Curl biceps haltères' }).getByRole('button', { name: 'Moyen', exact: true }).click();
+    await expect(confirm.getByText('Ressentis complétés.')).toBeVisible();
+    await confirm.getByRole('button', { name: 'Oui, terminer' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Séance terminée' })).toBeVisible();
+    const [done] = await readSessions(page);
+    expect(done?.performances.map((p) => [p.variantId, p.feeling])).toEqual([
+      ['pec-deck', 'tres_bien'],
+      ['tirage-horizontal', 'bien'],
+      ['curl-biceps-halteres', 'moyen'],
+    ]);
+  });
+
+  test('Fin de séance possible sans compléter les ressentis', async ({ page }) => {
+    await startSession(page);
+    await validateSets(await addExercise(page, 'pec deck', 'Pec deck', '35'), 3);
+    await page.getByRole('button', { name: 'Terminer la séance' }).click();
+    await page.getByRole('button', { name: 'Terminer sans compléter' }).click();
+    await expect(page.getByRole('heading', { name: 'Séance terminée' })).toBeVisible();
+    expect((await readSessions(page))[0]?.performances[0]?.feeling).toBe('inconnu');
+  });
+
   test('Retrait d’un exercice de la séance, avec annulation', async ({ page }) => {
     await startSession(page);
     const card = await addExercise(page, 'crunch', 'Crunch machine', '20');

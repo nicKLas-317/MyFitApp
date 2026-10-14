@@ -343,6 +343,11 @@ Le ressenti global contribue au calcul du statut (§7.4), mais ne suffit jamais 
 
 Si aucun ressenti n'est sélectionné, il est enregistré comme « inconnu » (voir §7.4).
 
+**Précisions validées :**
+
+- Un ressenti sélectionné peut être remplacé par un autre niveau, mais jamais effacé : un nouvel appui sur le niveau déjà sélectionné ne change rien.
+- Un ressenti « inconnu » rend la performance orange et remet le compteur de validations à 0. Pour éviter un oubli, la confirmation de fin de séance (§5.6) liste les exercices ayant au moins une série enregistrée mais sans ressenti, et permet de choisir le ressenti de chacun directement dans cette confirmation. L'utilisateur peut ensuite terminer la séance, que les ressentis aient été complétés ou non.
+
 ### 5.6. Terminer une séance
 
 Prévoir une action claire pour terminer la séance.
@@ -996,6 +1001,8 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 72. (I) Avec une cible manuelle supérieure à 12, deux validations recommandent « poids supérieur » et jamais une cible au-delà de 12.
 73. (J) 52,5 kg et 52.50 kg sont le même poids : pas de changement de palier.
 74. (§5.6) À la fin d'une séance, un exercice sans aucune série est retiré automatiquement et ne modifie pas ses compteurs ; « Annuler » le rétablit, et il compte alors comme séance incomplète.
+75. (§5.5) Un nouvel appui sur le ressenti déjà sélectionné ne l'efface pas ; seul un autre niveau le remplace.
+76. (§5.5, §5.6) La confirmation de fin de séance liste les exercices réalisés sans ressenti et permet de le compléter avant de terminer ; le ressenti choisi est enregistré avec la séance terminée.
 
 Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
 

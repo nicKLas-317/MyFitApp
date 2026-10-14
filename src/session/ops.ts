@@ -147,8 +147,17 @@ export function deleteLastSet(session: Session, variantId: string, now: number):
   );
 }
 
-export function setFeeling(session: Session, variantId: string, feeling: Feeling, now: number): Session {
+/** Ressenti choisi par l'utilisateur : « inconnu » n'est jamais saisi, il correspond à l'absence de choix. */
+export type RatedFeeling = Exclude<Feeling, 'inconnu'>;
+
+/** Choisit ou remplace le ressenti global ; il ne peut pas être effacé (§5.5). */
+export function setFeeling(session: Session, variantId: string, feeling: RatedFeeling, now: number): Session {
   return updatePerformance(session, variantId, now, (p) => (p.feeling === feeling ? p : { ...p, feeling }));
+}
+
+/** Exercices réalisés (au moins une série) sans ressenti, à signaler avant de terminer (§5.5). */
+export function missingFeelings(session: Session): Performance[] {
+  return session.performances.filter((p) => p.reps.length > 0 && p.feeling === 'inconnu');
 }
 
 /** Retire l'exercice de la séance en cours, sans toucher à son historique (§13). */
