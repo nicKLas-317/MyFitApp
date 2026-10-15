@@ -13,7 +13,7 @@ async function search(page: Page, query: string): Promise<void> {
 }
 
 async function openLibrary(page: Page): Promise<void> {
-  await page.goto('/');
+  await page.goto('./');
   await page.getByRole('link', { name: 'Bibliothèque d’exercices' }).click();
   await expect(page.getByRole('searchbox', { name: 'Rechercher un exercice' })).toBeVisible();
 }
@@ -27,7 +27,7 @@ function doneSession(id: string, date: string, variantId: string, reps = [8, 8, 
 }
 
 async function seedHistory(page: Page, sessions: Session[]): Promise<void> {
-  await page.goto('/');
+  await page.goto('./');
   await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
   await writeSessions(page, sessions);
   // Une navigation qui ne change que le hash ne recharge pas la page : rechargement explicite.
@@ -95,7 +95,7 @@ test.describe('Bibliothèque et recherche', () => {
   });
 
   test('§4.0.1. Illustration embarquée et attribution discrète sur la fiche ; pictogramme sinon', async ({ page }) => {
-    await page.goto('/#/exercice/curl-biceps-banc-incline');
+    await page.goto('./#/exercice/curl-biceps-banc-incline');
     const figure = page.locator('figure.illustration img');
     await expect(figure).toBeVisible();
     expect(await figure.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
@@ -106,7 +106,7 @@ test.describe('Bibliothèque et recherche', () => {
     );
     await expect(page.getByTestId('attribution').getByRole('link', { name: '1' })).toHaveAttribute('href', /commons\.wikimedia\.org\/wiki\/File:/);
 
-    await page.goto('/#/exercice/rowing-haltere');
+    await page.goto('./#/exercice/rowing-haltere');
     await expect(page.getByRole('heading', { name: 'Rowing haltère' })).toBeVisible();
     await expect(page.locator('figure.illustration')).toHaveCount(0);
     await expect(page.getByTestId('attribution')).toHaveCount(0);
@@ -120,7 +120,7 @@ test.describe('Bibliothèque et recherche', () => {
       'ecarte-couche-halteres', 'curl-ischios',
     ];
     for (const id of illustrated) {
-      await page.goto(`/#/exercice/${id}`);
+      await page.goto(`./#/exercice/${id}`);
       const img = page.locator('figure.illustration img');
       await expect(img, id).toBeVisible();
       expect(await img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0), id).toBe(true);
@@ -130,7 +130,7 @@ test.describe('Bibliothèque et recherche', () => {
       await expect(attribution.getByRole('link', { name: /^[12]$/ }), id).toHaveCount(2);
     }
     for (const id of ['rowing-haltere', 'crunch-machine', 'dips-assistes']) {
-      await page.goto(`/#/exercice/${id}`);
+      await page.goto(`./#/exercice/${id}`);
       await expect(page.locator('.sheet-head'), id).toBeVisible();
       await expect(page.getByTestId('attribution'), id).toHaveCount(0);
     }
@@ -139,7 +139,7 @@ test.describe('Bibliothèque et recherche', () => {
   test('55. Renommer un exercice conserve son historique et ses compteurs', async ({ page }) => {
     const sessions = [doneSession('s1', '2026-10-01', 'tirage-vertical'), doneSession('s2', '2026-10-03', 'tirage-vertical')];
     await seedHistory(page, sessions);
-    await page.goto('/#/exercice/tirage-vertical');
+    await page.goto('./#/exercice/tirage-vertical');
     await page.getByRole('link', { name: 'Modifier' }).click();
     await page.getByLabel('Nom', { exact: true }).fill('Tirage poitrine Technogym');
     await page.getByRole('button', { name: 'Enregistrer' }).click();
@@ -151,20 +151,20 @@ test.describe('Bibliothèque et recherche', () => {
     expect(ex?.name).toBe('Tirage poitrine Technogym');
     expect(await readSessions(page)).toEqual(sessions);
     // L'ancien nom anglais reste un synonyme : la recherche le retrouve.
-    await page.goto('/#/bibliotheque');
+    await page.goto('./#/bibliotheque');
     await search(page, 'lat pulldown');
     expect((await resultNames(page))[0]).toBe('Tirage poitrine Technogym');
   });
 
   test('56. Un exercice avec historique s’archive sans se supprimer ; son historique reste consultable', async ({ page }) => {
     await seedHistory(page, [doneSession('s1', '2026-10-01', 'leg-curl')]);
-    await page.goto('/#/modifier/leg-curl');
+    await page.goto('./#/modifier/leg-curl');
     await expect(page.getByText('Cet exercice a un historique')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Supprimer l’exercice' })).toHaveCount(0);
     await page.getByRole('button', { name: 'Archiver l’exercice' }).click();
     await expect(page.getByText('Exercice archivé')).toBeVisible();
 
-    await page.goto('/#/bibliotheque');
+    await page.goto('./#/bibliotheque');
     await search(page, 'leg curl');
     expect(await resultNames(page)).not.toContain('Leg curl');
     await search(page, '');
@@ -177,13 +177,13 @@ test.describe('Bibliothèque et recherche', () => {
     await page.getByRole('button', { name: 'Désarchiver l’exercice' }).click();
     await expect(page.getByRole('heading', { name: 'Leg curl' })).toBeVisible();
     await expect(page.getByText('Exercice archivé')).toHaveCount(0);
-    await page.goto('/#/bibliotheque');
+    await page.goto('./#/bibliotheque');
     await search(page, 'leg curl');
     expect(await resultNames(page)).toContain('Leg curl');
   });
 
   test('Un exercice sans historique se supprime après confirmation', async ({ page }) => {
-    await page.goto('/#/modifier/crunch-machine');
+    await page.goto('./#/modifier/crunch-machine');
     await page.getByRole('button', { name: 'Supprimer l’exercice' }).click();
     await page.getByRole('button', { name: 'Oui, supprimer' }).click();
     await expect(page.getByRole('searchbox', { name: 'Rechercher un exercice' })).toBeVisible();
@@ -211,7 +211,7 @@ test.describe('Bibliothèque et recherche', () => {
 
   test('Ajout à la séance depuis la bibliothèque, variante créée avec son propre historique', async ({ page }) => {
     await startSession(page);
-    await page.goto('/#/exercice/curl-biceps-banc-incline');
+    await page.goto('./#/exercice/curl-biceps-banc-incline');
     await page.getByRole('button', { name: '+ Nouvelle variante (machine, prise, inclinaison…)' }).click();
     await page.getByLabel('Nom de la variante').fill('45°');
     await page.getByRole('button', { name: 'Créer' }).click();
@@ -223,7 +223,7 @@ test.describe('Bibliothèque et recherche', () => {
     expect((await activeSession(page)).performances[0]?.variantId).toBe('curl-biceps-banc-incline--45');
 
     // Depuis la bibliothèque, le bouton « + » ajoute un exercice déjà connu sans quitter la recherche.
-    await page.goto('/#/bibliotheque');
+    await page.goto('./#/bibliotheque');
     await search(page, 'pec deck');
     await page.getByRole('button', { name: 'Ajouter Pec deck à la séance' }).click();
     await page.getByLabel('Poids de départ (kg)').fill('35');
@@ -232,7 +232,7 @@ test.describe('Bibliothèque et recherche', () => {
   });
 
   test('Réglages par exercice : plage de répétitions personnalisée', async ({ page }) => {
-    await page.goto('/#/modifier/leg-curl');
+    await page.goto('./#/modifier/leg-curl');
     const standard = page.getByRole('group', { name: 'Variante standard' });
     await standard.getByLabel('Rép. max').fill('6');
     await page.getByRole('button', { name: 'Enregistrer' }).click();

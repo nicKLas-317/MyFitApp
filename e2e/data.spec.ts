@@ -13,7 +13,7 @@ async function analyzeNotes(page: Page, text: string): Promise<void> {
 }
 
 async function openData(page: Page): Promise<void> {
-  await page.goto('/');
+  await page.goto('./');
   await page.getByRole('link', { name: 'Importer / exporter' }).click();
   await expect(page.getByRole('heading', { name: 'Données' })).toBeVisible();
 }
@@ -100,7 +100,7 @@ test.describe('Import et export', () => {
     expect(await readSessions(page)).toEqual(original);
 
     // Autre appareil : base vide, restauration complète.
-    const other = await browser.newContext({ baseURL: 'http://localhost:4173', locale: 'fr-FR', timezoneId: 'Europe/Paris' });
+    const other = await browser.newContext({ baseURL: 'http://localhost:4173/MyFitApp/', locale: 'fr-FR', timezoneId: 'Europe/Paris' });
     const page2 = await other.newPage();
     await openData(page2);
     await page2.getByLabel('Fichier à importer').setInputFiles(file);
@@ -190,7 +190,7 @@ test.describe('Import et export', () => {
   });
 
   test('§12. Rappel de sauvegarde discret sur l’accueil, avec export direct', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('./');
     await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
     await expect(page.getByText('Pensez à sauvegarder vos séances.')).toHaveCount(0);
 

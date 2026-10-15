@@ -113,7 +113,7 @@ test.describe('Séance, persistance et chronomètre', () => {
   });
 
   test('61. Séance ouverte depuis plus de 4 h : proposition de la terminer, jamais automatique', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('./');
     await expect(page.getByRole('button', { name: 'Démarrer une séance' })).toBeVisible();
     const now = await page.evaluate(() => Date.now());
     const startedAt = now - 5 * 3600_000;

@@ -6,6 +6,7 @@ import { useHashRoute } from './app/hooks';
 import { ForgottenDialog } from './ui/ForgottenDialog';
 import { SaveErrorBanner } from './ui/SaveIndicator';
 import { UndoToast } from './ui/UndoToast';
+import { UpdatePrompt } from './ui/UpdatePrompt';
 import { Bilan } from './ui/screens/Bilan';
 import { BodyScreen } from './ui/screens/BodyScreen';
 import { DataScreen } from './ui/screens/DataScreen';
@@ -80,6 +81,7 @@ export function App() {
         <Router />
         <UndoToast />
         <ForgottenDialog />
+        <UpdatePrompt />
       </BodyProvider>
     </AppProvider>
   );

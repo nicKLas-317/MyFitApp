@@ -11,7 +11,7 @@ function done(id: string, name: string, date: string, reps: number[], feeling: '
 }
 
 async function seed(page: Page, sessions: Session[]): Promise<void> {
-  await page.goto('/');
+  await page.goto('./');
   await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
   await writeSessions(page, sessions);
   await page.reload();
@@ -52,10 +52,10 @@ test.describe('Historique, analyse et Mon poids', () => {
 
   test('§16.8 et 27. Corriger une séance passée recalcule couleurs et recommandations', async ({ page }) => {
     await seed(page, SESSIONS);
-    await page.goto('/#/exercice/tirage-vertical');
+    await page.goto('./#/exercice/tirage-vertical');
     await expect(page.getByTestId('sheet-next')).toHaveText('3 × 9');
 
-    await page.goto('/#/historique/s2');
+    await page.goto('./#/historique/s2');
     const item = page.locator('li[data-variant="tirage-vertical"]');
     await expect(item.locator('[data-status]')).toHaveAttribute('data-status', 'vert');
     await item.getByRole('button', { name: 'Corriger' }).click();
@@ -67,13 +67,13 @@ test.describe('Historique, analyse et Mon poids', () => {
     await expect(item.locator('[data-status]')).toHaveAttribute('data-status', 'orange');
     expect((await readSessions(page)).find((s) => s.id === 's2')?.performances[0]?.reps).toEqual([8, 8, 7]);
 
-    await page.goto('/#/exercice/tirage-vertical');
+    await page.goto('./#/exercice/tirage-vertical');
     await expect(page.getByTestId('sheet-next')).toHaveText('3 × 8');
   });
 
   test('60. Supprimer une séance passée demande confirmation et recalcule le profil', async ({ page }) => {
     await seed(page, SESSIONS);
-    await page.goto('/#/historique/s2');
+    await page.goto('./#/historique/s2');
     await page.getByRole('button', { name: 'Supprimer la séance' }).click();
     await page.getByRole('button', { name: 'Annuler' }).click();
     expect(await readSessions(page)).toHaveLength(2);
@@ -81,13 +81,13 @@ test.describe('Historique, analyse et Mon poids', () => {
     await page.getByRole('button', { name: 'Oui, supprimer' }).click();
     await expect(page.getByRole('searchbox', { name: 'Rechercher une séance' })).toBeVisible();
     expect((await readSessions(page)).map((s) => s.id)).toEqual(['s1']);
-    await page.goto('/#/exercice/tirage-vertical');
+    await page.goto('./#/exercice/tirage-vertical');
     await expect(page.getByTestId('sheet-next')).toHaveText('3 × 8');
   });
 
   test('28. Nouvelle séance à partir d’une ancienne : exercices préremplis depuis le profil, originale intacte', async ({ page }) => {
     await seed(page, SESSIONS);
-    await page.goto('/#/historique/s1');
+    await page.goto('./#/historique/s1');
     await page.getByRole('button', { name: 'Nouvelle séance à partir de celle-ci' }).click();
     await expect(page.getByTestId('chrono')).toBeVisible();
     const active = await activeSession(page);
@@ -97,7 +97,7 @@ test.describe('Historique, analyse et Mon poids', () => {
 
   test('§19.3. Le bilan classe les exercices sans conclure sur une seule séance', async ({ page }) => {
     await seed(page, [...SESSIONS, done('s3', 'Bras', '2026-10-04', [8, 7, 7], 'moyen', 'curl-biceps-halteres')]);
-    await page.goto('/#/bilan');
+    await page.goto('./#/bilan');
     await expect(page.getByRole('region', { name: 'En progression' })).toContainText('Tirage vertical');
     await expect(page.getByRole('region', { name: 'Trop tôt pour conclure' })).toContainText('Curl biceps haltères');
     await expect(page.getByRole('region', { name: 'En difficulté' })).toHaveCount(0);
@@ -137,7 +137,7 @@ test.describe('Historique, analyse et Mon poids', () => {
     await first.getByRole('button', { name: 'Oui, supprimer' }).click();
     await expect.poll(async () => (await readBody(page)).weighIns.length).toBe(1);
 
-    await page.goto('/#/reglages');
+    await page.goto('./#/reglages');
     await page.getByLabel('Taille (cm)').fill('178');
     await page.getByRole('button', { name: 'Enregistrer' }).click();
     await expect(page.getByText('Taille enregistrée.')).toBeVisible();
@@ -150,7 +150,7 @@ test.describe('Historique, analyse et Mon poids', () => {
     await page.addInitScript(() => {
       indexedDB.open('myfitapp-corps', 99).onsuccess = (e) => (e.target as IDBOpenDBRequest).result.close();
     });
-    await page.goto('/');
+    await page.goto('./');
     await page.getByRole('button', { name: 'Démarrer une séance' }).click();
     await page.getByRole('link', { name: '+ Ajouter un exercice' }).click();
     await page.getByRole('searchbox', { name: 'Rechercher un exercice' }).fill('pec deck');
@@ -160,9 +160,9 @@ test.describe('Historique, analyse et Mon poids', () => {
     await page.locator('article[aria-label="Pec deck"]').getByRole('button', { name: 'Valider' }).click();
     await expect.poll(async () => (await activeSession(page)).performances[0]?.reps).toEqual([8]);
 
-    await page.goto('/#/poids');
+    await page.goto('./#/poids');
     await expect(page.getByRole('alert')).toContainText('Vos séances ne sont pas concernées');
-    await page.goto('/#/donnees');
+    await page.goto('./#/donnees');
     const downloading = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Exporter mes données' }).click();
     await downloading;
@@ -171,17 +171,17 @@ test.describe('Historique, analyse et Mon poids', () => {
 
   test('43. L’export contient taille et pesées ; l’import les restaure sur un autre appareil', async ({ page, browser }) => {
     await seed(page, SESSIONS);
-    await page.goto('/#/reglages');
+    await page.goto('./#/reglages');
     await page.getByLabel('Taille (cm)').fill('178');
     await page.getByRole('button', { name: 'Enregistrer' }).click();
     await expect(page.getByText('Taille enregistrée.')).toBeVisible();
-    await page.goto('/#/poids');
+    await page.goto('./#/poids');
     await page.getByLabel('Date').fill('2026-10-01');
     await page.getByLabel('Poids (kg)').fill('79,2');
     await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
     await expect(page.getByRole('list', { name: 'Historique des pesées' }).getByRole('listitem')).toHaveCount(1);
 
-    await page.goto('/#/donnees');
+    await page.goto('./#/donnees');
     const downloading = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Exporter mes données' }).click();
     const file = await (await downloading).path();
@@ -189,9 +189,9 @@ test.describe('Historique, analyse et Mon poids', () => {
     const backup = JSON.parse(await page.getByLabel('Notes de séance ou JSON').inputValue());
     expect(backup.bodyTracking).toEqual({ heightCm: 178, weighIns: [{ date: '2026-10-01', weightKg: 79.2 }] });
 
-    const other = await browser.newContext({ baseURL: 'http://localhost:4173', locale: 'fr-FR', timezoneId: 'Europe/Paris' });
+    const other = await browser.newContext({ baseURL: 'http://localhost:4173/MyFitApp/', locale: 'fr-FR', timezoneId: 'Europe/Paris' });
     const page2 = await other.newPage();
-    await page2.goto('/#/donnees');
+    await page2.goto('./#/donnees');
     await page2.getByLabel('Fichier à importer').setInputFiles(file);
     await expect(page2.getByTestId('plan-weighins')).toHaveText('1 pesée à ajouter');
     await page2.getByRole('button', { name: 'Ajouter à mes données' }).click();

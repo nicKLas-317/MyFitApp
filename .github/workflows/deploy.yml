@@ -1,0 +1,56 @@
+# Tests puis publication sur GitHub Pages à chaque push sur main (§21).
+# Aucune publication si la compilation ou un test échoue.
+name: Tests et déploiement
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Une seule publication à la fois ; une publication en cours n'est jamais interrompue.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  tests:
+    name: Compilation, tests et construction
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Compilation TypeScript (strict)
+        run: npm run typecheck
+      - name: Tests unitaires (moteur, import, stockage…)
+        run: npm test
+      - name: Navigateur des tests de bout en bout
+        run: npx playwright install --with-deps chromium
+      - name: Tests de bout en bout (format smartphone)
+        run: npm run test:e2e
+      - name: Construction pour /MyFitApp/
+        run: npx vite build
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+  deploiement:
+    name: Publication sur GitHub Pages
+    needs: tests
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

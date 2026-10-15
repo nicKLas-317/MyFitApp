@@ -49,7 +49,7 @@ export async function activeSession(page: Page): Promise<Session> {
 }
 
 export async function startSession(page: Page): Promise<void> {
-  await page.goto('/');
+  await page.goto('./');
   await page.getByRole('button', { name: 'Démarrer une séance' }).click();
   await expect(page.getByTestId('chrono')).toBeVisible();
 }
