@@ -22,9 +22,14 @@ export function Settings() {
         <dt>Version</dt>
         <dd>{__APP_VERSION__}</dd>
       </dl>
-      <a className="btn big" href="#/donnees">
-        Importer ou exporter mes données
-      </a>
+      <div className="settings-links">
+        <a className="btn big" href="#/bibliotheque">
+          Exercices, variantes et réglages par exercice
+        </a>
+        <a className="btn big" href="#/donnees">
+          Importer ou exporter mes données
+        </a>
+      </div>
     </main>
   );
 }

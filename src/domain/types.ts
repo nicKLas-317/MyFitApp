@@ -30,6 +30,8 @@ export interface Variant {
   synonyms: string[];
   config?: Partial<VariantConfig>;
   archived: boolean;
+  /** Mis en avant quand la recherche est vide (§4.2). */
+  favorite?: boolean;
 }
 
 export interface Exercise {

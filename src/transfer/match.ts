@@ -5,7 +5,7 @@
  */
 import type { Exercise } from '../domain/types';
 import { MUSCLE_GROUP_LABELS } from '../library/seed';
-import { nameTokens, normalizeName } from './text';
+import { nameTokens, normalizeName } from '../library/text';
 
 export type MatchConfidence =
   /** Nom déjà confirmé lors d'un import précédent (synonyme appris). */

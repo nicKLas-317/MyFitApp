@@ -907,3 +907,277 @@ textarea {
 .reminder {
   margin: 12px 0;
 }
+
+/* Bibliothèque */
+.picto {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--group, #3a4050);
+}
+
+.picto.large {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+}
+
+.picto svg {
+  width: 60%;
+  height: 60%;
+  fill: none;
+  stroke: #eef0f4;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Teintes de groupe, volontairement éloignées des trois couleurs de statut. */
+.picto-dos { --group: #284a78; }
+.picto-pectoraux { --group: #573a7d; }
+.picto-epaules { --group: #1f5e66; }
+.picto-biceps { --group: #6e335f; }
+.picto-triceps { --group: #44497a; }
+.picto-jambes,
+.picto-quadriceps,
+.picto-ischio-jambiers { --group: #5c5530; }
+.picto-abdominaux { --group: #3d5064; }
+
+.pick-row {
+  display: flex;
+  align-items: stretch;
+}
+
+.pick-row .pick-button {
+  flex: 1;
+  min-width: 0;
+}
+
+.pick-button {
+  justify-content: flex-start;
+}
+
+.pick-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.variant-tag {
+  display: inline-block;
+  padding: 0 6px;
+  margin-right: 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.add-to-session {
+  margin: 8px 8px 8px 0;
+  min-width: var(--tap);
+  padding: 0;
+  font-size: 1.4rem;
+}
+
+.no-result {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  padding: 16px 0;
+}
+
+.new-exercise {
+  margin-top: 12px;
+}
+
+.archived {
+  margin-top: 24px;
+}
+
+.archived summary,
+.direct-name {
+  color: var(--muted);
+  cursor: pointer;
+  min-height: 40px;
+  padding: 8px 16px 0;
+  margin: 0;
+}
+
+.plain-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+  display: grid;
+  gap: 4px;
+}
+
+.plain-list a,
+.plain-list strong {
+  display: inline-block;
+  padding: 8px 0;
+}
+
+.sheet-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 14px;
+  align-items: start;
+  margin-bottom: 12px;
+}
+
+.sheet-head p {
+  margin: 0 0 4px;
+}
+
+.variant-line {
+  font-weight: 600;
+}
+
+.favorite {
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  line-height: 1;
+  min-width: var(--tap);
+  min-height: var(--tap);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.favorite[aria-pressed='true'] {
+  color: #ffd166;
+}
+
+.sheet-status {
+  padding: 12px 16px;
+  display: grid;
+  gap: 6px;
+}
+
+.sheet-status p {
+  margin: 0;
+}
+
+.sheet-actions,
+.settings-links,
+.danger-zone {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.inline-form {
+  display: grid;
+  gap: 6px;
+}
+
+.inline-form input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--tap);
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.history {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.history-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 10px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.history-item .status {
+  grid-row: 1 / span 3;
+  grid-column: 2;
+  align-self: center;
+}
+
+.history-date {
+  font-weight: 600;
+}
+
+.edit-form {
+  display: grid;
+  gap: 12px;
+}
+
+.draft-field textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  resize: vertical;
+}
+
+.field-grid.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.chips-field {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.chips-field legend {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+}
+
+.variant-forms {
+  display: grid;
+  gap: 10px;
+}
+
+.variant-form {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  margin: 0;
+}
+
+.variant-form legend {
+  font-weight: 600;
+  padding: 0 4px;
+}
+
+/* Un fieldset ne doit pas imposer la largeur de son contenu sur petit écran. */
+fieldset {
+  min-width: 0;
+}
+
+.chips-field .feeling-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chips-field .chip {
+  flex: none;
+}
+
+.sheet .link {
+  text-align: left;
+}
+
+.card-header .card-title {
+  flex: 1;
+  min-width: 0;
+}

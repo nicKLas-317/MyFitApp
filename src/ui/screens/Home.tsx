@@ -38,6 +38,9 @@ export function Home() {
         </div>
       )}
       <nav className="home-nav">
+        <a className="btn" href="#/bibliotheque">
+          Bibliothèque d’exercices
+        </a>
         <a className="btn" href="#/donnees">
           Importer / exporter
         </a>

@@ -12,7 +12,7 @@ import { draftExercise, findDuplicates, type DraftExerciseInput, type DraftIssue
 import { isFeeling, readFeelingSymbol } from './feelings';
 import { detectDate } from './notes';
 import { newId } from '../session/ops';
-import { normalizeName } from './text';
+import { normalizeName } from '../library/text';
 
 export const APP_ID = 'MyFitApp';
 export const SCHEMA_VERSION = 2;
@@ -304,6 +304,7 @@ function validateVariant(v: unknown, path: string, errors: string[]): void {
   if (!isStr(v.name)) errors.push(`${path}.name manquant.`);
   if (!isStrArray(v.synonyms)) errors.push(`${path}.synonyms invalide.`);
   if (typeof v.archived !== 'boolean') errors.push(`${path}.archived invalide.`);
+  if (v.favorite !== undefined && typeof v.favorite !== 'boolean') errors.push(`${path}.favorite invalide.`);
   if (v.config !== undefined) {
     if (!isObj(v.config)) errors.push(`${path}.config invalide.`);
     else for (const k of ['sets', 'minReps', 'maxReps']) {
@@ -453,10 +454,11 @@ function mergeExercise(base: Exercise, other: Exercise): Exercise {
   return { ...base, synonyms: union(base.synonyms, other.synonyms), variants };
 }
 
-/** L'exercice local est celui de la bibliothèque initiale, jamais modifié sur l'appareil. */
+/** L'exercice local est celui de la bibliothèque initiale, jamais modifié sur l'appareil (un favori ne compte pas). */
 function isPristine(local: Exercise): boolean {
   const seed = SEED_EXERCISES.find((e) => e.id === local.id);
-  return seed !== undefined && stable(seed) === stable(local);
+  const withoutFavorites = { ...local, variants: local.variants.map(({ favorite: _f, ...v }) => v) };
+  return seed !== undefined && stable(seed) === stable(withoutFavorites);
 }
 
 /**
@@ -502,7 +504,12 @@ export function planImport(
     // Un exercice jamais modifié ici reprend la version importée (nom, réglages…) ;
     // un exercice modifié ici est conservé, et la divergence est signalée.
     const keepLocal = mergeExercise(existing, imported);
-    const takeImported = mergeExercise(imported, existing);
+    const importedFirst = mergeExercise(imported, existing);
+    // Les favoris de l'appareil sont conservés.
+    const takeImported = {
+      ...importedFirst,
+      variants: importedFirst.variants.map((v) => (existing.variants.find((x) => x.id === v.id)?.favorite ? { ...v, favorite: true } : v)),
+    };
     const merged = isPristine(existing) ? takeImported : keepLocal;
     if (merged === keepLocal && stable(keepLocal) !== stable(takeImported)) plan.exerciseConflicts.push(imported);
     if (stable(merged) !== stable(existing)) plan.exercises.push(merged);

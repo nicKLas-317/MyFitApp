@@ -1,0 +1,238 @@
+import { useState } from 'react';
+import { useApp } from '../../app/store';
+import { navigate } from '../../app/hooks';
+import { sortSessions } from '../../engine';
+import { displayName } from '../../library/catalog';
+import { addVariant, updateVariant, validateVariantName } from '../../library/edit';
+import { MUSCLE_GROUP_LABELS } from '../../library/seed';
+import { formatIsoDay, formatKg } from '../../session/format';
+import { findPerformance } from '../../session/ops';
+import { FEELING_LABELS, formatRecommendation } from '../labels';
+import { equipmentLabel, ExercisePicto } from '../Pictogram';
+import { StatusBadge } from '../StatusBadge';
+
+/** Fiche d'un exercice-variante (§4) : dernière performance, prochaine cible, statut, variantes et historique. */
+export function ExerciseSheet({ variantId }: { variantId: string }) {
+  const { variants, exercises, sessions, replay, active, ctxFor, saveExercises } = useApp();
+  const ref = variants.get(variantId);
+  const [variantName, setVariantName] = useState<string | null>(null);
+  const [variantError, setVariantError] = useState<string | null>(null);
+
+  if (!ref) {
+    return (
+      <main className="screen">
+        <p className="empty">Exercice introuvable.</p>
+        <a className="btn primary big" href="#/bibliotheque">
+          Bibliothèque
+        </a>
+      </main>
+    );
+  }
+
+  const { exercise, variant } = ref;
+  const ctx = ctxFor(variantId);
+  const state = ctx.state;
+  const archived = exercise.archived || variant.archived;
+  const inSession = active ? !!findPerformance(active, variantId) : false;
+
+  // Historique de l'exercice-variante, du plus récent au plus ancien (§4, §19.1).
+  const history = sortSessions(sessions.filter((s) => s.state === 'done'))
+    .reverse()
+    .flatMap((s) => {
+      const p = s.performances.find((x) => x.variantId === variantId);
+      return p ? [{ session: s, performance: p, evaluation: replay.evaluations.find((e) => e.sessionId === s.id && e.variantId === variantId) }] : [];
+    });
+  const last = history.find((h) => h.evaluation);
+
+  async function toggleFavorite() {
+    await saveExercises([updateVariant(exercise, variantId, { favorite: !variant.favorite })]);
+  }
+
+  async function createVariant() {
+    const name = variantName ?? '';
+    const error = validateVariantName(exercise, name);
+    if (error) {
+      setVariantError(error === 'name_missing' ? 'Saisissez un nom de variante.' : 'Cette variante existe déjà.');
+      return;
+    }
+    const { exercise: next, variantId: id } = addVariant(exercise, name, exercises);
+    if (await saveExercises([next])) {
+      setVariantName(null);
+      navigate('exercice', id);
+    }
+  }
+
+  return (
+    <main className="screen sheet">
+      <header className="simple-header">
+        <a href="#/bibliotheque" className="back" aria-label="Bibliothèque">
+          ‹
+        </a>
+        <h1>{exercise.name}</h1>
+      </header>
+
+      <div className="sheet-head">
+        <ExercisePicto exercise={exercise} large />
+        <div>
+          {variant.id !== exercise.id && <p className="variant-line">Variante : {variant.name}</p>}
+          <p>
+            {MUSCLE_GROUP_LABELS[exercise.primaryGroup]}
+            {exercise.secondaryGroups.length > 0 && (
+              <span className="muted"> · secondaire : {exercise.secondaryGroups.map((g) => MUSCLE_GROUP_LABELS[g]).join(', ')}</span>
+            )}
+          </p>
+          <p className="muted small">Matériel : {equipmentLabel(exercise)}</p>
+        </div>
+        <button
+          type="button"
+          className="favorite"
+          aria-pressed={!!variant.favorite}
+          aria-label="Favori"
+          title={variant.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+          onClick={() => void toggleFavorite()}
+        >
+          {variant.favorite ? '★' : '☆'}
+        </button>
+      </div>
+
+      {archived && <p className="banner info">Exercice archivé : masqué de la recherche, historique conservé.</p>}
+
+      <section className="card sheet-status">
+        {state ? (
+          <>
+            <div className="last-perf">
+              <StatusBadge status={state.lastStatus} />
+              <span>
+                Dernière fois : <strong>{formatKg(state.lastPerformance.weightKg)}</strong> · {state.lastPerformance.reps.join(' · ')}
+                {last && <span className="muted small"> ({formatIsoDay(last.session.date)})</span>}
+              </span>
+            </div>
+            <p>
+              Prochaine cible : <strong data-testid="sheet-next">{formatRecommendation(state.recommendation)}</strong>
+              {state.recommendation.kind === 'keep' || state.recommendation.kind === 'reps_up' ? ` à ${formatKg(state.palier.weightKg)}` : ''}
+            </p>
+          </>
+        ) : (
+          <p>
+            Jamais réalisé : poids de départ à saisir, cible{' '}
+            <strong data-testid="sheet-next">
+              {ctx.cfg.sets} × {ctx.cfg.minReps}
+            </strong>
+            .
+          </p>
+        )}
+      </section>
+
+      <div className="sheet-actions">
+        {active && !archived && (
+          inSession ? (
+            <a className="btn primary big" href={`#/seance/${encodeURIComponent(variantId)}`}>
+              Ouvrir dans la séance
+            </a>
+          ) : (
+            <button type="button" className="btn primary big" onClick={() => navigate('ajouter', variantId)}>
+              Ajouter à la séance
+            </button>
+          )
+        )}
+        <a className="btn big" href={`#/modifier/${encodeURIComponent(exercise.id)}`}>
+          Modifier
+        </a>
+      </div>
+
+      <section>
+        <h2 className="section-title">Variantes</h2>
+        <ul className="plain-list variants">
+          {exercise.variants.map((v) => (
+            <li key={v.id}>
+              {v.id === variantId ? (
+                <strong aria-current="true">{displayName({ exercise, variant: v })}</strong>
+              ) : (
+                <a href={`#/exercice/${encodeURIComponent(v.id)}`}>{displayName({ exercise, variant: v })}</a>
+              )}
+              {v.archived && <span className="muted small"> · archivée</span>}
+            </li>
+          ))}
+        </ul>
+        {variantName === null ? (
+          <button type="button" className="link" onClick={() => setVariantName('')}>
+            + Nouvelle variante (machine, prise, inclinaison…)
+          </button>
+        ) : (
+          <form
+            className="inline-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void createVariant();
+            }}
+          >
+            <label htmlFor="variant-name">Nom de la variante</label>
+            <div className="row">
+              <input
+                id="variant-name"
+                type="text"
+                autoFocus
+                placeholder="ex. 70°, prise serrée"
+                value={variantName}
+                onChange={(e) => {
+                  setVariantName(e.target.value);
+                  setVariantError(null);
+                }}
+              />
+              <button type="submit" className="btn primary">
+                Créer
+              </button>
+              <button type="button" className="btn" onClick={() => setVariantName(null)}>
+                Annuler
+              </button>
+            </div>
+            {variantError && (
+              <p className="field-error" role="alert">
+                {variantError}
+              </p>
+            )}
+            <p className="muted small">Une variante a son propre historique et sa propre progression.</p>
+          </form>
+        )}
+      </section>
+
+      {exercise.synonyms.length + variant.synonyms.length > 0 && (
+        <section>
+          <h2 className="section-title">Autres noms</h2>
+          <p className="small">{[...exercise.synonyms, ...variant.synonyms].join(' · ')}</p>
+        </section>
+      )}
+
+      <section>
+        <h2 className="section-title">Historique</h2>
+        {history.length === 0 ? (
+          <p className="muted">Aucune séance pour l’instant.</p>
+        ) : (
+          <ul className="history" aria-label="Historique de l’exercice">
+            {history.map(({ session, performance: p, evaluation }) => (
+              <li key={session.id} className="history-item">
+                <span className="history-date">{formatIsoDay(session.date)}</span>
+                <span>
+                  {formatKg(p.weightKg)}
+                  {p.partial ? (
+                    <span className="muted"> · historique partiel</span>
+                  ) : (
+                    <>
+                      {' '}
+                      · {p.reps.join(' · ')} <span className="muted small">(cible {p.plannedSets} × {p.targetReps})</span>
+                    </>
+                  )}
+                </span>
+                <span className="muted small">
+                  {p.partial ? '' : FEELING_LABELS[p.feeling]}
+                  {session.origin === 'import' && ' · importée'}
+                </span>
+                <StatusBadge status={evaluation?.status} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </main>
+  );
+}

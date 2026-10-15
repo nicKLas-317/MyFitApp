@@ -67,6 +67,11 @@ export class Repository {
     await Promise.all([...writes, tx.done]);
   }
 
+  async deleteExercise(id: string): Promise<void> {
+    const tx = this.db.transaction('exercises', 'readwrite');
+    await Promise.all([tx.store.delete(id), tx.done]);
+  }
+
   async getMeta<T>(key: string): Promise<T | undefined> {
     return (await this.db.get('meta', key)) as T | undefined;
   }

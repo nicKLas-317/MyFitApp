@@ -5,6 +5,9 @@ import { ForgottenDialog } from './ui/ForgottenDialog';
 import { SaveErrorBanner } from './ui/SaveIndicator';
 import { UndoToast } from './ui/UndoToast';
 import { DataScreen } from './ui/screens/DataScreen';
+import { ExerciseEdit } from './ui/screens/ExerciseEdit';
+import { ExerciseSheet } from './ui/screens/ExerciseSheet';
+import { Library } from './ui/screens/Library';
 import { ExercisePicker } from './ui/screens/ExercisePicker';
 import { Home } from './ui/screens/Home';
 import { Recap } from './ui/screens/Recap';
@@ -12,7 +15,7 @@ import { SessionScreen } from './ui/screens/SessionScreen';
 import { Settings } from './ui/screens/Settings';
 
 function Router() {
-  const [page, param] = useHashRoute();
+  const [page, param, extra] = useHashRoute();
   // Chaque écran s'ouvre en haut : la position de défilement de l'écran précédent ne s'applique pas.
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -21,7 +24,15 @@ function Router() {
     case 'seance':
       return <SessionScreen openVariantId={param} />;
     case 'ajouter':
-      return <ExercisePicker />;
+      return <ExercisePicker key={param ?? ''} variantId={param} />;
+    case 'bibliotheque':
+      return <Library />;
+    case 'exercice':
+      return param ? <ExerciseSheet key={param} variantId={param} /> : <Library />;
+    case 'modifier':
+      return param ? <ExerciseEdit key={param} exerciseId={param} /> : <Library />;
+    case 'nouvel-exercice':
+      return <ExerciseEdit key={`new-${param ?? ''}`} initialName={param} forSession={extra === 'seance'} />;
     case 'recap':
       return param ? <Recap key={param} sessionId={param} /> : <Home />;
     case 'reglages':

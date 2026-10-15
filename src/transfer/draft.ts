@@ -6,11 +6,12 @@
 import type { Exercise, Feeling, MuscleGroup, Performance, Session } from '../domain/types';
 import { rebuildProfile, validatePerformance, type Evaluation, type Profile } from '../engine';
 import { buildEngineSettings } from '../library/catalog';
+import { allIds, slug, uniqueId } from '../library/edit';
 import { importedSessionName, isIsoDate } from '../session/format';
 import { newId, WEIGHT_CONFIRM_RATIO } from '../session/ops';
 import { MATCH_MARGIN, matchExercise, qualifierOf, type MatchResult } from './match';
 import { parseNotes, type ParseIssue } from './notes';
-import { angleOf, normalizeName } from './text';
+import { angleOf, normalizeName } from '../library/text';
 
 export type ExerciseChoice =
   | { kind: 'variant'; variantId: string }
@@ -181,17 +182,6 @@ export function updateDraftExercise(draft: DraftSession, key: string, patch: Par
 
 // ——— Finalisation ———————————————————————————————————————————————
 
-function slug(name: string): string {
-  return normalizeName(name).replace(/ /g, '-') || 'exercice';
-}
-
-function uniqueId(base: string, taken: Set<string>): string {
-  let id = base;
-  for (let n = 2; taken.has(id); n++) id = `${base}-${n}`;
-  taken.add(id);
-  return id;
-}
-
 /** Noms définis par la bibliothèque pour une variante (hors synonymes appris). */
 function libraryNames(exercise: Exercise, variantId: string): string[] {
   const variant = exercise.variants.find((v) => v.id === variantId);
@@ -272,7 +262,7 @@ export function finalizeDrafts(
 ): FinalizeResult {
   const work = new Map(exercises.map((e) => [e.id, e]));
   const changed = new Set<string>();
-  const takenIds = new Set(exercises.flatMap((e) => [e.id, ...e.variants.map((v) => v.id)]));
+  const takenIds = allIds(exercises);
   const takenSessionIds = new Set(existing.map((s) => s.id));
   const sessions: Session[] = [];
   const variantIds = new Map<string, Map<string, string>>();

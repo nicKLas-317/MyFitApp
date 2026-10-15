@@ -4,7 +4,7 @@
  */
 import type { Feeling } from '../domain/types';
 import { readFeelingSymbol } from './feelings';
-import { normalizeNotation, stripAccents } from './text';
+import { normalizeNotation, stripAccents } from '../library/text';
 
 export type ParseIssue =
   /** Aucune ligne de performance sous ce nom. */

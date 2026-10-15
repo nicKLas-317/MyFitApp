@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { Exercise, Session } from '../domain/types';
 import { rebuildProfile, resolveConfig, type EngineSettings, type ReplayResult } from '../engine';
 import { buildEngineSettings, indexVariants, type VariantRef } from '../library/catalog';
+import { exerciseHasHistory } from '../library/edit';
 import type { RemovedPerformance, VariantContext } from '../session/ops';
 import { openAppDb, Repository, requestPersistence, type PersistState } from '../storage/db';
 
@@ -41,6 +42,10 @@ interface AppValue {
   setLastFinish(info: FinishInfo | null): void;
   /** Enregistre un import en une transaction ; l'état n'est mis à jour qu'en cas de succès. */
   importData(data: ImportData): Promise<boolean>;
+  /** Enregistre des exercices créés ou modifiés ; l'état n'est mis à jour qu'en cas de succès. */
+  saveExercises(list: readonly Exercise[]): Promise<boolean>;
+  /** Supprime un exercice sans historique (l'appelant le vérifie). */
+  deleteExercise(exercise: Exercise): Promise<boolean>;
   markExported(at: number): Promise<boolean>;
 }
 
@@ -188,6 +193,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [repo],
   );
 
+  const saveExercises = useCallback(
+    async (list: readonly Exercise[]): Promise<boolean> => {
+      if (!repo) return false;
+      setSave({ kind: 'saving' });
+      try {
+        await repo.putExercises(list);
+      } catch (error) {
+        console.error('[MyFitApp] échec d’enregistrement de la bibliothèque', error);
+        setSave({ kind: 'error' });
+        return false;
+      }
+      setExercises((current) => upsert(current, list));
+      setSave(failedIds.current.size > 0 ? { kind: 'error' } : { kind: 'saved' });
+      return true;
+    },
+    [repo],
+  );
+
+  const deleteExercise = useCallback(
+    async (exercise: Exercise): Promise<boolean> => {
+      // Un exercice avec historique ne se supprime jamais : il s'archive (§4.3).
+      if (!repo || exerciseHasHistory(exercise, sessionsRef.current)) return false;
+      try {
+        await repo.deleteExercise(exercise.id);
+      } catch {
+        return false;
+      }
+      setExercises((current) => current.filter((e) => e.id !== exercise.id));
+      return true;
+    },
+    [repo],
+  );
+
   const markExported = useCallback(
     async (at: number): Promise<boolean> => {
       if (!repo) return false;
@@ -234,6 +272,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     dismissUndo,
     setLastFinish,
     importData,
+    saveExercises,
+    deleteExercise,
     markExported,
   };
 

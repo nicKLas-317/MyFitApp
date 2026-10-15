@@ -155,6 +155,13 @@ describe('Export et import JSON (§11.9, §11.10)', () => {
     expect(chest.name).toBe('Ma chest press');
     expect(chest.synonyms).toContain('Presse pecs');
 
+    // Un exercice de la bibliothèque initiale simplement mis en favori reprend la version importée.
+    const favorite = local.exercises.map((e) => (e.id === 'leg-curl' ? { ...e, variants: e.variants.map((v) => ({ ...v, favorite: true })) } : e));
+    const renamedLegCurl = favorite.map((e) => (e.id === 'leg-curl' ? { ...e, name: 'Leg curl assis', variants: e.variants.map(({ favorite: _f, ...v }) => v) } : e));
+    const legPlan = planImport(buildBackup({ sessions: [], exercises: renamedLegCurl }, 1), { ...local, exercises: favorite }, { mode: 'merge' });
+    expect(legPlan.exercises.find((e) => e.id === 'leg-curl')).toMatchObject({ name: 'Leg curl assis', variants: [{ favorite: true }] });
+    expect(legPlan.exerciseConflicts.map((e) => e.id)).not.toContain('leg-curl');
+
     // Remplacement global : uniquement sur demande explicite.
     await repo.applyImport({ ...planImport(older, local, { mode: 'replace' }), replace: true });
     expect((await repo.loadSessions()).map((s) => s.name)).toEqual(['Ancien nom']);
