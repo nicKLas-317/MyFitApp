@@ -14,14 +14,14 @@ import {
   type DraftSession,
 } from '../draft';
 import { matchExercise } from '../match';
-import { NOTES_11_3 } from './fixtures';
+import { NOTES_11_3, withExampleChoices } from './fixtures';
 
 const TODAY = '2026-10-15';
 const LIB: readonly Exercise[] = SEED_EXERCISES;
 
 /** Import complet d'un bloc de notes à une date donnée, comme le ferait l'écran d'import. */
 function importNotes(text: string, date: string, state: { sessions: Session[]; exercises: Exercise[] }, now: number) {
-  const draft = setDraftDate(draftFromNotes(text, state.exercises, TODAY), date);
+  const draft = withExampleChoices(setDraftDate(draftFromNotes(text, state.exercises, TODAY), date));
   const problems = draftProblems(draft, { ...state, profile: rebuildProfile(state.sessions, buildEngineSettings(state.exercises)).profile });
   expect(hasBlockingProblems(problems), JSON.stringify(problems)).toBe(false);
   const result = finalizeDrafts([draft], state.exercises, state.sessions, now);
@@ -44,7 +44,8 @@ describe('Reconnaissance des exercices (§11.7)', () => {
       ['Bench press', 'developpe-couche'],
       ['Leg press', 'presse-a-cuisses'],
       ['Butterfly', 'pec-deck'],
-      ['Lateral raise', 'elevations-laterales'],
+      ['Dumbbell lateral raise', 'elevations-laterales'],
+      ['Machine lateral raise', 'elevations-laterales-machine'],
       ['Triceps pushdown', 'extension-triceps-poulie'],
     ];
     for (const [name, id] of cases) {
@@ -75,11 +76,29 @@ describe('Reconnaissance des exercices (§11.7)', () => {
     ]);
   });
 
+  it('103. Élévations latérales haltères ou machine : matériel précisé reconnu, sinon choix demandé', () => {
+    for (const name of ['élévations latérales haltères', 'Lateral raise haltères', 'Dumbbell lateral raise']) {
+      expect(matchExercise(name, LIB), name).toMatchObject({ confidence: 'certain', suggestion: 'elevations-laterales' });
+    }
+    for (const name of ['Élévations latérales machine', 'lateral raise machine', 'Machine lateral raise']) {
+      expect(matchExercise(name, LIB), name).toMatchObject({ confidence: 'certain', suggestion: 'elevations-laterales-machine' });
+    }
+    for (const name of ['latéral raise', 'Lateral raise', 'Epaules latéral raise', 'élévations latérales']) {
+      const draft = draftFromNotes(`${name}\n3x8x10kg +`, LIB, TODAY);
+      const entry = draft.exercises[0]!;
+      expect(entry.choice, name).toBeNull();
+      expect(entry.match.candidates.slice(0, 2).map((c) => c.variantId).sort(), name).toEqual(['elevations-laterales', 'elevations-laterales-machine']);
+      expect(draftProblems(draft, ctx()).map((p) => p.code), name).toContain('choose_exercise');
+    }
+    // « Tirage nuque » n'est plus un synonyme du tirage vertical.
+    expect(matchExercise('Tirage nuque', LIB).suggestion).not.toBe('tirage-vertical');
+  });
+
   it('38. Les six exercices du §11.3 sont associés aux bons exercices', () => {
     const draft = draftFromNotes(NOTES_11_3, LIB, TODAY);
     expect(draft.exercises.map((e) => e.choice)).toEqual([
       { kind: 'variant', variantId: 'tirage-horizontal' },
-      { kind: 'variant', variantId: 'elevations-laterales' },
+      null, // « Epaules latéral raise » : matériel non précisé, l'aperçu demande de choisir
       { kind: 'variant', variantId: 'curl-biceps-poulie-corde' },
       { kind: 'new_variant', exerciseId: 'curl-biceps-banc-incline', name: '70°' },
       { kind: 'variant', variantId: 'tirage-vertical' },
@@ -252,7 +271,11 @@ describe('Import de notes et moteur de progression (§11.6)', () => {
   });
 
   it('l’aperçu affiche le statut que chaque performance obtiendra', () => {
-    const draft: DraftSession = setDraftDate(draftFromNotes(NOTES_11_3, LIB, TODAY), '2026-10-12');
+    const raw: DraftSession = setDraftDate(draftFromNotes(NOTES_11_3, LIB, TODAY), '2026-10-12');
+    // Sans choix du matériel, les élévations latérales n'ont pas encore de statut.
+    const before = previewEvaluations([raw], LIB, []).get(raw.key)!;
+    expect(raw.exercises.map((e) => before.get(e.key)?.status)).toEqual(['orange', undefined, 'vert', 'orange', 'orange', 'vert']);
+    const draft = withExampleChoices(raw);
     const preview = previewEvaluations([draft], LIB, []).get(draft.key)!;
     expect(draft.exercises.map((e) => preview.get(e.key)?.status)).toEqual(['orange', 'vert', 'vert', 'orange', 'orange', 'vert']);
     const { sessions } = finalizeDrafts([draft], LIB, [], 1);

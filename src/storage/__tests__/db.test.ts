@@ -96,6 +96,43 @@ describe('Persistance IndexedDB (§12)', () => {
     custom.close();
   });
 
+  it('102. Version 4 : élévations latérales séparées (haltères / machine), « Tirage nuque » retiré, sans perte de données', async () => {
+    const v3 = SEED_EXERCISES.filter((e) => e.id !== 'elevations-laterales-machine').map((e) => {
+      if (e.id === 'elevations-laterales') return { ...e, name: 'Élévations latérales', synonyms: ['Lateral raise', 'Latéral raise'] };
+      if (e.id === 'tirage-vertical') return { ...e, synonyms: ['Lat pulldown', 'Tirage poitrine', 'Tirage nuque'] };
+      return e;
+    });
+    const repo = new Repository(await openAppDb(freshName()));
+    await repo.putExercises(v3);
+    await repo.setMeta('seeded', true);
+    await repo.setMeta('seedVersion', 3);
+    // Séance déjà enregistrée sur les élévations latérales et synonyme appris sur la variante : conservés.
+    let s = startSession(1_000, 'avec-elevations');
+    s = addExercise(s, 'elevations-laterales', { state: undefined, cfg: DEFAULT_VARIANT_CONFIG }, 1_000, 8).session;
+    await repo.putSession(s);
+    const withLearned = v3.find((e) => e.id === 'elevations-laterales')!;
+    await repo.putExercises([{ ...withLearned, variants: [{ ...withLearned.variants[0]!, synonyms: ['Élévations latérales haltères 8 kg'] }] }]);
+    await repo.ensureSeed();
+    const after = await repo.loadExercises();
+    const haltere = after.find((e) => e.id === 'elevations-laterales')!;
+    expect(haltere).toMatchObject({ name: 'Élévations latérales haltères', synonyms: ['Lateral raise haltères', 'Dumbbell lateral raise'], equipment: 'haltères' });
+    expect(haltere.variants[0]?.synonyms).toEqual(['Élévations latérales haltères 8 kg']);
+    expect(after.find((e) => e.id === 'elevations-laterales-machine')).toMatchObject({ name: 'Élévations latérales machine', equipment: 'machine', primaryGroup: 'epaules' });
+    expect(after.find((e) => e.id === 'tirage-vertical')?.synonyms).toEqual(['Lat pulldown', 'Tirage poitrine']);
+    expect(await repo.loadSessions()).toEqual([s]);
+    expect(await repo.getMeta('seedVersion')).toBe(4);
+    repo.close();
+
+    // Exercice renommé par l'utilisateur : son nom et ses synonymes sont conservés.
+    const custom = new Repository(await openAppDb(freshName()));
+    await custom.putExercises(v3.map((e) => (e.id === 'elevations-laterales' ? { ...e, name: 'Mes élévations' } : e)));
+    await custom.setMeta('seeded', true);
+    await custom.setMeta('seedVersion', 3);
+    await custom.ensureSeed();
+    expect((await custom.loadExercises()).find((e) => e.id === 'elevations-laterales')).toMatchObject({ name: 'Mes élévations', synonyms: ['Lateral raise', 'Latéral raise'] });
+    custom.close();
+  });
+
   it('une écriture en échec est signalée par une promesse rejetée', async () => {
     const repo = new Repository(await openAppDb(freshName()));
     repo.close();

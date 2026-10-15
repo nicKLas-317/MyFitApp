@@ -15,7 +15,7 @@ import {
   planImport,
 } from '../backup';
 import { draftFromNotes, draftProblems, finalizeDrafts, hasBlockingProblems, previewEvaluations, setDraftDate } from '../draft';
-import { NOTES_11_3 } from './fixtures';
+import { NOTES_11_3, withExampleChoices } from './fixtures';
 
 const TODAY = '2026-10-15';
 const LIB: Exercise[] = [...SEED_EXERCISES];
@@ -31,7 +31,7 @@ function sampleData(): { sessions: Session[]; exercises: Exercise[] } {
   s = setFeeling(s, 'chest-press', 'tres_bien', s.startedAt! + 2);
   const done = finishSession(s, s.startedAt! + 3_600_000).session;
 
-  const draft = setDraftDate(draftFromNotes(`${NOTES_11_3}\n\nCurl biceps\n3x8x14kg +`, LIB, TODAY), '2026-10-12');
+  const draft = withExampleChoices(setDraftDate(draftFromNotes(`${NOTES_11_3}\n\nCurl biceps\n3x8x14kg +`, LIB, TODAY), '2026-10-12'));
   const fixed = {
     ...draft,
     exercises: draft.exercises.map((e) =>
@@ -168,6 +168,23 @@ describe('Export et import JSON (§11.9, §11.10)', () => {
     repo.close();
   });
 
+  it('104. Une sauvegarde d’une version antérieure ne réintroduit pas d’anciens noms ni synonymes de la bibliothèque', () => {
+    const old = LIB.map((e) => {
+      if (e.id === 'elevations-laterales') {
+        return { ...e, name: 'Élévations latérales', synonyms: ['Lateral raise', 'Latéral raise'], variants: [{ ...e.variants[0]!, synonyms: ['Epaules lateral raise'] }] };
+      }
+      if (e.id === 'tirage-vertical') return { ...e, synonyms: ['Lat pulldown', 'Tirage poitrine', 'Tirage nuque'] };
+      return e;
+    });
+    const plan = planImport(buildBackup({ sessions: [], exercises: old }, 1), { sessions: [], exercises: LIB }, { mode: 'merge' });
+    const elevations = plan.exercises.find((e) => e.id === 'elevations-laterales')!;
+    expect(elevations.name).toBe('Élévations latérales haltères');
+    expect(elevations.synonyms).toEqual(['Lateral raise haltères', 'Dumbbell lateral raise']);
+    expect(elevations.variants[0]?.synonyms).toEqual(['Epaules lateral raise']); // synonyme appris conservé
+    expect(plan.exercises.some((e) => e.id === 'tirage-vertical')).toBe(false); // rien à changer
+    expect(plan.exerciseConflicts).toEqual([]);
+  });
+
   it('une séance en cours importée est ignorée si une autre est en cours sur l’appareil', () => {
     const active = startSession(10, 'ici');
     const elsewhere = startSession(20, 'ailleurs');
@@ -184,33 +201,38 @@ describe('Fichier d’exemple docs/exemples/seance-exemple-1.json', () => {
     if (parsed.kind !== 'drafts') return;
     expect(parsed.format).toBe('simple');
     expect(parsed.drafts).toHaveLength(1);
-    const draft = parsed.drafts[0]!;
-    expect(draft).toMatchObject({ sourceId: 'seance-exemple-1', date: '2026-03-09', dateConfirmed: true, name: 'Séance du 9 mars 2026' });
+    const raw = parsed.drafts[0]!;
+    expect(raw).toMatchObject({ sourceId: 'seance-exemple-1', date: '2026-03-09', dateConfirmed: true, name: 'Séance du 9 mars 2026' });
+    // « Epaules latéral raise » ne précise pas le matériel : l'aperçu demande de choisir, sans rattachement par défaut.
+    expect(draftProblems(raw, { sessions: [], exercises: LIB, profile: EMPTY_PROFILE }).filter((p) => p.level === 'error').map((p) => [p.exerciseKey, p.code])).toEqual([
+      ['e2', 'choose_exercise'],
+    ]);
+    const draft = withExampleChoices(raw);
 
     const problems = draftProblems(draft, { sessions: [], exercises: LIB, profile: EMPTY_PROFILE });
     expect(hasBlockingProblems(problems), JSON.stringify(problems)).toBe(false);
 
-    const { sessions } = finalizeDrafts(parsed.drafts, LIB, [], 1_000);
+    const { sessions } = finalizeDrafts([draft], LIB, [], 1_000);
     const session = sessions[0]!;
     expect(session).toMatchObject({ id: 'seance-exemple-1', date: '2026-03-09', origin: 'import', state: 'done', startedAt: null });
     expect(session.sourceText).toContain('Seated row horizontal');
     expect(session.performances.map((p) => [p.variantId, p.weightKg, p.plannedSets, p.targetReps, p.reps, p.feeling])).toEqual([
       ['tirage-horizontal', 48, 3, 8, [8, 8, 8], 'moyen'],
-      ['elevations-laterales', 9, 3, 8, [8, 8, 8], 'tres_bien'],
+      ['elevations-laterales-machine', 9, 3, 8, [8, 8, 8], 'tres_bien'],
       ['curl-biceps-poulie-corde', 15, 3, 8, [8, 8, 8], 'tres_bien'],
       ['curl-biceps-banc-incline--70', 10, 3, 8, [8, 8, 8], 'mal'],
       ['tirage-vertical', 36, 3, 9, [9, 9, 9], 'mal'],
       ['extension-triceps-haltere-assis', 14, 3, 8, [8, 8, 8], 'tres_bien'],
     ]);
-    const preview = previewEvaluations(parsed.drafts, LIB, []).get(draft.key)!;
+    const preview = previewEvaluations([draft], LIB, []).get(draft.key)!;
     expect(draft.exercises.map((e) => preview.get(e.key)?.status)).toEqual(['orange', 'vert', 'vert', 'orange', 'orange', 'vert']);
   });
 
   it('62. Le JSON simple et les notes du même bloc donnent la même séance', () => {
     const parsed = parseJsonImport(sampleJson, LIB, TODAY);
     if (parsed.kind !== 'drafts') throw new Error(parsed.kind);
-    const fromJson = finalizeDrafts(parsed.drafts, LIB, [], 1).sessions[0]!;
-    const fromNotes = finalizeDrafts([setDraftDate(draftFromNotes(NOTES_11_3, LIB, TODAY), '2026-10-12')], LIB, [], 1).sessions[0]!;
+    const fromJson = finalizeDrafts(parsed.drafts.map(withExampleChoices), LIB, [], 1).sessions[0]!;
+    const fromNotes = finalizeDrafts([withExampleChoices(setDraftDate(draftFromNotes(NOTES_11_3, LIB, TODAY), '2026-10-12'))], LIB, [], 1).sessions[0]!;
     expect(fromJson.performances).toEqual(fromNotes.performances);
   });
 

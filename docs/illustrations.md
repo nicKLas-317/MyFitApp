@@ -4,7 +4,7 @@ Conformément au §4.0.1, les illustrations sont embarquées dans l'application 
 
 ## Résultat
 
-17 des 20 exercices de la bibliothèque initiale ont une illustration. Toutes viennent de la même source et partagent la même licence :
+17 des 21 exercices de la bibliothèque initiale ont une illustration. Toutes viennent de la même source et partagent la même licence :
 
 - **Auteur** : Everkinetic (dessins au trait créés pour everkinetic.com par Greg Priday).
 - **Licence** : [Creative Commons Attribution – Partage dans les mêmes conditions 3.0 (CC BY-SA 3.0)](https://creativecommons.org/licenses/by-sa/3.0/deed.fr).
@@ -20,7 +20,7 @@ Conformément au §4.0.1, les illustrations sont embarquées dans l'application 
 | Pec deck | `pec-deck.webp` | [Butterfly machine 1.svg](https://commons.wikimedia.org/wiki/File:Butterfly_machine_1.svg), [Butterfly machine 2.svg](https://commons.wikimedia.org/wiki/File:Butterfly_machine_2.svg) |
 | Développé couché | `developpe-couche.webp` | [Bench press 1.svg](https://commons.wikimedia.org/wiki/File:Bench_press_1.svg), [Bench press 2.svg](https://commons.wikimedia.org/wiki/File:Bench_press_2.svg) |
 | Développé épaules machine | `developpe-epaules-machine.webp` | [Seated shoulder press machine 1.svg](https://commons.wikimedia.org/wiki/File:Seated_shoulder_press_machine_1.svg), [Seated shoulder press machine 2.svg](https://commons.wikimedia.org/wiki/File:Seated_shoulder_press_machine_2.svg) |
-| Élévations latérales | `elevations-laterales.webp` | [Lateral dumbbell raises 1.svg](https://commons.wikimedia.org/wiki/File:Lateral_dumbbell_raises_1.svg), [Lateral dumbbell raises 2.svg](https://commons.wikimedia.org/wiki/File:Lateral_dumbbell_raises_2.svg) |
+| Élévations latérales haltères | `elevations-laterales.webp` | [Lateral dumbbell raises 1.svg](https://commons.wikimedia.org/wiki/File:Lateral_dumbbell_raises_1.svg), [Lateral dumbbell raises 2.svg](https://commons.wikimedia.org/wiki/File:Lateral_dumbbell_raises_2.svg) |
 | Curl biceps poulie corde | `curl-biceps-poulie-corde.webp` | [Hammer curls with rope and cable 1.svg](https://commons.wikimedia.org/wiki/File:Hammer_curls_with_rope_and_cable_1.svg), [Hammer curls with rope and cable 2.svg](https://commons.wikimedia.org/wiki/File:Hammer_curls_with_rope_and_cable_2.svg) |
 | Curl biceps haltères | `curl-biceps-halteres.webp` | [Biceps curl with dumbbell 1.svg](https://commons.wikimedia.org/wiki/File:Biceps_curl_with_dumbbell_1.svg), [Biceps curl with dumbbell 2.svg](https://commons.wikimedia.org/wiki/File:Biceps_curl_with_dumbbell_2.svg) |
 | Curl biceps banc incliné | `curl-biceps-banc-incline.webp` | [Alternating incline curl with dumbbell 1.svg](https://commons.wikimedia.org/wiki/File:Alternating_incline_curl_with_dumbbell_1.svg), [Alternating incline curl with dumbbell 2.svg](https://commons.wikimedia.org/wiki/File:Alternating_incline_curl_with_dumbbell_2.svg) |
@@ -34,7 +34,7 @@ Conformément au §4.0.1, les illustrations sont embarquées dans l'application 
 
 Chaque fichier `.webp` a une vignette `…-vignette.webp` (même source, même licence). Tailles : 11 à 25 Ko par image, moins de 3 Ko par vignette ; un test vérifie la limite de 50 Ko (`src/library/__tests__/illustrations.test.ts`).
 
-**Sans illustration (pictogramme)** : Rowing haltère (aucun dessin d'origine vérifiable du rowing un bras), Crunch machine (seul un crunch à la poulie existe, ce serait une image trompeuse) et Dips assistés (les dessins disponibles montrent des dips au poids du corps, sans machine d'assistance). Les exercices personnalisés ont également un pictogramme ; les variantes reprennent l'illustration de leur exercice.
+**Sans illustration (pictogramme)** : Rowing haltère (aucun dessin d'origine vérifiable du rowing un bras), Crunch machine (seul un crunch à la poulie existe, ce serait une image trompeuse) Dips assistés (les dessins disponibles montrent des dips au poids du corps, sans machine d'assistance) et Élévations latérales machine (aucun dessin Everkinetic ; la seule photo trouvée sur Wikimedia Commons, « Shoulder Fly Machine.jpg », CC BY-SA 4.0, montre une machine multifonction avec des logos de marque et une personne en arrière-plan : elle serait trompeuse). Les exercices personnalisés ont également un pictogramme ; les variantes reprennent l'illustration de leur exercice.
 
 ## Vérification de la licence Everkinetic
 

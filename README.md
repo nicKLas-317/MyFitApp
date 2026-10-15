@@ -111,3 +111,4 @@ Ce dépôt est public. Il ne contient aucune séance ni pesée réelle : celles-
 
 - Illustrations des exercices : dessins d'Everkinetic, licence [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/deed.fr), via Wikimedia Commons ; source et licence de chaque image dans [docs/illustrations.md](docs/illustrations.md), attribution affichée sur la fiche de chaque exercice.
 - Pictogrammes et icônes : créés pour MyFitApp.
+- Code : aucune licence pour l'instant (tous droits réservés).

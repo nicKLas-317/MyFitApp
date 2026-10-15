@@ -144,13 +144,14 @@ Chaque exercice doit comporter, dans la mesure du possible :
 Pré-charger au minimum les exercices suivants, avec leurs synonymes et groupes musculaires :
 
 - Tirage horizontal / Seated row (dos).
-- Tirage vertical / Lat pulldown (dos).
+- Tirage vertical / Lat pulldown (dos). « Tirage nuque » n'en est pas un synonyme : c'est un mouvement différent.
 - Rowing haltère / Dumbbell row (dos).
 - Chest press / Développé assis machine (pectoraux).
 - Pec deck / Butterfly (pectoraux).
 - Développé couché / Bench press (pectoraux).
 - Développé épaules machine / Shoulder press (épaules).
-- Élévations latérales / Lateral raise (épaules).
+- Élévations latérales haltères (épaules, haltères). Synonymes : élévations latérales haltères, lateral raise haltères, dumbbell lateral raise.
+- Élévations latérales machine (épaules, machine) : exercice distinct, avec son propre historique (charges non comparables). Synonymes : élévations latérales machine, lateral raise machine, machine lateral raise.
 - Curl biceps poulie corde / Cable rope curl (biceps).
 - Curl biceps haltères (biceps).
 - Curl biceps banc incliné (biceps).
@@ -164,9 +165,9 @@ Pré-charger au minimum les exercices suivants, avec leurs synonymes et groupes 
 - Dips assistés / Assisted dips (triceps et pectoraux), réglage « assisté » activé (§7.12).
 - Écarté couché haltères / Dumbbell fly (pectoraux).
 
-Dans les notes de l'utilisateur, « leg curl » désigne toujours la version assise et « curl ischios » la version allongée. Un nom importé identique, mot pour mot, à un nom ou à un synonyme de la bibliothèque est reconnu directement (« leg curl allongé » → Curl ischios) ; en cas de doute entre les deux machines, l'aperçu d'import demande de choisir.
+Dans les notes de l'utilisateur, « leg curl » désigne toujours la version assise et « curl ischios » la version allongée. Pour les élévations latérales, le matériel est précisé dans le nom (« haltères » ou « machine ») ; s'il ne l'est pas (« latéral raise », « élévations latérales »), l'aperçu d'import demande de choisir, sans rattachement par défaut. Le choix fait dans l'aperçu est mémorisé comme synonyme pour les imports suivants. Un nom importé identique, mot pour mot, à un nom ou à un synonyme de la bibliothèque est reconnu directement (« leg curl allongé » → Curl ischios) ; en cas de doute entre les deux machines, l'aperçu d'import demande de choisir.
 
-Cette liste est un point de départ modifiable dans les réglages. Les exercices ajoutés à cette liste après une première installation sont installés une seule fois sur une base existante, sans recréer ceux que l'utilisateur a supprimés.
+Cette liste est un point de départ modifiable dans les réglages. Les exercices ajoutés à cette liste après une première installation sont installés une seule fois sur une base existante, sans recréer ceux que l'utilisateur a supprimés. Une correction de nom ou de synonymes de la bibliothèque n'est appliquée à une base existante que si l'utilisateur ne les a pas personnalisés ; identifiants, variantes, synonymes appris et historique sont toujours conservés. Une sauvegarde d'une version antérieure ne réintroduit jamais d'anciens noms ou synonymes de la bibliothèque.
 
 ### 4.0.1. Illustrations
 
@@ -806,7 +807,7 @@ Exemples de correspondances candidates :
 - `Lat pulldown vertical` → Tirage vertical.
 - `Biceps poulie corde` → Curl biceps poulie corde, distinct du curl aux haltères.
 - `Biceps curl banc incliné 70°` → Curl biceps banc incliné, en conservant la variante 70°.
-- `Epaules latéral raise` → Élévations latérales.
+- `Epaules latéral raise` → Élévations latérales haltères ou machine : matériel non précisé, l'aperçu demande de choisir (§4.0).
 - `Triceps sur banc assis 1 haltere` → Extension triceps haltère assis.
 
 Ce sont des propositions, pas des associations à imposer. Si plusieurs exercices ou variantes sont plausibles, afficher les options et demander de choisir.
@@ -1058,7 +1059,7 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 85. (§4.0) « Dips assistés » (assisté) et « Écarté couché haltères » sont dans la bibliothèque initiale, installés une seule fois sur une base existante, sans recréer un exercice supprimé.
 86. (§7.3) `+=` est stocké comme Moyen (orange) et le symbole d'origine est conservé dans l'historique.
 87. (§11.11 A, E) Le deuxième jeu d’exemple (`docs/exemples/seance-exemple-2.json` et ses notes) : `+=` reconnu comme Moyen, « 47gs » signalé comme poids à confirmer, variante « prise très large » proposée pour le tirage vertical, dips assistés reconnus comme exercice assisté, aucune donnée inventée.
-88. (§11.11 F) `docs/exemples/depart-exemple.json` s'importe dans une base vide : le triceps haltère assis propose 3×9 à 14 kg, le chest press est orange, les dips assistés sont assistés ; aucun code de l'application ne charge ce fichier.
+88. (§11.11 F) `docs/exemples/depart-exemple.json` s'importe dans une base vide : le triceps haltère assis propose 3×9 à 14 kg, le chest press est orange, les dips assistés sont assistés, les élévations latérales sont à la machine ; aucun code de l'application ne charge ce fichier.
 
 ### Récapitulatif hebdomadaire, machines d'ischios et données personnelles
 
@@ -1075,6 +1076,12 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 99. (§4.0) Une base existante reçoit « Curl ischios » une seule fois ; les synonymes du leg curl ne sont corrigés que s'ils n'ont pas été personnalisés.
 100. (§4.0.1) Chaque fiche illustrée affiche le dessin et l'attribution CC BY-SA 3.0 (auteur, licence, deux sources) ; les fiches sans illustration n'en affichent pas.
 101. (§1) Les tests s'exécutent à l'heure de Paris, quelle que soit la machine.
+
+### Élévations latérales haltères / machine et corrections de la bibliothèque
+
+102. (§4.0) Une base existante reçoit la séparation des élévations latérales (renommage en « haltères » et nouvel exercice « machine ») et le retrait de « Tirage nuque », sans perte de données : séances, variantes et synonymes appris conservés ; un exercice personnalisé par l'utilisateur garde son nom et ses synonymes.
+103. (§4.0) « élévations latérales haltères », « lateral raise haltères », « dumbbell lateral raise » → haltères ; « élévations latérales machine », « lateral raise machine », « machine lateral raise » → machine ; sans matériel précisé (« latéral raise », « Epaules latéral raise », « élévations latérales »), l'aperçu demande de choisir ; « Tirage nuque » n'est plus reconnu comme tirage vertical.
+104. (§4.0, §11.11 C) Une sauvegarde d'une version antérieure de la bibliothèque ne réintroduit ni ancien nom ni ancien synonyme ; ses synonymes appris sont repris.
 
 Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
 
@@ -1264,6 +1271,7 @@ L'application est déployée sur **GitHub Pages**, ce qui fournit le HTTPS néce
 - Ajouter un workflow GitHub Actions qui, à chaque push sur `main` : installe les dépendances, lance la compilation TypeScript et les tests unitaires, construit l'application et la publie sur GitHub Pages. Le déploiement ne se fait pas si un test échoue.
 - Lors d'une mise à jour, le service worker doit proposer de recharger la nouvelle version sans jamais effacer les données locales.
 - Documenter dans le `README` : lancement local, tests, déploiement, et procédure d'installation sur téléphone.
+- Licence du code : aucune pour l'instant (tous droits réservés), choix de l'utilisateur. Les illustrations gardent leur licence CC BY-SA 3.0 (§4.0.1).
 
 Les données restent uniquement sur l'appareil : GitHub Pages ne sert que les fichiers de l'application.
 

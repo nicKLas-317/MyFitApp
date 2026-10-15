@@ -53,6 +53,14 @@ describe('88. Données de départ docs/exemples/depart-exemple.json', () => {
     expect(profile.variants['tirage-vertical--prise-tres-large']?.palier).toEqual({ weightKg: 41, targetReps: 8 });
     expect(profile.variants['tirage-vertical']?.palier).toEqual({ weightKg: 36, targetReps: 9 });
     expect(profile.variants['ecarte-couche-halteres']?.palier).toEqual({ weightKg: 9, targetReps: 8 });
+    // Élévations latérales : l'exemple est rattaché à la machine ; la version haltères n'a pas d'historique.
+    expect(profile.variants['elevations-laterales-machine']?.palier).toEqual({ weightKg: 9, targetReps: 8 });
+    expect(profile.variants['elevations-laterales']).toBeUndefined();
+    const lateral = exercises.find((e) => e.id === 'elevations-laterales-machine')!;
+    expect(lateral.variants[0]?.synonyms).toEqual(['Epaules latéral raise']);
+    // Bibliothèque à jour : pas d'ancien nom ni de « Tirage nuque » réintroduits par l'import.
+    expect(exercises.find((e) => e.id === 'elevations-laterales')?.name).toBe('Élévations latérales haltères');
+    expect(exercises.find((e) => e.id === 'tirage-vertical')?.synonyms).toEqual(['Lat pulldown', 'Tirage poitrine']);
     expect(evaluations).toHaveLength(12);
     // Les noms de tes notes sont mémorisés pour les imports suivants.
     expect(exercises.find((e) => e.id === 'extension-triceps-haltere-assis')?.variants[0]?.synonyms).toEqual([

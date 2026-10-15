@@ -28,13 +28,14 @@ function exercise(
 
 export const SEED_EXERCISES: readonly Exercise[] = [
   exercise('tirage-horizontal', 'Tirage horizontal', ['Seated row', 'Rowing assis', 'Tirage poulie basse'], 'dos', ['biceps'], 'machine'),
-  exercise('tirage-vertical', 'Tirage vertical', ['Lat pulldown', 'Tirage poitrine', 'Tirage nuque'], 'dos', ['biceps'], 'poulie'),
+  exercise('tirage-vertical', 'Tirage vertical', ['Lat pulldown', 'Tirage poitrine'], 'dos', ['biceps'], 'poulie'),
   exercise('rowing-haltere', 'Rowing haltère', ['Dumbbell row', 'Rowing un bras'], 'dos', ['biceps'], 'haltère'),
   exercise('chest-press', 'Chest press', ['Développé assis machine', 'Développé pectoraux machine'], 'pectoraux', ['triceps', 'epaules'], 'machine'),
   exercise('pec-deck', 'Pec deck', ['Butterfly', 'Pec fly', 'Écarté machine'], 'pectoraux', ['epaules'], 'machine'),
   exercise('developpe-couche', 'Développé couché', ['Bench press', 'DC'], 'pectoraux', ['triceps', 'epaules'], 'barre'),
   exercise('developpe-epaules-machine', 'Développé épaules machine', ['Shoulder press', 'Développé militaire machine'], 'epaules', ['triceps'], 'machine'),
-  exercise('elevations-laterales', 'Élévations latérales', ['Lateral raise', 'Latéral raise'], 'epaules', [], 'haltères'),
+  // Version haltères ; la version machine est un exercice distinct (historiques séparés, charges non comparables).
+  exercise('elevations-laterales', 'Élévations latérales haltères', ['Lateral raise haltères', 'Dumbbell lateral raise'], 'epaules', [], 'haltères'),
   exercise('curl-biceps-poulie-corde', 'Curl biceps poulie corde', ['Cable rope curl', 'Biceps poulie corde'], 'biceps', [], 'poulie'),
   exercise('curl-biceps-halteres', 'Curl biceps haltères', ['Dumbbell curl', 'Curl haltères'], 'biceps', [], 'haltères'),
   exercise('curl-biceps-banc-incline', 'Curl biceps banc incliné', ['Incline dumbbell curl', 'Curl incliné'], 'biceps', [], 'haltères'),
@@ -52,24 +53,65 @@ export const SEED_EXERCISES: readonly Exercise[] = [
   exercise('ecarte-couche-halteres', 'Écarté couché haltères', ['Dumbbell fly', 'Écarté haltères', 'Écarté à plat haltères'], 'pectoraux', ['epaules'], 'haltères'),
   // Version 3.
   exercise('curl-ischios', 'Curl ischios', ['Curl ischio allongé', 'Leg curl allongé', 'Lying leg curl'], 'jambes', ['ischio-jambiers'], 'machine'),
+  // Version 4.
+  exercise('elevations-laterales-machine', 'Élévations latérales machine', ['Lateral raise machine', 'Machine lateral raise'], 'epaules', [], 'machine'),
 ];
 
 /** Version de la bibliothèque initiale ; chaque version ajoute des exercices (jamais de suppression). */
-export const SEED_VERSION = 3;
+export const SEED_VERSION = 4;
 
 /** Exercices ajoutés par chaque version, installés une seule fois sur une base existante. */
 export const SEED_ADDITIONS: Readonly<Record<number, readonly string[]>> = {
   2: ['dips-assistes', 'ecarte-couche-halteres'],
   3: ['curl-ischios'],
+  4: ['elevations-laterales-machine'],
 };
 
+/** Nom et synonymes d'un exercice de la bibliothèque initiale, à une version donnée. */
+export interface SeedNaming {
+  name: string;
+  synonyms: readonly string[];
+}
+
 /**
- * Synonymes corrigés par une version : appliqués seulement si l'exercice a encore les synonymes
- * d'origine (une personnalisation de l'utilisateur n'est jamais écrasée).
+ * Corrections de nom et de synonymes apportées par une version : appliquées à une base existante
+ * seulement si l'exercice a encore exactement le nom et les synonymes d'origine (une personnalisation
+ * de l'utilisateur n'est jamais écrasée). L'identifiant, et donc l'historique, ne change jamais.
  */
-export const SEED_SYNONYM_UPDATES: Readonly<Record<number, Readonly<Record<string, { from: readonly string[]; to: readonly string[] }>>>> = {
-  3: { 'leg-curl': { from: ['Flexion des jambes', 'Curl ischios'], to: ['Leg curl assis', 'Seated leg curl'] } },
+export const SEED_UPDATES: Readonly<Record<number, Readonly<Record<string, { from: SeedNaming; to: SeedNaming }>>>> = {
+  3: {
+    'leg-curl': {
+      from: { name: 'Leg curl', synonyms: ['Flexion des jambes', 'Curl ischios'] },
+      to: { name: 'Leg curl', synonyms: ['Leg curl assis', 'Seated leg curl'] },
+    },
+  },
+  4: {
+    'elevations-laterales': {
+      from: { name: 'Élévations latérales', synonyms: ['Lateral raise', 'Latéral raise'] },
+      to: { name: 'Élévations latérales haltères', synonyms: ['Lateral raise haltères', 'Dumbbell lateral raise'] },
+    },
+    'tirage-vertical': {
+      from: { name: 'Tirage vertical', synonyms: ['Lat pulldown', 'Tirage poitrine', 'Tirage nuque'] },
+      to: { name: 'Tirage vertical', synonyms: ['Lat pulldown', 'Tirage poitrine'] },
+    },
+  },
 };
+
+/** Noms et synonymes qu'un exercice de la bibliothèque initiale a portés, version actuelle comprise. */
+export function seedNamings(id: string): SeedNaming[] {
+  const current = SEED_EXERCISES.find((e) => e.id === id);
+  if (!current) return [];
+  const states: SeedNaming[] = [{ name: current.name, synonyms: current.synonyms }];
+  for (const changes of Object.values(SEED_UPDATES)) {
+    const change = changes[id];
+    if (change) states.push(change.from);
+  }
+  return states;
+}
+
+export function sameNaming(a: SeedNaming, b: SeedNaming): boolean {
+  return a.name === b.name && a.synonyms.length === b.synonyms.length && a.synonyms.every((s, i) => s === b.synonyms[i]);
+}
 
 export const MUSCLE_GROUP_LABELS: Record<MuscleGroup, string> = {
   dos: 'Dos',

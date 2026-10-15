@@ -6,7 +6,7 @@
  * Aucune fonction de ce module n'écrit : l'import passe par un plan appliqué en une seule transaction.
  */
 import type { Exercise, Feeling, MuscleGroup, Session, Variant } from '../domain/types';
-import { MUSCLE_GROUP_LABELS, SEED_EXERCISES } from '../library/seed';
+import { MUSCLE_GROUP_LABELS, SEED_EXERCISES, sameNaming, seedNamings } from '../library/seed';
 import { EMPTY_BODY, isValidHeight, isValidWeighIn, type BodyTracking } from '../body/model';
 
 export { EMPTY_BODY, type BodyTracking };
@@ -466,6 +466,24 @@ function isPristine(local: Exercise): boolean {
 }
 
 /**
+ * L'exercice importé n'a que des métadonnées de la bibliothèque initiale, actuelles ou d'une version
+ * antérieure (ex. « Élévations latérales » avant la séparation haltères / machine) : il n'apporte
+ * que ses variantes et ses synonymes appris, jamais d'anciens noms ou synonymes.
+ */
+function isSeedExercise(imported: Exercise): boolean {
+  const seed = SEED_EXERCISES.find((e) => e.id === imported.id);
+  if (!seed || !seedNamings(seed.id).some((n) => sameNaming(n, imported))) return false;
+  const config = (e: Exercise) => e.variants.find((v) => v.id === e.id)?.config ?? null;
+  return (
+    imported.primaryGroup === seed.primaryGroup &&
+    stable(imported.secondaryGroups) === stable(seed.secondaryGroups) &&
+    imported.equipment === seed.equipment &&
+    imported.archived === seed.archived &&
+    stable(config(imported)) === stable(config(seed))
+  );
+}
+
+/**
  * Prépare l'import d'une sauvegarde native. Par défaut, fusion : aucune donnée créée ou modifiée
  * sur l'appareil n'est supprimée ni remplacée (§11.10). Le remplacement global n'est appliqué qu'avec `mode: 'replace'`,
  * que l'interface ne propose qu'après confirmation explicite.
@@ -514,7 +532,10 @@ export function planImport(
       ...importedFirst,
       variants: importedFirst.variants.map((v) => (existing.variants.find((x) => x.id === v.id)?.favorite ? { ...v, favorite: true } : v)),
     };
-    const merged = isPristine(existing) ? takeImported : keepLocal;
+    // Exercice de la bibliothèque initiale, éventuellement d'une version antérieure : seuls ses variantes
+    // et ses synonymes appris sont repris, le nom et les synonymes de l'appareil restent.
+    const fromSeed = { ...keepLocal, synonyms: existing.synonyms };
+    const merged = isSeedExercise(imported) ? fromSeed : isPristine(existing) ? takeImported : keepLocal;
     if (merged === keepLocal && stable(keepLocal) !== stable(takeImported)) plan.exerciseConflicts.push(imported);
     if (stable(merged) !== stable(existing)) plan.exercises.push(merged);
   }

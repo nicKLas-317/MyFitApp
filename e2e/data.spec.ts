@@ -33,12 +33,18 @@ test.describe('Import et export', () => {
     );
     expect(choices).toEqual([
       ['tirage-horizontal', '48', '8-8-8', '3', '8', 'moyen', 'orange'],
-      ['elevations-laterales', '9', '8-8-8', '3', '8', 'tres_bien', 'vert'],
+      ['', '9', '8-8-8', '3', '8', 'tres_bien', undefined], // matériel non précisé : à choisir
       ['curl-biceps-poulie-corde', '15', '8-8-8', '3', '8', 'tres_bien', 'vert'],
       ['__new_variant', '10', '8-8-8', '3', '8', 'mal', 'orange'],
       ['tirage-vertical', '36', '9-9-9', '3', '9', 'mal', 'orange'],
       ['extension-triceps-haltere-assis', '14', '8-8-8', '3', '8', 'tres_bien', 'vert'],
     ]);
+
+    // Élévations latérales sans matériel précisé : aucun rattachement par défaut, choix demandé.
+    const lateral = preview(page).getByRole('article', { name: 'Epaules latéral raise' });
+    await expect(lateral.getByText('Plusieurs exercices possibles : choisissez le bon.')).toBeVisible();
+    await lateral.getByLabel('Exercice', { exact: true }).selectOption('elevations-laterales-machine');
+    await expect(lateral.locator('[data-status]')).toHaveAttribute('data-status', 'vert');
 
     // §11.11 A : l'angle crée par défaut une variante distincte.
     const incline = preview(page).getByRole('article', { name: 'Biceps curl banc incliné 70°' });
@@ -60,7 +66,7 @@ test.describe('Import et export', () => {
     expect(session!.sourceText).toBe(NOTES_11_3);
     expect(session!.performances.map((p) => [p.variantId, p.weightKg, p.plannedSets, p.targetReps, p.reps.join('-'), p.feeling])).toEqual([
       ['tirage-horizontal', 48, 3, 8, '8-8-8', 'moyen'],
-      ['elevations-laterales', 9, 3, 8, '8-8-8', 'tres_bien'],
+      ['elevations-laterales-machine', 9, 3, 8, '8-8-8', 'tres_bien'],
       ['curl-biceps-poulie-corde', 15, 3, 8, '8-8-8', 'tres_bien'],
       ['curl-biceps-banc-incline--70', 10, 3, 8, '8-8-8', 'mal'],
       ['tirage-vertical', 36, 3, 9, '9-9-9', 'mal'],
@@ -175,6 +181,7 @@ test.describe('Import et export', () => {
     await expect(preview(page).getByText('Format simple (version 1)')).toBeVisible();
     await expect(cards(page)).toHaveCount(6);
     await expect(preview(page).getByText('✓ Date confirmée')).toBeVisible();
+    await preview(page).getByRole('article', { name: 'Epaules latéral raise' }).getByLabel('Exercice', { exact: true }).selectOption('elevations-laterales-machine');
     await page.getByRole('button', { name: 'Importer la séance (6 exercices)' }).click();
     await expect(page.getByText('Séance importée : 6 exercices.')).toBeVisible();
     const [session] = await readSessions(page);

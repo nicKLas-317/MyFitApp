@@ -30,3 +30,21 @@ Lat pull tirage vertical prise très large
 3x8×41   =
 Écarté sur banc à plat avec halteres (pectoraux)
 3x8x9 =`;
+
+/**
+ * Choix faits dans l'aperçu d'import pour les noms qui n'indiquent pas le matériel
+ * (exemple : « Epaules latéral raise » rattaché à la machine).
+ */
+export const EXAMPLE_CHOICES: Readonly<Record<string, string>> = {
+  'Epaules latéral raise': 'elevations-laterales-machine',
+};
+
+/** Applique les choix d'exemple aux exercices restés sans choix dans un brouillon. */
+export function withExampleChoices<T extends { exercises: { sourceName: string; choice: unknown }[] }>(draft: T): T {
+  return {
+    ...draft,
+    exercises: draft.exercises.map((e) =>
+      e.choice === null && EXAMPLE_CHOICES[e.sourceName] ? { ...e, choice: { kind: 'variant', variantId: EXAMPLE_CHOICES[e.sourceName] } } : e,
+    ),
+  };
+}

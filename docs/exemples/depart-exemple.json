@@ -29,7 +29,7 @@
           "feelingSymbol": "="
         },
         {
-          "variantId": "elevations-laterales",
+          "variantId": "elevations-laterales-machine",
           "weightKg": 9,
           "targetReps": 8,
           "plannedSets": 3,
@@ -219,8 +219,7 @@
       "name": "Tirage vertical",
       "synonyms": [
         "Lat pulldown",
-        "Tirage poitrine",
-        "Tirage nuque"
+        "Tirage poitrine"
       ],
       "primaryGroup": "dos",
       "secondaryGroups": [
@@ -364,10 +363,10 @@
     },
     {
       "id": "elevations-laterales",
-      "name": "Élévations latérales",
+      "name": "Élévations latérales haltères",
       "synonyms": [
-        "Lateral raise",
-        "Latéral raise"
+        "Lateral raise haltères",
+        "Dumbbell lateral raise"
       ],
       "primaryGroup": "epaules",
       "secondaryGroups": [],
@@ -377,9 +376,7 @@
         {
           "id": "elevations-laterales",
           "name": "Standard",
-          "synonyms": [
-            "Epaules latéral raise"
-          ],
+          "synonyms": [],
           "archived": false
         }
       ]
@@ -545,8 +542,8 @@
       "id": "leg-curl",
       "name": "Leg curl",
       "synonyms": [
-        "Flexion des jambes",
-        "Curl ischios"
+        "Leg curl assis",
+        "Seated leg curl"
       ],
       "primaryGroup": "jambes",
       "secondaryGroups": [
@@ -629,6 +626,51 @@
           "name": "Standard",
           "synonyms": [
             "Écarté sur banc à plat avec halteres (pectoraux)"
+          ],
+          "archived": false
+        }
+      ]
+    },
+    {
+      "id": "curl-ischios",
+      "name": "Curl ischios",
+      "synonyms": [
+        "Curl ischio allongé",
+        "Leg curl allongé",
+        "Lying leg curl"
+      ],
+      "primaryGroup": "jambes",
+      "secondaryGroups": [
+        "ischio-jambiers"
+      ],
+      "equipment": "machine",
+      "archived": false,
+      "variants": [
+        {
+          "id": "curl-ischios",
+          "name": "Standard",
+          "synonyms": [],
+          "archived": false
+        }
+      ]
+    },
+    {
+      "id": "elevations-laterales-machine",
+      "name": "Élévations latérales machine",
+      "synonyms": [
+        "Lateral raise machine",
+        "Machine lateral raise"
+      ],
+      "primaryGroup": "epaules",
+      "secondaryGroups": [],
+      "equipment": "machine",
+      "archived": false,
+      "variants": [
+        {
+          "id": "elevations-laterales-machine",
+          "name": "Standard",
+          "synonyms": [
+            "Epaules latéral raise"
           ],
           "archived": false
         }

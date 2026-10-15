@@ -64,7 +64,8 @@ test.describe('Bibliothèque et recherche', () => {
       ['butterfly', 'Pec deck'],
       ['developpe assis machine', 'Chest press'],
       ['dumbbell row', 'Rowing haltère'],
-      ['ELEVATIONS LATERALES', 'Élévations latérales'],
+      ['ELEVATIONS LATERALES HALTERES', 'Élévations latérales haltères'],
+      ['lateral raise machine', 'Élévations latérales machine'],
       ['abdos', 'Crunch machine'],
     ];
     for (const [query, expected] of cases) {
@@ -129,7 +130,7 @@ test.describe('Bibliothèque et recherche', () => {
       await expect(attribution.getByRole('link', { name: 'CC BY-SA 3.0' }), id).toHaveAttribute('href', /creativecommons\.org\/licenses\/by-sa\/3\.0/);
       await expect(attribution.getByRole('link', { name: /^[12]$/ }), id).toHaveCount(2);
     }
-    for (const id of ['rowing-haltere', 'crunch-machine', 'dips-assistes']) {
+    for (const id of ['rowing-haltere', 'crunch-machine', 'dips-assistes', 'elevations-laterales-machine']) {
       await page.goto(`./#/exercice/${id}`);
       await expect(page.locator('.sheet-head'), id).toBeVisible();
       await expect(page.getByTestId('attribution'), id).toHaveCount(0);
