@@ -293,6 +293,9 @@ function readExercise(raw: unknown): DraftExerciseInput {
     issues,
     hint: isStr(hintValue) ? hintValue.replace(/\s*\/\s*/g, ' ') : null,
     primaryGroup: readGroup(pick(o, ['muscleGroup', 'groupe', 'primaryGroup'])),
+    // Remarque laissée dans le fichier : soumise à confirmation, jamais ignorée.
+    notes: [pick(o, ['toConfirm', 'aConfirmer', 'note', 'remarque'])].filter((n): n is string => isStr(n) && n.trim() !== '').map((n) => n.trim()),
+    assistedHint: pick(o, ['weightIsAssistance', 'assisted', 'assiste']) === true,
   };
 }
 
@@ -307,8 +310,11 @@ function validateVariant(v: unknown, path: string, errors: string[]): void {
   if (v.favorite !== undefined && typeof v.favorite !== 'boolean') errors.push(`${path}.favorite invalide.`);
   if (v.config !== undefined) {
     if (!isObj(v.config)) errors.push(`${path}.config invalide.`);
-    else for (const k of ['sets', 'minReps', 'maxReps']) {
-      if (v.config[k] !== undefined && !(isInt(v.config[k]) && (v.config[k] as number) > 0)) errors.push(`${path}.config.${k} invalide.`);
+    else {
+      for (const k of ['sets', 'minReps', 'maxReps']) {
+        if (v.config[k] !== undefined && !(isInt(v.config[k]) && (v.config[k] as number) > 0)) errors.push(`${path}.config.${k} invalide.`);
+      }
+      if (v.config.assisted !== undefined && typeof v.config.assisted !== 'boolean') errors.push(`${path}.config.assisted invalide.`);
     }
   }
 }
@@ -336,6 +342,7 @@ function validatePerformanceShape(p: unknown, path: string, errors: string[]): v
   if (p.partial !== undefined && typeof p.partial !== 'boolean') errors.push(`${path}.partial invalide.`);
   if (!Array.isArray(p.reps) || !p.reps.every((r) => isInt(r) && r >= 0)) errors.push(`${path}.reps invalide.`);
   if (!isFeeling(p.feeling)) errors.push(`${path}.feeling inconnu.`);
+  if (p.feelingSymbol !== undefined && !isStr(p.feelingSymbol)) errors.push(`${path}.feelingSymbol invalide.`);
   if (partial) return;
   if (!isInt(p.targetReps) || p.targetReps < 1) errors.push(`${path}.targetReps invalide.`);
   if (!isInt(p.plannedSets) || p.plannedSets < 1) errors.push(`${path}.plannedSets invalide.`);

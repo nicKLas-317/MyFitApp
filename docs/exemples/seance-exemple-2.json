@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "app": "MyFitApp",
+  "exportedAt": "2026-03-12",
+  "sessions": [
+    {
+      "id": "seance-exemple-2",
+      "name": "Séance du 12 mars 2026",
+      "date": "2026-03-12",
+      "startTime": null,
+      "endTime": null,
+      "durationMinutes": null,
+      "origin": "import",
+      "exercises": [
+        {
+          "sourceName": "Développé épaules",
+          "suggestedExercise": "Développé épaules machine / Shoulder press",
+          "variant": null,
+          "muscleGroup": "épaules",
+          "weightKg": 38,
+          "targetReps": 8,
+          "sets": [8, 8, 8],
+          "feelingSymbol": "=",
+          "feeling": "moyen"
+        },
+        {
+          "sourceName": "Dips assistés",
+          "suggestedExercise": "Dips assistés (machine)",
+          "variant": "assistés",
+          "muscleGroup": "triceps",
+          "weightKg": 27,
+          "weightIsAssistance": true,
+          "targetReps": 8,
+          "sets": [8, 8, 8],
+          "feelingSymbol": "=",
+          "feeling": "moyen"
+        },
+        {
+          "sourceName": "Triceps sur banc 1 haltere",
+          "suggestedExercise": "Extension triceps haltère assis / Overhead dumbbell extension",
+          "variant": "assis sur banc, 1 haltère",
+          "muscleGroup": "triceps",
+          "weightKg": 14,
+          "targetReps": 8,
+          "sets": [8, 8, 8],
+          "feelingSymbol": "++",
+          "feeling": "tres_bien"
+        },
+        {
+          "sourceName": "Chest press",
+          "suggestedExercise": "Chest press / Développé assis machine",
+          "variant": null,
+          "muscleGroup": "pectoraux",
+          "weightKg": 47,
+          "targetReps": 8,
+          "sets": [8, 8, 8],
+          "feelingSymbol": "+=",
+          "feeling": null,
+          "toConfirm": "symbole « += » inconnu ; poids noté « 47gs », interprété comme 47 kg"
+        },
+        {
+          "sourceName": "Lat pull tirage vertical prise très large",
+          "suggestedExercise": "Tirage vertical / Lat pulldown",
+          "variant": "prise très large",
+          "muscleGroup": "dos",
+          "weightKg": 41,
+          "targetReps": 8,
+          "sets": [8, 8, 8],
+          "feelingSymbol": "=",
+          "feeling": "moyen"
+        },
+        {
+          "sourceName": "Écarté sur banc à plat avec halteres (pectoraux)",
+          "suggestedExercise": "Écarté couché haltères / Dumbbell fly",
+          "variant": "banc plat",
+          "muscleGroup": "pectoraux",
+          "weightKg": 9,
+          "targetReps": 8,
+          "sets": [8, 8, 8],
+          "feelingSymbol": "=",
+          "feeling": "moyen"
+        }
+      ],
+      "sourceText": "Développé épaules\n3x8x38    =\nDips assistés\n3×8×27 =\nTriceps sur banc 1 haltere\n3x8x14 kgs ++\nChest press\n3x8x47gs +=\nLat pull tirage vertical prise très large\n3x8×41   =\nÉcarté sur banc à plat avec halteres (pectoraux)\n3x8x9 ="
+    }
+  ],
+  "settings": {},
+  "bodyTracking": {
+    "heightCm": null,
+    "weighIns": []
+  }
+}

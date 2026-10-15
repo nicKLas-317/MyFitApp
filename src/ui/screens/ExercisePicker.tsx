@@ -73,7 +73,7 @@ export function ExercisePicker({ variantId }: { variantId?: string }) {
           submitStart(ref);
         }}
       >
-        <label htmlFor={`start-${ref.variant.id}`}>Poids de départ (kg)</label>
+        <label htmlFor={`start-${ref.variant.id}`}>{ctxFor(ref.variant.id).cfg.assisted ? 'Aide de départ (kg)' : 'Poids de départ (kg)'}</label>
         <div className="row">
           <input
             id={`start-${ref.variant.id}`}

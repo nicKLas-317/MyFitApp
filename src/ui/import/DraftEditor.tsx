@@ -301,6 +301,14 @@ function DraftExerciseEditor({ entry, problems, evaluation, exercises, onChange 
       )}
 
       <ProblemList problems={entry.include ? problems : []} />
+      {entry.include && entry.toConfirm.length > 0 &&
+        (entry.checksConfirmed ? (
+          <p className="ok-text small">✓ Points vérifiés : {entry.toConfirm.join(' ')}</p>
+        ) : (
+          <button type="button" className="btn" onClick={() => onChange({ checksConfirmed: true })}>
+            J’ai vérifié
+          </button>
+        ))}
     </article>
   );
 }

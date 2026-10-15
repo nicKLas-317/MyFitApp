@@ -16,3 +16,17 @@ Lat pulldown vertical
 
 Triceps sur banc assis 1 haltere
 3x8x14 kgs ++`;
+
+/** Deuxième jeu d'exemple (anonymisé), avec les mêmes cas que des notes réelles. */
+export const NOTES_EXEMPLE_2 = `Développé épaules
+3x8x38    =
+Dips assistés
+3×8×27 =
+Triceps sur banc 1 haltere
+3x8x14 kgs ++
+Chest press
+3x8x47gs +=
+Lat pull tirage vertical prise très large
+3x8×41   =
+Écarté sur banc à plat avec halteres (pectoraux)
+3x8x9 =`;

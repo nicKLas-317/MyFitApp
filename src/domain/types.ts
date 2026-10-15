@@ -20,6 +20,11 @@ export interface VariantConfig {
   sets: number;
   minReps: number;
   maxReps: number;
+  /**
+   * Exercice assisté (§7.12) : la charge saisie est une aide, plus elle est basse plus l'exercice est dur.
+   * Le sens de la charge est inversé pour le moteur.
+   */
+  assisted: boolean;
 }
 
 /** Exercice-variante : unité d'historique et de progression (§4.3, §7.1). */
@@ -57,6 +62,8 @@ export interface Performance {
   /** Répétitions réellement effectuées, une entrée par série enregistrée. */
   reps: number[];
   feeling: Feeling;
+  /** Symbole de ressenti d'origine d'une performance importée (« += », « ++ »…), conservé tel quel. */
+  feelingSymbol?: string;
   /** Historique partiel (§11.8, §7.11 H) : ignoré par le moteur. */
   partial?: boolean;
 }

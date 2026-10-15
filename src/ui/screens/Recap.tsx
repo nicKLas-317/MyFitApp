@@ -9,7 +9,7 @@ import { StatusBadge } from '../StatusBadge';
 
 /** Récapitulatif de fin de séance (§5.6) : la séance est déjà enregistrée, le nom est facultatif. */
 export function Recap({ sessionId }: { sessionId: string }) {
-  const { sessions, variants, replay, commit, lastFinish, setLastFinish } = useApp();
+  const { sessions, variants, replay, commit, lastFinish, setLastFinish, ctxFor } = useApp();
   const session = sessions.find((s) => s.id === sessionId);
   const [name, setName] = useState(session?.name ?? '');
 
@@ -98,7 +98,7 @@ export function Recap({ sessionId }: { sessionId: string }) {
               <div className="muted small">{FEELING_LABELS[p.feeling]}</div>
               {next && (
                 <div className="small">
-                  Prochaine cible : <strong data-testid="next-target">{formatRecommendation(next)}</strong>
+                  Prochaine cible : <strong data-testid="next-target">{formatRecommendation(next, ctxFor(p.variantId).cfg.assisted)}</strong>
                 </div>
               )}
             </li>

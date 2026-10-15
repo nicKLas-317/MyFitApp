@@ -1218,3 +1218,8 @@ fieldset {
 .attribution a {
   color: var(--muted);
 }
+
+.assisted-note {
+  color: var(--accent);
+  margin: 4px 0 0;
+}

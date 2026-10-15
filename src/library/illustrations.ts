@@ -33,6 +33,8 @@ import legExtension from './illustrations/leg-extension.webp';
 import legExtensionThumb from './illustrations/leg-extension-vignette.webp';
 import legCurl from './illustrations/leg-curl.webp';
 import legCurlThumb from './illustrations/leg-curl-vignette.webp';
+import ecarteCoucheHalteres from './illustrations/ecarte-couche-halteres.webp';
+import ecarteCoucheHalteresThumb from './illustrations/ecarte-couche-halteres-vignette.webp';
 
 export interface Illustration {
   src: string;
@@ -65,6 +67,7 @@ export const ILLUSTRATIONS: Readonly<Record<string, Illustration>> = {
   'presse-a-cuisses': { src: presseACuisses, thumb: presseACuissesThumb, title: 'Leg-press', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Leg-press-1-1024x670.png', 'https://commons.wikimedia.org/wiki/File:Leg-press-2-1024x670.png'] },
   'leg-extension': { src: legExtension, thumb: legExtensionThumb, title: 'Leg extensions', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Leg_extensions_1.svg', 'https://commons.wikimedia.org/wiki/File:Leg_extensions_2.svg'] },
   'leg-curl': { src: legCurl, thumb: legCurlThumb, title: 'Seated leg curl', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Seated_leg_curl_1.svg', 'https://commons.wikimedia.org/wiki/File:Seated_leg_curl_2.svg'] },
+  'ecarte-couche-halteres': { src: ecarteCoucheHalteres, thumb: ecarteCoucheHalteresThumb, title: 'Dumbbell flys', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Dumbbell_flys_1.svg', 'https://commons.wikimedia.org/wiki/File:Dumbbell_flys_2.svg'] },
 };
 
 export function illustrationFor(exerciseId: string): Illustration | undefined {

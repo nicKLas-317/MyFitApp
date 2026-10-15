@@ -40,6 +40,8 @@ describe('Illustrations embarquées (§4.0.1)', () => {
   it('les exercices sans illustration vérifiable gardent leur pictogramme', () => {
     expect(ILLUSTRATIONS['rowing-haltere']).toBeUndefined();
     expect(ILLUSTRATIONS['crunch-machine']).toBeUndefined();
-    expect(Object.keys(ILLUSTRATIONS)).toHaveLength(15);
+    // Dips assistés : les dessins disponibles montrent des dips au poids du corps, sans machine d'assistance.
+    expect(ILLUSTRATIONS['dips-assistes']).toBeUndefined();
+    expect(Object.keys(ILLUSTRATIONS)).toHaveLength(16);
   });
 });

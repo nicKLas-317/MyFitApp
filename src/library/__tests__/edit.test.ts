@@ -77,8 +77,8 @@ describe('Gestion des exercices et variantes (§4.3)', () => {
   });
 
   it('réglages spécifiques : validés, seules les différences sont conservées, et le moteur les applique', () => {
-    expect(validateConfig({ sets: 4, minReps: 6, maxReps: 10 })).toEqual([]);
-    expect(validateConfig({ sets: 0, minReps: 10, maxReps: 6 })).toEqual(['sets', 'range']);
+    expect(validateConfig({ sets: 4, minReps: 6, maxReps: 10, assisted: false })).toEqual([]);
+    expect(validateConfig({ sets: 0, minReps: 10, maxReps: 6, assisted: false })).toEqual(['sets', 'range']);
     const ex = setVariantConfig(byId('leg-curl'), 'leg-curl', { ...DEFAULT_VARIANT_CONFIG, maxReps: 15 });
     expect(ex.variants[0]!.config).toEqual({ maxReps: 15 });
     expect(setVariantConfig(ex, 'leg-curl', DEFAULT_VARIANT_CONFIG).variants[0]).not.toHaveProperty('config');

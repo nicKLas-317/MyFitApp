@@ -27,6 +27,7 @@ interface VariantForm {
   sets: string;
   minReps: string;
   maxReps: string;
+  assisted: boolean;
   archived: boolean;
   removed: boolean;
 }
@@ -61,6 +62,7 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false 
         sets: String(cfg.sets),
         minReps: String(cfg.minReps),
         maxReps: String(cfg.maxReps),
+        assisted: cfg.assisted,
         archived: v.archived,
         removed: false,
       };
@@ -109,7 +111,7 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false 
         const err = validateVariantName(next, form.name, form.id);
         if (err) list.push(`${label} : ${err === 'name_missing' ? 'nom manquant' : 'nom déjà utilisé'}.`);
       }
-      const cfg = { sets: Number(form.sets), minReps: Number(form.minReps), maxReps: Number(form.maxReps) };
+      const cfg = { sets: Number(form.sets), minReps: Number(form.minReps), maxReps: Number(form.maxReps), assisted: form.assisted };
       const cfgErrors = validateConfig(cfg);
       if (cfgErrors.includes('sets')) list.push(`${label} : nombre de séries entre 1 et 10.`);
       if (cfgErrors.includes('range')) list.push(`${label} : plage de répétitions invalide (minimum ≤ maximum).`);
@@ -237,6 +239,10 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false 
                     <NumberField label="Rép. min" value={v.minReps} onChange={(t) => patchVariant(v.id, { minReps: t })} />
                     <NumberField label="Rép. max" value={v.maxReps} onChange={(t) => patchVariant(v.id, { maxReps: t })} />
                   </div>
+                  <label className="check-line">
+                    <input type="checkbox" checked={v.assisted} onChange={(e) => patchVariant(v.id, { assisted: e.target.checked })} />
+                    <span>Exercice assisté : la charge est une aide (moins d’aide = plus dur)</span>
+                  </label>
                   {!standard && (
                     <div className="row">
                       <label className="check-line">

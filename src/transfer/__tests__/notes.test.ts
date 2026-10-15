@@ -64,6 +64,12 @@ describe('Lecture des notes en texte brut (§11.3, §11.4)', () => {
     expect(absent.issues).toEqual([]);
   });
 
+  it('86. « += » est stocké comme Moyen, le symbole d’origine est conservé', () => {
+    const entry = parseNotes('Chest press\n3x8x52kg +=', TODAY).entries[0]!;
+    expect(entry).toMatchObject({ feeling: 'moyen', feelingSymbol: '+=', issues: [] });
+    expect(readFeelingSymbol('+ =')).toEqual({ kind: 'known', symbol: '+=', feeling: 'moyen' });
+  });
+
   it('40. Les informations manquantes ne sont pas inventées', () => {
     const parsed = parseNotes('Presse\n120kg\n\nLeg extension\n3x10\n\nCrunch\nfait 3 séries mais je sais plus\n\nPec deck', TODAY);
     const [presse, legExt, crunch, pec] = parsed.entries;

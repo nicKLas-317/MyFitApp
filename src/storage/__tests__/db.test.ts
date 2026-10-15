@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
-import { SEED_EXERCISES } from '../../library/seed';
+import { SEED_EXERCISES, SEED_VERSION } from '../../library/seed';
 import { addExercise, recordSet, setFeeling, startSession } from '../../session/ops';
 import { DEFAULT_VARIANT_CONFIG } from '../../engine';
 import { openAppDb, Repository } from '../db';
@@ -49,6 +49,27 @@ describe('Persistance IndexedDB (§12)', () => {
     const again = await repo.loadExercises();
     expect(again).toHaveLength(SEED_EXERCISES.length);
     expect(again.find((e) => e.id === renamed.id)?.name).toBe('Mon tirage');
+    repo.close();
+  });
+
+  it('85. Une base existante reçoit une seule fois les exercices ajoutés à la bibliothèque, sans recréer les supprimés', async () => {
+    const repo = new Repository(await openAppDb(freshName()));
+    // Base installée avec la version 1 : 17 exercices, puis « Crunch machine » supprimé par l'utilisateur.
+    const v1 = SEED_EXERCISES.filter((e) => !['dips-assistes', 'ecarte-couche-halteres', 'crunch-machine'].includes(e.id));
+    await repo.putExercises(v1);
+    await repo.setMeta('seeded', true);
+    await repo.ensureSeed();
+    const ids = (await repo.loadExercises()).map((e) => e.id);
+    expect(ids).toContain('dips-assistes');
+    expect(ids).toContain('ecarte-couche-halteres');
+    expect(ids).not.toContain('crunch-machine');
+    expect(await repo.getMeta('seedVersion')).toBe(SEED_VERSION);
+    // Exercice ajouté puis supprimé : pas réinstallé au lancement suivant.
+    await repo.deleteExercise('ecarte-couche-halteres');
+    await repo.ensureSeed();
+    expect((await repo.loadExercises()).map((e) => e.id)).not.toContain('ecarte-couche-halteres');
+    const dips = (await repo.loadExercises()).find((e) => e.id === 'dips-assistes');
+    expect(dips).toMatchObject({ primaryGroup: 'triceps', secondaryGroups: ['pectoraux'], variants: [{ config: { assisted: true } }] });
     repo.close();
   });
 

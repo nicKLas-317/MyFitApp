@@ -1,7 +1,7 @@
 import type { Status, VariantConfig } from '../domain/types';
 import { GREEN_STREAK_TO_PROGRESS, RED_STREAK_TO_DECREASE } from './config';
 import { computeStatus, isComplete, type EvaluablePerformance } from './status';
-import { compareWeight } from './weight';
+import { compareDifficulty } from './weight';
 
 /** Palier : couple (poids, cible de répétitions) d'un exercice-variante (§7.1). */
 export interface Palier {
@@ -13,7 +13,8 @@ export interface Palier {
  * - `start` : exercice jamais réalisé, saisir le poids de départ (§5.3).
  * - `keep` : conserver le palier.
  * - `reps_up` : même poids, cible + 1 (§7.5).
- * - `weight_up` / `weight_down` : poids supérieur / inférieur, sans valeur (§7.6, §7.8).
+ * - `weight_up` / `weight_down` : charge plus difficile / plus facile, sans valeur (§7.6, §7.8) :
+ *   « poids supérieur » / « poids inférieur », ou pour un exercice assisté « moins d'aide » / « plus d'aide » (§7.12).
  *   `targetReps` est alors la cible à appliquer avec la nouvelle charge.
  */
 export type RecommendationKind = 'start' | 'keep' | 'reps_up' | 'weight_up' | 'weight_down';
@@ -93,7 +94,8 @@ export function expectedTarget(
   cfg: VariantConfig,
 ): number {
   if (!state) return cfg.minReps;
-  const cmp = compareWeight(weightKg, state.palier.weightKg);
+  // Charge plus difficile (plus lourde, ou moins d'aide pour un exercice assisté) : borne basse.
+  const cmp = compareDifficulty(weightKg, state.palier.weightKg, cfg.assisted);
   if (cmp > 0) return cfg.minReps;
   if (cmp < 0) return state.palier.targetReps;
   const rec = recommend(state, cfg);
@@ -133,7 +135,8 @@ export function applyPerformance(
     redStreak = isRed ? 1 : 0;
   } else {
     const rec = recommend(prev, cfg);
-    const weightCmp = compareWeight(perf.weightKg, prev.palier.weightKg);
+    // Sens de difficulté de la nouvelle charge : inversé pour un exercice assisté (§7.12).
+    const weightCmp = compareDifficulty(perf.weightKg, prev.palier.weightKg, cfg.assisted);
 
     if (weightCmp !== 0) {
       // Nouveau poids : nouveau palier, compteurs repartant de 0 (§7.5, §7.8).

@@ -133,6 +133,7 @@ export function validateConfig(cfg: VariantConfig): ConfigError[] {
 export function compactConfig(cfg: VariantConfig): Partial<VariantConfig> | undefined {
   const out: Partial<VariantConfig> = {};
   for (const k of ['sets', 'minReps', 'maxReps'] as const) if (cfg[k] !== DEFAULT_VARIANT_CONFIG[k]) out[k] = cfg[k];
+  if (cfg.assisted) out.assisted = true;
   return Object.keys(out).length > 0 ? out : undefined;
 }
 

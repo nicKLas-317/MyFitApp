@@ -160,8 +160,10 @@ Pré-charger au minimum les exercices suivants, avec leurs synonymes et groupes 
 - Leg extension (jambes, quadriceps).
 - Leg curl (jambes, ischio-jambiers).
 - Crunch machine / Abdominaux (abdominaux).
+- Dips assistés / Assisted dips (triceps et pectoraux), réglage « assisté » activé (§7.12).
+- Écarté couché haltères / Dumbbell fly (pectoraux).
 
-Cette liste est un point de départ modifiable dans les réglages.
+Cette liste est un point de départ modifiable dans les réglages. Les exercices ajoutés à cette liste après une première installation sont installés une seule fois sur une base existante, sans recréer ceux que l'utilisateur a supprimés.
 
 ### 4.0.1. Illustrations
 
@@ -436,12 +438,15 @@ Le ressenti est stocké sur l'échelle à cinq niveaux. Les symboles des notes i
 |---|---|
 | `++` | Très bien passé |
 | `+` | Bien passé |
+| `+=` | Moyen (entre « bien passé » et « moyen ») |
 | `=` | Moyen |
 | `-=` | Mal passé |
 | `--` | Très mal passé |
 | absent | Inconnu |
 
 Tout autre symbole est signalé à l'import et soumis à confirmation, jamais deviné.
+
+Le symbole d'origine d'une performance importée (par exemple `+=`) est conservé avec elle et affiché dans l'historique.
 
 ### 7.4. Calcul du statut (vert / orange / rouge)
 
@@ -597,6 +602,20 @@ Une séance est **standard** si et seulement si elle est complète, faite avec l
 **I. Cible hors plage.** Le moteur ne propose jamais de cible au-delà de la borne haute. À partir de la borne haute (y compris une cible manuelle supérieure), deux validations conduisent à « poids supérieur ». Sous la borne basse, la progression +1 s'applique normalement.
 
 **J. Égalité de poids.** Deux poids sont égaux s'ils sont identiques une fois arrondis à 0,01 kg (52,5 = 52.50).
+
+### 7.12. Exercices assistés (précision validée)
+
+Certains exercices sont assistés (dips assistés, tractions assistées) : la charge saisie est une **aide**, et plus elle est basse, plus l'exercice est dur. Chaque exercice-variante possède un réglage « assisté » (désactivé par défaut).
+
+Pour une variante assistée, le sens de la charge est inversé dans toutes les règles du §7 :
+
+- « Poids supérieur » devient **« Moins d'aide »** : la charge à saisir est plus basse.
+- « Poids inférieur » devient **« Plus d'aide »** : la charge à saisir est plus haute.
+- Règle de cible du §7.7 et du §7.11 A : moins d'aide (charge plus basse) → retour à la borne basse (3×8) ; plus d'aide (charge plus haute) → cible conservée.
+- Changement de charge non recommandé (§7.11 B) : apprécié dans ce même sens (moins d'aide sans recommandation « moins d'aide », ou plus d'aide sans recommandation « plus d'aide »).
+- La protection contre les fautes de frappe (écart de plus de 50 %, §5.3) s'applique normalement.
+
+L'interface parle d'« aide » pour ces variantes (champ « Aide (kg) », fiche marquée « exercice assisté »). À l'import, une charge signalée comme aide dans la source est rapprochée du réglage de l'exercice ; une incohérence est signalée.
 
 ## 8. Affichage du statut : trois couleurs uniquement
 
@@ -842,13 +861,17 @@ L'import ne doit jamais supprimer ou remplacer silencieusement les données exis
 
 Ces règles précisent les §11.1 à §11.10. Elles ont été validées et s'appliquent telles quelles.
 
-**A. Angle précisé dans le nom.** Un angle chiffré dans un nom importé (« Biceps curl banc incliné 70° », « 45 degrés ») désigne par défaut une variante distincte de l'exercice reconnu : la variante de cet angle si elle existe déjà, sinon une nouvelle variante nommée d'après l'angle (« 70° »), avec son propre historique. L'aperçu le signale et permet de rattacher la séance à une autre variante, notamment la variante standard. Sans angle, une hésitation entre les variantes d'un même exercice propose la variante standard, à vérifier. Les termes non chiffrés (« horizontal », « plat ») ne créent pas de variante automatiquement.
+**A. Angle ou prise précisés dans le nom.** Un angle chiffré (« Biceps curl banc incliné 70° », « 45 degrés ») ou une prise (« prise très large », « prise serrée », « prise neutre », « wide grip »…) dans un nom importé désigne par défaut une variante distincte de l'exercice reconnu : la variante correspondante si elle existe déjà, sinon une nouvelle variante nommée d'après cette précision (« 70° », « prise très large »), avec son propre historique. L'aperçu le signale et permet de rattacher la séance à une autre variante, notamment la variante standard. Sans précision, une hésitation entre les variantes d'un même exercice propose la variante standard, à vérifier. Les autres termes (« horizontal », « plat ») ne créent pas de variante automatiquement.
 
 **B. Répétitions détaillées.** Pour une notation série par série (`8-8-7 x 52kg`), la cible retenue est la meilleure série (ici 8), signalée dans l'aperçu pour vérification.
 
 **C. Exercice présent des deux côtés lors d'un import JSON.** Un exercice resté identique à la bibliothèque initiale sur l'appareil prend la version importée (nom, réglages, métadonnées). Un exercice modifié sur l'appareil conserve sa version locale ; l'écart est signalé dans l'aperçu. Dans les deux cas, synonymes et variantes s'additionnent.
 
 **D. Date d'un bloc de notes.** Modifier la date dans l'aperçu vaut confirmation explicite ; sinon, le bouton « Confirmer la date » est requis.
+
+**E. Points à confirmer.** Une unité de poids non reconnue (« 47gs », « 47 lbs ») n'est ni convertie ni ignorée : le nombre est lu (47 kg) et signalé comme poids à confirmer ; l'import reste bloqué jusqu'à confirmation ou correction. Une remarque laissée dans un fichier JSON (champ `toConfirm`) est affichée et soumise à la même confirmation.
+
+**F. Données de départ.** `docs/exemples/depart-exemple.json` contient deux séances d’exemple anonymisées au format de sauvegarde (schemaVersion 2), avec les exercices et variantes rattachés à la bibliothèque. Il n'est jamais chargé automatiquement par l'application : l'utilisateur l'importe lui-même (Importer / exporter) après l'installation.
 
 ## 12. Persistance et protection des données
 
@@ -1022,6 +1045,17 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 78. (B) Des répétitions détaillées donnent une cible égale à la meilleure série, signalée dans l'aperçu.
 79. (C) À l'import, un exercice jamais modifié localement prend la version importée ; un exercice modifié localement est conservé et l'écart signalé ; synonymes et variantes s'additionnent.
 80. (D) Modifier la date d'un bloc de notes la confirme ; sans modification, l'import exige la confirmation explicite.
+
+### Exercices assistés, bibliothèque et deuxième jeu d'import
+
+81. (§7.12) Pour une variante assistée, deux validations à 3×12 recommandent « Moins d'aide » ; une charge plus basse suivie revient à 3×8 et valide normalement.
+82. (§7.12) Une charge plus haute (plus d'aide) alors que « moins d'aide » est recommandé est un changement non recommandé : non standard, compteur à 0.
+83. (§7.12) Quatre rouges recommandent « Plus d'aide » ; une charge plus haute conserve la cible ; une charge plus basse non recommandée ne valide pas.
+84. (§7.12) La protection contre les fautes de frappe s'applique normalement aux variantes assistées ; une variante non assistée garde le sens habituel.
+85. (§4.0) « Dips assistés » (assisté) et « Écarté couché haltères » sont dans la bibliothèque initiale, installés une seule fois sur une base existante, sans recréer un exercice supprimé.
+86. (§7.3) `+=` est stocké comme Moyen (orange) et le symbole d'origine est conservé dans l'historique.
+87. (§11.11 A, E) Le deuxième jeu d’exemple (`docs/exemples/seance-exemple-2.json` et ses notes) : `+=` reconnu comme Moyen, « 47gs » signalé comme poids à confirmer, variante « prise très large » proposée pour le tirage vertical, dips assistés reconnus comme exercice assisté, aucune donnée inventée.
+88. (§11.11 F) `docs/exemples/depart-exemple.json` s'importe dans une base vide : le triceps haltère assis propose 3×9 à 14 kg, le chest press est orange, les dips assistés sont assistés ; aucun code de l'application ne charge ce fichier.
 
 Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
 

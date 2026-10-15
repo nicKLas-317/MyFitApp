@@ -17,7 +17,7 @@ import {
 } from '../session/ops';
 import { FeelingPicker } from './FeelingPicker';
 import { ExercisePicto } from './Pictogram';
-import { formatRecommendation } from './labels';
+import { formatRecommendation, loadChangeLabel } from './labels';
 import { StatusBadge } from './StatusBadge';
 import { WeightField } from './WeightField';
 
@@ -81,11 +81,12 @@ export function ExerciseCard({ session, performance: p, open, onToggle }: Props)
 
           {weightChange && (
             <p className={`reco reco-${weightChange}`} role="status">
-              {weightChange === 'weight_up' ? 'Poids supérieur' : 'Poids inférieur'}
+              {loadChangeLabel(weightChange, ctx.cfg.assisted)}
             </p>
           )}
 
           <WeightField
+            label={ctx.cfg.assisted ? 'Aide (kg)' : 'Poids (kg)'}
             value={p.weightKg}
             previous={state?.palier.weightKg ?? p.weightKg}
             highlight={weightChange !== null}
@@ -97,7 +98,7 @@ export function ExerciseCard({ session, performance: p, open, onToggle }: Props)
               Cible : <strong data-testid="target">{planned} × {target}</strong>
             </span>
             {rec && rec.kind !== 'keep' && rec.kind !== 'start' && !weightChange && (
-              <span className="muted small">Prochaine : {formatRecommendation(rec)}</span>
+              <span className="muted small">Prochaine : {formatRecommendation(rec, ctx.cfg.assisted)}</span>
             )}
             <button type="button" className="link" onClick={() => setAdjust(!adjust)} aria-expanded={adjust}>
               Ajuster

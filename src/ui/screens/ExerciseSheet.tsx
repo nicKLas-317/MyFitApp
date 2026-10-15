@@ -84,6 +84,11 @@ export function ExerciseSheet({ variantId }: { variantId: string }) {
             )}
           </p>
           <p className="muted small">Matériel : {equipmentLabel(exercise)}</p>
+          {ctx.cfg.assisted && (
+            <p className="small assisted-note" data-testid="assisted">
+              Exercice assisté : la charge est une aide (moins d’aide = plus dur)
+            </p>
+          )}
         </div>
         <button
           type="button"
@@ -126,12 +131,13 @@ export function ExerciseSheet({ variantId }: { variantId: string }) {
             <div className="last-perf">
               <StatusBadge status={state.lastStatus} />
               <span>
-                Dernière fois : <strong>{formatKg(state.lastPerformance.weightKg)}</strong> · {state.lastPerformance.reps.join(' · ')}
+                Dernière fois : {ctx.cfg.assisted && 'aide '}
+                <strong>{formatKg(state.lastPerformance.weightKg)}</strong> · {state.lastPerformance.reps.join(' · ')}
                 {last && <span className="muted small"> ({formatIsoDay(last.session.date)})</span>}
               </span>
             </div>
             <p>
-              Prochaine cible : <strong data-testid="sheet-next">{formatRecommendation(state.recommendation)}</strong>
+              Prochaine cible : <strong data-testid="sheet-next">{formatRecommendation(state.recommendation, ctx.cfg.assisted)}</strong>
               {state.recommendation.kind === 'keep' || state.recommendation.kind === 'reps_up' ? ` à ${formatKg(state.palier.weightKg)}` : ''}
             </p>
           </>
@@ -248,6 +254,7 @@ export function ExerciseSheet({ variantId }: { variantId: string }) {
                 </span>
                 <span className="muted small">
                   {p.partial ? '' : FEELING_LABELS[p.feeling]}
+                  {p.feelingSymbol && ` (${p.feelingSymbol})`}
                   {session.origin === 'import' && ' · importée'}
                 </span>
                 <StatusBadge status={evaluation?.status} />

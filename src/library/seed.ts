@@ -1,4 +1,4 @@
-import type { Exercise, MuscleGroup } from '../domain/types';
+import type { Exercise, MuscleGroup, VariantConfig } from '../domain/types';
 
 /**
  * Bibliothèque initiale (§4.0). Les identifiants sont stables et ne doivent jamais changer :
@@ -12,6 +12,7 @@ function exercise(
   primaryGroup: MuscleGroup,
   secondaryGroups: MuscleGroup[],
   equipment: string,
+  config?: Partial<VariantConfig>,
 ): Exercise {
   return {
     id,
@@ -21,7 +22,7 @@ function exercise(
     secondaryGroups,
     equipment,
     archived: false,
-    variants: [{ id, name: 'Standard', synonyms: [], archived: false }],
+    variants: [{ id, name: 'Standard', synonyms: [], archived: false, ...(config ? { config } : {}) }],
   };
 }
 
@@ -43,7 +44,20 @@ export const SEED_EXERCISES: readonly Exercise[] = [
   exercise('leg-extension', 'Leg extension', ['Extension des jambes', 'Extension quadriceps'], 'jambes', ['quadriceps'], 'machine'),
   exercise('leg-curl', 'Leg curl', ['Flexion des jambes', 'Curl ischios'], 'jambes', ['ischio-jambiers'], 'machine'),
   exercise('crunch-machine', 'Crunch machine', ['Abdominaux machine', 'Abdos'], 'abdominaux', [], 'machine'),
+  // Version 2 de la bibliothèque initiale.
+  exercise('dips-assistes', 'Dips assistés', ['Assisted dips', 'Dips machine assistée', 'Dips à la machine'], 'triceps', ['pectoraux'], 'machine', {
+    assisted: true,
+  }),
+  exercise('ecarte-couche-halteres', 'Écarté couché haltères', ['Dumbbell fly', 'Écarté haltères', 'Écarté à plat haltères'], 'pectoraux', ['epaules'], 'haltères'),
 ];
+
+/** Version de la bibliothèque initiale ; chaque version ajoute des exercices (jamais de suppression). */
+export const SEED_VERSION = 2;
+
+/** Exercices ajoutés par chaque version, installés une seule fois sur une base existante. */
+export const SEED_ADDITIONS: Readonly<Record<number, readonly string[]>> = {
+  2: ['dips-assistes', 'ecarte-couche-halteres'],
+};
 
 export const MUSCLE_GROUP_LABELS: Record<MuscleGroup, string> = {
   dos: 'Dos',

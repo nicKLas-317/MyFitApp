@@ -19,7 +19,9 @@ export type ParseIssue =
   /** Répétitions détaillées : cible déduite de la meilleure série, à vérifier. */
   | 'target_inferred'
   /** Le nombre de répétitions détaillées ne correspond pas au nombre de séries. */
-  | 'sets_mismatch';
+  | 'sets_mismatch'
+  /** Unité du poids non reconnue (« 47gs ») : poids lu sans l'unité, à confirmer. */
+  | 'unknown_unit';
 
 export interface ParsedEntry {
   sourceName: string;
@@ -31,6 +33,8 @@ export interface ParsedEntry {
   feeling: Feeling;
   /** Symbole lu tel quel, connu ou non. */
   feelingSymbol: string | null;
+  /** Poids tel qu'écrit quand son unité n'est pas reconnue (« 47gs »). */
+  weightText?: string;
   issues: ParseIssue[];
 }
 
@@ -254,8 +258,17 @@ export function parseNotes(text: string, today: string): ParsedNotes {
     pending = [];
     lastName = name || lastName;
 
-    const symbol = readFeelingSymbol(line.slice(notation.end));
+    // Unité collée au poids et non reconnue (« 47gs », « 52 lbs ») : jamais convertie ni ignorée en silence.
+    let rest = line.slice(notation.end);
+    let weightText: string | undefined;
+    const unit = notation.weightKg !== null ? /^\s?([a-zà-ÿ]{1,5})(?![a-zà-ÿ])/iu.exec(rest) : null;
+    if (unit) {
+      weightText = `${prepare(line).slice(notation.index, notation.end).match(/[\d.]+\s*$/)?.[0]?.trim() ?? ''}${unit[0]}`.replace('.', ',');
+      rest = rest.slice(unit[0].length);
+    }
+    const symbol = readFeelingSymbol(rest);
     const issues = [...notation.issues];
+    if (unit) issues.push('unknown_unit');
     if (symbol.kind === 'unknown') issues.push('unknown_symbol');
     result.entries.push({
       sourceName: name,
@@ -266,6 +279,7 @@ export function parseNotes(text: string, today: string): ParsedNotes {
       weightKg: notation.weightKg,
       feeling: symbol.kind === 'known' ? symbol.feeling : 'inconnu',
       feelingSymbol: symbol.kind === 'absent' ? null : symbol.symbol,
+      ...(weightText ? { weightText } : {}),
       issues,
     });
   }

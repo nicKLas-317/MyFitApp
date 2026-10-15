@@ -4,14 +4,21 @@ import type { Feeling } from '../domain/types';
 export const SYMBOL_TO_FEELING: Readonly<Record<string, Feeling>> = {
   '++': 'tres_bien',
   '+': 'bien',
+  // Entre « bien passé » et « moyen » : stocké comme Moyen (orange), symbole d'origine conservé.
+  '+=': 'moyen',
   '=': 'moyen',
   '-=': 'mal',
   '--': 'tres_mal',
 };
 
-export const FEELING_TO_SYMBOL: Readonly<Partial<Record<Feeling, string>>> = Object.fromEntries(
-  Object.entries(SYMBOL_TO_FEELING).map(([symbol, feeling]) => [feeling, symbol]),
-);
+/** Symbole de référence de chaque ressenti (export en notes). */
+export const FEELING_TO_SYMBOL: Readonly<Partial<Record<Feeling, string>>> = {
+  tres_bien: '++',
+  bien: '+',
+  moyen: '=',
+  mal: '-=',
+  tres_mal: '--',
+};
 
 export type SymbolReading =
   | { kind: 'absent' }

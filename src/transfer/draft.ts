@@ -4,14 +4,14 @@
  * n'est pas confirmé ; aucune donnée absente n'est inventée.
  */
 import type { Exercise, Feeling, MuscleGroup, Performance, Session } from '../domain/types';
-import { rebuildProfile, validatePerformance, type Evaluation, type Profile } from '../engine';
+import { rebuildProfile, resolveConfig, validatePerformance, type Evaluation, type Profile } from '../engine';
 import { buildEngineSettings } from '../library/catalog';
 import { allIds, slug, uniqueId } from '../library/edit';
 import { importedSessionName, isIsoDate } from '../session/format';
 import { newId, WEIGHT_CONFIRM_RATIO } from '../session/ops';
 import { MATCH_MARGIN, matchExercise, qualifierOf, type MatchResult } from './match';
 import { parseNotes, type ParseIssue } from './notes';
-import { angleOf, normalizeName } from '../library/text';
+import { normalizeName, variantPrecisionOf } from '../library/text';
 
 export type ExerciseChoice =
   | { kind: 'variant'; variantId: string }
@@ -39,6 +39,11 @@ export interface DraftExercise {
   feelingSymbol: string | null;
   /** false tant qu'un symbole inconnu ou contradictoire n'a pas été tranché (§7.3). */
   feelingConfirmed: boolean;
+  /** Points relevés dans la source (unité inconnue, remarque du fichier) à confirmer avant l'import. */
+  toConfirm: string[];
+  checksConfirmed: boolean;
+  /** La source indique que la charge est une aide (exercice assisté, §7.12). */
+  assistedHint: boolean;
   issues: DraftIssue[];
   include: boolean;
 }
@@ -79,6 +84,11 @@ export interface DraftExerciseInput {
   hint?: string | null;
   /** Groupe musculaire indiqué par la source, utilisé pour un nouvel exercice. */
   primaryGroup?: MuscleGroup | null;
+  /** Poids tel qu'écrit quand son unité n'est pas reconnue (« 47gs »). */
+  weightText?: string;
+  /** Remarques de la source à confirmer (champ `toConfirm` d'un JSON). */
+  notes?: string[];
+  assistedHint?: boolean;
 }
 
 function resolveMatch(input: DraftExerciseInput, exercises: readonly Exercise[]): MatchResult {
@@ -91,9 +101,9 @@ function resolveMatch(input: DraftExerciseInput, exercises: readonly Exercise[])
 }
 
 /**
- * Variante retenue par défaut (précision validée §11.11 A) : un angle chiffré dans le nom
- * (« 70° ») désigne la variante de cet angle, créée si elle n'existe pas encore.
- * Une hésitation limitée aux variantes d'un même exercice, sans angle, désigne la variante standard.
+ * Variante retenue par défaut (précision validée §11.11 A) : un angle chiffré (« 70° ») ou une prise
+ * (« prise très large ») dans le nom désigne la variante correspondante, créée si elle n'existe pas encore.
+ * Une hésitation limitée aux variantes d'un même exercice, sans précision, désigne la variante standard.
  */
 function chooseVariant(match: MatchResult, sourceName: string, exercises: readonly Exercise[]): { match: MatchResult; choice: ExerciseChoice | null } {
   const plain = { match, choice: match.suggestion ? ({ kind: 'variant', variantId: match.suggestion } as const) : null };
@@ -106,11 +116,12 @@ function chooseVariant(match: MatchResult, sourceName: string, exercises: readon
   }
   if (!exercise) return plain;
 
-  const angle = angleOf(sourceName);
-  if (angle) {
-    const existing = exercise.variants.find((v) => !v.archived && angleOf(v.name) === angle);
+  const precision = variantPrecisionOf(sourceName);
+  if (precision) {
+    const key = normalizeName(precision);
+    const existing = exercise.variants.find((v) => !v.archived && normalizeName(variantPrecisionOf(v.name) ?? '') === key);
     if (existing) return { match: { ...match, suggestion: existing.id }, choice: { kind: 'variant', variantId: existing.id } };
-    return { match, choice: { kind: 'new_variant', exerciseId: exercise.id, name: angle } };
+    return { match, choice: { kind: 'new_variant', exerciseId: exercise.id, name: precision } };
   }
   if (match.suggestion) return plain;
   const standard = exercise.variants.find((v) => v.id === exercise.id && !v.archived);
@@ -122,6 +133,11 @@ export function draftExercise(input: DraftExerciseInput, exercises: readonly Exe
   const chosen = chooseVariant(resolveMatch(input, exercises), input.sourceName, exercises);
   const match = chosen.match;
   let choice = chosen.choice;
+  const toConfirm = [...(input.notes ?? [])];
+  if (input.issues.includes('unknown_unit') && input.weightKg !== null) {
+    const kg = input.weightKg.toLocaleString('fr-FR', { maximumFractionDigits: 2 });
+    toConfirm.unshift(`Poids noté « ${input.weightText ?? kg} » : unité non reconnue, lu ${kg} kg.`);
+  }
   if (!choice && match.confidence === 'none' && input.primaryGroup) {
     choice = { kind: 'new_exercise', name: input.sourceName, primaryGroup: input.primaryGroup };
   }
@@ -138,6 +154,9 @@ export function draftExercise(input: DraftExerciseInput, exercises: readonly Exe
     feeling: input.feeling,
     feelingSymbol: input.feelingSymbol,
     feelingConfirmed: !input.issues.includes('unknown_symbol') && !input.issues.includes('feeling_conflict'),
+    toConfirm,
+    checksConfirmed: toConfirm.length === 0,
+    assistedHint: input.assistedHint === true,
     issues: input.issues,
     include: true,
   };
@@ -221,12 +240,15 @@ function learnSynonym(work: Map<string, Exercise>, variantId: string, sourceName
   }
 }
 
+/** Symbole de ressenti d'origine, conservé dans l'historique (§7.3). */
+const symbol = (e: DraftExercise) => (e.feelingSymbol ? { feelingSymbol: e.feelingSymbol } : {});
+
 /** Performance d'un exercice du brouillon, ou null si ses données sont inexploitables. */
 export function draftPerformance(e: DraftExercise, variantId: string): Performance | null {
   if (e.weightKg === null || !Number.isFinite(e.weightKg) || e.weightKg <= 0) return null;
   if (e.reps === null) {
     // Poids seul : historique partiel, ignoré par le moteur (§11.8, §7.11 H).
-    return { variantId, weightKg: e.weightKg, targetReps: null, plannedSets: null, reps: [], feeling: e.feeling, partial: true };
+    return { variantId, weightKg: e.weightKg, targetReps: null, plannedSets: null, reps: [], feeling: e.feeling, ...symbol(e), partial: true };
   }
   if (e.targetReps === null || e.plannedSets === null || e.reps.length === 0) return null;
   const perf: Performance = {
@@ -236,6 +258,7 @@ export function draftPerformance(e: DraftExercise, variantId: string): Performan
     plannedSets: e.plannedSets,
     reps: [...e.reps],
     feeling: e.feeling,
+    ...symbol(e),
   };
   return validatePerformance(perf).length === 0 ? perf : null;
 }
@@ -439,6 +462,13 @@ function exerciseProblems(e: DraftExercise, ctx: ProblemContext): DraftProblem[]
     }
     if (e.issues.includes('target_inferred')) warn('target_inferred', `Cible déduite de la meilleure série (${e.targetReps}) : à vérifier.`);
   }
+
+  if (!e.checksConfirmed) for (const note of e.toConfirm) err('to_confirm', `À confirmer : ${note}`);
+
+  // Exercice assisté (§7.12) : la charge saisie est une aide.
+  const assisted = choice?.kind === 'variant' && resolveConfig(buildEngineSettings(ctx.exercises), choice.variantId).assisted;
+  if (assisted) warn('assisted', 'Exercice assisté : la charge est une aide (moins d’aide = plus dur).');
+  else if (e.assistedHint) warn('assisted_mismatch', 'La source indique une charge d’aide, mais cet exercice n’est pas réglé comme assisté : vérifiez.');
 
   if (!e.feelingConfirmed) {
     if (e.issues.includes('feeling_conflict')) err('feeling_conflict', 'Ressenti et symbole contradictoires : choisissez le ressenti.');

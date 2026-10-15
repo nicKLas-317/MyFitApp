@@ -1,6 +1,6 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import type { Exercise, Session } from '../domain/types';
-import { SEED_EXERCISES } from '../library/seed';
+import { SEED_ADDITIONS, SEED_EXERCISES, SEED_VERSION } from '../library/seed';
 
 /**
  * Base d'entraînement. Le suivi corporel (§20) aura sa propre base, séparée.
@@ -101,15 +101,25 @@ export class Repository {
     await Promise.all([...writes, tx.done]);
   }
 
-  /** Installe la bibliothèque initiale au premier lancement uniquement : les modifications ultérieures sont conservées. */
+  /**
+   * Installe la bibliothèque initiale au premier lancement, puis les exercices ajoutés par chaque nouvelle
+   * version (une seule fois). Les modifications et suppressions ultérieures sont conservées.
+   */
   async ensureSeed(): Promise<void> {
-    if (await this.getMeta<boolean>('seeded')) return;
+    const seeded = await this.getMeta<boolean>('seeded');
+    const version = seeded ? ((await this.getMeta<number>('seedVersion')) ?? 1) : 0;
+    if (version >= SEED_VERSION) return;
+    const wanted =
+      version === 0
+        ? SEED_EXERCISES
+        : SEED_EXERCISES.filter((e) => Object.entries(SEED_ADDITIONS).some(([v, ids]) => Number(v) > version && ids.includes(e.id)));
     const tx = this.db.transaction(['exercises', 'meta'], 'readwrite');
     const store = tx.objectStore('exercises');
     const existing = new Set(await store.getAllKeys());
     await Promise.all([
-      ...SEED_EXERCISES.filter((e) => !existing.has(e.id)).map((e) => store.put(e)),
+      ...wanted.filter((e) => !existing.has(e.id)).map((e) => store.put(e)),
       tx.objectStore('meta').put(true, 'seeded'),
+      tx.objectStore('meta').put(SEED_VERSION, 'seedVersion'),
       tx.done,
     ]);
   }

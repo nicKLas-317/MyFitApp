@@ -1,0 +1,643 @@
+{
+  "app": "MyFitApp",
+  "schemaVersion": 2,
+  "exportedAt": "2026-03-12T19:00:00.000Z",
+  "sessions": [
+    {
+      "id": "seance-exemple-1",
+      "name": "Séance du 9 mars 2026",
+      "date": "2026-03-09",
+      "startedAt": null,
+      "endedAt": null,
+      "createdAt": 1773079200000,
+      "updatedAt": 1773079200000,
+      "origin": "import",
+      "state": "done",
+      "sourceText": "Seated row horizontal\n3x8x48kg =\n\nEpaules latéral raise\n3x8x9kgs ++\n\nBiceps poulie corde\n3×8x15 kgs ++\n\nBiceps curl banc incliné 70°\n3×8×10 kgs -=\n\nLat pulldown vertical\n3×9×36 kgs -=\n\nTriceps sur banc assis 1 haltere\n3x8x14 kgs ++",
+      "performances": [
+        {
+          "variantId": "tirage-horizontal",
+          "weightKg": 48,
+          "targetReps": 8,
+          "plannedSets": 3,
+          "reps": [
+            8,
+            8,
+            8
+          ],
+          "feeling": "moyen",
+          "feelingSymbol": "="
+        },
+        {
+          "variantId": "elevations-laterales",
+          "weightKg": 9,
+          "targetReps": 8,
+          "plannedSets": 3,
+          "reps": [
+            8,
+            8,
+            8
+          ],
+          "feeling": "tres_bien",
+          "feelingSymbol": "++"
+        },
+        {
+          "variantId": "curl-biceps-poulie-corde",
+          "weightKg": 15,
+          "targetReps": 8,
+          "plannedSets": 3,
+          "reps": [
+            8,
+            8,
+            8
+          ],
+          "feeling": "tres_bien",
+          "feelingSymbol": "++"
+        },
+        {
+          "variantId": "curl-biceps-banc-incline--70",
+          "weightKg": 10,
+          "targetReps": 8,
+          "plannedSets": 3,
+          "reps": [
+            8,
+            8,
+            8
+          ],
+          "feeling": "mal",
+          "feelingSymbol": "-="
+        },
+        {
+          "variantId": "tirage-vertical",
+          "weightKg": 36,
+          "targetReps": 9,
+          "plannedSets": 3,
+          "reps": [
+            9,
+            9,
+            9
+          ],
+          "feeling": "mal",
+          "feelingSymbol": "-="
+        },
+        {
+          "variantId": "extension-triceps-haltere-assis",
+          "weightKg": 14,
+          "targetReps": 8,
+          "plannedSets": 3,
+          "reps": [
+            8,
+            8,
+            8
+          ],
+          "feeling": "tres_bien",
+          "feelingSymbol": "++"
+        }
+      ]
+    },
+    {
+      "id": "seance-exemple-2",
+      "name": "Séance du 12 mars 2026",
+      "date": "2026-03-12",
+      "startedAt": null,
+      "endedAt": null,
+      "createdAt": 1773338400000,
+      "updatedAt": 1773338400000,
+      "origin": "import",
+      "state": "done",
+      "sourceText": "Développé épaules\n3x8x38    =\nDips assistés\n3×8×27 =\nTriceps sur banc 1 haltere\n3x8x14 kgs ++\nChest press\n3x8x47gs +=\nLat pull tirage vertical prise très large\n3x8×41   =\nÉcarté sur banc à plat avec halteres (pectoraux)\n3x8x9 =",
+      "performances": [
+        {
+          "variantId": "developpe-epaules-machine",
+          "weightKg": 38,
+          "targetReps": 8,
+          "plannedSets": 3,
+          "reps": [
+            8,
+            8,
+            8
+          ],
+          "feeling": "moyen",
+          "feelingSymbol": "="
+        },
+        {
+          "variantId": "dips-assistes",
+          "weightKg": 27,
+          "targetReps": 8,
+          "plannedSets": 3,
+          "reps": [
+            8,
+            8,
+            8
+          ],
+          "feeling": "moyen",
+          "feelingSymbol": "="
+        },
+        {
+          "variantId": "extension-triceps-haltere-assis",
+          "weightKg": 14,
+          "targetReps": 8,
+          "plannedSets": 3,
+          "reps": [
+            8,
+            8,
+            8
+          ],
+          "feeling": "tres_bien",
+          "feelingSymbol": "++"
+        },
+        {
+          "variantId": "chest-press",
+          "weightKg": 47,
+          "targetReps": 8,
+          "plannedSets": 3,
+          "reps": [
+            8,
+            8,
+            8
+          ],
+          "feeling": "moyen",
+          "feelingSymbol": "+="
+        },
+        {
+          "variantId": "tirage-vertical--prise-tres-large",
+          "weightKg": 41,
+          "targetReps": 8,
+          "plannedSets": 3,
+          "reps": [
+            8,
+            8,
+            8
+          ],
+          "feeling": "moyen",
+          "feelingSymbol": "="
+        },
+        {
+          "variantId": "ecarte-couche-halteres",
+          "weightKg": 9,
+          "targetReps": 8,
+          "plannedSets": 3,
+          "reps": [
+            8,
+            8,
+            8
+          ],
+          "feeling": "moyen",
+          "feelingSymbol": "="
+        }
+      ]
+    }
+  ],
+  "exercises": [
+    {
+      "id": "tirage-horizontal",
+      "name": "Tirage horizontal",
+      "synonyms": [
+        "Seated row",
+        "Rowing assis",
+        "Tirage poulie basse"
+      ],
+      "primaryGroup": "dos",
+      "secondaryGroups": [
+        "biceps"
+      ],
+      "equipment": "machine",
+      "archived": false,
+      "variants": [
+        {
+          "id": "tirage-horizontal",
+          "name": "Standard",
+          "synonyms": [
+            "Seated row horizontal"
+          ],
+          "archived": false
+        }
+      ]
+    },
+    {
+      "id": "tirage-vertical",
+      "name": "Tirage vertical",
+      "synonyms": [
+        "Lat pulldown",
+        "Tirage poitrine",
+        "Tirage nuque"
+      ],
+      "primaryGroup": "dos",
+      "secondaryGroups": [
+        "biceps"
+      ],
+      "equipment": "poulie",
+      "archived": false,
+      "variants": [
+        {
+          "id": "tirage-vertical",
+          "name": "Standard",
+          "synonyms": [
+            "Lat pulldown vertical"
+          ],
+          "archived": false
+        },
+        {
+          "id": "tirage-vertical--prise-tres-large",
+          "name": "prise très large",
+          "synonyms": [
+            "Lat pull tirage vertical prise très large"
+          ],
+          "archived": false
+        }
+      ]
+    },
+    {
+      "id": "rowing-haltere",
+      "name": "Rowing haltère",
+      "synonyms": [
+        "Dumbbell row",
+        "Rowing un bras"
+      ],
+      "primaryGroup": "dos",
+      "secondaryGroups": [
+        "biceps"
+      ],
+      "equipment": "haltère",
+      "archived": false,
+      "variants": [
+        {
+          "id": "rowing-haltere",
+          "name": "Standard",
+          "synonyms": [],
+          "archived": false
+        }
+      ]
+    },
+    {
+      "id": "chest-press",
+      "name": "Chest press",
+      "synonyms": [
+        "Développé assis machine",
+        "Développé pectoraux machine"
+      ],
+      "primaryGroup": "pectoraux",
+      "secondaryGroups": [
+        "triceps",
+        "epaules"
+      ],
+      "equipment": "machine",
+      "archived": false,
+      "variants": [
+        {
+          "id": "chest-press",
+          "name": "Standard",
+          "synonyms": [],
+          "archived": false
+        }
+      ]
+    },
+    {
+      "id": "pec-deck",
+      "name": "Pec deck",
+      "synonyms": [
+        "Butterfly",
+        "Pec fly",
+        "Écarté machine"
+      ],
+      "primaryGroup": "pectoraux",
+      "secondaryGroups": [
+        "epaules"
+      ],
+      "equipment": "machine",
+      "archived": false,
+      "variants": [
+        {
+          "id": "pec-deck",
+          "name": "Standard",
+          "synonyms": [],
+          "archived": false
+        }
+      ]
+    },
+    {
+      "id": "developpe-couche",
+      "name": "Développé couché",
+      "synonyms": [
+        "Bench press",
+        "DC"
+      ],
+      "primaryGroup": "pectoraux",
+      "secondaryGroups": [
+        "triceps",
+        "epaules"
+      ],
+      "equipment": "barre",
+      "archived": false,
+      "variants": [
+        {
+          "id": "developpe-couche",
+          "name": "Standard",
+          "synonyms": [],
+          "archived": false
+        }
+      ]
+    },
+    {
+      "id": "developpe-epaules-machine",
+      "name": "Développé épaules machine",
+      "synonyms": [
+        "Shoulder press",
+        "Développé militaire machine"
+      ],
+      "primaryGroup": "epaules",
+      "secondaryGroups": [
+        "triceps"
+      ],
+      "equipment": "machine",
+      "archived": false,
+      "variants": [
+        {
+          "id": "developpe-epaules-machine",
+          "name": "Standard",
+          "synonyms": [
+            "Développé épaules"
+          ],
+          "archived": false
+        }
+      ]
+    },
+    {
+      "id": "elevations-laterales",
+      "name": "Élévations latérales",
+      "synonyms": [
+        "Lateral raise",
+        "Latéral raise"
+      ],
+      "primaryGroup": "epaules",
+      "secondaryGroups": [],
+      "equipment": "haltères",
+      "archived": false,
+      "variants": [
+        {
+          "id": "elevations-laterales",
+          "name": "Standard",
+          "synonyms": [
+            "Epaules latéral raise"
+          ],
+          "archived": false
+        }
+      ]
+    },
+    {
+      "id": "curl-biceps-poulie-corde",
+      "name": "Curl biceps poulie corde",
+      "synonyms": [
+        "Cable rope curl",
+        "Biceps poulie corde"
+      ],
+      "primaryGroup": "biceps",
+      "secondaryGroups": [],
+      "equipment": "poulie",
+      "archived": false,
+      "variants": [
+        {
+          "id": "curl-biceps-poulie-corde",
+          "name": "Standard",
+          "synonyms": [],
+          "archived": false
+        }
+      ]
+    },
+    {
+      "id": "curl-biceps-halteres",
+      "name": "Curl biceps haltères",
+      "synonyms": [
+        "Dumbbell curl",
+        "Curl haltères"
+      ],
+      "primaryGroup": "biceps",
+      "secondaryGroups": [],
+      "equipment": "haltères",
+      "archived": false,
+      "variants": [
+        {
+          "id": "curl-biceps-halteres",
+          "name": "Standard",
+          "synonyms": [],
+          "archived": false
+        }
+      ]
+    },
+    {
+      "id": "curl-biceps-banc-incline",
+      "name": "Curl biceps banc incliné",
+      "synonyms": [
+        "Incline dumbbell curl",
+        "Curl incliné"
+      ],
+      "primaryGroup": "biceps",
+      "secondaryGroups": [],
+      "equipment": "haltères",
+      "archived": false,
+      "variants": [
+        {
+          "id": "curl-biceps-banc-incline",
+          "name": "Standard",
+          "synonyms": [],
+          "archived": false
+        },
+        {
+          "id": "curl-biceps-banc-incline--70",
+          "name": "70°",
+          "synonyms": [
+            "Biceps curl banc incliné 70°"
+          ],
+          "archived": false
+        }
+      ]
+    },
+    {
+      "id": "extension-triceps-poulie",
+      "name": "Extension triceps poulie",
+      "synonyms": [
+        "Triceps pushdown",
+        "Pushdown",
+        "Triceps poulie haute"
+      ],
+      "primaryGroup": "triceps",
+      "secondaryGroups": [],
+      "equipment": "poulie",
+      "archived": false,
+      "variants": [
+        {
+          "id": "extension-triceps-poulie",
+          "name": "Standard",
+          "synonyms": [],
+          "archived": false
+        }
+      ]
+    },
+    {
+      "id": "extension-triceps-haltere-assis",
+      "name": "Extension triceps haltère assis",
+      "synonyms": [
+        "Overhead dumbbell extension",
+        "Extension nuque haltère"
+      ],
+      "primaryGroup": "triceps",
+      "secondaryGroups": [],
+      "equipment": "haltère",
+      "archived": false,
+      "variants": [
+        {
+          "id": "extension-triceps-haltere-assis",
+          "name": "Standard",
+          "synonyms": [
+            "Triceps sur banc assis 1 haltere",
+            "Triceps sur banc 1 haltere"
+          ],
+          "archived": false
+        }
+      ]
+    },
+    {
+      "id": "presse-a-cuisses",
+      "name": "Presse à cuisses",
+      "synonyms": [
+        "Leg press",
+        "Presse"
+      ],
+      "primaryGroup": "jambes",
+      "secondaryGroups": [
+        "quadriceps",
+        "ischio-jambiers"
+      ],
+      "equipment": "machine",
+      "archived": false,
+      "variants": [
+        {
+          "id": "presse-a-cuisses",
+          "name": "Standard",
+          "synonyms": [],
+          "archived": false
+        }
+      ]
+    },
+    {
+      "id": "leg-extension",
+      "name": "Leg extension",
+      "synonyms": [
+        "Extension des jambes",
+        "Extension quadriceps"
+      ],
+      "primaryGroup": "jambes",
+      "secondaryGroups": [
+        "quadriceps"
+      ],
+      "equipment": "machine",
+      "archived": false,
+      "variants": [
+        {
+          "id": "leg-extension",
+          "name": "Standard",
+          "synonyms": [],
+          "archived": false
+        }
+      ]
+    },
+    {
+      "id": "leg-curl",
+      "name": "Leg curl",
+      "synonyms": [
+        "Flexion des jambes",
+        "Curl ischios"
+      ],
+      "primaryGroup": "jambes",
+      "secondaryGroups": [
+        "ischio-jambiers"
+      ],
+      "equipment": "machine",
+      "archived": false,
+      "variants": [
+        {
+          "id": "leg-curl",
+          "name": "Standard",
+          "synonyms": [],
+          "archived": false
+        }
+      ]
+    },
+    {
+      "id": "crunch-machine",
+      "name": "Crunch machine",
+      "synonyms": [
+        "Abdominaux machine",
+        "Abdos"
+      ],
+      "primaryGroup": "abdominaux",
+      "secondaryGroups": [],
+      "equipment": "machine",
+      "archived": false,
+      "variants": [
+        {
+          "id": "crunch-machine",
+          "name": "Standard",
+          "synonyms": [],
+          "archived": false
+        }
+      ]
+    },
+    {
+      "id": "dips-assistes",
+      "name": "Dips assistés",
+      "synonyms": [
+        "Assisted dips",
+        "Dips machine assistée",
+        "Dips à la machine"
+      ],
+      "primaryGroup": "triceps",
+      "secondaryGroups": [
+        "pectoraux"
+      ],
+      "equipment": "machine",
+      "archived": false,
+      "variants": [
+        {
+          "id": "dips-assistes",
+          "name": "Standard",
+          "synonyms": [],
+          "archived": false,
+          "config": {
+            "assisted": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "ecarte-couche-halteres",
+      "name": "Écarté couché haltères",
+      "synonyms": [
+        "Dumbbell fly",
+        "Écarté haltères",
+        "Écarté à plat haltères"
+      ],
+      "primaryGroup": "pectoraux",
+      "secondaryGroups": [
+        "epaules"
+      ],
+      "equipment": "haltères",
+      "archived": false,
+      "variants": [
+        {
+          "id": "ecarte-couche-halteres",
+          "name": "Standard",
+          "synonyms": [
+            "Écarté sur banc à plat avec halteres (pectoraux)"
+          ],
+          "archived": false
+        }
+      ]
+    }
+  ],
+  "settings": {},
+  "bodyTracking": {
+    "heightCm": null,
+    "weighIns": []
+  }
+}

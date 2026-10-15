@@ -45,6 +45,29 @@ export function angleOf(s: string): string | null {
   return m ? `${m[1]!.replace(',', '.')}°` : null;
 }
 
+const GRIPS_FR = String.raw`(?:tr[eè]s\s+)?(?:serr[ée]e|large|neutre|marteau|supination|pronation|invers[ée]e|supin[ée]e|pron[ée]e)`;
+const GRIPS_EN: [RegExp, string][] = [
+  [/\b(?:wide|large)[\s-]grip\b/i, 'prise large'],
+  [/\b(?:close|narrow)[\s-]grip\b/i, 'prise serrée'],
+  [/\bneutral[\s-]grip\b/i, 'prise neutre'],
+];
+
+/**
+ * Prise précisée dans un nom (« tirage vertical prise très large », « wide grip ») : « prise très large ».
+ * Comme un angle, elle désigne une variante distincte (§11.11 A).
+ */
+export function gripOf(s: string): string | null {
+  const m = new RegExp(String.raw`\bprise\s+${GRIPS_FR}`, 'iu').exec(s);
+  if (m) return m[0].toLowerCase().replace(/\s+/g, ' ');
+  for (const [re, name] of GRIPS_EN) if (re.test(s)) return name;
+  return null;
+}
+
+/** Précision qui distingue une variante : angle chiffré ou prise. */
+export function variantPrecisionOf(s: string): string | null {
+  return angleOf(s) ?? gripOf(s);
+}
+
 /** Mots significatifs (racines), hors mots vides et nombres. */
 export function nameTokens(s: string): string[] {
   return normalizeName(s)

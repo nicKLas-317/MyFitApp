@@ -5,7 +5,7 @@ export const GREEN_STREAK_TO_PROGRESS = 2;
 /** Nombre de séances rouges consécutives déclenchant la baisse de charge (§7.8). */
 export const RED_STREAK_TO_DECREASE = 4;
 
-export const DEFAULT_VARIANT_CONFIG: VariantConfig = { sets: 3, minReps: 8, maxReps: 12 };
+export const DEFAULT_VARIANT_CONFIG: VariantConfig = { sets: 3, minReps: 8, maxReps: 12, assisted: false };
 
 /** Réglages du moteur : valeurs par défaut et réglages spécifiques par exercice-variante. */
 export interface EngineSettings {

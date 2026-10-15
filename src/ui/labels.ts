@@ -21,10 +21,18 @@ export const FEELING_LABELS: Record<Feeling, string> = {
 
 export const STATUS_LABELS: Record<Status, string> = { vert: 'vert', orange: 'orange', rouge: 'rouge' };
 
-/** Prochaine cible lisible : « 3 × 9 », « Poids supérieur · 3 × 8 ». */
-export function formatRecommendation(rec: Recommendation): string {
+/**
+ * Changement de charge recommandé (§7.6, §7.8). Pour un exercice assisté (§7.12), la charge est une aide :
+ * une charge plus difficile, c'est moins d'aide.
+ */
+export function loadChangeLabel(kind: 'weight_up' | 'weight_down', assisted: boolean): string {
+  if (assisted) return kind === 'weight_up' ? 'Moins d’aide' : 'Plus d’aide';
+  return kind === 'weight_up' ? 'Poids supérieur' : 'Poids inférieur';
+}
+
+/** Prochaine cible lisible : « 3 × 9 », « Poids supérieur · 3 × 8 », « Moins d’aide · 3 × 8 ». */
+export function formatRecommendation(rec: Recommendation, assisted = false): string {
   const target = `${rec.plannedSets} × ${rec.targetReps}`;
-  if (rec.kind === 'weight_up') return `Poids supérieur · ${target}`;
-  if (rec.kind === 'weight_down') return `Poids inférieur · ${target}`;
+  if (rec.kind === 'weight_up' || rec.kind === 'weight_down') return `${loadChangeLabel(rec.kind, assisted)} · ${target}`;
   return target;
 }

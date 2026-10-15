@@ -8,6 +8,15 @@ export function compareWeight(a: number, b: number): number {
   return Math.sign(toCentikg(a) - toCentikg(b));
 }
 
+/**
+ * Compare la difficulté de deux charges : positif si `a` est plus difficile que `b`.
+ * Pour un exercice assisté (§7.12), une charge plus basse (moins d'aide) est plus difficile.
+ */
+export function compareDifficulty(a: number, b: number, assisted: boolean): number {
+  const cmp = compareWeight(a, b);
+  return assisted ? -cmp : cmp;
+}
+
 export function sameWeight(a: number, b: number): boolean {
   return compareWeight(a, b) === 0;
 }
