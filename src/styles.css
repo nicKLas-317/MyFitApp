@@ -1181,3 +1181,40 @@ fieldset {
   flex: 1;
   min-width: 0;
 }
+
+/* Illustrations : dessins au trait sur fond clair, lisibles en thème sombre. */
+.picto.picto-image {
+  background: #f4f5f7;
+  overflow: hidden;
+}
+
+.picto.picto-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.illustration {
+  margin: 0 0 12px;
+  display: grid;
+  gap: 4px;
+}
+
+.illustration img {
+  display: block;
+  width: 100%;
+  max-height: 280px;
+  object-fit: contain;
+  background: #f4f5f7;
+  border-radius: var(--radius);
+  padding: 8px;
+}
+
+.attribution {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.attribution a {
+  color: var(--muted);
+}

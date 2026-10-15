@@ -1,10 +1,11 @@
 import type { Exercise } from '../domain/types';
+import { illustrationFor } from '../library/illustrations';
 import { equipmentKey } from '../library/search';
 
 /**
- * Pictogrammes embarqués (§4.0.1) : faute d'illustrations sous licence vérifiable, un pictogramme
- * SVG simple par type de matériel, sur un fond teinté selon le groupe musculaire principal.
- * Dessins originaux, sans ressource externe.
+ * Visuel d'un exercice (§4.0.1) : la vignette de son illustration quand elle existe (licence vérifiée,
+ * voir docs/illustrations.md), sinon un pictogramme SVG original par type de matériel, sur un fond
+ * teinté selon le groupe musculaire principal.
  */
 const EQUIPMENT_PATHS: Record<string, string> = {
   // Haltère : barre courte et deux disques.
@@ -30,6 +31,14 @@ const EQUIPMENT_LABELS: Record<string, string> = {
 };
 
 export function ExercisePicto({ exercise, large = false }: { exercise: Exercise; large?: boolean }) {
+  const illustration = illustrationFor(exercise.id);
+  if (illustration) {
+    return (
+      <span className={`picto picto-image${large ? ' large' : ''}`} aria-hidden="true">
+        <img src={illustration.thumb} alt="" width={128} height={128} decoding="async" />
+      </span>
+    );
+  }
   const key = equipmentKey(exercise.equipment);
   const path = EQUIPMENT_PATHS[key] ?? EQUIPMENT_PATHS.autre!;
   return (

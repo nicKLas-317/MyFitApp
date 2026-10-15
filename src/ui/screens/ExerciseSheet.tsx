@@ -4,6 +4,7 @@ import { navigate } from '../../app/hooks';
 import { sortSessions } from '../../engine';
 import { displayName } from '../../library/catalog';
 import { addVariant, updateVariant, validateVariantName } from '../../library/edit';
+import { illustrationFor } from '../../library/illustrations';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
 import { formatIsoDay, formatKg } from '../../session/format';
 import { findPerformance } from '../../session/ops';
@@ -34,6 +35,7 @@ export function ExerciseSheet({ variantId }: { variantId: string }) {
   const state = ctx.state;
   const archived = exercise.archived || variant.archived;
   const inSession = active ? !!findPerformance(active, variantId) : false;
+  const illustration = illustrationFor(exercise.id);
 
   // Historique de l'exercice-variante, du plus récent au plus ancien (§4, §19.1).
   const history = sortSessions(sessions.filter((s) => s.state === 'done'))
@@ -94,6 +96,27 @@ export function ExerciseSheet({ variantId }: { variantId: string }) {
           {variant.favorite ? '★' : '☆'}
         </button>
       </div>
+
+      {illustration && (
+        <figure className="illustration">
+          <img src={illustration.src} alt={`${exercise.name} : positions de début et de fin du mouvement`} decoding="async" />
+          <figcaption className="attribution" data-testid="attribution">
+            Illustration : {illustration.author} ·{' '}
+            <a href={illustration.licenseUrl} target="_blank" rel="noopener noreferrer license">
+              {illustration.license}
+            </a>{' '}
+            · sources{' '}
+            <a href={illustration.sources[0]} target="_blank" rel="noopener noreferrer">
+              1
+            </a>
+            ,{' '}
+            <a href={illustration.sources[1]} target="_blank" rel="noopener noreferrer">
+              2
+            </a>{' '}
+            (Wikimedia Commons) · recadrée et assemblée
+          </figcaption>
+        </figure>
+      )}
 
       {archived && <p className="banner info">Exercice archivé : masqué de la recherche, historique conservé.</p>}
 

@@ -94,6 +94,24 @@ test.describe('Bibliothèque et recherche', () => {
     await expect(favorites.getByRole('button', { name: /^Tirage vertical/ })).toBeVisible();
   });
 
+  test('§4.0.1. Illustration embarquée et attribution discrète sur la fiche ; pictogramme sinon', async ({ page }) => {
+    await page.goto('/#/exercice/curl-biceps-banc-incline');
+    const figure = page.locator('figure.illustration img');
+    await expect(figure).toBeVisible();
+    expect(await figure.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+    await expect(page.getByTestId('attribution')).toContainText('Everkinetic');
+    await expect(page.getByTestId('attribution').getByRole('link', { name: 'CC BY-SA 3.0' })).toHaveAttribute(
+      'href',
+      /creativecommons\.org\/licenses\/by-sa\/3\.0/,
+    );
+    await expect(page.getByTestId('attribution').getByRole('link', { name: '1' })).toHaveAttribute('href', /commons\.wikimedia\.org\/wiki\/File:/);
+
+    await page.goto('/#/exercice/rowing-haltere');
+    await expect(page.getByRole('heading', { name: 'Rowing haltère' })).toBeVisible();
+    await expect(page.locator('figure.illustration')).toHaveCount(0);
+    await expect(page.getByTestId('attribution')).toHaveCount(0);
+  });
+
   test('55. Renommer un exercice conserve son historique et ses compteurs', async ({ page }) => {
     const sessions = [doneSession('s1', '2026-10-01', 'tirage-vertical'), doneSession('s2', '2026-10-03', 'tirage-vertical')];
     await seedHistory(page, sessions);
