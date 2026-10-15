@@ -90,7 +90,7 @@ describe('Export et import JSON (§11.9, §11.10)', () => {
     repo.close();
   });
 
-  it('43. Export puis import : séances, réglages, pesées et profil recalculé identiques, sans doublon', async () => {
+  it('43 et 79. Export puis import : séances, réglages, pesées et profil recalculé identiques, sans doublon', async () => {
     const data = sampleData();
     const withConfig = data.exercises.map((e) =>
       e.id === 'leg-curl' ? { ...e, variants: e.variants.map((v) => ({ ...v, config: { maxReps: 15 } })) } : e,
@@ -132,7 +132,7 @@ describe('Export et import JSON (§11.9, §11.10)', () => {
     expect(planImport(backup, data, { mode: 'merge', includeDuplicates: true }).sessions.map((s) => s.id)).toEqual(['copie']);
   });
 
-  it('44. L’import ne supprime ni ne remplace les données existantes sans confirmation explicite', async () => {
+  it('44 et 79. L’import ne supprime ni ne remplace les données existantes sans confirmation explicite', async () => {
     const data = sampleData();
     const repo = await freshRepo();
     await repo.ensureSeed();
@@ -191,7 +191,7 @@ describe('Fichier d’exemple docs/exemples/seance-exemple-1.json', () => {
       ['tirage-horizontal', 48, 3, 8, [8, 8, 8], 'moyen'],
       ['elevations-laterales', 9, 3, 8, [8, 8, 8], 'tres_bien'],
       ['curl-biceps-poulie-corde', 15, 3, 8, [8, 8, 8], 'tres_bien'],
-      ['curl-biceps-banc-incline', 10, 3, 8, [8, 8, 8], 'mal'],
+      ['curl-biceps-banc-incline--70', 10, 3, 8, [8, 8, 8], 'mal'],
       ['tirage-vertical', 36, 3, 9, [9, 9, 9], 'mal'],
       ['extension-triceps-haltere-assis', 14, 3, 8, [8, 8, 8], 'tres_bien'],
     ]);

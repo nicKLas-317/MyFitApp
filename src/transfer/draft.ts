@@ -8,9 +8,9 @@ import { rebuildProfile, validatePerformance, type Evaluation, type Profile } fr
 import { buildEngineSettings } from '../library/catalog';
 import { importedSessionName, isIsoDate } from '../session/format';
 import { newId, WEIGHT_CONFIRM_RATIO } from '../session/ops';
-import { matchExercise, qualifierOf, type MatchResult } from './match';
+import { MATCH_MARGIN, matchExercise, qualifierOf, type MatchResult } from './match';
 import { parseNotes, type ParseIssue } from './notes';
-import { normalizeName } from './text';
+import { angleOf, normalizeName } from './text';
 
 export type ExerciseChoice =
   | { kind: 'variant'; variantId: string }
@@ -89,9 +89,38 @@ function resolveMatch(input: DraftExerciseInput, exercises: readonly Exercise[])
   return { ...viaHint, confidence: 'certain', qualifier: exercise ? qualifierOf(input.sourceName, exercise) : null };
 }
 
+/**
+ * Variante retenue par défaut (précision validée §11.11 A) : un angle chiffré dans le nom
+ * (« 70° ») désigne la variante de cet angle, créée si elle n'existe pas encore.
+ * Une hésitation limitée aux variantes d'un même exercice, sans angle, désigne la variante standard.
+ */
+function chooseVariant(match: MatchResult, sourceName: string, exercises: readonly Exercise[]): { match: MatchResult; choice: ExerciseChoice | null } {
+  const plain = { match, choice: match.suggestion ? ({ kind: 'variant', variantId: match.suggestion } as const) : null };
+  if (match.confidence === 'learned') return plain;
+  const top = match.candidates[0];
+  let exercise = match.suggestion ? exercises.find((e) => e.variants.some((v) => v.id === match.suggestion)) : undefined;
+  if (!exercise && match.confidence === 'ambiguous' && top) {
+    const close = match.candidates.filter((c) => top.score - c.score < MATCH_MARGIN);
+    if (close.every((c) => c.exerciseId === top.exerciseId)) exercise = exercises.find((e) => e.id === top.exerciseId);
+  }
+  if (!exercise) return plain;
+
+  const angle = angleOf(sourceName);
+  if (angle) {
+    const existing = exercise.variants.find((v) => !v.archived && angleOf(v.name) === angle);
+    if (existing) return { match: { ...match, suggestion: existing.id }, choice: { kind: 'variant', variantId: existing.id } };
+    return { match, choice: { kind: 'new_variant', exerciseId: exercise.id, name: angle } };
+  }
+  if (match.suggestion) return plain;
+  const standard = exercise.variants.find((v) => v.id === exercise.id && !v.archived);
+  if (!standard) return plain;
+  return { match: { ...match, confidence: 'probable', suggestion: standard.id }, choice: { kind: 'variant', variantId: standard.id } };
+}
+
 export function draftExercise(input: DraftExerciseInput, exercises: readonly Exercise[], key: string): DraftExercise {
-  const match = resolveMatch(input, exercises);
-  let choice: ExerciseChoice | null = match.suggestion ? { kind: 'variant', variantId: match.suggestion } : null;
+  const chosen = chooseVariant(resolveMatch(input, exercises), input.sourceName, exercises);
+  const match = chosen.match;
+  let choice = chosen.choice;
   if (!choice && match.confidence === 'none' && input.primaryGroup) {
     choice = { kind: 'new_exercise', name: input.sourceName, primaryGroup: input.primaryGroup };
   }
@@ -391,6 +420,8 @@ function exerciseProblems(e: DraftExercise, ctx: ProblemContext): DraftProblem[]
     else if (!name) err('new_variant_name', 'Nom de la nouvelle variante manquant.');
     else if (exercise.variants.some((v) => normalizeName(v.name) === name)) {
       err('new_variant_exists', 'Cette variante existe déjà : sélectionnez-la.');
+    } else {
+      warn('new_variant', `Nouvelle variante « ${choice.name.trim()} » de « ${exercise.name} », avec son propre historique.`);
     }
   }
 

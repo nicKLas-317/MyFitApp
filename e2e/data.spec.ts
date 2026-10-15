@@ -35,10 +35,14 @@ test.describe('Import et export', () => {
       ['tirage-horizontal', '48', '8-8-8', '3', '8', 'moyen', 'orange'],
       ['elevations-laterales', '9', '8-8-8', '3', '8', 'tres_bien', 'vert'],
       ['curl-biceps-poulie-corde', '15', '8-8-8', '3', '8', 'tres_bien', 'vert'],
-      ['curl-biceps-banc-incline', '10', '8-8-8', '3', '8', 'mal', 'orange'],
+      ['__new_variant', '10', '8-8-8', '3', '8', 'mal', 'orange'],
       ['tirage-vertical', '36', '9-9-9', '3', '9', 'mal', 'orange'],
       ['extension-triceps-haltere-assis', '14', '8-8-8', '3', '8', 'tres_bien', 'vert'],
     ]);
+
+    // §11.11 A : l'angle crée par défaut une variante distincte.
+    const incline = preview(page).getByRole('article', { name: 'Biceps curl banc incliné 70°' });
+    await expect(incline.getByLabel(/^Nom de la variante/)).toHaveValue('70°');
 
     // La date doit être confirmée explicitement (§11.2).
     await page.getByRole('button', { name: 'Importer la séance (6 exercices)' }).click();
@@ -58,7 +62,7 @@ test.describe('Import et export', () => {
       ['tirage-horizontal', 48, 3, 8, '8-8-8', 'moyen'],
       ['elevations-laterales', 9, 3, 8, '8-8-8', 'tres_bien'],
       ['curl-biceps-poulie-corde', 15, 3, 8, '8-8-8', 'tres_bien'],
-      ['curl-biceps-banc-incline', 10, 3, 8, '8-8-8', 'mal'],
+      ['curl-biceps-banc-incline--70', 10, 3, 8, '8-8-8', 'mal'],
       ['tirage-vertical', 36, 3, 9, '9-9-9', 'mal'],
       ['extension-triceps-haltere-assis', 14, 3, 8, '8-8-8', 'tres_bien'],
     ]);

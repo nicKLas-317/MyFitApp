@@ -36,6 +36,15 @@ export function normalizeName(s: string): string {
     .trim();
 }
 
+/**
+ * Angle précisé dans un nom (« banc incliné 70° », « 45 degrés ») : « 70° ».
+ * Seule une valeur chiffrée compte ; « horizontal » ou « plat » ne sont pas convertis.
+ */
+export function angleOf(s: string): string | null {
+  const m = /(\d+(?:[.,]\d+)?)\s*(?:°|º|degr[eé]s?\b)/i.exec(s);
+  return m ? `${m[1]!.replace(',', '.')}°` : null;
+}
+
 /** Mots significatifs (racines), hors mots vides et nombres. */
 export function nameTokens(s: string): string[] {
   return normalizeName(s)

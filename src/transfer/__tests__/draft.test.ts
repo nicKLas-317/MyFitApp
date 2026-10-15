@@ -56,13 +56,13 @@ describe('Reconnaissance des exercices (§11.7)', () => {
 
   it('38. Les six exercices du §11.3 sont associés aux bons exercices', () => {
     const draft = draftFromNotes(NOTES_11_3, LIB, TODAY);
-    expect(draft.exercises.map((e) => (e.choice?.kind === 'variant' ? e.choice.variantId : null))).toEqual([
-      'tirage-horizontal',
-      'elevations-laterales',
-      'curl-biceps-poulie-corde',
-      'curl-biceps-banc-incline',
-      'tirage-vertical',
-      'extension-triceps-haltere-assis',
+    expect(draft.exercises.map((e) => e.choice)).toEqual([
+      { kind: 'variant', variantId: 'tirage-horizontal' },
+      { kind: 'variant', variantId: 'elevations-laterales' },
+      { kind: 'variant', variantId: 'curl-biceps-poulie-corde' },
+      { kind: 'new_variant', exerciseId: 'curl-biceps-banc-incline', name: '70°' },
+      { kind: 'variant', variantId: 'tirage-vertical' },
+      { kind: 'variant', variantId: 'extension-triceps-haltere-assis' },
     ]);
     expect(draft.exercises[3]!.match.qualifier).toBe('70°');
   });
@@ -105,12 +105,12 @@ describe('Reconnaissance des exercices (§11.7)', () => {
     expect(finalizeDrafts([draft], LIB, [], 1).exercises).toEqual([]);
   });
 
-  it('variante « 70° » : nouvelle variante créée à la demande, avec son propre historique', () => {
-    const draft = draftFromNotes('Biceps curl banc incliné 70°\n3×8×10 kgs -=', LIB, TODAY);
-    const withVariant = updateDraftExercise(setDraftDate(draft, '2026-10-12'), 'e1', {
-      choice: { kind: 'new_variant', exerciseId: 'curl-biceps-banc-incline', name: '70°' },
-    });
-    expect(hasBlockingProblems(draftProblems(withVariant, ctx()))).toBe(false);
+  it('77. Un angle précisé dans le nom crée par défaut une variante, avec son propre historique', () => {
+    const withVariant = setDraftDate(draftFromNotes('Biceps curl banc incliné 70°\n3×8×10 kgs -=', LIB, TODAY), '2026-10-10');
+    expect(withVariant.exercises[0]!.choice).toEqual({ kind: 'new_variant', exerciseId: 'curl-biceps-banc-incline', name: '70°' });
+    const problems = draftProblems(withVariant, ctx());
+    expect(hasBlockingProblems(problems)).toBe(false);
+    expect(problems.find((p) => p.code === 'new_variant')?.level).toBe('warning');
     const result = finalizeDrafts([withVariant], LIB, [], 1_000);
     const exercise = result.exercises.find((e) => e.id === 'curl-biceps-banc-incline')!;
     expect(exercise.variants.map((v) => v.id)).toEqual(['curl-biceps-banc-incline', 'curl-biceps-banc-incline--70']);
@@ -119,6 +119,17 @@ describe('Reconnaissance des exercices (§11.7)', () => {
     // Imports suivants : le nom est reconnu directement sur cette variante.
     const exercises = LIB.map((e) => (e.id === exercise.id ? exercise : e));
     expect(matchExercise('Biceps curl banc incliné 70°', exercises).suggestion).toBe('curl-biceps-banc-incline--70');
+
+    // Autre écriture du même angle : la variante existante est reprise, pas recréée.
+    const choice = (text: string) => draftFromNotes(`${text}\n3x8x12kg +`, exercises, TODAY).exercises[0]!.choice;
+    expect(choice('Curl incliné 70 degrés')).toEqual({ kind: 'variant', variantId: 'curl-biceps-banc-incline--70' });
+    // Autre angle : nouvelle variante ; sans angle : variante standard, à vérifier.
+    expect(choice('Curl biceps banc incliné 45°')).toEqual({ kind: 'new_variant', exerciseId: 'curl-biceps-banc-incline', name: '45°' });
+    const plain = draftFromNotes('Curl biceps banc incliné\n3x8x12kg +', exercises, TODAY).exercises[0]!;
+    expect(plain.choice).toEqual({ kind: 'variant', variantId: 'curl-biceps-banc-incline' });
+    // L'option inverse reste possible : rattacher à la variante standard.
+    const standard = updateDraftExercise(withVariant, 'e1', { choice: { kind: 'variant', variantId: 'curl-biceps-banc-incline' } });
+    expect(finalizeDrafts([standard], LIB, [], 1).sessions[0]!.performances[0]!.variantId).toBe('curl-biceps-banc-incline');
   });
 
   it('un exercice inconnu peut être créé comme exercice personnalisé', () => {
@@ -172,7 +183,7 @@ describe('Import de notes et moteur de progression (§11.6)', () => {
     ]);
   });
 
-  it('41. Une date de notes doit être confirmée ; une date trouvée dans le texte est proposée', () => {
+  it('41 et 80. Une date de notes doit être confirmée ; la modifier vaut confirmation', () => {
     const draft = draftFromNotes('Seated row\n3x8x52kg ++', LIB, TODAY);
     expect(draft).toMatchObject({ date: TODAY, dateConfirmed: false, dateSource: 'today', name: 'Séance du 15 octobre 2026' });
     expect(draftProblems(draft, ctx()).map((p) => p.code)).toContain('date_unconfirmed');

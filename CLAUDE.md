@@ -838,6 +838,18 @@ Le profil global n'a pas besoin d'être exporté : il est reconstruit à partir 
 
 L'import ne doit jamais supprimer ou remplacer silencieusement les données existantes. Par défaut, il fusionne ; un remplacement global demande une confirmation explicite.
 
+### 11.11. Précisions validées
+
+Ces règles précisent les §11.1 à §11.10. Elles ont été validées et s'appliquent telles quelles.
+
+**A. Angle précisé dans le nom.** Un angle chiffré dans un nom importé (« Biceps curl banc incliné 70° », « 45 degrés ») désigne par défaut une variante distincte de l'exercice reconnu : la variante de cet angle si elle existe déjà, sinon une nouvelle variante nommée d'après l'angle (« 70° »), avec son propre historique. L'aperçu le signale et permet de rattacher la séance à une autre variante, notamment la variante standard. Sans angle, une hésitation entre les variantes d'un même exercice propose la variante standard, à vérifier. Les termes non chiffrés (« horizontal », « plat ») ne créent pas de variante automatiquement.
+
+**B. Répétitions détaillées.** Pour une notation série par série (`8-8-7 x 52kg`), la cible retenue est la meilleure série (ici 8), signalée dans l'aperçu pour vérification.
+
+**C. Exercice présent des deux côtés lors d'un import JSON.** Un exercice resté identique à la bibliothèque initiale sur l'appareil prend la version importée (nom, réglages, métadonnées). Un exercice modifié sur l'appareil conserve sa version locale ; l'écart est signalé dans l'aperçu. Dans les deux cas, synonymes et variantes s'additionnent.
+
+**D. Date d'un bloc de notes.** Modifier la date dans l'aperçu vaut confirmation explicite ; sinon, le bouton « Confirmer la date » est requis.
+
 ## 12. Persistance et protection des données
 
 Utiliser IndexedDB pour le stockage persistant local.
@@ -1003,6 +1015,13 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 74. (§5.6) À la fin d'une séance, un exercice sans aucune série est retiré automatiquement et ne modifie pas ses compteurs ; « Annuler » le rétablit, et il compte alors comme séance incomplète.
 75. (§5.5) Un nouvel appui sur le ressenti déjà sélectionné ne l'efface pas ; seul un autre niveau le remplace.
 76. (§5.5, §5.6) La confirmation de fin de séance liste les exercices réalisés sans ressenti et permet de le compléter avant de terminer ; le ressenti choisi est enregistré avec la séance terminée.
+
+### Précisions validées (§11.11)
+
+77. (A) Un angle chiffré dans le nom importé crée par défaut une nouvelle variante ; le même angle écrit autrement reprend la variante existante ; sans angle, la variante standard est proposée ; on peut toujours rattacher la séance à une autre variante.
+78. (B) Des répétitions détaillées donnent une cible égale à la meilleure série, signalée dans l'aperçu.
+79. (C) À l'import, un exercice jamais modifié localement prend la version importée ; un exercice modifié localement est conservé et l'écart signalé ; synonymes et variantes s'additionnent.
+80. (D) Modifier la date d'un bloc de notes la confirme ; sans modification, l'import exige la confirmation explicite.
 
 Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
 

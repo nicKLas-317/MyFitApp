@@ -36,7 +36,8 @@ export interface MatchResult {
 const CERTAIN = 0.85;
 const PROBABLE = 0.6;
 const CANDIDATE = 0.3;
-const MARGIN = 0.25;
+/** Écart minimal entre le premier candidat et le suivant pour proposer une correspondance. */
+export const MATCH_MARGIN = 0.25;
 
 function score(source: string[], name: string): number {
   const target = nameTokens(name);
@@ -89,7 +90,7 @@ export function matchExercise(sourceName: string, exercises: readonly Exercise[]
   const [first, second] = candidates;
   let confidence: MatchConfidence = 'none';
   if (first) {
-    const clear = !second || first.score - second.score >= MARGIN;
+    const clear = !second || first.score - second.score >= MATCH_MARGIN;
     if (first.score >= PROBABLE && clear) confidence = first.score >= CERTAIN ? 'certain' : 'probable';
     else if (first.score >= CANDIDATE) confidence = 'ambiguous';
   }

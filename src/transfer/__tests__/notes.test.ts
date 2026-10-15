@@ -41,7 +41,7 @@ describe('Lecture des notes en texte brut (§11.3, §11.4)', () => {
     }
   });
 
-  it('34. Les répétitions détaillées sont lues série par série, la cible déduite est signalée', () => {
+  it('34 et 78. Les répétitions détaillées sont lues série par série, la cible déduite est signalée', () => {
     const parsed = parseNotes('Leg curl\n8-8-7 x 52kg +', TODAY);
     expect(parsed.entries[0]).toMatchObject({ plannedSets: 3, targetReps: 8, reps: [8, 8, 7], weightKg: 52, feeling: 'bien' });
     expect(parsed.entries[0]!.issues).toContain('target_inferred');
