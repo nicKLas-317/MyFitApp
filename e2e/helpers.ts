@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test';
-import type { Session } from '../src/domain/types';
+import type { Exercise, Session } from '../src/domain/types';
 
 /** Lit les séances directement dans IndexedDB : on vérifie les données enregistrées, pas seulement l'affichage. */
 export function readSessions(page: Page): Promise<Session[]> {
@@ -87,4 +87,23 @@ export async function finishSession(page: Page): Promise<void> {
 export async function doExercise(card: Locator, sets: number, feeling: string): Promise<void> {
   await validateSets(card, sets);
   await card.getByRole('button', { name: feeling, exact: true }).click();
+}
+
+export function readExercises(page: Page): Promise<Exercise[]> {
+  return page.evaluate(
+    () =>
+      new Promise<Exercise[]>((resolve, reject) => {
+        const open = indexedDB.open('myfitapp');
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const db = open.result;
+          const req = db.transaction('exercises').objectStore('exercises').getAll();
+          req.onsuccess = () => {
+            resolve(req.result as Exercise[]);
+            db.close();
+          };
+          req.onerror = () => reject(req.error);
+        };
+      }),
+  );
 }

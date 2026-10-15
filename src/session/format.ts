@@ -55,3 +55,21 @@ export function fromDateTimeLocal(value: string): number | null {
   const ts = new Date(value).getTime();
   return Number.isFinite(ts) ? ts : null;
 }
+
+/** Date YYYY-MM-DD en français : « 12 octobre 2026 ». */
+export function formatIsoDay(date: string): string {
+  const [y, m, d] = date.split('-').map(Number);
+  return DAY_FORMAT.format(new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1));
+}
+
+/** Nom d'une séance importée sans heure connue : « Séance du 12 octobre 2026 ». */
+export function importedSessionName(date: string): string {
+  return `Séance du ${formatIsoDay(date)}`;
+}
+
+export function isIsoDate(value: string): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!m) return false;
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+  return d.getUTCFullYear() === Number(m[1]) && d.getUTCMonth() === Number(m[2]) - 1 && d.getUTCDate() === Number(m[3]);
+}

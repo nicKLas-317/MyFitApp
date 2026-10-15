@@ -1,0 +1,494 @@
+/**
+ * Brouillon d'import (§11.1, §11.8) : séance lue depuis des notes ou un JSON simple,
+ * corrigeable dans l'aperçu avant confirmation. Rien n'est enregistré tant que l'import
+ * n'est pas confirmé ; aucune donnée absente n'est inventée.
+ */
+import type { Exercise, Feeling, MuscleGroup, Performance, Session } from '../domain/types';
+import { rebuildProfile, validatePerformance, type Evaluation, type Profile } from '../engine';
+import { buildEngineSettings } from '../library/catalog';
+import { importedSessionName, isIsoDate } from '../session/format';
+import { newId, WEIGHT_CONFIRM_RATIO } from '../session/ops';
+import { matchExercise, qualifierOf, type MatchResult } from './match';
+import { parseNotes, type ParseIssue } from './notes';
+import { normalizeName } from './text';
+
+export type ExerciseChoice =
+  | { kind: 'variant'; variantId: string }
+  | { kind: 'new_exercise'; name: string; primaryGroup: MuscleGroup | null }
+  | { kind: 'new_variant'; exerciseId: string; name: string };
+
+export type DraftIssue =
+  | ParseIssue
+  /** JSON : le ressenti et le symbole fournis se contredisent. */
+  | 'feeling_conflict';
+
+export interface DraftExercise {
+  key: string;
+  sourceName: string;
+  sourceLine: string | null;
+  match: MatchResult;
+  /** null tant que l'exercice n'est pas choisi (correspondance ambiguë ou inconnue). */
+  choice: ExerciseChoice | null;
+  weightKg: number | null;
+  targetReps: number | null;
+  plannedSets: number | null;
+  /** null : aucune répétition connue (historique partiel si le poids est connu). */
+  reps: number[] | null;
+  feeling: Feeling;
+  feelingSymbol: string | null;
+  /** false tant qu'un symbole inconnu ou contradictoire n'a pas été tranché (§7.3). */
+  feelingConfirmed: boolean;
+  issues: DraftIssue[];
+  include: boolean;
+}
+
+export interface DraftSession {
+  key: string;
+  source: 'notes' | 'json';
+  /** Identifiant fourni par le JSON, conservé s'il est libre. */
+  sourceId: string | null;
+  date: string;
+  /** Une date de notes doit être confirmée explicitement (§11.2). */
+  dateConfirmed: boolean;
+  dateSource: 'text' | 'json' | 'today';
+  dateYearAssumed: boolean;
+  name: string;
+  /** Le nom est celui généré à partir de la date : il suit les changements de date. */
+  nameAuto: boolean;
+  startedAt: number | null;
+  endedAt: number | null;
+  sourceText: string | null;
+  exercises: DraftExercise[];
+  /** Doublon potentiel importé quand même, après confirmation explicite (§11.9). */
+  allowDuplicate: boolean;
+}
+
+/** Données lues pour un exercice, avant rapprochement avec la bibliothèque. */
+export interface DraftExerciseInput {
+  sourceName: string;
+  sourceLine: string | null;
+  plannedSets: number | null;
+  targetReps: number | null;
+  reps: number[] | null;
+  weightKg: number | null;
+  feeling: Feeling;
+  feelingSymbol: string | null;
+  issues: DraftIssue[];
+  /** Nom d'exercice suggéré par la source (JSON), essayé si le nom d'origine n'est pas reconnu avec certitude. */
+  hint?: string | null;
+  /** Groupe musculaire indiqué par la source, utilisé pour un nouvel exercice. */
+  primaryGroup?: MuscleGroup | null;
+}
+
+function resolveMatch(input: DraftExerciseInput, exercises: readonly Exercise[]): MatchResult {
+  const direct = matchExercise(input.sourceName, exercises);
+  if (direct.confidence === 'learned' || direct.confidence === 'certain' || !input.hint) return direct;
+  const viaHint = matchExercise(input.hint, exercises);
+  if (viaHint.confidence !== 'learned' && viaHint.confidence !== 'certain') return direct;
+  const exercise = exercises.find((e) => e.variants.some((v) => v.id === viaHint.suggestion));
+  return { ...viaHint, confidence: 'certain', qualifier: exercise ? qualifierOf(input.sourceName, exercise) : null };
+}
+
+export function draftExercise(input: DraftExerciseInput, exercises: readonly Exercise[], key: string): DraftExercise {
+  const match = resolveMatch(input, exercises);
+  let choice: ExerciseChoice | null = match.suggestion ? { kind: 'variant', variantId: match.suggestion } : null;
+  if (!choice && match.confidence === 'none' && input.primaryGroup) {
+    choice = { kind: 'new_exercise', name: input.sourceName, primaryGroup: input.primaryGroup };
+  }
+  return {
+    key,
+    sourceName: input.sourceName,
+    sourceLine: input.sourceLine,
+    match,
+    choice,
+    weightKg: input.weightKg,
+    targetReps: input.targetReps,
+    plannedSets: input.plannedSets,
+    reps: input.reps,
+    feeling: input.feeling,
+    feelingSymbol: input.feelingSymbol,
+    feelingConfirmed: !input.issues.includes('unknown_symbol') && !input.issues.includes('feeling_conflict'),
+    issues: input.issues,
+    include: true,
+  };
+}
+
+/** Un bloc de notes collé = une séance (§11.2). `today` : date locale YYYY-MM-DD. */
+export function draftFromNotes(text: string, exercises: readonly Exercise[], today: string): DraftSession {
+  const parsed = parseNotes(text, today);
+  const date = parsed.date ?? today;
+  return {
+    key: newId(),
+    source: 'notes',
+    sourceId: null,
+    date,
+    dateConfirmed: false,
+    dateSource: parsed.date ? 'text' : 'today',
+    dateYearAssumed: parsed.dateYearAssumed,
+    name: parsed.title ?? importedSessionName(date),
+    nameAuto: parsed.title === null,
+    startedAt: null,
+    endedAt: null,
+    sourceText: text.trim() || null,
+    exercises: parsed.entries.map((e, i) => draftExercise(e, exercises, `e${i + 1}`)),
+    allowDuplicate: false,
+  };
+}
+
+/** Changer la date vaut confirmation explicite ; un nom généré suit la nouvelle date. */
+export function setDraftDate(draft: DraftSession, date: string): DraftSession {
+  return {
+    ...draft,
+    date,
+    dateConfirmed: true,
+    dateYearAssumed: false,
+    name: draft.nameAuto ? importedSessionName(date) : draft.name,
+  };
+}
+
+export function updateDraftExercise(draft: DraftSession, key: string, patch: Partial<DraftExercise>): DraftSession {
+  return { ...draft, exercises: draft.exercises.map((e) => (e.key === key ? { ...e, ...patch } : e)) };
+}
+
+// ——— Finalisation ———————————————————————————————————————————————
+
+function slug(name: string): string {
+  return normalizeName(name).replace(/ /g, '-') || 'exercice';
+}
+
+function uniqueId(base: string, taken: Set<string>): string {
+  let id = base;
+  for (let n = 2; taken.has(id); n++) id = `${base}-${n}`;
+  taken.add(id);
+  return id;
+}
+
+/** Noms définis par la bibliothèque pour une variante (hors synonymes appris). */
+function libraryNames(exercise: Exercise, variantId: string): string[] {
+  const variant = exercise.variants.find((v) => v.id === variantId);
+  if (!variant) return [];
+  if (variant.id === exercise.id) return [exercise.name, ...exercise.synonyms];
+  return [`${exercise.name} ${variant.name}`, variant.name];
+}
+
+/**
+ * Mémorise le nom importé comme synonyme de la variante confirmée (§11.7).
+ * Un nom déjà défini par la bibliothèque n'est pas appris ; un synonyme appris
+ * auparavant pour une autre variante lui est retiré (correction mémorisée).
+ */
+function learnSynonym(work: Map<string, Exercise>, variantId: string, sourceName: string): void {
+  const normalized = normalizeName(sourceName);
+  if (!normalized) return;
+  for (const exercise of work.values()) {
+    for (const v of exercise.variants) {
+      if (libraryNames(exercise, v.id).some((n) => normalizeName(n) === normalized)) return;
+    }
+  }
+  for (const [id, exercise] of work) {
+    let changed = false;
+    const variants = exercise.variants.map((v) => {
+      const has = v.synonyms.some((s) => normalizeName(s) === normalized);
+      if (v.id === variantId && !has) {
+        changed = true;
+        return { ...v, synonyms: [...v.synonyms, sourceName.trim()] };
+      }
+      if (v.id !== variantId && has) {
+        changed = true;
+        return { ...v, synonyms: v.synonyms.filter((s) => normalizeName(s) !== normalized) };
+      }
+      return v;
+    });
+    if (changed) work.set(id, { ...exercise, variants });
+  }
+}
+
+/** Performance d'un exercice du brouillon, ou null si ses données sont inexploitables. */
+export function draftPerformance(e: DraftExercise, variantId: string): Performance | null {
+  if (e.weightKg === null || !Number.isFinite(e.weightKg) || e.weightKg <= 0) return null;
+  if (e.reps === null) {
+    // Poids seul : historique partiel, ignoré par le moteur (§11.8, §7.11 H).
+    return { variantId, weightKg: e.weightKg, targetReps: null, plannedSets: null, reps: [], feeling: e.feeling, partial: true };
+  }
+  if (e.targetReps === null || e.plannedSets === null || e.reps.length === 0) return null;
+  const perf: Performance = {
+    variantId,
+    weightKg: e.weightKg,
+    targetReps: e.targetReps,
+    plannedSets: e.plannedSets,
+    reps: [...e.reps],
+    feeling: e.feeling,
+  };
+  return validatePerformance(perf).length === 0 ? perf : null;
+}
+
+export interface FinalizeResult {
+  /** Séances prêtes à enregistrer, dans l'ordre des brouillons. */
+  sessions: Session[];
+  /** Exercices créés ou modifiés (nouvel exercice, nouvelle variante, synonyme appris). */
+  exercises: Exercise[];
+  /** Variante retenue pour chaque exercice importé : clé de brouillon → clé d'exercice → variante. */
+  variantIds: Map<string, Map<string, string>>;
+}
+
+/**
+ * Transforme des brouillons en séances terminées d'origine « import ».
+ * Les exercices exclus ou encore inexploitables sont ignorés : l'appelant vérifie
+ * auparavant qu'il ne reste aucun problème bloquant (`draftProblems`).
+ */
+export function finalizeDrafts(
+  drafts: readonly DraftSession[],
+  exercises: readonly Exercise[],
+  existing: readonly Session[],
+  now: number,
+): FinalizeResult {
+  const work = new Map(exercises.map((e) => [e.id, e]));
+  const changed = new Set<string>();
+  const takenIds = new Set(exercises.flatMap((e) => [e.id, ...e.variants.map((v) => v.id)]));
+  const takenSessionIds = new Set(existing.map((s) => s.id));
+  const sessions: Session[] = [];
+  const variantIds = new Map<string, Map<string, string>>();
+
+  drafts.forEach((draft, index) => {
+    const created = new Map<string, string>();
+    const byKey = new Map<string, string>();
+    const performances: Performance[] = [];
+
+    for (const e of draft.exercises) {
+      if (!e.include || !e.choice) continue;
+      let variantId: string | null = null;
+      const choice = e.choice;
+
+      if (choice.kind === 'variant') {
+        if (![...work.values()].some((x) => x.variants.some((v) => v.id === choice.variantId))) continue;
+        variantId = choice.variantId;
+      } else if (choice.kind === 'new_exercise') {
+        const name = choice.name.trim();
+        if (!name || !choice.primaryGroup) continue;
+        const createdKey = `exercise:${normalizeName(name)}`;
+        variantId = created.get(createdKey) ?? null;
+        if (!variantId) {
+          const id = uniqueId(`perso-${slug(name)}`, takenIds);
+          work.set(id, {
+            id,
+            name,
+            synonyms: [],
+            primaryGroup: choice.primaryGroup,
+            secondaryGroups: [],
+            equipment: '',
+            archived: false,
+            variants: [{ id, name: 'Standard', synonyms: [], archived: false }],
+          });
+          created.set(createdKey, id);
+          variantId = id;
+        }
+      } else {
+        const name = choice.name.trim();
+        const exercise = work.get(choice.exerciseId);
+        if (!name || !exercise) continue;
+        const createdKey = `variant:${exercise.id}:${normalizeName(name)}`;
+        variantId = created.get(createdKey) ?? null;
+        if (!variantId) {
+          const id = uniqueId(`${exercise.id}--${slug(name)}`, takenIds);
+          work.set(exercise.id, { ...exercise, variants: [...exercise.variants, { id, name, synonyms: [], archived: false }] });
+          created.set(createdKey, id);
+          variantId = id;
+        }
+      }
+
+      const perf = draftPerformance(e, variantId);
+      if (!perf || performances.some((p) => p.variantId === variantId)) continue;
+      performances.push(perf);
+      byKey.set(e.key, variantId);
+      learnSynonym(work, variantId, e.sourceName);
+    }
+
+    for (const [id, exercise] of work) if (exercise !== exercises.find((x) => x.id === id)) changed.add(id);
+
+    const id = draft.sourceId && !takenSessionIds.has(draft.sourceId) ? draft.sourceId : newId();
+    takenSessionIds.add(id);
+    const name = draft.name.trim() || importedSessionName(draft.date);
+    sessions.push({
+      id,
+      name,
+      date: draft.date,
+      startedAt: draft.startedAt,
+      endedAt: draft.endedAt,
+      // Ordre d'enregistrement distinct pour chaque séance d'un même import (§7.9).
+      createdAt: now + index,
+      updatedAt: now + index,
+      origin: 'import',
+      state: 'done',
+      ...(draft.sourceText ? { sourceText: draft.sourceText } : {}),
+      performances,
+    });
+    variantIds.set(draft.key, byKey);
+  });
+
+  return { sessions, exercises: [...changed].map((id) => work.get(id)!), variantIds };
+}
+
+// ——— Doublons et contrôles ————————————————————————————————————————
+
+function signature(session: Pick<Session, 'performances'>): string {
+  return session.performances
+    .map((p) => `${p.variantId}|${Math.round(p.weightKg * 100)}|${p.reps.join('-')}`)
+    .sort()
+    .join('§');
+}
+
+/**
+ * Doublons potentiels (§11.9) : séance terminée de même identifiant, ou de même date
+ * avec les mêmes exercices, poids et répétitions.
+ */
+export function findDuplicates(candidate: Session, existing: readonly Session[], sourceId: string | null = candidate.id): Session[] {
+  const sig = signature(candidate);
+  return existing.filter(
+    (s) => s.state === 'done' && ((sourceId !== null && s.id === sourceId) || (s.date === candidate.date && signature(s) === sig)),
+  );
+}
+
+export interface DraftProblem {
+  level: 'error' | 'warning';
+  code: string;
+  /** Exercice concerné ; absent pour un problème qui concerne la séance. */
+  exerciseKey?: string;
+  message: string;
+}
+
+export interface ProblemContext {
+  exercises: readonly Exercise[];
+  sessions: readonly Session[];
+  profile: Profile;
+}
+
+const fmt = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 2 });
+
+function exerciseProblems(e: DraftExercise, ctx: ProblemContext): DraftProblem[] {
+  const list: DraftProblem[] = [];
+  const err = (code: string, message: string) => list.push({ level: 'error', code, exerciseKey: e.key, message });
+  const warn = (code: string, message: string) => list.push({ level: 'warning', code, exerciseKey: e.key, message });
+
+  const choice = e.choice;
+  if (!choice) {
+    if (e.match.confidence === 'ambiguous') err('choose_exercise', 'Plusieurs exercices possibles : choisissez le bon.');
+    else err('choose_exercise', 'Exercice non reconnu : choisissez-en un ou créez-le.');
+  } else if (choice.kind === 'variant') {
+    if (!ctx.exercises.some((x) => x.variants.some((v) => v.id === choice.variantId))) err('unknown_variant', 'Exercice introuvable.');
+    else if (e.match.confidence === 'probable' && choice.variantId === e.match.suggestion) {
+      warn('probable_match', 'Correspondance probable : vérifiez l’exercice.');
+    }
+  } else if (choice.kind === 'new_exercise') {
+    const name = normalizeName(choice.name);
+    if (!name) err('new_exercise_name', 'Nom du nouvel exercice manquant.');
+    else if (ctx.exercises.some((x) => normalizeName(x.name) === name)) {
+      err('new_exercise_exists', 'Un exercice porte déjà ce nom : sélectionnez-le.');
+    }
+    if (!choice.primaryGroup) err('new_exercise_group', 'Choisissez le groupe musculaire du nouvel exercice.');
+  } else {
+    const exercise = ctx.exercises.find((x) => x.id === choice.exerciseId);
+    const name = normalizeName(choice.name);
+    if (!exercise) err('unknown_variant', 'Exercice introuvable.');
+    else if (!name) err('new_variant_name', 'Nom de la nouvelle variante manquant.');
+    else if (exercise.variants.some((v) => normalizeName(v.name) === name)) {
+      err('new_variant_exists', 'Cette variante existe déjà : sélectionnez-la.');
+    }
+  }
+
+  if (e.weightKg === null) {
+    if (e.reps === null && e.targetReps === null) {
+      err('no_data', e.issues.includes('ambiguous_format') ? 'Ligne non comprise : saisissez les valeurs ou excluez l’exercice.' : 'Aucune performance trouvée : complétez ou excluez l’exercice.');
+    } else err('missing_weight', 'Poids manquant.');
+  } else if (!Number.isFinite(e.weightKg) || e.weightKg <= 0) {
+    err('invalid_weight', 'Poids invalide.');
+  } else if (e.reps === null) {
+    warn('partial', 'Poids seul : historique partiel, sans effet sur la progression.');
+  } else if (e.targetReps === null || e.plannedSets === null) {
+    err('missing_target', 'Nombre de séries ou cible manquant.');
+  } else if (e.reps.length === 0) {
+    err('no_sets', 'Aucune série.');
+  } else {
+    const errors = validatePerformance({ variantId: '', weightKg: e.weightKg, targetReps: e.targetReps, plannedSets: e.plannedSets, reps: e.reps, feeling: e.feeling });
+    if (errors.includes('reps_above_target')) err('reps_above_target', 'Une série dépasse la cible.');
+    if (errors.includes('too_many_sets')) err('too_many_sets', 'Plus de séries réalisées que de séries prévues.');
+    if (errors.some((x) => x === 'invalid_target' || x === 'invalid_planned_sets' || x === 'invalid_reps')) {
+      err('invalid_numbers', 'Séries ou répétitions invalides.');
+    }
+    if (errors.length === 0 && e.reps.length < e.plannedSets) {
+      warn('incomplete', `Séance incomplète (${e.reps.length} série${e.reps.length > 1 ? 's' : ''} sur ${e.plannedSets}) : orange.`);
+    }
+    if (e.issues.includes('target_inferred')) warn('target_inferred', `Cible déduite de la meilleure série (${e.targetReps}) : à vérifier.`);
+  }
+
+  if (!e.feelingConfirmed) {
+    if (e.issues.includes('feeling_conflict')) err('feeling_conflict', 'Ressenti et symbole contradictoires : choisissez le ressenti.');
+    else err('unknown_symbol', `Symbole « ${e.feelingSymbol ?? ''} » non reconnu : choisissez le ressenti.`);
+  } else if (e.feeling === 'inconnu' && e.reps !== null) {
+    warn('no_feeling', 'Ressenti absent : la performance sera orange et ne validera pas.');
+  }
+
+  if (choice?.kind === 'variant' && e.weightKg !== null && e.weightKg > 0) {
+    const previous = ctx.profile.variants[choice.variantId]?.palier.weightKg;
+    if (previous !== undefined && Math.abs(e.weightKg - previous) / previous > WEIGHT_CONFIRM_RATIO) {
+      warn('weight_gap', `Poids très différent du dernier utilisé (${fmt(previous)} kg) : vérifiez.`);
+    }
+  }
+  return list;
+}
+
+/** Problèmes d'un brouillon : les erreurs bloquent l'import, les avertissements informent. */
+export function draftProblems(draft: DraftSession, ctx: ProblemContext): DraftProblem[] {
+  const list: DraftProblem[] = [];
+  if (!isIsoDate(draft.date)) list.push({ level: 'error', code: 'date_invalid', message: 'Date invalide.' });
+  else if (!draft.dateConfirmed) list.push({ level: 'error', code: 'date_unconfirmed', message: 'Confirmez la date de la séance.' });
+  if (draft.dateYearAssumed) list.push({ level: 'warning', code: 'date_year_assumed', message: 'Année absente des notes : vérifiez-la.' });
+
+  const included = draft.exercises.filter((e) => e.include);
+  if (included.length === 0) list.push({ level: 'error', code: 'no_exercise', message: 'Aucun exercice à importer.' });
+
+  const seen = new Set<string>();
+  for (const e of included) {
+    list.push(...exerciseProblems(e, ctx));
+    const id = e.choice?.kind === 'variant' ? e.choice.variantId : e.choice?.kind === 'new_variant' ? `${e.choice.exerciseId}:${normalizeName(e.choice.name)}` : e.choice ? `new:${normalizeName(e.choice.name)}` : null;
+    if (id !== null) {
+      if (seen.has(id)) list.push({ level: 'error', code: 'duplicate_exercise', exerciseKey: e.key, message: 'Exercice déjà présent dans cette séance : excluez-en un.' });
+      seen.add(id);
+    }
+  }
+
+  if (!draft.allowDuplicate && isIsoDate(draft.date)) {
+    const { sessions } = finalizeDrafts([draft], ctx.exercises, ctx.sessions, 0);
+    const candidate = sessions[0];
+    if (candidate && candidate.performances.length > 0 && findDuplicates(candidate, ctx.sessions, draft.sourceId).length > 0) {
+      list.push({ level: 'error', code: 'duplicate_session', message: 'Une séance identique existe déjà à cette date.' });
+    }
+  }
+  return list;
+}
+
+export function hasBlockingProblems(problems: readonly DraftProblem[]): boolean {
+  return problems.some((p) => p.level === 'error');
+}
+
+/**
+ * Statut que chaque performance obtiendra une fois importée (§11.8), calculé par le moteur
+ * en rejouant l'historique complété des brouillons. null : performance partielle ou inexploitable.
+ */
+export function previewEvaluations(
+  drafts: readonly DraftSession[],
+  exercises: readonly Exercise[],
+  sessions: readonly Session[],
+): Map<string, Map<string, Evaluation | null>> {
+  const result = finalizeDrafts(drafts, exercises, sessions, Date.now());
+  const all = [...exercises.filter((e) => !result.exercises.some((x) => x.id === e.id)), ...result.exercises];
+  const replay = rebuildProfile([...sessions, ...result.sessions], buildEngineSettings(all));
+  const out = new Map<string, Map<string, Evaluation | null>>();
+  drafts.forEach((draft, i) => {
+    const sessionId = result.sessions[i]!.id;
+    const byKey = new Map<string, Evaluation | null>();
+    for (const [key, variantId] of result.variantIds.get(draft.key) ?? []) {
+      byKey.set(key, replay.evaluations.find((ev) => ev.sessionId === sessionId && ev.variantId === variantId) ?? null);
+    }
+    out.set(draft.key, byKey);
+  });
+  return out;
+}

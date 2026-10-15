@@ -30,6 +30,8 @@ interface AppValue {
   persist: PersistState | null;
   undo: UndoEntry | null;
   lastFinish: FinishInfo | null;
+  /** Date du dernier export (ms epoch), null si jamais exporté. */
+  lastExportAt: number | null;
   ctxFor(variantId: string): VariantContext;
   /** Applique la nouvelle version d'une séance puis l'enregistre. Renvoie true si l'enregistrement a réussi. */
   commit(next: Session, undoLabel?: string): Promise<boolean>;
@@ -37,6 +39,23 @@ interface AppValue {
   applyUndo(): void;
   dismissUndo(): void;
   setLastFinish(info: FinishInfo | null): void;
+  /** Enregistre un import en une transaction ; l'état n'est mis à jour qu'en cas de succès. */
+  importData(data: ImportData): Promise<boolean>;
+  markExported(at: number): Promise<boolean>;
+}
+
+export interface ImportData {
+  sessions: readonly Session[];
+  exercises: readonly Exercise[];
+  /** Remplacement global, après confirmation explicite uniquement. */
+  replace?: boolean;
+}
+
+function upsert<T extends { id: string }>(list: readonly T[], items: readonly T[]): T[] {
+  const byId = new Map(items.map((x) => [x.id, x]));
+  const next = list.map((x) => byId.get(x.id) ?? x);
+  for (const x of items) if (!list.some((y) => y.id === x.id)) next.push(x);
+  return next;
 }
 
 const AppContext = createContext<AppValue | null>(null);
@@ -57,6 +76,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [persist, setPersist] = useState<PersistState | null>(null);
   const [undo, setUndo] = useState<UndoEntry | null>(null);
   const [lastFinish, setLastFinish] = useState<FinishInfo | null>(null);
+  const [lastExportAt, setLastExportAt] = useState<number | null>(null);
 
   const sessionsRef = useRef<Session[]>([]);
   const failedIds = useRef(new Set<string>());
@@ -68,11 +88,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         const repo = new Repository(await openAppDb());
         await repo.ensureSeed();
-        const [loadedSessions, loadedExercises] = await Promise.all([repo.loadSessions(), repo.loadExercises()]);
+        const [loadedSessions, loadedExercises, exportedAt] = await Promise.all([
+          repo.loadSessions(),
+          repo.loadExercises(),
+          repo.getMeta<number>('lastExportAt'),
+        ]);
         if (cancelled) return;
         sessionsRef.current = loadedSessions;
         setSessions(loadedSessions);
         setExercises(loadedExercises);
+        setLastExportAt(exportedAt ?? null);
         setLoad({ kind: 'ready', repo });
 
         // §12 : stockage persistant demandé au premier lancement, état affiché ensuite.
@@ -141,6 +166,42 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const dismissUndo = useCallback(() => setUndo(null), []);
 
+  const importData = useCallback(
+    async (data: ImportData): Promise<boolean> => {
+      if (!repo) return false;
+      try {
+        await repo.applyImport(data);
+      } catch (error) {
+        console.error('[MyFitApp] échec de l’import', error);
+        return false;
+      }
+      const list = data.replace ? [...data.sessions] : upsert(sessionsRef.current, data.sessions);
+      if (data.replace) failedIds.current.clear();
+      sessionsRef.current = list;
+      setSessions(list);
+      setExercises((current) => (data.replace ? [...data.exercises] : upsert(current, data.exercises)));
+      // Une annulation ne doit jamais défaire un import.
+      setUndo(null);
+      setLastFinish(null);
+      return true;
+    },
+    [repo],
+  );
+
+  const markExported = useCallback(
+    async (at: number): Promise<boolean> => {
+      if (!repo) return false;
+      try {
+        await repo.setMeta('lastExportAt', at);
+        setLastExportAt(at);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [repo],
+  );
+
   const settings = useMemo(() => buildEngineSettings(exercises), [exercises]);
   const variants = useMemo(() => indexVariants(exercises), [exercises]);
   const replay = useMemo(() => rebuildProfile(sessions, settings), [sessions, settings]);
@@ -165,12 +226,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     persist,
     undo,
     lastFinish,
+    lastExportAt,
     ctxFor,
     commit,
     retrySave,
     applyUndo,
     dismissUndo,
     setLastFinish,
+    importData,
+    markExported,
   };
 
   if (load.kind === 'loading') return <div className="splash">Chargement…</div>;

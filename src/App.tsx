@@ -4,6 +4,7 @@ import { useHashRoute } from './app/hooks';
 import { ForgottenDialog } from './ui/ForgottenDialog';
 import { SaveErrorBanner } from './ui/SaveIndicator';
 import { UndoToast } from './ui/UndoToast';
+import { DataScreen } from './ui/screens/DataScreen';
 import { ExercisePicker } from './ui/screens/ExercisePicker';
 import { Home } from './ui/screens/Home';
 import { Recap } from './ui/screens/Recap';
@@ -25,6 +26,8 @@ function Router() {
       return param ? <Recap key={param} sessionId={param} /> : <Home />;
     case 'reglages':
       return <Settings />;
+    case 'donnees':
+      return <DataScreen />;
     default:
       return <Home />;
   }

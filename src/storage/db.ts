@@ -57,7 +57,14 @@ export class Repository {
 
   async putExercises(exercises: readonly Exercise[]): Promise<void> {
     const tx = this.db.transaction('exercises', 'readwrite');
-    await Promise.all([...exercises.map((e) => tx.store.put(e)), tx.done]);
+    const writes: Promise<unknown>[] = [];
+    try {
+      for (const e of exercises) writes.push(tx.store.put(e));
+    } catch (error) {
+      abortQuietly(tx, writes);
+      throw error;
+    }
+    await Promise.all([...writes, tx.done]);
   }
 
   async getMeta<T>(key: string): Promise<T | undefined> {
@@ -67,6 +74,26 @@ export class Repository {
   async setMeta(key: string, value: unknown): Promise<void> {
     const tx = this.db.transaction('meta', 'readwrite');
     await Promise.all([tx.store.put(value, key), tx.done]);
+  }
+
+  /**
+   * Enregistre un import en une seule transaction (§11.10, §12) : soit tout est écrit, soit rien.
+   * `replace` vide d'abord séances et exercices ; l'appelant ne le demande qu'après confirmation explicite.
+   */
+  async applyImport(data: { sessions: readonly Session[]; exercises: readonly Exercise[]; replace?: boolean }): Promise<void> {
+    const tx = this.db.transaction(['sessions', 'exercises'], 'readwrite');
+    const sessions = tx.objectStore('sessions');
+    const exercises = tx.objectStore('exercises');
+    const writes: Promise<unknown>[] = [];
+    try {
+      if (data.replace) writes.push(sessions.clear(), exercises.clear());
+      for (const e of data.exercises) writes.push(exercises.put(e));
+      for (const s of data.sessions) writes.push(sessions.put(s));
+    } catch (error) {
+      abortQuietly(tx, writes);
+      throw error;
+    }
+    await Promise.all([...writes, tx.done]);
   }
 
   /** Installe la bibliothèque initiale au premier lancement uniquement : les modifications ultérieures sont conservées. */
@@ -85,6 +112,16 @@ export class Repository {
   close(): void {
     this.db.close();
   }
+}
+
+/**
+ * Annule une transaction après une erreur levée en préparant les écritures (enregistrement
+ * invalide) : sans cela, les écritures déjà lancées seraient validées.
+ */
+function abortQuietly(tx: { abort(): void; done: Promise<void> }, writes: readonly Promise<unknown>[]): void {
+  for (const w of writes) w.catch(() => undefined);
+  tx.done.catch(() => undefined);
+  tx.abort();
 }
 
 export type PersistState = 'granted' | 'denied' | 'unsupported';
