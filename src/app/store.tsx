@@ -47,6 +47,8 @@ interface AppValue {
   /** Supprime un exercice sans historique (l'appelant le vérifie). */
   deleteExercise(exercise: Exercise): Promise<boolean>;
   markExported(at: number): Promise<boolean>;
+  /** Supprime une séance passée (après confirmation explicite) ; le profil est recalculé (§10, §7.9). */
+  deleteSession(id: string): Promise<boolean>;
 }
 
 export interface ImportData {
@@ -226,6 +228,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [repo],
   );
 
+  const deleteSession = useCallback(
+    async (id: string): Promise<boolean> => {
+      if (!repo) return false;
+      try {
+        await repo.deleteSession(id);
+      } catch (error) {
+        console.error('[MyFitApp] échec de suppression', error);
+        return false;
+      }
+      const list = sessionsRef.current.filter((s) => s.id !== id);
+      sessionsRef.current = list;
+      setSessions(list);
+      failedIds.current.delete(id);
+      setUndo(null);
+      return true;
+    },
+    [repo],
+  );
+
   const markExported = useCallback(
     async (at: number): Promise<boolean> => {
       if (!repo) return false;
@@ -275,6 +296,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     saveExercises,
     deleteExercise,
     markExported,
+    deleteSession,
   };
 
   if (load.kind === 'loading') return <div className="splash">Chargement…</div>;

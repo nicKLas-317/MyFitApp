@@ -10,6 +10,8 @@ import {
   previewEvaluations,
   type DraftSession,
 } from '../../transfer/draft';
+import { EMPTY_BODY, planBodyImport } from '../../body/model';
+import { useBody } from '../../body/store';
 import { downloadBackup } from '../download';
 import { DraftSessionEditor, ProblemList } from '../import/DraftEditor';
 
@@ -23,13 +25,15 @@ type Outcome = { kind: 'ok' | 'error'; text: string };
 /** Import et export des données (§11, §12). */
 export function DataScreen() {
   const { sessions, exercises, lastExportAt, markExported } = useApp();
+  const body = useBody();
   const [text, setText] = useState('');
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [counter, setCounter] = useState(0);
 
   async function exportNow() {
-    const at = downloadBackup({ sessions, exercises });
+    const bodyTracking = await body.snapshot();
+    const at = downloadBackup({ sessions, exercises, bodyTracking: bodyTracking ?? undefined });
     const ok = await markExported(at);
     setOutcome(ok ? { kind: 'ok', text: 'Sauvegarde téléchargée.' } : { kind: 'error', text: 'Sauvegarde téléchargée, mais sa date n’a pas pu être enregistrée.' });
   }
@@ -228,6 +232,7 @@ function DraftsPreview({ initial, notes, onDone }: { initial: DraftSession[]; no
 /** Aperçu d'une sauvegarde MyFitApp : fusion par défaut, remplacement sur confirmation explicite. */
 function BackupPreview({ backup, onDone }: { backup: Backup; onDone(outcome: Outcome): void }) {
   const { sessions, exercises, importData, markExported } = useApp();
+  const body = useBody();
   const [includeDuplicates, setIncludeDuplicates] = useState(false);
   const [replaceConfirmed, setReplaceConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -235,16 +240,26 @@ function BackupPreview({ backup, onDone }: { backup: Backup; onDone(outcome: Out
     () => planImport(backup, { sessions, exercises }, { mode: 'merge', includeDuplicates }),
     [backup, sessions, exercises, includeDuplicates],
   );
+  const importedBody = backup.bodyTracking ?? EMPTY_BODY;
+  const bodyPlan = useMemo(() => planBodyImport(importedBody, body.data, 'merge'), [importedBody, body.data]);
+  const bodyChanges = bodyPlan.weighIns.length > 0 || bodyPlan.heightCm !== undefined;
   const exportedAt = Date.parse(backup.exportedAt);
   const failed: Outcome = { kind: 'error', text: 'L’import a échoué : aucune donnée n’a été modifiée. Réessayez.' };
 
   async function merge() {
     setBusy(true);
     const ok = await importData({ sessions: plan.sessions, exercises: plan.exercises });
+    // Suivi corporel : base séparée, importé après les séances ; un échec ici n'annule pas les séances.
+    const bodyOk = !ok || !bodyChanges || (await body.applyImport(bodyPlan));
     setBusy(false);
     onDone(
       ok
-        ? { kind: 'ok', text: `Import terminé : ${plural(plan.sessions.length, 'séance ajoutée', 'séances ajoutées')}.` }
+        ? {
+            kind: bodyOk ? 'ok' : 'error',
+            text: `Import terminé : ${plural(plan.sessions.length, 'séance ajoutée', 'séances ajoutées')}${
+              bodyPlan.weighIns.length > 0 ? `, ${plural(bodyPlan.weighIns.length, 'pesée ajoutée', 'pesées ajoutées')}` : ''
+            }.${bodyOk ? '' : ' Les pesées n’ont pas pu être importées.'}`,
+          }
         : failed,
     );
   }
@@ -252,10 +267,16 @@ function BackupPreview({ backup, onDone }: { backup: Backup; onDone(outcome: Out
   async function replace() {
     setBusy(true);
     // Les données actuelles sont sauvegardées avant d'être remplacées.
-    await markExported(downloadBackup({ sessions, exercises }));
+    const currentBody = await body.snapshot();
+    await markExported(downloadBackup({ sessions, exercises, bodyTracking: currentBody ?? undefined }));
     const ok = await importData({ sessions: backup.sessions, exercises: backup.exercises, replace: true });
+    const bodyOk = !ok || (await body.applyImport(planBodyImport(importedBody, body.data, 'replace')));
     setBusy(false);
-    onDone(ok ? { kind: 'ok', text: 'Données remplacées par la sauvegarde.' } : failed);
+    onDone(
+      ok
+        ? { kind: bodyOk ? 'ok' : 'error', text: `Données remplacées par la sauvegarde.${bodyOk ? '' : ' Les pesées n’ont pas pu être remplacées.'}` }
+        : failed,
+    );
   }
 
   return (
@@ -295,6 +316,12 @@ function BackupPreview({ backup, onDone }: { backup: Backup; onDone(outcome: Out
               </li>
             )}
             {plan.skippedActive.length > 0 && <li>Séance en cours de la sauvegarde ignorée : une séance est déjà en cours ici</li>}
+            {bodyPlan.weighIns.length > 0 && <li data-testid="plan-weighins">{plural(bodyPlan.weighIns.length, 'pesée à ajouter', 'pesées à ajouter')}</li>}
+            {bodyPlan.heightCm !== undefined && <li>Taille : {bodyPlan.heightCm} cm</li>}
+            {bodyPlan.conflicts.length > 0 && (
+              <li>{plural(bodyPlan.conflicts.length, 'pesée différente', 'pesées différentes')} à la même date : la pesée de l’appareil est conservée</li>
+            )}
+            {bodyPlan.heightConflict && <li>Taille différente : celle de l’appareil est conservée</li>}
           </ul>
           {plan.duplicates.length > 0 && (
             <label className="check-line warn">
@@ -305,7 +332,7 @@ function BackupPreview({ backup, onDone }: { backup: Backup; onDone(outcome: Out
               </span>
             </label>
           )}
-          {plan.sessions.length === 0 && plan.exercises.length === 0 ? (
+          {plan.sessions.length === 0 && plan.exercises.length === 0 && !bodyChanges ? (
             <p className="banner info">Rien de nouveau à importer.</p>
           ) : (
             <button type="button" className="btn primary big" disabled={busy} onClick={() => void merge()}>

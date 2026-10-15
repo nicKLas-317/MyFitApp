@@ -3,12 +3,19 @@ import { navigate, useNow } from '../../app/hooks';
 import { elapsedMs, startSession } from '../../session/ops';
 import { formatDuration } from '../../session/format';
 import { needsBackupReminder } from '../../transfer/backup';
+import { useBody } from '../../body/store';
 import { downloadBackup } from '../download';
 
 export function Home() {
   const { active, commit, sessions, exercises, lastExportAt, markExported } = useApp();
   const now = useNow();
   const remind = needsBackupReminder(sessions, lastExportAt, now);
+  const body = useBody();
+
+  async function exportNow() {
+    const bodyTracking = (await body.snapshot()) ?? undefined;
+    await markExported(downloadBackup({ sessions, exercises, bodyTracking }));
+  }
 
   async function start() {
     const session = startSession(Date.now());
@@ -32,14 +39,20 @@ export function Home() {
       {remind && (
         <div className="banner info reminder" role="status">
           <span>{lastExportAt ? 'Aucune sauvegarde depuis plus de 14 jours.' : 'Pensez à sauvegarder vos séances.'}</span>
-          <button type="button" className="btn" onClick={() => void markExported(downloadBackup({ sessions, exercises }))}>
+          <button type="button" className="btn" onClick={() => void exportNow()}>
             Exporter
           </button>
         </div>
       )}
       <nav className="home-nav">
+        <a className="btn" href="#/historique">
+          Historique
+        </a>
         <a className="btn" href="#/bibliotheque">
           Bibliothèque d’exercices
+        </a>
+        <a className="btn" href="#/poids">
+          Mon poids
         </a>
         <a className="btn" href="#/donnees">
           Importer / exporter

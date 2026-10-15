@@ -7,6 +7,9 @@
  */
 import type { Exercise, Feeling, MuscleGroup, Session, Variant } from '../domain/types';
 import { MUSCLE_GROUP_LABELS, SEED_EXERCISES } from '../library/seed';
+import { EMPTY_BODY, isValidHeight, isValidWeighIn, type BodyTracking } from '../body/model';
+
+export { EMPTY_BODY, type BodyTracking };
 import { importedSessionName, isIsoDate, localDate } from '../session/format';
 import { draftExercise, findDuplicates, type DraftExerciseInput, type DraftIssue, type DraftSession } from './draft';
 import { isFeeling, readFeelingSymbol } from './feelings';
@@ -19,16 +22,6 @@ export const SCHEMA_VERSION = 2;
 /** Délai au-delà duquel l'accueil rappelle d'exporter (§12). */
 export const BACKUP_REMINDER_MS = 14 * 24 * 60 * 60 * 1000;
 
-export interface WeighIn {
-  date: string;
-  weightKg: number;
-}
-
-/** Suivi corporel (§20). Vide tant que la rubrique « Mon poids » n'existe pas (phase 5). */
-export interface BodyTracking {
-  heightCm: number | null;
-  weighIns: WeighIn[];
-}
 
 export interface Backup {
   app: typeof APP_ID;
@@ -41,7 +34,6 @@ export interface Backup {
   bodyTracking: BodyTracking;
 }
 
-export const EMPTY_BODY: BodyTracking = { heightCm: null, weighIns: [] };
 
 export function buildBackup(
   data: { sessions: readonly Session[]; exercises: readonly Exercise[]; bodyTracking?: BodyTracking },
@@ -383,9 +375,14 @@ export function validateBackup(data: Obj): string[] {
   if (body !== undefined) {
     if (!isObj(body)) errors.push('bodyTracking invalide.');
     else {
-      if (body.heightCm !== null && !(isNum(body.heightCm) && body.heightCm > 0)) errors.push('bodyTracking.heightCm invalide.');
-      if (!Array.isArray(body.weighIns) || !body.weighIns.every((w) => isObj(w) && isStr(w.date) && isIsoDate(w.date) && isNum(w.weightKg) && w.weightKg > 0)) {
-        errors.push('bodyTracking.weighIns invalide.');
+      if (!isValidHeight(body.heightCm)) errors.push('bodyTracking.heightCm invalide.');
+      if (!Array.isArray(body.weighIns)) errors.push('bodyTracking.weighIns invalide.');
+      else {
+        body.weighIns.forEach((w, i) => {
+          if (!isValidWeighIn(w)) errors.push(`bodyTracking.weighIns[${i}] invalide.`);
+        });
+        const dates = body.weighIns.map((w) => (isObj(w) ? w.date : null));
+        if (new Set(dates).size !== dates.length) errors.push('bodyTracking.weighIns : plusieurs pesées à la même date.');
       }
     }
   }

@@ -5,6 +5,9 @@ import { sortSessions } from '../../engine';
 import { displayName } from '../../library/catalog';
 import { addVariant, updateVariant, validateVariantName } from '../../library/edit';
 import { illustrationFor } from '../../library/illustrations';
+import { chartSeries } from '../../analysis/progress';
+import { ErrorBoundary } from '../ErrorBoundary';
+import { LineChart } from '../LineChart';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
 import { formatIsoDay, formatKg } from '../../session/format';
 import { findPerformance } from '../../session/ops';
@@ -36,6 +39,9 @@ export function ExerciseSheet({ variantId }: { variantId: string }) {
   const archived = exercise.archived || variant.archived;
   const inSession = active ? !!findPerformance(active, variantId) : false;
   const illustration = illustrationFor(exercise.id);
+  // Graphique secondaire (§19.2) : une seule variante, jamais mélangée avec une autre.
+  const series = chartSeries(variantId, sessions, replay.evaluations);
+  const reps = series.flatMap((p) => (p.avgReps === null ? [] : [{ date: p.date, value: p.avgReps }]));
 
   // Historique de l'exercice-variante, du plus récent au plus ancien (§4, §19.1).
   const history = sortSessions(sessions.filter((s) => s.state === 'done'))
@@ -230,6 +236,22 @@ export function ExerciseSheet({ variantId }: { variantId: string }) {
           <h2 className="section-title">Autres noms</h2>
           <p className="small">{[...exercise.synonyms, ...variant.synonyms].join(' · ')}</p>
         </section>
+      )}
+
+      {series.length > 1 && (
+        <ErrorBoundary fallback={<p className="muted small">Graphique indisponible.</p>}>
+        <section aria-label="Évolution">
+          <h2 className="section-title">Évolution</h2>
+          <p className="muted small">{ctx.cfg.assisted ? 'Aide (kg)' : 'Charge (kg)'}</p>
+          <LineChart data={series.map((p) => ({ date: p.date, value: p.weightKg }))} label={ctx.cfg.assisted ? 'Évolution de l’aide' : 'Évolution de la charge'} unit="kg" testId="chart-weight" />
+          {reps.length > 1 && (
+            <>
+              <p className="muted small">Répétitions par série (moyenne)</p>
+              <LineChart data={reps} label="Évolution des répétitions" unit="répétitions" testId="chart-reps" />
+            </>
+          )}
+        </section>
+        </ErrorBoundary>
       )}
 
       <section>

@@ -1,10 +1,16 @@
 import { useEffect } from 'react';
 import { AppProvider } from './app/store';
+import { BodyProvider } from './body/store';
+import { ErrorBoundary } from './ui/ErrorBoundary';
 import { useHashRoute } from './app/hooks';
 import { ForgottenDialog } from './ui/ForgottenDialog';
 import { SaveErrorBanner } from './ui/SaveIndicator';
 import { UndoToast } from './ui/UndoToast';
+import { Bilan } from './ui/screens/Bilan';
+import { BodyScreen } from './ui/screens/BodyScreen';
 import { DataScreen } from './ui/screens/DataScreen';
+import { History } from './ui/screens/History';
+import { SessionDetail } from './ui/screens/SessionDetail';
 import { ExerciseEdit } from './ui/screens/ExerciseEdit';
 import { ExerciseSheet } from './ui/screens/ExerciseSheet';
 import { Library } from './ui/screens/Library';
@@ -39,6 +45,27 @@ function Router() {
       return <Settings />;
     case 'donnees':
       return <DataScreen />;
+    case 'historique':
+      return param ? <SessionDetail key={param} sessionId={param} /> : <History />;
+    case 'bilan':
+      return <Bilan />;
+    case 'poids':
+      return (
+        <ErrorBoundary
+          fallback={
+            <main className="screen">
+              <p className="banner error-inline" role="alert">
+                Le suivi du poids a rencontré une erreur. Vos séances ne sont pas concernées.
+              </p>
+              <a className="btn primary big" href="#/">
+                Accueil
+              </a>
+            </main>
+          }
+        >
+          <BodyScreen />
+        </ErrorBoundary>
+      );
     default:
       return <Home />;
   }
@@ -47,10 +74,13 @@ function Router() {
 export function App() {
   return (
     <AppProvider>
-      <SaveErrorBanner />
-      <Router />
-      <UndoToast />
-      <ForgottenDialog />
+      {/* Suivi corporel isolé (§20) : son chargement ou ses erreurs n'affectent jamais les séances. */}
+      <BodyProvider>
+        <SaveErrorBanner />
+        <Router />
+        <UndoToast />
+        <ForgottenDialog />
+      </BodyProvider>
     </AppProvider>
   );
 }

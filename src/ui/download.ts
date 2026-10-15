@@ -1,8 +1,9 @@
+import type { BodyTracking } from '../body/model';
 import type { Exercise, Session } from '../domain/types';
 import { backupFileName, buildBackup } from '../transfer/backup';
 
 /** Télécharge une sauvegarde complète au format JSON (§11.10). Renvoie l'horodatage de l'export. */
-export function downloadBackup(data: { sessions: readonly Session[]; exercises: readonly Exercise[] }): number {
+export function downloadBackup(data: { sessions: readonly Session[]; exercises: readonly Exercise[]; bodyTracking?: BodyTracking }): number {
   const now = Date.now();
   const blob = new Blob([JSON.stringify(buildBackup(data, now), null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);

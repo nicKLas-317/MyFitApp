@@ -1223,3 +1223,102 @@ fieldset {
   color: var(--accent);
   margin: 4px 0 0;
 }
+
+/* Graphiques (§19.2, §20) */
+.chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 4px 0 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.chart-axis {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.chart-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.chart-dot {
+  fill: var(--accent);
+}
+
+.chart-label {
+  fill: var(--muted);
+  font-size: 10px;
+}
+
+/* Historique et suivi corporel */
+.history-links {
+  margin: 12px 0;
+}
+
+.session-link {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.perf-editor,
+.weigh-in-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.weigh-in-form input,
+.perf-editor input,
+.perf-editor select,
+.name-form input[type='date'],
+.name-form .row input {
+  min-height: var(--tap);
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.name-form .row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.weigh-in {
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+}
+
+.weigh-in .weigh-in-form {
+  grid-column: 1 / -1;
+}
+
+.period-chips {
+  margin: 8px 0;
+}
+
+.period-chips .chip {
+  flex: none;
+  padding: 0 14px;
+}
+
+.recap-item .link,
+.session-detail .sheet-actions .link {
+  justify-self: start;
+  text-align: left;
+}
