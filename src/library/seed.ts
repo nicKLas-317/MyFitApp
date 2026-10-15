@@ -42,21 +42,33 @@ export const SEED_EXERCISES: readonly Exercise[] = [
   exercise('extension-triceps-haltere-assis', 'Extension triceps haltère assis', ['Overhead dumbbell extension', 'Extension nuque haltère'], 'triceps', [], 'haltère'),
   exercise('presse-a-cuisses', 'Presse à cuisses', ['Leg press', 'Presse'], 'jambes', ['quadriceps', 'ischio-jambiers'], 'machine'),
   exercise('leg-extension', 'Leg extension', ['Extension des jambes', 'Extension quadriceps'], 'jambes', ['quadriceps'], 'machine'),
-  exercise('leg-curl', 'Leg curl', ['Flexion des jambes', 'Curl ischios'], 'jambes', ['ischio-jambiers'], 'machine'),
+  // Leg curl = version ASSISE ; la version allongée est « Curl ischios » (historiques séparés).
+  exercise('leg-curl', 'Leg curl', ['Leg curl assis', 'Seated leg curl'], 'jambes', ['ischio-jambiers'], 'machine'),
   exercise('crunch-machine', 'Crunch machine', ['Abdominaux machine', 'Abdos'], 'abdominaux', [], 'machine'),
   // Version 2 de la bibliothèque initiale.
   exercise('dips-assistes', 'Dips assistés', ['Assisted dips', 'Dips machine assistée', 'Dips à la machine'], 'triceps', ['pectoraux'], 'machine', {
     assisted: true,
   }),
   exercise('ecarte-couche-halteres', 'Écarté couché haltères', ['Dumbbell fly', 'Écarté haltères', 'Écarté à plat haltères'], 'pectoraux', ['epaules'], 'haltères'),
+  // Version 3.
+  exercise('curl-ischios', 'Curl ischios', ['Curl ischio allongé', 'Leg curl allongé', 'Lying leg curl'], 'jambes', ['ischio-jambiers'], 'machine'),
 ];
 
 /** Version de la bibliothèque initiale ; chaque version ajoute des exercices (jamais de suppression). */
-export const SEED_VERSION = 2;
+export const SEED_VERSION = 3;
 
 /** Exercices ajoutés par chaque version, installés une seule fois sur une base existante. */
 export const SEED_ADDITIONS: Readonly<Record<number, readonly string[]>> = {
   2: ['dips-assistes', 'ecarte-couche-halteres'],
+  3: ['curl-ischios'],
+};
+
+/**
+ * Synonymes corrigés par une version : appliqués seulement si l'exercice a encore les synonymes
+ * d'origine (une personnalisation de l'utilisateur n'est jamais écrasée).
+ */
+export const SEED_SYNONYM_UPDATES: Readonly<Record<number, Readonly<Record<string, { from: readonly string[]; to: readonly string[] }>>>> = {
+  3: { 'leg-curl': { from: ['Flexion des jambes', 'Curl ischios'], to: ['Leg curl assis', 'Seated leg curl'] } },
 };
 
 export const MUSCLE_GROUP_LABELS: Record<MuscleGroup, string> = {

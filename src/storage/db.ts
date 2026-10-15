@@ -1,6 +1,6 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import type { Exercise, Session } from '../domain/types';
-import { SEED_ADDITIONS, SEED_EXERCISES, SEED_VERSION } from '../library/seed';
+import { SEED_ADDITIONS, SEED_EXERCISES, SEED_SYNONYM_UPDATES, SEED_VERSION } from '../library/seed';
 
 /**
  * Base d'entraînement. Le suivi corporel (§20) aura sa propre base, séparée.
@@ -116,8 +116,22 @@ export class Repository {
     const tx = this.db.transaction(['exercises', 'meta'], 'readwrite');
     const store = tx.objectStore('exercises');
     const existing = new Set(await store.getAllKeys());
+    // Synonymes corrigés par une version, seulement s'ils n'ont pas été personnalisés.
+    const updates: Exercise[] = [];
+    if (version > 0) {
+      for (const [v, changes] of Object.entries(SEED_SYNONYM_UPDATES)) {
+        if (Number(v) <= version) continue;
+        for (const [id, { from, to }] of Object.entries(changes)) {
+          const current = await store.get(id);
+          if (current && current.synonyms.length === from.length && current.synonyms.every((s, i) => s === from[i])) {
+            updates.push({ ...current, synonyms: [...to] });
+          }
+        }
+      }
+    }
     await Promise.all([
       ...wanted.filter((e) => !existing.has(e.id)).map((e) => store.put(e)),
+      ...updates.map((e) => store.put(e)),
       tx.objectStore('meta').put(true, 'seeded'),
       tx.objectStore('meta').put(SEED_VERSION, 'seedVersion'),
       tx.done,

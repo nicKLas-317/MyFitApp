@@ -42,6 +42,6 @@ describe('Illustrations embarquées (§4.0.1)', () => {
     expect(ILLUSTRATIONS['crunch-machine']).toBeUndefined();
     // Dips assistés : les dessins disponibles montrent des dips au poids du corps, sans machine d'assistance.
     expect(ILLUSTRATIONS['dips-assistes']).toBeUndefined();
-    expect(Object.keys(ILLUSTRATIONS)).toHaveLength(16);
+    expect(Object.keys(ILLUSTRATIONS)).toHaveLength(17);
   });
 });

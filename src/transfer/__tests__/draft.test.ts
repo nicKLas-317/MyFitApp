@@ -54,6 +54,27 @@ describe('Reconnaissance des exercices (§11.7)', () => {
     }
   });
 
+  it('98. Leg curl (assis) et curl ischios (allongé) : deux machines distinctes, reconnues sans confusion', () => {
+    for (const name of ['leg curl', 'Leg curl', 'Leg curl assis', 'seated leg curl', 'LEG CURL']) {
+      expect(matchExercise(name, LIB), name).toMatchObject({ confidence: 'certain', suggestion: 'leg-curl' });
+    }
+    for (const name of ['curl ischios', 'Curl ischio allongé', 'curl ischio allonge', 'leg curl allongé', 'Lying leg curl', 'curl ischio']) {
+      expect(matchExercise(name, LIB), name).toMatchObject({ confidence: 'certain', suggestion: 'curl-ischios' });
+    }
+    // En cas de doute, l'aperçu demande de choisir entre les deux machines.
+    const doubt = draftFromNotes('Leg curl machine\n3x10x40kg +', LIB, TODAY).exercises[0]!;
+    expect(doubt.choice).toBeNull();
+    expect(doubt.match.confidence).toBe('ambiguous');
+    expect(doubt.match.candidates.slice(0, 2).map((c) => c.variantId).sort()).toEqual(['curl-ischios', 'leg-curl']);
+    // Historiques séparés : deux variantes distinctes pour le moteur.
+    const draft = setDraftDate(draftFromNotes('Leg curl\n3x10x40kg +\n\nCurl ischios\n3x10x30kg +', LIB, TODAY), '2026-03-02');
+    const { sessions } = finalizeDrafts([draft], LIB, [], 1);
+    expect(sessions[0]!.performances.map((p) => [p.variantId, p.weightKg])).toEqual([
+      ['leg-curl', 40],
+      ['curl-ischios', 30],
+    ]);
+  });
+
   it('38. Les six exercices du §11.3 sont associés aux bons exercices', () => {
     const draft = draftFromNotes(NOTES_11_3, LIB, TODAY);
     expect(draft.exercises.map((e) => e.choice)).toEqual([

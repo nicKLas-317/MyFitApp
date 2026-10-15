@@ -36,7 +36,7 @@ export interface Backup {
 
 
 export function buildBackup(
-  data: { sessions: readonly Session[]; exercises: readonly Exercise[]; bodyTracking?: BodyTracking },
+  data: { sessions: readonly Session[]; exercises: readonly Exercise[]; bodyTracking?: BodyTracking; settings?: Record<string, unknown> },
   now: number,
 ): Backup {
   return {
@@ -45,7 +45,7 @@ export function buildBackup(
     exportedAt: new Date(now).toISOString(),
     sessions: [...data.sessions],
     exercises: [...data.exercises],
-    settings: {},
+    settings: { ...data.settings },
     bodyTracking: data.bodyTracking ?? EMPTY_BODY,
   };
 }

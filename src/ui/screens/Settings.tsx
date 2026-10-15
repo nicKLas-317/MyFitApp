@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { useApp } from '../../app/store';
 import { parseHeight } from '../../body/model';
 import { useBody } from '../../body/store';
+import type { MuscleGroup } from '../../domain/types';
+import { MUSCLE_GROUP_LABELS } from '../../library/seed';
+import { Stepper } from '../ExerciseCard';
 
 const PERSIST_LABELS = {
   granted: 'accordé',
@@ -20,6 +23,7 @@ export function Settings() {
         <h1>Réglages</h1>
       </header>
       <HeightField />
+      <RecapSettingsField />
       <dl className="settings-list">
         <dt>Stockage persistant</dt>
         <dd data-testid="persist-state">{persist ? PERSIST_LABELS[persist] : '…'}</dd>
@@ -74,5 +78,52 @@ function HeightField() {
         </p>
       )}
     </form>
+  );
+}
+
+const RECAP_CHOICES: MuscleGroup[] = ['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes', 'abdominaux'];
+
+/** Récapitulatif hebdomadaire de l'accueil (§19.6) : groupes affichés et seuil du rouge. */
+function RecapSettingsField() {
+  const { recapSettings, setRecapSettings } = useApp();
+  const [failed, setFailed] = useState(false);
+  const save = async (next: typeof recapSettings) => setFailed(!(await setRecapSettings(next)));
+
+  return (
+    <fieldset className="chips-field recap-settings">
+      <legend>Récapitulatif de la semaine</legend>
+      <div className="feeling-options" role="group" aria-label="Groupes affichés">
+        {RECAP_CHOICES.map((g) => {
+          const on = recapSettings.groups.includes(g);
+          return (
+            <button
+              key={g}
+              type="button"
+              className="chip"
+              aria-pressed={on}
+              disabled={on && recapSettings.groups.length === 1}
+              onClick={() => {
+                const groups = on ? recapSettings.groups.filter((x) => x !== g) : RECAP_CHOICES.filter((x) => x === g || recapSettings.groups.includes(x));
+                void save({ ...recapSettings, groups });
+              }}
+            >
+              {MUSCLE_GROUP_LABELS[g]}
+            </button>
+          );
+        })}
+      </div>
+      <Stepper
+        label="Rouge à partir de (séances)"
+        value={recapSettings.redThreshold}
+        min={2}
+        max={7}
+        onChange={(redThreshold) => void save({ ...recapSettings, redThreshold })}
+      />
+      {failed && (
+        <p className="field-error" role="alert">
+          Enregistrement impossible : réessayez.
+        </p>
+      )}
+    </fieldset>
   );
 }

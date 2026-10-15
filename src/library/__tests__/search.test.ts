@@ -67,10 +67,10 @@ describe('Recherche par groupe musculaire (§4.1 B)', () => {
     expect(ids('pecs')).toEqual(expect.arrayContaining(['chest-press', 'pec-deck', 'developpe-couche']));
     expect(ids('epaules').slice(0, 2).sort()).toEqual(['developpe-epaules-machine', 'elevations-laterales']);
     expect(ids('triceps').slice(0, 2).sort()).toEqual(['extension-triceps-haltere-assis', 'extension-triceps-poulie']);
-    expect(ids('jambes').sort()).toEqual(['leg-curl', 'leg-extension', 'presse-a-cuisses']);
+    expect(ids('jambes').sort()).toEqual(['curl-ischios', 'leg-curl', 'leg-extension', 'presse-a-cuisses']);
     expect(ids('abdos')).toEqual(['crunch-machine']);
     expect(ids('abdominaux')).toEqual(['crunch-machine']);
-    expect(ids('ischios').sort()).toEqual(['leg-curl', 'presse-a-cuisses']);
+    expect(ids('ischios').sort()).toEqual(['curl-ischios', 'leg-curl', 'presse-a-cuisses']);
   });
 
   it('recherche par matériel, combinable avec un groupe', () => {

@@ -9,5 +9,7 @@ export default defineConfig({
   },
   test: {
     include: ['src/**/*.test.ts'],
+    // L'application vit à l'heure de Paris : les tests aussi, quelle que soit la machine (intégration continue en UTC).
+    env: { TZ: 'Europe/Paris' },
   },
 });

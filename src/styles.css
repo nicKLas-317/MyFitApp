@@ -1322,3 +1322,68 @@ fieldset {
   justify-self: start;
   text-align: left;
 }
+
+/* Récapitulatif hebdomadaire (§19.6) : cases pleines, distinctes des pastilles de progression. */
+.home .brand {
+  margin: 8px 0 12px;
+}
+
+.weekly-recap {
+  margin-bottom: 14px;
+}
+
+.recap-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0 0 8px;
+  color: var(--text);
+}
+
+.recap-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.recap-cell {
+  padding: 9px 10px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.recap-when {
+  font-weight: 400;
+}
+
+/* Contraste du texte ≥ 6:1 sur chaque fond. */
+.recap-vert {
+  background: #1d5c35;
+  color: #eafff0;
+}
+
+.recap-orange {
+  background: #8a4a10;
+  color: #fff3e6;
+}
+
+.recap-rouge {
+  background: #8e2626;
+  color: #ffecec;
+}
+
+.recap-settings {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.recap-settings .chip {
+  flex: none;
+  padding: 0 12px;
+}

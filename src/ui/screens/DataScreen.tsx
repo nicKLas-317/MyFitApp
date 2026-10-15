@@ -11,6 +11,7 @@ import {
   type DraftSession,
 } from '../../transfer/draft';
 import { EMPTY_BODY, planBodyImport } from '../../body/model';
+import { sanitizeRecapSettings } from '../../analysis/weekly';
 import { useBody } from '../../body/store';
 import { downloadBackup } from '../download';
 import { DraftSessionEditor, ProblemList } from '../import/DraftEditor';
@@ -24,7 +25,7 @@ type Outcome = { kind: 'ok' | 'error'; text: string };
 
 /** Import et export des données (§11, §12). */
 export function DataScreen() {
-  const { sessions, exercises, lastExportAt, markExported } = useApp();
+  const { sessions, exercises, lastExportAt, markExported, recapSettings } = useApp();
   const body = useBody();
   const [text, setText] = useState('');
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
@@ -33,7 +34,7 @@ export function DataScreen() {
 
   async function exportNow() {
     const bodyTracking = await body.snapshot();
-    const at = downloadBackup({ sessions, exercises, bodyTracking: bodyTracking ?? undefined });
+    const at = downloadBackup({ sessions, exercises, bodyTracking: bodyTracking ?? undefined, settings: { weeklyRecap: recapSettings } });
     const ok = await markExported(at);
     setOutcome(ok ? { kind: 'ok', text: 'Sauvegarde téléchargée.' } : { kind: 'error', text: 'Sauvegarde téléchargée, mais sa date n’a pas pu être enregistrée.' });
   }
@@ -231,7 +232,7 @@ function DraftsPreview({ initial, notes, onDone }: { initial: DraftSession[]; no
 
 /** Aperçu d'une sauvegarde MyFitApp : fusion par défaut, remplacement sur confirmation explicite. */
 function BackupPreview({ backup, onDone }: { backup: Backup; onDone(outcome: Outcome): void }) {
-  const { sessions, exercises, importData, markExported } = useApp();
+  const { sessions, exercises, importData, markExported, recapSettings, setRecapSettings } = useApp();
   const body = useBody();
   const [includeDuplicates, setIncludeDuplicates] = useState(false);
   const [replaceConfirmed, setReplaceConfirmed] = useState(false);
@@ -268,8 +269,10 @@ function BackupPreview({ backup, onDone }: { backup: Backup; onDone(outcome: Out
     setBusy(true);
     // Les données actuelles sont sauvegardées avant d'être remplacées.
     const currentBody = await body.snapshot();
-    await markExported(downloadBackup({ sessions, exercises, bodyTracking: currentBody ?? undefined }));
+    await markExported(downloadBackup({ sessions, exercises, bodyTracking: currentBody ?? undefined, settings: { weeklyRecap: recapSettings } }));
     const ok = await importData({ sessions: backup.sessions, exercises: backup.exercises, replace: true });
+    // Remplacement global : les réglages de la sauvegarde remplacent aussi ceux de l'appareil.
+    if (ok && backup.settings.weeklyRecap !== undefined) await setRecapSettings(sanitizeRecapSettings(backup.settings.weeklyRecap));
     const bodyOk = !ok || (await body.applyImport(planBodyImport(importedBody, body.data, 'replace')));
     setBusy(false);
     onDone(

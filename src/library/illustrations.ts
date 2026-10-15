@@ -33,6 +33,8 @@ import legExtension from './illustrations/leg-extension.webp';
 import legExtensionThumb from './illustrations/leg-extension-vignette.webp';
 import legCurl from './illustrations/leg-curl.webp';
 import legCurlThumb from './illustrations/leg-curl-vignette.webp';
+import curlIschios from './illustrations/curl-ischios.webp';
+import curlIschiosThumb from './illustrations/curl-ischios-vignette.webp';
 import ecarteCoucheHalteres from './illustrations/ecarte-couche-halteres.webp';
 import ecarteCoucheHalteresThumb from './illustrations/ecarte-couche-halteres-vignette.webp';
 
@@ -68,6 +70,7 @@ export const ILLUSTRATIONS: Readonly<Record<string, Illustration>> = {
   'leg-extension': { src: legExtension, thumb: legExtensionThumb, title: 'Leg extensions', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Leg_extensions_1.svg', 'https://commons.wikimedia.org/wiki/File:Leg_extensions_2.svg'] },
   'leg-curl': { src: legCurl, thumb: legCurlThumb, title: 'Seated leg curl', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Seated_leg_curl_1.svg', 'https://commons.wikimedia.org/wiki/File:Seated_leg_curl_2.svg'] },
   'ecarte-couche-halteres': { src: ecarteCoucheHalteres, thumb: ecarteCoucheHalteresThumb, title: 'Dumbbell flys', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Dumbbell_flys_1.svg', 'https://commons.wikimedia.org/wiki/File:Dumbbell_flys_2.svg'] },
+  'curl-ischios': { src: curlIschios, thumb: curlIschiosThumb, title: 'Lying leg curl machine', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Lying_leg_curl_machine_1.svg', 'https://commons.wikimedia.org/wiki/File:Lying_leg_curl_machine_2.svg'] },
 };
 
 export function illustrationFor(exerciseId: string): Illustration | undefined {

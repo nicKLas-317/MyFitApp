@@ -4,7 +4,7 @@ Conformément au §4.0.1, les illustrations sont embarquées dans l'application 
 
 ## Résultat
 
-16 des 19 exercices de la bibliothèque initiale ont une illustration. Toutes viennent de la même source et partagent la même licence :
+17 des 20 exercices de la bibliothèque initiale ont une illustration. Toutes viennent de la même source et partagent la même licence :
 
 - **Auteur** : Everkinetic (dessins au trait créés pour everkinetic.com par Greg Priday).
 - **Licence** : [Creative Commons Attribution – Partage dans les mêmes conditions 3.0 (CC BY-SA 3.0)](https://creativecommons.org/licenses/by-sa/3.0/deed.fr).
@@ -29,7 +29,8 @@ Conformément au §4.0.1, les illustrations sont embarquées dans l'application 
 | Presse à cuisses | `presse-a-cuisses.webp` | [Leg-press-1-1024x670.png](https://commons.wikimedia.org/wiki/File:Leg-press-1-1024x670.png), [Leg-press-2-1024x670.png](https://commons.wikimedia.org/wiki/File:Leg-press-2-1024x670.png) |
 | Leg extension | `leg-extension.webp` | [Leg extensions 1.svg](https://commons.wikimedia.org/wiki/File:Leg_extensions_1.svg), [Leg extensions 2.svg](https://commons.wikimedia.org/wiki/File:Leg_extensions_2.svg) |
 | Écarté couché haltères | `ecarte-couche-halteres.webp` | [Dumbbell flys 1.svg](https://commons.wikimedia.org/wiki/File:Dumbbell_flys_1.svg), [Dumbbell flys 2.svg](https://commons.wikimedia.org/wiki/File:Dumbbell_flys_2.svg) |
-| Leg curl | `leg-curl.webp` | [Seated leg curl 1.svg](https://commons.wikimedia.org/wiki/File:Seated_leg_curl_1.svg), [Seated leg curl 2.svg](https://commons.wikimedia.org/wiki/File:Seated_leg_curl_2.svg) |
+| Curl ischios (leg curl allongé) | `curl-ischios.webp` | [Lying leg curl machine 1.svg](https://commons.wikimedia.org/wiki/File:Lying_leg_curl_machine_1.svg), [Lying leg curl machine 2.svg](https://commons.wikimedia.org/wiki/File:Lying_leg_curl_machine_2.svg) |
+| Leg curl (assis) | `leg-curl.webp` | [Seated leg curl 1.svg](https://commons.wikimedia.org/wiki/File:Seated_leg_curl_1.svg), [Seated leg curl 2.svg](https://commons.wikimedia.org/wiki/File:Seated_leg_curl_2.svg) |
 
 Chaque fichier `.webp` a une vignette `…-vignette.webp` (même source, même licence). Tailles : 11 à 25 Ko par image, moins de 3 Ko par vignette ; un test vérifie la limite de 50 Ko (`src/library/__tests__/illustrations.test.ts`).
 
@@ -37,7 +38,7 @@ Chaque fichier `.webp` a une vignette `…-vignette.webp` (même source, même l
 
 ## Vérification de la licence Everkinetic
 
-- Wikimedia Commons : chaque fichier indique l'auteur « Everkinetic », la licence CC BY-SA 3.0 et la source db.everkinetic.com (vérifié le 15 octobre 2026 par l'API de Commons pour les 32 fichiers utilisés).
+- Wikimedia Commons : chaque fichier indique l'auteur « Everkinetic », la licence CC BY-SA 3.0 et la source db.everkinetic.com (vérifié le 15 octobre 2026 par l'API de Commons pour les 34 fichiers utilisés).
 - Archive du site d'origine (Wayback Machine) : en 2010, les images étaient vendues (« All content is copyright Everkinetic ») ; en janvier 2014, le site s'intitule « Everkinetic | Creative Commons Exercise Images » et propose des « Free Exercise Images ».
 - Le dépôt [everkinetic/data](https://github.com/everkinetic/data), qui reprend ce projet en données ouvertes, est publié sous CC BY-SA 4.0.
 

@@ -112,6 +112,30 @@ test.describe('Bibliothèque et recherche', () => {
     await expect(page.getByTestId('attribution')).toHaveCount(0);
   });
 
+  test('100. Attribution CC BY-SA 3.0 affichée sur chaque fiche illustrée, absente des autres', async ({ page }) => {
+    const illustrated = [
+      'tirage-horizontal', 'tirage-vertical', 'chest-press', 'pec-deck', 'developpe-couche', 'developpe-epaules-machine',
+      'elevations-laterales', 'curl-biceps-poulie-corde', 'curl-biceps-halteres', 'curl-biceps-banc-incline',
+      'extension-triceps-poulie', 'extension-triceps-haltere-assis', 'presse-a-cuisses', 'leg-extension', 'leg-curl',
+      'ecarte-couche-halteres', 'curl-ischios',
+    ];
+    for (const id of illustrated) {
+      await page.goto(`/#/exercice/${id}`);
+      const img = page.locator('figure.illustration img');
+      await expect(img, id).toBeVisible();
+      expect(await img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0), id).toBe(true);
+      const attribution = page.getByTestId('attribution');
+      await expect(attribution, id).toContainText('Illustration : Everkinetic');
+      await expect(attribution.getByRole('link', { name: 'CC BY-SA 3.0' }), id).toHaveAttribute('href', /creativecommons\.org\/licenses\/by-sa\/3\.0/);
+      await expect(attribution.getByRole('link', { name: /^[12]$/ }), id).toHaveCount(2);
+    }
+    for (const id of ['rowing-haltere', 'crunch-machine', 'dips-assistes']) {
+      await page.goto(`/#/exercice/${id}`);
+      await expect(page.locator('.sheet-head'), id).toBeVisible();
+      await expect(page.getByTestId('attribution'), id).toHaveCount(0);
+    }
+  });
+
   test('55. Renommer un exercice conserve son historique et ses compteurs', async ({ page }) => {
     const sessions = [doneSession('s1', '2026-10-01', 'tirage-vertical'), doneSession('s2', '2026-10-03', 'tirage-vertical')];
     await seedHistory(page, sessions);

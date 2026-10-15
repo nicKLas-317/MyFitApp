@@ -5,16 +5,17 @@ import { formatDuration } from '../../session/format';
 import { needsBackupReminder } from '../../transfer/backup';
 import { useBody } from '../../body/store';
 import { downloadBackup } from '../download';
+import { WeeklyRecapBlock } from '../WeeklyRecap';
 
 export function Home() {
-  const { active, commit, sessions, exercises, lastExportAt, markExported } = useApp();
+  const { active, commit, sessions, exercises, lastExportAt, markExported, recapSettings } = useApp();
   const now = useNow();
   const remind = needsBackupReminder(sessions, lastExportAt, now);
   const body = useBody();
 
   async function exportNow() {
     const bodyTracking = (await body.snapshot()) ?? undefined;
-    await markExported(downloadBackup({ sessions, exercises, bodyTracking }));
+    await markExported(downloadBackup({ sessions, exercises, bodyTracking, settings: { weeklyRecap: recapSettings } }));
   }
 
   async function start() {
@@ -26,6 +27,7 @@ export function Home() {
   return (
     <main className="screen home">
       <h1 className="brand">MyFitApp</h1>
+      <WeeklyRecapBlock />
       {active ? (
         <button type="button" className="btn primary huge" onClick={() => navigate('seance')}>
           Reprendre la séance

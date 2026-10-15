@@ -4,3 +4,6 @@ coverage
 *.log
 test-results
 playwright-report
+
+# Données personnelles réelles (séances, pesées, sauvegardes) : jamais versionnées.
+perso/

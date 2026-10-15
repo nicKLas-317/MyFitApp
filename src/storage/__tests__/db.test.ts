@@ -73,6 +73,29 @@ describe('Persistance IndexedDB (§12)', () => {
     repo.close();
   });
 
+  it('99. Version 3 : « Curl ischios » ajouté, synonymes du leg curl corrigés sauf s’ils ont été personnalisés', async () => {
+    const v2 = SEED_EXERCISES.filter((e) => e.id !== 'curl-ischios').map((e) =>
+      e.id === 'leg-curl' ? { ...e, synonyms: ['Flexion des jambes', 'Curl ischios'] } : e,
+    );
+    const repo = new Repository(await openAppDb(freshName()));
+    await repo.putExercises(v2);
+    await repo.setMeta('seeded', true);
+    await repo.setMeta('seedVersion', 2);
+    await repo.ensureSeed();
+    const after = await repo.loadExercises();
+    expect(after.find((e) => e.id === 'curl-ischios')).toMatchObject({ name: 'Curl ischios', primaryGroup: 'jambes', secondaryGroups: ['ischio-jambiers'] });
+    expect(after.find((e) => e.id === 'leg-curl')?.synonyms).toEqual(['Leg curl assis', 'Seated leg curl']);
+    repo.close();
+
+    const custom = new Repository(await openAppDb(freshName()));
+    await custom.putExercises(v2.map((e) => (e.id === 'leg-curl' ? { ...e, synonyms: ['Ma machine ischios'] } : e)));
+    await custom.setMeta('seeded', true);
+    await custom.setMeta('seedVersion', 2);
+    await custom.ensureSeed();
+    expect((await custom.loadExercises()).find((e) => e.id === 'leg-curl')?.synonyms).toEqual(['Ma machine ischios']);
+    custom.close();
+  });
+
   it('une écriture en échec est signalée par une promesse rejetée', async () => {
     const repo = new Repository(await openAppDb(freshName()));
     repo.close();

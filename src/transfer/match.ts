@@ -77,6 +77,18 @@ export function matchExercise(sourceName: string, exercises: readonly Exercise[]
     }
   }
 
+  // Nom identique, mot pour mot, à un nom ou synonyme de la bibliothèque : reconnu sans ambiguïté
+  // (« leg curl allongé » est un synonyme du curl ischios, même s'il contient les mots « leg curl »).
+  const exact = active.flatMap((exercise) =>
+    exercise.variants
+      .filter((v) => !v.archived && variantNames(exercise, v.id).some((n) => normalizeName(n) === normalized))
+      .map((v) => ({ variantId: v.id, exerciseId: exercise.id, score: 1.5 })),
+  );
+  if (exact.length === 1) {
+    const chosen = active.find((e) => e.id === exact[0]!.exerciseId)!;
+    return { confidence: 'certain', suggestion: exact[0]!.variantId, candidates: exact, qualifier: qualifierOf(sourceName, chosen) };
+  }
+
   const candidates: MatchCandidate[] = [];
   for (const exercise of active) {
     for (const variant of exercise.variants) {

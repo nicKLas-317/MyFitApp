@@ -27,7 +27,7 @@ Si une règle de ce brief est ambiguë ou contradictoire, pose-moi la question a
 
 Développer une application personnelle de suivi de musculation appelée **MyFitApp**.
 
-Toute l'interface est en **français**. Les dates et heures sont affichées au format français et calculées dans le fuseau horaire local de l'appareil. Les poids sont exprimés en **kilogrammes**, avec une décimale possible (par exemple 52,5 kg).
+Toute l'interface est en **français**. Les dates et heures sont affichées au format français et calculées dans le fuseau horaire local de l'appareil, qui est et restera celui de Paris (`Europe/Paris`) ; les tests automatisés s'exécutent eux aussi à l'heure de Paris, quelle que soit la machine. Les poids sont exprimés en **kilogrammes**, avec une décimale possible (par exemple 52,5 kg).
 
 L'application doit être simple, rapide, mobile-first, installable sur smartphone et utilisable hors ligne. Elle doit me permettre de suivre mes séances, conserver mon historique et gérer automatiquement ma surcharge progressive.
 
@@ -158,10 +158,13 @@ Pré-charger au minimum les exercices suivants, avec leurs synonymes et groupes 
 - Extension triceps haltère assis / Overhead dumbbell extension (triceps).
 - Presse à cuisses / Leg press (jambes).
 - Leg extension (jambes, quadriceps).
-- Leg curl (jambes, ischio-jambiers).
+- Leg curl : la version **assise** (jambes, ischio-jambiers). Synonymes : leg curl, leg curl assis, seated leg curl.
+- Curl ischios : la version **allongée**, à plat ventre (jambes, ischio-jambiers), machine distincte avec son propre historique. Synonymes : curl ischios, curl ischio allongé, leg curl allongé, lying leg curl.
 - Crunch machine / Abdominaux (abdominaux).
 - Dips assistés / Assisted dips (triceps et pectoraux), réglage « assisté » activé (§7.12).
 - Écarté couché haltères / Dumbbell fly (pectoraux).
+
+Dans les notes de l'utilisateur, « leg curl » désigne toujours la version assise et « curl ischios » la version allongée. Un nom importé identique, mot pour mot, à un nom ou à un synonyme de la bibliothèque est reconnu directement (« leg curl allongé » → Curl ischios) ; en cas de doute entre les deux machines, l'aperçu d'import demande de choisir.
 
 Cette liste est un point de départ modifiable dans les réglages. Les exercices ajoutés à cette liste après une première installation sont installés une seule fois sur une base existante, sans recréer ceux que l'utilisateur a supprimés.
 
@@ -674,7 +677,7 @@ Créer un historique chronologique des séances, avec :
 
 Permettre de rechercher une séance par son nom et de consulter ses détails.
 
-Permettre de renommer et de corriger une séance passée.
+Permettre de renommer et de corriger une séance passée. **Précision validée :** la date d'une séance passée est modifiable ; la séance est alors rejouée à sa nouvelle place chronologique (§7.9).
 
 Permettre de supprimer une séance passée, après confirmation explicite. La suppression déclenche le recalcul du profil (§7.9).
 
@@ -871,7 +874,7 @@ Ces règles précisent les §11.1 à §11.10. Elles ont été validées et s'app
 
 **E. Points à confirmer.** Une unité de poids non reconnue (« 47gs », « 47 lbs ») n'est ni convertie ni ignorée : le nombre est lu (47 kg) et signalé comme poids à confirmer ; l'import reste bloqué jusqu'à confirmation ou correction. Une remarque laissée dans un fichier JSON (champ `toConfirm`) est affichée et soumise à la même confirmation.
 
-**F. Données de départ.** `docs/exemples/depart-exemple.json` contient deux séances d’exemple anonymisées au format de sauvegarde (schemaVersion 2), avec les exercices et variantes rattachés à la bibliothèque. Il n'est jamais chargé automatiquement par l'application : l'utilisateur l'importe lui-même (Importer / exporter) après l'installation.
+**F. Données de départ.** Les séances réelles de l'utilisateur (fichier de départ `mes-seances-depart.json` au format de sauvegarde, et les fichiers d'origine) sont conservées dans `perso/`, dossier ignoré par git (§22). Il n'est jamais chargé automatiquement par l'application : l'utilisateur l'importe lui-même (Importer / exporter) après l'installation. Le dépôt contient seulement des copies anonymisées équivalentes, dans `docs/exemples/` : `seance-exemple-1.json`, `seance-exemple-2.json` et `depart-exemple.json`, avec les mêmes cas (symboles, fautes, exercices assistés, variantes) mais des poids, des dates et des identifiants fictifs.
 
 ## 12. Persistance et protection des données
 
@@ -1057,6 +1060,22 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 87. (§11.11 A, E) Le deuxième jeu d’exemple (`docs/exemples/seance-exemple-2.json` et ses notes) : `+=` reconnu comme Moyen, « 47gs » signalé comme poids à confirmer, variante « prise très large » proposée pour le tirage vertical, dips assistés reconnus comme exercice assisté, aucune donnée inventée.
 88. (§11.11 F) `docs/exemples/depart-exemple.json` s'importe dans une base vide : le triceps haltère assis propose 3×9 à 14 kg, le chest press est orange, les dips assistés sont assistés ; aucun code de l'application ne charge ce fichier.
 
+### Récapitulatif hebdomadaire, machines d'ischios et données personnelles
+
+89. (§19.6) La semaine commence le lundi 0 h 00 ; l'en-tête donne les dates exactes du lundi et du dimanche et le nombre de séances.
+90. (§19.6) Une séance du lundi 0 h 00 compte dans la nouvelle semaine ; une séance du dimanche 23 h 30 compte dans l'ancienne, même si elle se termine après minuit.
+91. (§19.6) Seul le groupe principal compte, une fois par séance ; un groupe secondaire n'est pas compté ; les abdominaux sont absents.
+92. (§19.6) Couleurs selon le nombre de séances : vert = 0, orange = 1, rouge à partir du seuil (2 par défaut, réglable).
+93. (§19.6) Mention « aujourd'hui » ou « hier » correcte (moins de 48 heures, jour du calendrier), y compris pour la semaine précédente.
+94. (§19.6) Ordre de tri : vert, orange, rouge ; à couleur égale, « hier » et « aujourd'hui » en dernier.
+95. (§19.6) Semaine vide : tous les groupes verts, « 0 séance ».
+96. (§19.6) Une séance en cours n'est pas comptée ; terminer, supprimer ou importer une séance met à jour le récapitulatif au retour sur l'accueil (test de bout en bout : bloc visible sans clic ni défilement au format smartphone).
+97. (§19.6) Les sous-groupes des jambes comptent pour « jambes » ; le récapitulatif ne modifie ni les séances ni le moteur.
+98. (§4.0) « leg curl », « leg curl assis », « seated leg curl » → Leg curl (assis) ; « curl ischios », « curl ischio allongé », « leg curl allongé », « lying leg curl » → Curl ischios (allongé) ; en cas de doute, l'aperçu demande de choisir ; historiques séparés.
+99. (§4.0) Une base existante reçoit « Curl ischios » une seule fois ; les synonymes du leg curl ne sont corrigés que s'ils n'ont pas été personnalisés.
+100. (§4.0.1) Chaque fiche illustrée affiche le dessin et l'attribution CC BY-SA 3.0 (auteur, licence, deux sources) ; les fiches sans illustration n'en affichent pas.
+101. (§1) Les tests s'exécutent à l'heure de Paris, quelle que soit la machine.
+
 Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
 
 ## 16. Vérification avant livraison
@@ -1161,6 +1180,12 @@ Prévoir une vue facultative permettant de repérer :
 
 Ne jamais déclarer un exercice en stagnation sur la base d'une seule séance difficile. Ne pas inventer de score de progression.
 
+**Précisions validées :**
+
+- Un palier est « validé » quand il atteint sa 2ᵉ validation verte consécutive (§7.5).
+- Un exercice qui n'a qu'une seule séance évaluée est classé « Trop tôt pour conclure ».
+- « En difficulté » (au moins 2 rouges consécutives en cours) l'emporte sur « En progression ».
+
 ### 19.4. Séparation entre historique réel et recommandation
 
 Les performances réellement réalisées sont la donnée de référence. Le moteur calcule paliers et cibles, mais ne modifie jamais les performances réelles pour les faire correspondre au palier théorique.
@@ -1168,6 +1193,39 @@ Les performances réellement réalisées sont la donnée de référence. Le mote
 ### 19.5. Priorité d'utilisation
 
 La saisie et la consultation de la prochaine cible restent immédiates. Graphiques et analyses sont dans une vue secondaire.
+
+### 19.6. Récapitulatif hebdomadaire en page d'accueil (précision validée)
+
+But : un coup d'œil de 2 secondes avant la séance pour savoir quels groupes travailler.
+
+**Affichage**
+
+- En haut de l'accueil, au-dessus du bouton de démarrage, visible sans clic ni défilement sur smartphone.
+- Une grille compacte de cases colorées, une par groupe, nom en entier, avec le nombre de séances de la semaine entre parenthèses (sauf pour les cases vertes) :
+
+  ```
+  Semaine du lun. 12 au dim. 18 oct. : 2 séances
+  [vert] Jambes            [vert] Biceps
+  [orange] Pectoraux (1×)  [orange] Dos (1×) · hier
+  [rouge] Épaules (2×)     [rouge] Triceps (2×) · hier
+  ```
+
+- L'en-tête affiche les dates exactes de la semaine en cours (lundi et dimanche, mois répété si la semaine change de mois) et le nombre de séances (« 0 séance », « 1 séance », « 2 séances »).
+- Couleur selon le nombre de séances de la semaine où le groupe a été travaillé : vert = 0, orange = 1, rouge = 2 ou plus. Le seuil du rouge est réglable (2 par défaut, de 2 à 7).
+- Mention « aujourd'hui » ou « hier » si le groupe a été travaillé il y a moins de 48 heures, même la semaine précédente. La mention suit le jour du calendrier : une séance d'avant-hier, même à moins de 48 heures, n'a pas de mention.
+- Tri : vert en haut, puis orange, puis rouge en bas. À couleur égale, les groupes « hier » ou « aujourd'hui » passent en dernier, puis l'ordre de la liste des groupes.
+- Cases pleines, visuellement différentes des pastilles de progression des exercices ; texte lisible en mode sombre.
+- Rien d'autre : pas de légende, de graphique ni de texte explicatif.
+
+**Calcul**
+
+- Semaine du lundi 0 h 00 au dimanche 23 h 59 inclus, heure locale du téléphone (Paris). Une séance compte dans la semaine de sa date de début, même si elle se termine après minuit ; une séance importée sans heure compte selon sa date.
+- Groupes affichés par défaut : pectoraux, dos, épaules, biceps, triceps, jambes. Abdominaux exclus du récapitulatif mais gardés dans la bibliothèque. Liste modifiable dans les réglages ; elle est incluse dans l'export.
+- Seul le groupe principal d'un exercice compte ; un groupe travaillé deux fois dans la même séance compte pour une. Un exercice personnalisé dont le groupe principal est « quadriceps » ou « ischio-jambiers » compte pour « jambes » quand ce sous-groupe n'est pas affiché lui-même.
+- Le récapitulatif n'est jamais stocké : il est recalculé à partir des séances enregistrées à chaque affichage de l'accueil. Il est donc à jour immédiatement après la fin d'une séance, un import, une suppression ou une modification de date.
+- Seules les séances terminées comptent ; une séance en cours n'est prise en compte qu'une fois terminée.
+- En début de semaine, sans séance, tous les groupes sont verts et l'en-tête indique « 0 séance ».
+- Aucun effet sur le moteur de progression.
 
 ## 20. Suivi corporel simplifié : « Mon poids »
 
@@ -1181,6 +1239,12 @@ La saisie et la consultation de la prochaine cible restent immédiates. Graphiqu
 - Aucune pesée, mensuration ni saisie régulière imposée.
 - Pas de calculs complexes, de scores corporels ou d'analyses automatiques superflues.
 
+**Précisions validées :**
+
+- Une seule pesée par date : une nouvelle saisie à la même date remplace la précédente.
+- Poids accepté entre 20 et 350 kg, taille entre 80 et 250 cm, pas de date dans le futur.
+- Import : en cas de conflit (même date, autre poids ; taille différente), la valeur de l'appareil est conservée et l'écart signalé. Les pesées sont importées après les séances, dans leur base séparée : si cette étape échoue, les séances restent importées et l'échec est signalé.
+
 ### Isolation et fiabilité
 
 - Le suivi corporel est un module indépendant du système d'entraînement, stocké dans un espace séparé d'IndexedDB.
@@ -1193,7 +1257,8 @@ La saisie et la consultation de la prochaine cible restent immédiates. Graphiqu
 
 L'application est déployée sur **GitHub Pages**, ce qui fournit le HTTPS nécessaire à l'installation de la PWA sur smartphone.
 
-- Configurer `base` dans Vite selon le nom exact du dépôt GitHub, majuscules comprises (par exemple `/MyFitApp/` si le dépôt s'appelle `MyFitApp`). Demande-moi le nom du dépôt avant de configurer le déploiement.
+- Dépôt : `MyFitApp` (public, compte `nicKLas-317`), remote SSH `git@github.com:nicKLas-317/MyFitApp.git`. Adresse finale : https://nicklas-317.github.io/MyFitApp/. `base` de Vite : `/MyFitApp/` (majuscules exactes).
+- Aucun push tant que le nettoyage des données personnelles et de l'identité (§22) n'a pas été vérifié et validé par l'utilisateur.
 - Configurer le manifeste (`start_url`, `scope`) et le service worker pour ce chemin.
 - Utiliser un routage compatible avec un hébergement statique (routage par hash, ou fallback `404.html`), pour qu'un rechargement sur une page interne ne donne pas d'erreur.
 - Ajouter un workflow GitHub Actions qui, à chaque push sur `main` : installe les dépendances, lance la compilation TypeScript et les tests unitaires, construit l'application et la publie sur GitHub Pages. Le déploiement ne se fait pas si un test échoue.
@@ -1201,6 +1266,14 @@ L'application est déployée sur **GitHub Pages**, ce qui fournit le HTTPS néce
 - Documenter dans le `README` : lancement local, tests, déploiement, et procédure d'installation sur téléphone.
 
 Les données restent uniquement sur l'appareil : GitHub Pages ne sert que les fichiers de l'application.
+
+## 22. Données personnelles et identité git
+
+Le dépôt est public : il ne contient ni données personnelles réelles, ni trace de l'identité professionnelle de l'utilisateur.
+
+- **Données réelles** (séances, pesées, sauvegardes, fichiers d'origine) : uniquement dans `perso/`, ignoré par git. Elles ont été retirées de tout l'historique git. Les tests utilisent les copies anonymisées de `docs/exemples/` (§11.11 F). Toute nouvelle donnée réelle fournie va dans `perso/`, jamais dans le dépôt ni dans les tests.
+- **Identité git** : configurée localement pour ce dépôt (`git config` sans `--global`) : `user.name` « Nicolas Senentz », `user.email` « nsenentz@hotmail.fr ». Tous les commits, auteur et committer, portent cette identité ; aucune adresse ni identité professionnelle ne doit apparaître dans l’historique, les messages ou les fichiers.
+- **Vérification avant tout push** : `perso/verifier-historique.sh` (hors dépôt, puisqu'il contient les empreintes des données réelles) contrôle le contenu de tous les commits, les chemins, les messages, les objets orphelins et les identités ; `git log --all --format='%an <%ae> | %cn <%ce>' | sort -u` doit n'afficher que l'identité ci-dessus.
 
 ## Résultat attendu
 

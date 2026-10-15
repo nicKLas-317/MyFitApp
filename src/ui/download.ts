@@ -3,7 +3,12 @@ import type { Exercise, Session } from '../domain/types';
 import { backupFileName, buildBackup } from '../transfer/backup';
 
 /** Télécharge une sauvegarde complète au format JSON (§11.10). Renvoie l'horodatage de l'export. */
-export function downloadBackup(data: { sessions: readonly Session[]; exercises: readonly Exercise[]; bodyTracking?: BodyTracking }): number {
+export function downloadBackup(data: {
+  sessions: readonly Session[];
+  exercises: readonly Exercise[];
+  bodyTracking?: BodyTracking;
+  settings?: Record<string, unknown>;
+}): number {
   const now = Date.now();
   const blob = new Blob([JSON.stringify(buildBackup(data, now), null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
