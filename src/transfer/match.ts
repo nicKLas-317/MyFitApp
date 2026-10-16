@@ -110,7 +110,10 @@ export function matchExercise(sourceName: string, exercises: readonly Exercise[]
   // Un nom de groupe seul (« pec », « pecs », « pectoraux ») désigne un groupe, pas un exercice :
   // les exercices du groupe sont proposés et le choix est obligatoire.
   if (tokens.length > 0 && tokens.every((t) => GROUP_WORDS.has(t))) {
-    const group = active.filter((e) => tokens.some((t) => GROUP_WORDS_BY_GROUP.get(e.primaryGroup)?.has(t)));
+    const inGroup = (g: Exercise['primaryGroup']) => tokens.every((t) => GROUP_WORDS_BY_GROUP.get(g)?.has(t));
+    // Groupe principal d'abord ; un sous-groupe (« ischios », « quadri ») est cherché dans les groupes secondaires.
+    const primary = active.filter((e) => inGroup(e.primaryGroup));
+    const group = primary.length > 0 ? primary : active.filter((e) => e.secondaryGroups.some(inGroup));
     const list = group.map((e) => ({ variantId: e.id, exerciseId: e.id, score: CANDIDATE }));
     return { confidence: list.length > 0 ? 'ambiguous' : 'none', suggestion: null, candidates: list, qualifier: null, unknownWords: [] };
   }

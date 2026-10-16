@@ -1,7 +1,7 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { commitNow, STRICT } from './commit';
 import type { Exercise, Session } from '../domain/types';
-import { SEED_ADDITIONS, SEED_EXERCISES, SEED_UPDATES, SEED_VERSION, sameNaming } from '../library/seed';
+import { SEED_ADDITIONS, SEED_EXERCISES, SEED_GROUP_UPDATES, SEED_UPDATES, SEED_VERSION, sameGroups, sameNaming } from '../library/seed';
 
 /**
  * Base d'entraînement. Le suivi corporel (§20) aura sa propre base, séparée.
@@ -139,6 +139,14 @@ export class Repository {
         for (const [id, { from, to }] of Object.entries(changes)) {
           const current = updates.get(id) ?? (await store.get(id));
           if (current && sameNaming(current, from)) updates.set(id, { ...current, name: to.name, synonyms: [...to.synonyms] });
+        }
+      }
+      // Groupes secondaires corrigés, seulement s'ils n'ont pas été personnalisés.
+      for (const [v, changes] of Object.entries(SEED_GROUP_UPDATES)) {
+        if (Number(v) <= version) continue;
+        for (const [id, { from, to }] of Object.entries(changes)) {
+          const current = updates.get(id) ?? (await store.get(id));
+          if (current && sameGroups(current.secondaryGroups, from)) updates.set(id, { ...current, secondaryGroups: [...to] });
         }
       }
     }

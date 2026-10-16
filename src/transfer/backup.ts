@@ -8,7 +8,7 @@
  */
 import type { CardioMachine, Exercise, Feeling, Incline, MuscleGroup, Session, Variant } from '../domain/types';
 import { DEFAULT_CARDIO_MACHINES, INCLINES, isValidDistance, isValidMinutes } from '../cardio/model';
-import { MUSCLE_GROUP_LABELS, SEED_EXERCISES, sameNaming, seedNamings } from '../library/seed';
+import { MUSCLE_GROUP_LABELS, SEED_EXERCISES, sameGroups, sameNaming, seedNamings, seedSecondaryGroups } from '../library/seed';
 import { EMPTY_BODY, isValidHeight, isValidWeighIn, type BodyTracking } from '../body/model';
 
 export { EMPTY_BODY, type BodyTracking };
@@ -536,7 +536,8 @@ function isPristine(local: Exercise): boolean {
 
 /**
  * L'exercice importé n'a que des métadonnées de la bibliothèque initiale, actuelles ou d'une version
- * antérieure (ex. « Élévations latérales » avant la séparation haltères / machine) : il n'apporte
+ * antérieure (ex. « Élévations latérales » avant la séparation haltères / machine, presse à cuisses avec les
+ * ischio-jambiers avant la version 5) : il n'apporte
  * que ses variantes et ses synonymes appris, jamais d'anciens noms ou synonymes.
  */
 function isSeedExercise(imported: Exercise): boolean {
@@ -545,7 +546,7 @@ function isSeedExercise(imported: Exercise): boolean {
   const config = (e: Exercise) => e.variants.find((v) => v.id === e.id)?.config ?? null;
   return (
     imported.primaryGroup === seed.primaryGroup &&
-    stable(imported.secondaryGroups) === stable(seed.secondaryGroups) &&
+    seedSecondaryGroups(seed.id).some((g) => sameGroups(g, imported.secondaryGroups)) &&
     imported.equipment === seed.equipment &&
     imported.archived === seed.archived &&
     stable(config(imported)) === stable(config(seed))

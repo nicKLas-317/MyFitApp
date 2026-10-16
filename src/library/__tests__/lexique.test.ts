@@ -1,8 +1,12 @@
+import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
+import { weeklyRecap } from '../../analysis/weekly';
+import { openAppDb, Repository } from '../../storage/db';
+import { buildBackup, parseJsonImport, planImport } from '../../transfer/backup';
 import type { Exercise } from '../../domain/types';
 import { rebuildProfile } from '../../engine';
 import { buildEngineSettings } from '../catalog';
-import { SEED_EXERCISES } from '../seed';
+import { SEED_EXERCISES, SEED_VERSION } from '../seed';
 import { buildSearchIndex, searchExercises, searchWithInfo } from '../search';
 import { canonicalName, nameKey } from '../text';
 import lexique from '../lexique.json';
@@ -114,5 +118,66 @@ describe('Lexique d’équivalences (§4.2.1)', () => {
     // Les exercices de la bibliothèque restent tous distincts une fois le lexique appliqué.
     const names = LIB.map((e) => nameKey(e.name));
     expect(new Set(names).size).toBe(names.length);
+  });
+
+  it('131. Sous-groupes des jambes : « ischios » → leg curl et curl ischios, « quadri » → leg extension et presse, « jambes » → tous ; le récapitulatif compte tout dans « Jambes »', () => {
+    for (const q of ['ischio', 'ischios', 'ischio-jambiers', 'hamstrings']) expect(ids(q).sort(), q).toEqual(['curl-ischios', 'leg-curl']);
+    for (const q of ['quadri', 'quadriceps', 'quads']) expect(ids(q).sort(), q).toEqual(['leg-extension', 'presse-a-cuisses']);
+    for (const q of ['jambe', 'jambes', 'legs']) expect(ids(q).sort(), q).toEqual(['curl-ischios', 'leg-curl', 'leg-extension', 'presse-a-cuisses']);
+    // Import : un sous-groupe seul propose ses exercices et demande de choisir.
+    expect(matchExercise('ischios', LIB)).toMatchObject({ confidence: 'ambiguous', suggestion: null });
+    expect(matchExercise('ischios', LIB).candidates.map((c) => c.variantId).sort()).toEqual(['curl-ischios', 'leg-curl']);
+    expect(matchExercise('quadri', LIB).candidates.map((c) => c.variantId).sort()).toEqual(['leg-extension', 'presse-a-cuisses']);
+    // Les noms précis restent reconnus.
+    expect(choiceOf('curl ischios')).toBe('curl-ischios');
+    expect(choiceOf('leg extension')).toBe('leg-extension');
+    // Récapitulatif hebdomadaire : groupe principal seulement, inchangé.
+    const t = new Date(2026, 9, 13, 18).getTime();
+    const sessions = ['leg-curl', 'presse-a-cuisses'].map((variantId, i) => ({
+      id: `j${i}`, name: 'J', date: '2026-10-13', startedAt: t + i, endedAt: t + i + 1, createdAt: t, updatedAt: t,
+      origin: 'app' as const, state: 'done' as const,
+      performances: [{ variantId, weightKg: 40, targetReps: 8, plannedSets: 3, reps: [8, 8, 8], feeling: 'bien' as const }],
+    }));
+    expect(weeklyRecap(sessions, LIB, t + 3_600_000).cells.find((c) => c.group === 'jambes')?.count).toBe(2);
+  });
+
+  it('132. Bibliothèque version 5 : la presse perd les ischio-jambiers une seule fois, sauf personnalisation ; une ancienne sauvegarde ne les réintroduit pas', async () => {
+    const presse = LIB.find((e) => e.id === 'presse-a-cuisses')!;
+    expect(presse.secondaryGroups).toEqual(['quadriceps']);
+    const v4 = LIB.map((e) => (e.id === 'presse-a-cuisses' ? { ...e, secondaryGroups: ['quadriceps', 'ischio-jambiers'] as typeof e.secondaryGroups } : e));
+    const install = async (exercises: Exercise[]) => {
+      const repo = new Repository(await openAppDb(`test-lexique-${Math.random()}`));
+      await repo.putExercises(exercises);
+      await repo.setMeta('seeded', true);
+      await repo.setMeta('seedVersion', 4);
+      await repo.ensureSeed();
+      return repo;
+    };
+    const repo = await install(v4);
+    expect((await repo.loadExercises()).find((e) => e.id === 'presse-a-cuisses')?.secondaryGroups).toEqual(['quadriceps']);
+    expect(await repo.getMeta('seedVersion')).toBe(SEED_VERSION);
+    // Une sauvegarde d'avant la version 5 garde la version de l'appareil.
+    const backup = parseJsonImport(JSON.stringify(buildBackup({ sessions: [], exercises: v4 }, 1)), LIB, '2026-10-16');
+    if (backup.kind !== 'backup') throw new Error(backup.kind);
+    const plan = planImport(backup.backup, { sessions: [], exercises: await repo.loadExercises() }, { mode: 'merge' });
+    expect(plan.exercises.find((e) => e.id === 'presse-a-cuisses')).toBeUndefined();
+    expect(plan.exerciseConflicts).toEqual([]);
+    repo.close();
+    // Groupes personnalisés par l'utilisateur : conservés.
+    const custom = await install(v4.map((e) => (e.id === 'presse-a-cuisses' ? { ...e, secondaryGroups: ['ischio-jambiers'] as typeof e.secondaryGroups } : e)));
+    expect((await custom.loadExercises()).find((e) => e.id === 'presse-a-cuisses')?.secondaryGroups).toEqual(['ischio-jambiers']);
+    custom.close();
+  });
+
+  it('133. « seated row », « row assis » et « tirage horizontal » → Tirage horizontal ; « rowing haltère » et « dumbbell row » → Rowing haltère', () => {
+    for (const q of ['seated row', 'row assis', 'tirage horizontal']) {
+      expect(ids(q)[0], q).toBe('tirage-horizontal');
+      expect(ids(q), q).not.toContain('rowing-haltere');
+      expect(choiceOf(q), q).toBe('tirage-horizontal');
+    }
+    for (const q of ['rowing haltère', 'dumbbell row']) {
+      expect(ids(q), q).toEqual(['rowing-haltere']);
+      expect(choiceOf(q), q).toBe('rowing-haltere');
+    }
   });
 });

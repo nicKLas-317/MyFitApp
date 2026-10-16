@@ -1,6 +1,6 @@
 # Inventaire de la bibliothèque d’exercices
 
-Bibliothèque initiale de l’application (version 4), telle qu’installée sur un nouvel appareil. Les exercices et variantes créés ou modifiés ensuite dans l’application n’y figurent pas.
+Bibliothèque initiale de l’application (version 5), telle qu’installée sur un nouvel appareil. Les exercices et variantes créés ou modifiés ensuite dans l’application n’y figurent pas.
 
 **21 exercices, 21 variantes** (une variante standard par exercice).
 
@@ -23,7 +23,7 @@ Bibliothèque initiale de l’application (version 4), telle qu’installée sur
 | Curl biceps banc incliné | Standard | Incline dumbbell curl, Curl incliné | Biceps | — | haltères | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Alternating_incline_curl_with_dumbbell_1.svg), [2](https://commons.wikimedia.org/wiki/File:Alternating_incline_curl_with_dumbbell_2.svg)) |
 | Extension triceps poulie | Standard | Triceps pushdown, Pushdown, Triceps poulie haute | Triceps | — | poulie | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Triceps_pushdown_with_cable_1.svg), [2](https://commons.wikimedia.org/wiki/File:Triceps_pushdown_with_cable_2.svg)) |
 | Extension triceps haltère assis | Standard | Overhead dumbbell extension, Extension nuque haltère | Triceps | — | haltère | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Seated_triceps_press_with_dumbbell_1.svg), [2](https://commons.wikimedia.org/wiki/File:Seated_triceps_press_with_dumbbell_2.svg)) |
-| Presse à cuisses | Standard | Leg press, Presse | Jambes | Quadriceps, Ischio-jambiers | machine | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Leg-press-1-1024x670.png), [2](https://commons.wikimedia.org/wiki/File:Leg-press-2-1024x670.png)) |
+| Presse à cuisses | Standard | Leg press, Presse | Jambes | Quadriceps | machine | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Leg-press-1-1024x670.png), [2](https://commons.wikimedia.org/wiki/File:Leg-press-2-1024x670.png)) |
 | Leg extension | Standard | Extension des jambes, Extension quadriceps | Jambes | Quadriceps | machine | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Leg_extensions_1.svg), [2](https://commons.wikimedia.org/wiki/File:Leg_extensions_2.svg)) |
 | Leg curl | Standard | Leg curl assis, Seated leg curl | Jambes | Ischio-jambiers | machine | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Seated_leg_curl_1.svg), [2](https://commons.wikimedia.org/wiki/File:Seated_leg_curl_2.svg)) |
 | Crunch machine | Standard | Abdominaux machine, Abdos | Abdominaux | — | machine | non | standard | pictogramme |

@@ -70,8 +70,9 @@ describe('Recherche par groupe musculaire (§4.1 B)', () => {
     expect(ids('jambes').sort()).toEqual(['curl-ischios', 'leg-curl', 'leg-extension', 'presse-a-cuisses']);
     expect(ids('abdos')).toEqual(['crunch-machine']);
     expect(ids('abdominaux')).toEqual(['crunch-machine']);
-    // Lexique (§4.2.1) : « ischios » désigne les jambes.
-    expect(ids('ischios').sort()).toEqual(['curl-ischios', 'leg-curl', 'leg-extension', 'presse-a-cuisses']);
+    // Lexique (§4.2.1) : les ischio-jambiers et les quadriceps sont des sous-groupes des jambes.
+    expect(ids('ischios').sort()).toEqual(['curl-ischios', 'leg-curl']);
+    expect(ids('quadri').sort()).toEqual(['leg-extension', 'presse-a-cuisses']);
   });
 
   it('recherche par matériel, combinable avec un groupe', () => {

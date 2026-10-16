@@ -29,7 +29,9 @@
     "dos": ["dos", "back", "dorsaux", "lats"],
     "biceps": ["biceps", "bi", "bis"],
     "triceps": ["triceps", "tri", "tris"],
-    "jambes": ["jambe", "jambes", "leg", "legs", "quadri", "quadris", "quadriceps", "quads", "ischio", "ischios"],
+    "jambes": ["jambe", "jambes", "leg", "legs"],
+    "quadriceps": ["quadri", "quadris", "quadriceps", "quad", "quads"],
+    "ischio-jambiers": ["ischio", "ischios", "ischio-jambiers", "ischio-jambier", "ischiojambiers", "hamstring", "hamstrings"],
     "abdominaux": ["abdo", "abdos", "abdominaux", "abs"]
   },
   "expressionsProtegees": ["pec deck", "pec fly", "leg curl", "curl ischio", "curl ischios"]

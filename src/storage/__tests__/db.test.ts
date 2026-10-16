@@ -120,7 +120,7 @@ describe('Persistance IndexedDB (§12)', () => {
     expect(after.find((e) => e.id === 'elevations-laterales-machine')).toMatchObject({ name: 'Élévations latérales machine', equipment: 'machine', primaryGroup: 'epaules' });
     expect(after.find((e) => e.id === 'tirage-vertical')?.synonyms).toEqual(['Lat pulldown', 'Tirage poitrine']);
     expect(await repo.loadSessions()).toEqual([s]);
-    expect(await repo.getMeta('seedVersion')).toBe(4);
+    expect(await repo.getMeta('seedVersion')).toBe(SEED_VERSION);
     repo.close();
 
     // Exercice renommé par l'utilisateur : son nom et ses synonymes sont conservés.

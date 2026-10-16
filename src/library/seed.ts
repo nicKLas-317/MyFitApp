@@ -41,7 +41,8 @@ export const SEED_EXERCISES: readonly Exercise[] = [
   exercise('curl-biceps-banc-incline', 'Curl biceps banc incliné', ['Incline dumbbell curl', 'Curl incliné'], 'biceps', [], 'haltères'),
   exercise('extension-triceps-poulie', 'Extension triceps poulie', ['Triceps pushdown', 'Pushdown', 'Triceps poulie haute'], 'triceps', [], 'poulie'),
   exercise('extension-triceps-haltere-assis', 'Extension triceps haltère assis', ['Overhead dumbbell extension', 'Extension nuque haltère'], 'triceps', [], 'haltère'),
-  exercise('presse-a-cuisses', 'Presse à cuisses', ['Leg press', 'Presse'], 'jambes', ['quadriceps', 'ischio-jambiers'], 'machine'),
+  // Version 5 : quadriceps seulement (les ischio-jambiers désignent le leg curl et le curl ischios).
+  exercise('presse-a-cuisses', 'Presse à cuisses', ['Leg press', 'Presse'], 'jambes', ['quadriceps'], 'machine'),
   exercise('leg-extension', 'Leg extension', ['Extension des jambes', 'Extension quadriceps'], 'jambes', ['quadriceps'], 'machine'),
   // Leg curl = version ASSISE ; la version allongée est « Curl ischios » (historiques séparés).
   exercise('leg-curl', 'Leg curl', ['Leg curl assis', 'Seated leg curl'], 'jambes', ['ischio-jambiers'], 'machine'),
@@ -58,7 +59,7 @@ export const SEED_EXERCISES: readonly Exercise[] = [
 ];
 
 /** Version de la bibliothèque initiale ; chaque version ajoute des exercices (jamais de suppression). */
-export const SEED_VERSION = 4;
+export const SEED_VERSION = 5;
 
 /** Exercices ajoutés par chaque version, installés une seule fois sur une base existante. */
 export const SEED_ADDITIONS: Readonly<Record<number, readonly string[]>> = {
@@ -96,6 +97,27 @@ export const SEED_UPDATES: Readonly<Record<number, Readonly<Record<string, { fro
     },
   },
 };
+
+/**
+ * Corrections de groupes secondaires apportées par une version : appliquées à une base existante seulement
+ * si l'exercice a encore exactement les groupes d'origine (une personnalisation n'est jamais écrasée).
+ */
+export const SEED_GROUP_UPDATES: Readonly<Record<number, Readonly<Record<string, { from: readonly MuscleGroup[]; to: readonly MuscleGroup[] }>>>> = {
+  5: {
+    'presse-a-cuisses': { from: ['quadriceps', 'ischio-jambiers'], to: ['quadriceps'] },
+  },
+};
+
+/** Groupes secondaires qu'un exercice de la bibliothèque initiale a portés, version actuelle comprise. */
+export function seedSecondaryGroups(id: string): (readonly MuscleGroup[])[] {
+  const current = SEED_EXERCISES.find((e) => e.id === id);
+  if (!current) return [];
+  return [current.secondaryGroups, ...Object.values(SEED_GROUP_UPDATES).flatMap((c) => (c[id] ? [c[id]!.from] : []))];
+}
+
+export function sameGroups(a: readonly MuscleGroup[], b: readonly MuscleGroup[]): boolean {
+  return a.length === b.length && a.every((g, i) => g === b[i]);
+}
 
 /** Noms et synonymes qu'un exercice de la bibliothèque initiale a portés, version actuelle comprise. */
 export function seedNamings(id: string): SeedNaming[] {
