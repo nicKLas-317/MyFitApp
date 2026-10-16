@@ -4,46 +4,81 @@ import { analyzeProgress, recentChanges, type ProgressCategory } from '../../ana
 import { displayName } from '../../library/catalog';
 import { formatIsoDay, formatKg } from '../../session/format';
 
-const SECTIONS: { category: ProgressCategory; title: string; hint: string }[] = [
-  { category: 'progressing', title: 'En progression', hint: 'Au moins un palier validé sur les 6 dernières séances.' },
-  { category: 'stable', title: 'Stables', hint: 'Aucun palier validé sur les 6 dernières séances, sans rouges répétées.' },
-  { category: 'difficulty', title: 'En difficulté', hint: 'Au moins 2 séances rouges consécutives en cours.' },
-  { category: 'new', title: 'Trop tôt pour conclure', hint: 'Une seule séance enregistrée.' },
+const SECTIONS: { category: ProgressCategory; title: string; icon: string; hint: string }[] = [
+  { category: 'progressing', title: 'En progression', icon: '↗', hint: 'Au moins un palier validé sur les 6 dernières séances.' },
+  { category: 'stable', title: 'Stables', icon: '→', hint: 'Aucun palier validé sur les 6 dernières séances, sans rouges répétées.' },
+  { category: 'difficulty', title: 'En difficulté', icon: '↘', hint: 'Au moins 2 séances rouges consécutives en cours.' },
+  { category: 'new', title: 'Trop tôt pour conclure', icon: '…', hint: 'Une seule séance sur cet exercice.' },
 ];
 
-/** Bilan synthétique facultatif (§19.3) : classement factuel, sans score inventé. */
+const count = (n: number) => `${n} exercice${n > 1 ? 's' : ''}`;
+
+/**
+ * Bilan synthétique facultatif (§19.3) : classement factuel, sans score inventé. Catégories bien distinctes
+ * (pictogramme, style, nombre d'exercices), sans les couleurs des statuts ; un exercice ouvre sa fiche sur son graphique.
+ */
 export function Bilan() {
   const { replay, sessions, variants } = useApp();
   const progress = useMemo(() => analyzeProgress(replay.evaluations, replay.profile), [replay]);
   const changes = useMemo(() => recentChanges(replay.evaluations, sessions), [replay, sessions]);
   const name = (id: string) => displayName(variants.get(id));
+  const byCategory = SECTIONS.map((section) => ({
+    ...section,
+    list: progress.filter((p) => p.category === section.category).sort((a, b) => name(a.variantId).localeCompare(name(b.variantId), 'fr')),
+  }));
 
   return (
     <main className="screen bilan">
       <header className="simple-header">
-        <a href="#/historique" className="back" aria-label="Historique">
+        <a href="#/" className="back" aria-label="Accueil">
           ‹
         </a>
-        <h1>Bilan</h1>
+        <h1>Bilan de progression</h1>
       </header>
-      {progress.length === 0 && <p className="empty muted">Pas encore de séance évaluée.</p>}
-      {SECTIONS.map(({ category, title, hint }) => {
-        const list = progress.filter((p) => p.category === category).sort((a, b) => name(a.variantId).localeCompare(name(b.variantId), 'fr'));
+      {progress.length === 0 ? (
+        <p className="empty muted">Pas encore de séance évaluée.</p>
+      ) : (
+        <ul className="bilan-summary" aria-label="Résumé du bilan">
+          {byCategory.map(({ category, title, icon, list }) => (
+            <li key={category} className={`bilan-chip bilan-${category}`} data-category={category}>
+              <span className="bilan-icon" aria-hidden="true">
+                {icon}
+              </span>
+              <span>
+                {title} <strong data-testid={`count-${category}`}>{list.length}</strong>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {byCategory.map(({ category, title, icon, hint, list }) => {
         if (list.length === 0) return null;
         return (
-          <section key={category} aria-label={title} data-category={category}>
-            <h2 className="section-title">{title}</h2>
+          <section key={category} aria-label={title} data-category={category} className={`bilan-section bilan-${category}`}>
+            <h2 className="bilan-title">
+              <span className="bilan-icon" aria-hidden="true">
+                {icon}
+              </span>
+              <span className="bilan-name">{title}</span>
+              <span className="bilan-count">{count(list.length)}</span>
+            </h2>
             <p className="muted small">{hint}</p>
-            <ul className="plain-list">
+            <ul className="bilan-list">
               {list.map((p) => (
                 <li key={p.variantId}>
-                  <a href={`#/exercice/${encodeURIComponent(p.variantId)}`}>{name(p.variantId)}</a>
-                  <span className="muted small">
-                    {' '}
-                    · {p.sessions} séance{p.sessions > 1 ? 's' : ''}
-                    {p.validated > 0 && ` · ${p.validated} palier${p.validated > 1 ? 's' : ''} validé${p.validated > 1 ? 's' : ''}`}
-                    {p.redStreak >= 2 && ` · ${p.redStreak} rouges de suite`}
-                  </span>
+                  <a className="bilan-item" href={`#/exercice/${encodeURIComponent(p.variantId)}/evolution`}>
+                    <span className="bilan-item-text">
+                      <strong>{name(p.variantId)}</strong>
+                      <span className="muted small">
+                        {p.sessions} séance{p.sessions > 1 ? 's' : ''}
+                        {p.validated > 0 && ` · ${p.validated} palier${p.validated > 1 ? 's' : ''} validé${p.validated > 1 ? 's' : ''}`}
+                        {p.redStreak >= 2 && ` · ${p.redStreak} rouges de suite`}
+                      </span>
+                    </span>
+                    <span className="bilan-chevron" aria-hidden="true">
+                      ›
+                    </span>
+                  </a>
                 </li>
               ))}
             </ul>

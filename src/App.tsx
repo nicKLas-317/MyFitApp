@@ -35,7 +35,7 @@ function Router() {
     case 'bibliotheque':
       return <Library />;
     case 'exercice':
-      return param ? <ExerciseSheet key={param} variantId={param} /> : <Library />;
+      return param ? <ExerciseSheet key={param} variantId={param} fromBilan={extra === 'evolution'} /> : <Library />;
     case 'modifier':
       return param ? <ExerciseEdit key={param} exerciseId={param} /> : <Library />;
     case 'nouvel-exercice':

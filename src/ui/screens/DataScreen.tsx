@@ -15,6 +15,7 @@ import { sanitizeRecapSettings } from '../../analysis/weekly';
 import { sanitizeCardioMachines, upgradeCardioMachines } from '../../cardio/model';
 import { useBody } from '../../body/store';
 import { downloadBackup } from '../download';
+import { checkImportFile } from '../../transfer/file';
 import { DraftSessionEditor, ProblemList } from '../import/DraftEditor';
 
 type Analysis =
@@ -60,13 +61,23 @@ export function DataScreen() {
 
   async function readFile(file: File | undefined) {
     if (!file) return;
+    // Aucun filtre de type au choix du fichier (Android ne reconnaît pas toujours un .json reçu par mail
+    // ou Drive) : le contenu est validé après lecture.
+    let content: string;
     try {
-      const content = await file.text();
-      setText(content);
-      analyze(content);
+      content = await file.text();
     } catch {
       setAnalysis({ kind: 'error', id: counter + 1, message: 'Impossible de lire ce fichier.', details: [] });
+      return;
     }
+    const check = checkImportFile(file.name, file.size, content);
+    if (check) {
+      setText('');
+      setAnalysis({ kind: 'error', id: counter + 1, message: check, details: [`Fichier : ${file.name}`] });
+      return;
+    }
+    setText(content);
+    analyze(content);
   }
 
   function done(result: Outcome) {
@@ -124,7 +135,7 @@ export function DataScreen() {
             <input
               className="visually-hidden"
               type="file"
-              accept=".json,application/json,text/plain"
+              accept="*/*"
               aria-label="Fichier à importer"
               onChange={(e) => {
                 void readFile(e.target.files?.[0]);

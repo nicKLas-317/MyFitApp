@@ -104,6 +104,7 @@ L'écran principal doit donner accès directement à :
 - L'import et l'export des données.
 - Des réglages simples.
 - La rubrique « Mon poids ».
+- Le bilan de progression (§19.3), par un lien discret sous le récapitulatif hebdomadaire.
 
 Éviter les menus profonds, les écrans superflus, les animations inutiles et les longs textes explicatifs.
 
@@ -768,7 +769,7 @@ Créer une interface simple accessible depuis les réglages ou l'historique.
 
 Elle doit permettre :
 
-- De sélectionner un fichier JSON.
+- De sélectionner un fichier JSON. **Précision validée (Android)** : le champ fichier n'impose aucun type (`accept="*/*"`), car Android n'annonce pas toujours un .json reçu par mail ou Drive comme `application/json` (souvent `application/octet-stream`). Le contenu est validé après lecture : un fichier vide, binaire, trop volumineux ou un .json illisible ou tronqué est refusé avec un message clair, sans rien modifier ; un JSON qui n'est pas une sauvegarde suit le chemin habituel (§11.9).
 - De coller directement du JSON dans un champ de texte.
 - De coller des notes de séances en texte brut.
 - D'afficher un aperçu des informations détectées.
@@ -1198,6 +1199,12 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 138. « ↑ Poids supérieur » après deux vertes à 3×12, « ↓ Poids inférieur » après quatre rouges, « Moins d'aide » et « Plus d'aide » pour un exercice assisté ; trois rouges : aucun repère.
 139. (bout en bout) Le repère s'affiche en haut de l'exercice ajouté (au-dessus du poids, sans couleur de statut) avec la cible 3 × 9, disparaît si la charge change, et figure sur la fiche sous « Prochaine cible » ; aucun repère quand la cible ne change pas.
 
+### Bilan, graphiques et import de fichier (§19.2, §19.3, §11.1)
+
+140. Données de départ (exemple anonymisé) : l'extension triceps haltère assis (deux vertes, palier validé) est « En progression » ; les exercices à une seule séance sont « Trop tôt pour conclure » ; le graphique a un point dès la première séance.
+141. Fichier d'import : un .json, même sans type reconnu, du texte ou des notes sont acceptés ; un fichier vide, binaire, tronqué ou trop volumineux est refusé avec un message clair.
+142. (bout en bout) Champ fichier sans filtre de type ; fichier non valide refusé sans rien importer ; .json annoncé en `application/octet-stream` importé ; lien « Bilan de progression » sous le récapitulatif de l'accueil ; résumé et titres avec le nombre d'exercices par catégorie, libellé « Une seule séance sur cet exercice. », aucune couleur de statut ; un exercice ouvre sa fiche sur son graphique (deux points), un exercice à une seule séance montre un point et le message.
+
 Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
 
 ## 16. Vérification avant livraison
@@ -1291,6 +1298,8 @@ Prévoir un graphique léger dans la fiche de chaque exercice pour visualiser l'
 
 Ne pas mélanger les variantes non comparables. Le graphique est secondaire : il ne doit pas ralentir la saisie pendant la séance.
 
+**Précision validée :** le graphique (charge et répétitions) s'affiche dès la première séance, avec un seul point ; tant qu'il y a moins de deux séances, un court message l'indique : « Le graphique se complètera au fil des séances ».
+
 ### 19.3. Bilan synthétique
 
 Prévoir une vue facultative permettant de repérer :
@@ -1307,6 +1316,9 @@ Ne jamais déclarer un exercice en stagnation sur la base d'une seule séance di
 - Un palier est « validé » quand il atteint sa 2ᵉ validation verte consécutive (§7.5).
 - Un exercice qui n'a qu'une seule séance évaluée est classé « Trop tôt pour conclure ».
 - « En difficulté » (au moins 2 rouges consécutives en cours) l'emporte sur « En progression ».
+- Libellé de « Trop tôt pour conclure » : « Une seule séance sur cet exercice. »
+- Présentation : un résumé en tête donne le nombre d'exercices de chaque catégorie ; chaque catégorie a un titre de section bien visible, un pictogramme (↗ en progression, → stables, ↘ en difficulté, … trop tôt pour conclure), un style de bordure distinct et son nombre d'exercices. Pas de vert, d'orange ni de rouge (réservés aux statuts, §8).
+- Un appui sur un exercice ouvre sa fiche directement sur son graphique d'évolution (§19.2) ; le retour ramène au bilan. Le bilan est accessible depuis l'accueil (§3) et depuis l'historique.
 
 ### 19.4. Séparation entre historique réel et recommandation
 

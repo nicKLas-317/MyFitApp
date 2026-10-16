@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp } from '../../app/store';
 import { navigate } from '../../app/hooks';
 import { progressMarker, sortSessions } from '../../engine';
@@ -17,11 +17,17 @@ import { StatusBadge } from '../StatusBadge';
 import { ProgressMarkerBanner } from '../ProgressMarker';
 
 /** Fiche d'un exercice-variante (§4) : dernière performance, prochaine cible, statut, variantes et historique. */
-export function ExerciseSheet({ variantId }: { variantId: string }) {
+/** Fiche d'un exercice-variante. `fromBilan` : ouverte depuis le bilan, directement sur le graphique d'évolution. */
+export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: string; fromBilan?: boolean }) {
   const { variants, exercises, sessions, replay, active, ctxFor, saveExercises } = useApp();
   const ref = variants.get(variantId);
   const [variantName, setVariantName] = useState<string | null>(null);
   const [variantError, setVariantError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Après la remise en haut de page faite à chaque changement d'écran.
+    if (fromBilan) requestAnimationFrame(() => document.getElementById('evolution')?.scrollIntoView({ block: 'start' }));
+  }, [fromBilan, variantId]);
 
   if (!ref) {
     return (
@@ -74,7 +80,7 @@ export function ExerciseSheet({ variantId }: { variantId: string }) {
   return (
     <main className="screen sheet">
       <header className="simple-header">
-        <a href="#/bibliotheque" className="back" aria-label="Bibliothèque">
+        <a href={fromBilan ? '#/bilan' : '#/bibliotheque'} className="back" aria-label={fromBilan ? 'Bilan' : 'Bibliothèque'}>
           ‹
         </a>
         <h1>{exercise.name}</h1>
@@ -240,13 +246,19 @@ export function ExerciseSheet({ variantId }: { variantId: string }) {
         </section>
       )}
 
-      {series.length > 1 && (
+      {/* Graphique dès la première séance (§19.2) : un seul point tant qu'il n'y en a pas d'autre. */}
+      {series.length > 0 && (
         <ErrorBoundary fallback={<p className="muted small">Graphique indisponible.</p>}>
-        <section aria-label="Évolution">
+        <section aria-label="Évolution" id="evolution">
           <h2 className="section-title">Évolution</h2>
+          {series.length < 2 && (
+            <p className="muted small" data-testid="chart-hint">
+              Le graphique se complètera au fil des séances.
+            </p>
+          )}
           <p className="muted small">{ctx.cfg.assisted ? 'Aide (kg)' : 'Charge (kg)'}</p>
           <LineChart data={series.map((p) => ({ date: p.date, value: p.weightKg }))} label={ctx.cfg.assisted ? 'Évolution de l’aide' : 'Évolution de la charge'} unit="kg" testId="chart-weight" />
-          {reps.length > 1 && (
+          {reps.length > 0 && (
             <>
               <p className="muted small">Répétitions par série (moyenne)</p>
               <LineChart data={reps} label="Évolution des répétitions" unit="répétitions" testId="chart-reps" />

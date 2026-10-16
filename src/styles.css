@@ -1460,3 +1460,139 @@ fieldset {
 .draft-cardio-entry .tag {
   margin-left: 0;
 }
+
+/* Bilan de progression (§19.3) : catégories distinctes par pictogramme et style, sans couleurs de statut. */
+.recap-link {
+  display: inline-block;
+  margin: -6px 0 12px;
+  padding: 4px 0;
+  font-size: 0.9rem;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.bilan-summary {
+  list-style: none;
+  margin: 8px 0 4px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.bilan-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 0.9rem;
+  line-height: 1.25;
+}
+
+.bilan-section {
+  margin: 18px 0 8px;
+  padding: 12px 14px 6px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left-width: 5px;
+}
+
+.bilan-progressing {
+  border-left-color: var(--accent);
+}
+
+.bilan-stable {
+  border-left-color: var(--muted);
+}
+
+.bilan-difficulty {
+  border-left-style: double;
+  border-left-width: 6px;
+  border-left-color: var(--text);
+}
+
+.bilan-new {
+  border-left-style: dashed;
+  border-left-color: var(--muted);
+}
+
+.bilan-chip.bilan-progressing,
+.bilan-chip.bilan-stable,
+.bilan-chip.bilan-difficulty,
+.bilan-chip.bilan-new {
+  border-left-width: 4px;
+}
+
+.bilan-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 4px;
+  font-size: 1.15rem;
+}
+
+.bilan-icon {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.bilan-chip .bilan-icon {
+  width: 24px;
+  height: 24px;
+  font-size: 0.85rem;
+}
+
+.bilan-name {
+  flex: 1;
+}
+
+.bilan-count {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.bilan-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+
+.bilan-list li + li {
+  border-top: 1px solid var(--border);
+}
+
+.bilan-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--tap);
+  padding: 8px 0;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.bilan-item-text {
+  flex: 1;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bilan-chevron {
+  color: var(--muted);
+  font-size: 1.4rem;
+}
