@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Performance, Session } from '../domain/types';
-import { compareWeight } from '../engine';
+import { compareWeight, progressMarker } from '../engine';
 import { useApp } from '../app/store';
 import { displayName } from '../library/catalog';
 import { MUSCLE_GROUP_LABELS } from '../library/seed';
@@ -17,8 +17,9 @@ import {
 } from '../session/ops';
 import { FeelingPicker } from './FeelingPicker';
 import { ExercisePicto } from './Pictogram';
-import { formatRecommendation, loadChangeLabel } from './labels';
+import { formatRecommendation } from './labels';
 import { StatusBadge } from './StatusBadge';
+import { ProgressMarkerBanner } from './ProgressMarker';
 import { WeightField } from './WeightField';
 
 interface Props {
@@ -45,6 +46,14 @@ export function ExerciseCard({ session, performance: p, open, onToggle }: Props)
   const weightChange =
     rec && state && (rec.kind === 'weight_up' || rec.kind === 'weight_down') && compareWeight(p.weightKg, state.palier.weightKg) === 0
       ? rec.kind
+      : null;
+
+  // Repère de progression (§5.3.1) : la cible a changé depuis la dernière séance. Il disparaît si l'utilisateur
+  // change la charge ou la cible (ce n'est plus la progression recommandée).
+  const marker = progressMarker(state);
+  const shownMarker =
+    marker && state && compareWeight(p.weightKg, state.palier.weightKg) === 0 && (marker.kind !== 'reps_up' || p.targetReps === marker.to.targetReps)
+      ? marker
       : null;
 
   const name = displayName(ref);
@@ -79,11 +88,7 @@ export function ExerciseCard({ session, performance: p, open, onToggle }: Props)
             )}
           </div>
 
-          {weightChange && (
-            <p className={`reco reco-${weightChange}`} role="status">
-              {loadChangeLabel(weightChange, ctx.cfg.assisted)}
-            </p>
-          )}
+          {shownMarker && <ProgressMarkerBanner marker={shownMarker} assisted={ctx.cfg.assisted} />}
 
           <WeightField
             label={ctx.cfg.assisted ? 'Aide (kg)' : 'Poids (kg)'}
@@ -97,7 +102,7 @@ export function ExerciseCard({ session, performance: p, open, onToggle }: Props)
             <span>
               Cible : <strong data-testid="target">{planned} × {target}</strong>
             </span>
-            {rec && rec.kind !== 'keep' && rec.kind !== 'start' && !weightChange && (
+            {rec && rec.kind !== 'keep' && rec.kind !== 'start' && !shownMarker && (
               <span className="muted small">Prochaine : {formatRecommendation(rec, ctx.cfg.assisted)}</span>
             )}
             <button type="button" className="link" onClick={() => setAdjust(!adjust)} aria-expanded={adjust}>

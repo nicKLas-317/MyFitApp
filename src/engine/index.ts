@@ -8,3 +8,4 @@ export * from './status';
 export * from './progression';
 export * from './replay';
 export * from './session';
+export * from './marker';

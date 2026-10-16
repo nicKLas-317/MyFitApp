@@ -331,6 +331,15 @@ Le poids doit être modifiable facilement. Le nombre de séries et la cible peuv
 
 Prévoir une validation rapide de la préparation de l'exercice.
 
+### 5.3.1. Repère de progression (précision validée)
+
+Quand j'ajoute un exercice à la séance et que sa cible a changé depuis ma dernière séance sur cet exercice-variante, un repère bien visible s'affiche en haut de l'exercice, au-dessus du champ de poids, dans le style du bandeau de changement de charge :
+
+- « ↑ +1 répétition : 3×9 (au lieu de 3×8) » pour une hausse de répétitions recommandée par le moteur (« +2 répétitions » si l'écart est de deux) ;
+- « ↑ Poids supérieur » et « ↓ Poids inférieur » comme avant, avec leur flèche (« ↑ Moins d'aide » et « ↓ Plus d'aide » pour un exercice assisté, §7.12).
+
+Pas de repère quand la cible ne change pas (palier conservé, exercice jamais réalisé, nouvelle cible déjà faite à la séance précédente). Le repère disparaît si je saisis une autre charge ou une autre cible : ce n'est plus la progression recommandée. Même repère sur la fiche de l'exercice, sous « Prochaine cible ». Il est dérivé de la recommandation du moteur et de la dernière performance réelle, sans règle nouvelle. Pas de vert, d'orange ni de rouge : ces couleurs sont réservées aux statuts (§8).
+
 ### 5.4. Enregistrer les séries
 
 Afficher directement les séries prévues et préremplir les répétitions avec la cible actuelle.
@@ -1182,6 +1191,12 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 134. Trois prises seulement, écritures du lexique comprises, sans fusion ni supination, pronation ou prise neutre ; « tirage vertical » seul, « lat pull » et « latpull » → prise moyenne ; « tirage vertical wide grip », « tirage vertical prise large », « lat pull prise très large » → prise très large ; « prise très large » et « prise serrée » → variantes distinctes ; une prise demandée pour un exercice sans prise crée la variante.
 135. Tirage vertical prise moyenne le lundi et prise très large le jeudi : « Dos (2×) » dans le récapitulatif, deux historiques séparés.
 136. Bibliothèque version 6 : variante standard renommée « Prise moyenne », prises manquantes ajoutées une seule fois, sans doublon ni perte (synonymes appris conservés) ; les données de départ (exemple anonymisé) se réimportent avec la bonne prise.
+
+### Repère de progression (§5.3.1)
+
+137. Deux vertes à 3×8 : « ↑ +1 répétition : 3×9 (au lieu de 3×8) » ; aucun repère après une seule verte, ni une fois 3×9 fait ; le repère reste si la hausse a été refusée avec une verte ; « +2 répétitions » au pluriel.
+138. « ↑ Poids supérieur » après deux vertes à 3×12, « ↓ Poids inférieur » après quatre rouges, « Moins d'aide » et « Plus d'aide » pour un exercice assisté ; trois rouges : aucun repère.
+139. (bout en bout) Le repère s'affiche en haut de l'exercice ajouté (au-dessus du poids, sans couleur de statut) avec la cible 3 × 9, disparaît si la charge change, et figure sur la fiche sous « Prochaine cible » ; aucun repère quand la cible ne change pas.
 
 Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
 

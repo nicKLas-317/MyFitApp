@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../../app/store';
 import { navigate } from '../../app/hooks';
-import { sortSessions } from '../../engine';
+import { progressMarker, sortSessions } from '../../engine';
 import { displayName, variantLabel } from '../../library/catalog';
 import { addVariant, updateVariant, validateVariantName } from '../../library/edit';
 import { illustrationFor } from '../../library/illustrations';
@@ -14,6 +14,7 @@ import { findPerformance } from '../../session/ops';
 import { FEELING_LABELS, formatRecommendation } from '../labels';
 import { equipmentLabel, ExercisePicto } from '../Pictogram';
 import { StatusBadge } from '../StatusBadge';
+import { ProgressMarkerBanner } from '../ProgressMarker';
 
 /** Fiche d'un exercice-variante (§4) : dernière performance, prochaine cible, statut, variantes et historique. */
 export function ExerciseSheet({ variantId }: { variantId: string }) {
@@ -146,6 +147,7 @@ export function ExerciseSheet({ variantId }: { variantId: string }) {
               Prochaine cible : <strong data-testid="sheet-next">{formatRecommendation(state.recommendation, ctx.cfg.assisted)}</strong>
               {state.recommendation.kind === 'keep' || state.recommendation.kind === 'reps_up' ? ` à ${formatKg(state.palier.weightKg)}` : ''}
             </p>
+            {progressMarker(state) && <ProgressMarkerBanner marker={progressMarker(state)!} assisted={ctx.cfg.assisted} />}
           </>
         ) : (
           <p>

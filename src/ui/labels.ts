@@ -1,5 +1,5 @@
 import type { Feeling, Status } from '../domain/types';
-import type { Recommendation } from '../engine';
+import type { ProgressMarker, Recommendation } from '../engine';
 import type { RatedFeeling } from '../session/ops';
 
 export const FEELINGS: { value: RatedFeeling; label: string }[] = [
@@ -35,4 +35,16 @@ export function formatRecommendation(rec: Recommendation, assisted = false): str
   const target = `${rec.plannedSets} × ${rec.targetReps}`;
   if (rec.kind === 'weight_up' || rec.kind === 'weight_down') return `${loadChangeLabel(rec.kind, assisted)} · ${target}`;
   return target;
+}
+
+/** Flèche du repère de progression (§5.3.1) : vers le haut pour une progression, vers le bas pour une baisse. */
+export function markerArrow(marker: ProgressMarker): '↑' | '↓' {
+  return marker.kind === 'weight_down' ? '↓' : '↑';
+}
+
+/** Texte du repère : « +1 répétition : 3×9 (au lieu de 3×8) », « Poids supérieur », « Moins d’aide »… */
+export function markerLabel(marker: ProgressMarker, assisted = false): string {
+  if (marker.kind !== 'reps_up') return loadChangeLabel(marker.kind, assisted);
+  const { added, from, to } = marker;
+  return `+${added} répétition${added > 1 ? 's' : ''} : ${to.plannedSets}×${to.targetReps} (au lieu de ${from.plannedSets}×${from.targetReps})`;
 }
