@@ -35,8 +35,9 @@ jobs:
         run: npm test
       - name: Navigateur des tests de bout en bout
         run: npx playwright install --with-deps chromium
+      # Le rapporteur « github » publie chaque échec en annotation, lisible sans ouvrir les journaux.
       - name: Tests de bout en bout (format smartphone)
-        run: npm run test:e2e
+        run: npm run test:e2e -- --reporter=list,github
       - name: Construction pour /MyFitApp/
         run: npx vite build
       - uses: actions/configure-pages@v6
