@@ -1,10 +1,11 @@
 # Inventaire de la bibliothèque d’exercices
 
-Bibliothèque initiale de l’application (version 6), telle qu’installée sur un nouvel appareil. Les exercices et variantes créés ou modifiés ensuite dans l’application n’y figurent pas.
+Bibliothèque initiale de l’application (version 7), telle qu’installée sur un nouvel appareil. Les exercices et variantes créés ou modifiés ensuite dans l’application n’y figurent pas.
 
-**21 exercices, 25 variantes** : une variante standard par exercice, et trois prises pour chacun des deux tirages (la variante standard y est la prise moyenne, §4.3.1 de CLAUDE.md).
+**25 exercices, 29 variantes** : une variante standard par exercice, et trois prises pour chacun des deux tirages (la variante standard y est la prise moyenne, §4.3.1 de CLAUDE.md).
 
 - Séries et répétitions : « standard » = 3 séries de 8 à 12 répétitions.
+- Groupes : « Jambes » a des sous-groupes (quadriceps, ischio-jambiers, mollets, fessiers, adducteurs), indiqués en groupe secondaire ; tous comptent dans « Jambes » au récapitulatif hebdomadaire.
 - Illustration : « dessin » (source et licence indiquées), « pictogramme » (dessin SVG de l’application, par matériel et groupe) ou « manquante » (illustration prévue mais absente : aucun cas).
 - Synonymes : noms français et anglais reconnus par la recherche et l’import (le nom de l’exercice est toujours reconnu).
 
@@ -35,6 +36,10 @@ Bibliothèque initiale de l’application (version 6), telle qu’installée sur
 | Écarté couché haltères | Standard | Dumbbell fly, Écarté haltères, Écarté à plat haltères | Pectoraux | Épaules | haltères | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Dumbbell_flys_1.svg), [2](https://commons.wikimedia.org/wiki/File:Dumbbell_flys_2.svg)) |
 | Curl ischios | Standard | Curl ischio allongé, Leg curl allongé, Lying leg curl | Jambes | Ischio-jambiers | machine | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Lying_leg_curl_machine_1.svg), [2](https://commons.wikimedia.org/wiki/File:Lying_leg_curl_machine_2.svg)) |
 | Élévations latérales machine | Standard | Lateral raise machine, Machine lateral raise | Épaules | — | machine | non | standard | pictogramme |
+| Curl biceps barre droite | Standard | Curl barre, Curl barre droite, Curl à la barre, Barbell curl, Straight bar curl | Biceps | — | barre | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Wide_grip_standing_biceps_curl_with_barbell_1.svg), [2](https://commons.wikimedia.org/wiki/File:Wide_grip_standing_biceps_curl_with_barbell_2.svg)) |
+| Mollets machine | Standard | Mollets, Calf press, Calf raise, Extension mollets, Presse mollets, Machine à mollets | Jambes | Mollets | machine | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Standing_calf_raises_using_machine_1.svg), [2](https://commons.wikimedia.org/wiki/File:Standing_calf_raises_using_machine_2.svg)) |
+| Abducteurs machine | Standard | Abducteurs, Abduction, Machine abducteurs, Hip abduction, Abductor machine, Fessiers machine | Jambes | Fessiers | machine | non | standard | dessin — Everkinetic, CC BY-SA 4.0, everkinetic/data ([1](https://github.com/everkinetic/data/blob/main/src/images-web/thigh-abductor-1.png), [2](https://github.com/everkinetic/data/blob/main/src/images-web/thigh-abductor-2.png)) |
+| Adducteurs machine | Standard | Adducteurs, Adduction, Machine adducteurs, Hip adduction, Adductor machine | Jambes | Adducteurs | machine | non | standard | dessin — Everkinetic, CC BY-SA 4.0, everkinetic/data ([1](https://github.com/everkinetic/data/blob/main/src/images-web/thigh-adductor-1.png), [2](https://github.com/everkinetic/data/blob/main/src/images-web/thigh-adductor-2.png)) |
 
 ## Exercices avec un pictogramme seulement (4)
 

@@ -11,7 +11,7 @@
   "equivalences": {
     "haltères": ["haltère", "haltères", "dumbbell", "dumbbells", "db"],
     "poulie": ["poulie", "câble", "cable"],
-    "barre": ["barre", "barbell"],
+    "barre": ["barre", "barbell", "bar"],
     "élévation": ["élévation", "élévations", "raise", "raises"],
     "latéral": ["latéral", "latérale", "latéraux", "latérales", "lateral", "laterals"],
     "développé": ["développé", "développés", "press"],
@@ -37,6 +37,10 @@
     "jambes": ["jambe", "jambes", "leg", "legs"],
     "quadriceps": ["quadri", "quadris", "quadriceps", "quad", "quads"],
     "ischio-jambiers": ["ischio", "ischios", "ischio-jambiers", "ischio-jambier", "ischiojambiers", "hamstring", "hamstrings"],
+    "mollets": ["mollet", "mollets", "calf", "calves"],
+    "fessiers": ["fessier", "fessiers", "fesse", "fesses", "glute", "glutes"],
+    "adducteurs": ["adducteur", "adducteurs", "adductor", "adductors"],
+    "abducteurs": ["abducteur", "abducteurs", "abductor", "abductors"],
     "abdominaux": ["abdo", "abdos", "abdominaux", "abs"]
   },
   "prises": ["prise très large", "prise moyenne", "prise serrée"],

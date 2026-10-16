@@ -131,7 +131,7 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
             <a href={illustration.sources[1]} target="_blank" rel="noopener noreferrer">
               2
             </a>{' '}
-            (Wikimedia Commons) · recadrée et assemblée
+            ({illustration.origin}) · recadrée et assemblée
           </figcaption>
         </figure>
       )}

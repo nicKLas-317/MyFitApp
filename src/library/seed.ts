@@ -70,10 +70,16 @@ export const SEED_EXERCISES: readonly Exercise[] = [
   exercise('curl-ischios', 'Curl ischios', ['Curl ischio allongé', 'Leg curl allongé', 'Lying leg curl'], 'jambes', ['ischio-jambiers'], 'machine'),
   // Version 4.
   exercise('elevations-laterales-machine', 'Élévations latérales machine', ['Lateral raise machine', 'Machine lateral raise'], 'epaules', [], 'machine'),
+  // Version 7. Curl à la barre droite : distinct des curls aux haltères et à la poulie (historiques séparés).
+  exercise('curl-biceps-barre-droite', 'Curl biceps barre droite', ['Curl barre', 'Curl barre droite', 'Curl à la barre', 'Barbell curl', 'Straight bar curl'], 'biceps', [], 'barre'),
+  exercise('mollets-machine', 'Mollets machine', ['Mollets', 'Calf press', 'Calf raise', 'Extension mollets', 'Presse mollets', 'Machine à mollets'], 'jambes', ['mollets'], 'machine'),
+  // Abduction (on écarte les jambes) et adduction (on les ramène) : deux machines distinctes, jamais confondues.
+  exercise('abducteurs-machine', 'Abducteurs machine', ['Abducteurs', 'Abduction', 'Machine abducteurs', 'Hip abduction', 'Abductor machine', 'Fessiers machine'], 'jambes', ['fessiers'], 'machine'),
+  exercise('adducteurs-machine', 'Adducteurs machine', ['Adducteurs', 'Adduction', 'Machine adducteurs', 'Hip adduction', 'Adductor machine'], 'jambes', ['adducteurs'], 'machine'),
 ];
 
 /** Version de la bibliothèque initiale ; chaque version ajoute des exercices (jamais de suppression). */
-export const SEED_VERSION = 6;
+export const SEED_VERSION = 7;
 
 /**
  * Exercices devenus « à prise » à une version donnée : sur une base existante, leur variante standard prend le nom
@@ -88,6 +94,7 @@ export const SEED_ADDITIONS: Readonly<Record<number, readonly string[]>> = {
   2: ['dips-assistes', 'ecarte-couche-halteres'],
   3: ['curl-ischios'],
   4: ['elevations-laterales-machine'],
+  7: ['curl-biceps-barre-droite', 'mollets-machine', 'abducteurs-machine', 'adducteurs-machine'],
 };
 
 /** Nom et synonymes d'un exercice de la bibliothèque initiale, à une version donnée. */
@@ -166,5 +173,8 @@ export const MUSCLE_GROUP_LABELS: Record<MuscleGroup, string> = {
   jambes: 'Jambes',
   quadriceps: 'Quadriceps',
   'ischio-jambiers': 'Ischio-jambiers',
+  mollets: 'Mollets',
+  fessiers: 'Fessiers',
+  adducteurs: 'Adducteurs',
   abdominaux: 'Abdominaux',
 };

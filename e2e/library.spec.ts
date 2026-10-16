@@ -43,7 +43,7 @@ test.describe('Bibliothèque et recherche', () => {
     await search(page, 'pec deck');
     expect(await resultNames(page)).toEqual(['Pec deck']);
     await search(page, 'curl biceps');
-    expect((await resultNames(page)).slice(0, 3).sort()).toEqual(['Curl biceps banc incliné', 'Curl biceps haltères', 'Curl biceps poulie corde']);
+    expect((await resultNames(page)).slice(0, 4).sort()).toEqual(['Curl biceps banc incliné', 'Curl biceps barre droite', 'Curl biceps haltères', 'Curl biceps poulie corde']);
   });
 
   test('48. Recherche par groupe musculaire : dos', async ({ page }) => {
@@ -115,12 +115,12 @@ test.describe('Bibliothèque et recherche', () => {
     await expect(page.getByTestId('attribution')).toHaveCount(0);
   });
 
-  test('100. Attribution CC BY-SA 3.0 affichée sur chaque fiche illustrée, absente des autres', async ({ page }) => {
+  test('100. Attribution CC BY-SA affichée sur chaque fiche illustrée, absente des autres', async ({ page }) => {
     const illustrated = [
       'tirage-horizontal', 'tirage-vertical', 'chest-press', 'pec-deck', 'developpe-couche', 'developpe-epaules-machine',
       'elevations-laterales', 'curl-biceps-poulie-corde', 'curl-biceps-halteres', 'curl-biceps-banc-incline',
       'extension-triceps-poulie', 'extension-triceps-haltere-assis', 'presse-a-cuisses', 'leg-extension', 'leg-curl',
-      'ecarte-couche-halteres', 'curl-ischios',
+      'ecarte-couche-halteres', 'curl-ischios', 'curl-biceps-barre-droite', 'mollets-machine',
     ];
     for (const id of illustrated) {
       await page.goto(`./#/exercice/${id}`);
@@ -131,6 +131,15 @@ test.describe('Bibliothèque et recherche', () => {
       await expect(attribution, id).toContainText('Illustration : Everkinetic');
       await expect(attribution.getByRole('link', { name: 'CC BY-SA 3.0' }), id).toHaveAttribute('href', /creativecommons\.org\/licenses\/by-sa\/3\.0/);
       await expect(attribution.getByRole('link', { name: /^[12]$/ }), id).toHaveCount(2);
+    }
+    // Dessins pris dans le dépôt everkinetic/data, sous CC BY-SA 4.0.
+    for (const id of ['abducteurs-machine', 'adducteurs-machine']) {
+      await page.goto(`./#/exercice/${id}`);
+      const attribution = page.getByTestId('attribution');
+      await expect(attribution, id).toContainText('Illustration : Everkinetic');
+      await expect(attribution, id).toContainText('(everkinetic/data)');
+      await expect(attribution.getByRole('link', { name: 'CC BY-SA 4.0' }), id).toHaveAttribute('href', /creativecommons\.org\/licenses\/by-sa\/4\.0/);
+      await expect(attribution.getByRole('link', { name: '1' }), id).toHaveAttribute('href', /github\.com\/everkinetic\/data\//);
     }
     for (const id of ['rowing-haltere', 'crunch-machine', 'dips-assistes', 'elevations-laterales-machine']) {
       await page.goto(`./#/exercice/${id}`);

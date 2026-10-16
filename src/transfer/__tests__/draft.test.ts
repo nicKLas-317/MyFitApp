@@ -173,15 +173,15 @@ describe('Reconnaissance des exercices (§11.7)', () => {
   });
 
   it('un exercice inconnu peut être créé comme exercice personnalisé', () => {
-    const draft = setDraftDate(draftFromNotes('Hip thrust\n3x10x60kg +', LIB, TODAY), '2026-10-01');
+    const draft = setDraftDate(draftFromNotes('Good morning\n3x10x60kg +', LIB, TODAY), '2026-10-01');
     expect(draft.exercises[0]!.match.confidence).toBe('none');
-    const incomplete = updateDraftExercise(draft, 'e1', { choice: { kind: 'new_exercise', name: 'Hip thrust', primaryGroup: null } });
+    const incomplete = updateDraftExercise(draft, 'e1', { choice: { kind: 'new_exercise', name: 'Good morning', primaryGroup: null } });
     expect(draftProblems(incomplete, ctx()).map((p) => p.code)).toContain('new_exercise_group');
-    const ready = updateDraftExercise(draft, 'e1', { choice: { kind: 'new_exercise', name: 'Hip thrust', primaryGroup: 'jambes' } });
+    const ready = updateDraftExercise(draft, 'e1', { choice: { kind: 'new_exercise', name: 'Good morning', primaryGroup: 'jambes' } });
     expect(hasBlockingProblems(draftProblems(ready, ctx()))).toBe(false);
     const result = finalizeDrafts([ready], LIB, [], 1_000);
-    expect(result.exercises).toMatchObject([{ id: 'perso-hip-thrust', name: 'Hip thrust', primaryGroup: 'jambes' }]);
-    expect(result.sessions[0]!.performances[0]!.variantId).toBe('perso-hip-thrust');
+    expect(result.exercises).toMatchObject([{ id: 'perso-good-morning', name: 'Good morning', primaryGroup: 'jambes' }]);
+    expect(result.sessions[0]!.performances[0]!.variantId).toBe('perso-good-morning');
   });
 });
 

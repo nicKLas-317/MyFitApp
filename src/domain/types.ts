@@ -13,6 +13,9 @@ export type MuscleGroup =
   | 'jambes'
   | 'quadriceps'
   | 'ischio-jambiers'
+  | 'mollets'
+  | 'fessiers'
+  | 'adducteurs'
   | 'abdominaux';
 
 /** Réglages spécifiques d'un exercice-variante (§7.2). Absent = valeurs par défaut. */

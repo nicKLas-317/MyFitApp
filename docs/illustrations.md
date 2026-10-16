@@ -4,12 +4,11 @@ Conformément au §4.0.1, les illustrations sont embarquées dans l'application 
 
 ## Résultat
 
-17 des 21 exercices de la bibliothèque initiale ont une illustration. Toutes viennent de la même source et partagent la même licence :
+21 des 25 exercices de la bibliothèque initiale ont une illustration. Toutes ont le même auteur :
 
 - **Auteur** : Everkinetic (dessins au trait créés pour everkinetic.com par Greg Priday).
-- **Licence** : [Creative Commons Attribution – Partage dans les mêmes conditions 3.0 (CC BY-SA 3.0)](https://creativecommons.org/licenses/by-sa/3.0/deed.fr).
-- **Source** : Wikimedia Commons (un fichier par position du mouvement).
-- **Modifications** : les deux positions (début et fin) sont recadrées, assemblées en une seule image, converties en niveaux de gris et en WebP ; une vignette carrée est tirée de la première position. Ces images modifiées sont diffusées sous la même licence, CC BY-SA 3.0.
+- **Licence et source** : pour 19 exercices, [Creative Commons Attribution – Partage dans les mêmes conditions 3.0 (CC BY-SA 3.0)](https://creativecommons.org/licenses/by-sa/3.0/deed.fr), sur Wikimedia Commons (un fichier par position du mouvement) ; pour les abducteurs et les adducteurs, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/deed.fr), dans le dépôt [everkinetic/data](https://github.com/everkinetic/data) (voir plus bas).
+- **Modifications** : les deux positions (début et fin) sont recadrées, assemblées en une seule image, converties en niveaux de gris et en WebP ; une vignette carrée est tirée de la première position. Ces images modifiées sont diffusées sous la licence de leur source (CC BY-SA 3.0 ou 4.0).
 - **Attribution dans l'application** : en bas de l'illustration, sur la fiche de l'exercice (auteur, licence, liens vers les deux fichiers sources).
 
 | Exercice | Fichier | Sources (Wikimedia Commons) |
@@ -31,6 +30,19 @@ Conformément au §4.0.1, les illustrations sont embarquées dans l'application 
 | Écarté couché haltères | `ecarte-couche-halteres.webp` | [Dumbbell flys 1.svg](https://commons.wikimedia.org/wiki/File:Dumbbell_flys_1.svg), [Dumbbell flys 2.svg](https://commons.wikimedia.org/wiki/File:Dumbbell_flys_2.svg) |
 | Curl ischios (leg curl allongé) | `curl-ischios.webp` | [Lying leg curl machine 1.svg](https://commons.wikimedia.org/wiki/File:Lying_leg_curl_machine_1.svg), [Lying leg curl machine 2.svg](https://commons.wikimedia.org/wiki/File:Lying_leg_curl_machine_2.svg) |
 | Leg curl (assis) | `leg-curl.webp` | [Seated leg curl 1.svg](https://commons.wikimedia.org/wiki/File:Seated_leg_curl_1.svg), [Seated leg curl 2.svg](https://commons.wikimedia.org/wiki/File:Seated_leg_curl_2.svg) |
+| Curl biceps barre droite | `curl-biceps-barre-droite.webp` | [Wide grip standing biceps curl with barbell 1.svg](https://commons.wikimedia.org/wiki/File:Wide_grip_standing_biceps_curl_with_barbell_1.svg), [Wide grip standing biceps curl with barbell 2.svg](https://commons.wikimedia.org/wiki/File:Wide_grip_standing_biceps_curl_with_barbell_2.svg) |
+| Mollets machine | `mollets-machine.webp` | [Standing calf raises using machine 1.svg](https://commons.wikimedia.org/wiki/File:Standing_calf_raises_using_machine_1.svg), [Standing calf raises using machine 2.svg](https://commons.wikimedia.org/wiki/File:Standing_calf_raises_using_machine_2.svg) |
+
+### Dépôt everkinetic/data (CC BY-SA 4.0)
+
+| Exercice | Fichier | Sources (github.com/everkinetic/data) |
+|---|---|---|
+| Abducteurs machine (jambes serrées, puis écartées) | `abducteurs-machine.webp` | [thigh-abductor-1.png](https://github.com/everkinetic/data/blob/main/src/images-web/thigh-abductor-1.png), [thigh-abductor-2.png](https://github.com/everkinetic/data/blob/main/src/images-web/thigh-abductor-2.png) |
+| Adducteurs machine (jambes écartées, puis serrées) | `adducteurs-machine.webp` | [thigh-adductor-1.png](https://github.com/everkinetic/data/blob/main/src/images-web/thigh-adductor-1.png), [thigh-adductor-2.png](https://github.com/everkinetic/data/blob/main/src/images-web/thigh-adductor-2.png) |
+
+Pourquoi pas Wikimedia Commons pour ces deux machines : Commons n'en a qu'une paire incohérente. « Thigh abductor 1.svg » (jambes serrées) y est associé à « Thigh adductor 2.svg », décrit « Thigh Abductor » mais qui montre lui aussi les jambes serrées ; l'image n'aurait pas montré le mouvement, et l'adduction n'y figure pas. Le dépôt everkinetic/data, qui reprend la base Everkinetic en données ouvertes, a les deux paires correctes (même machine, positions dans l'ordre inverse), sous CC BY-SA 4.0 (licence du dépôt, vérifiée le 16 octobre 2026 par l'API GitHub et le fichier `LICENSE.md`).
+
+Mollets machine : Everkinetic a dessiné une machine debout et une machine assise ; c'est la machine debout qui est retenue. Le seul dessin d'adduction de Commons (« Hip adduction », debout à la poulie) n'a pas été retenu : il serait trompeur pour une machine assise.
 
 Chaque fichier `.webp` a une vignette `…-vignette.webp` (même source, même licence). Tailles : 11 à 25 Ko par image, moins de 3 Ko par vignette ; un test vérifie la limite de 50 Ko (`src/library/__tests__/illustrations.test.ts`).
 
@@ -38,7 +50,7 @@ Chaque fichier `.webp` a une vignette `…-vignette.webp` (même source, même l
 
 ## Vérification de la licence Everkinetic
 
-- Wikimedia Commons : chaque fichier indique l'auteur « Everkinetic », la licence CC BY-SA 3.0 et la source db.everkinetic.com (vérifié le 15 octobre 2026 par l'API de Commons pour les 34 fichiers utilisés).
+- Wikimedia Commons : chaque fichier indique l'auteur « Everkinetic », la licence CC BY-SA 3.0 et la source db.everkinetic.com (vérifié le 15 octobre 2026 par l'API de Commons pour les 34 premiers fichiers utilisés, et le 16 octobre 2026 pour les 4 fichiers du curl à la barre et des mollets).
 - Archive du site d'origine (Wayback Machine) : en 2010, les images étaient vendues (« All content is copyright Everkinetic ») ; en janvier 2014, le site s'intitule « Everkinetic | Creative Commons Exercise Images » et propose des « Free Exercise Images ».
 - Le dépôt [everkinetic/data](https://github.com/everkinetic/data), qui reprend ce projet en données ouvertes, est publié sous CC BY-SA 4.0.
 

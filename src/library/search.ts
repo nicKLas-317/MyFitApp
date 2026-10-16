@@ -17,6 +17,9 @@ export const GROUP_ALIASES: Record<MuscleGroup, string[]> = {
   jambes: ['jambes', 'cuisses', 'legs'],
   quadriceps: ['quadriceps', 'quadri', 'quads', 'cuisses'],
   'ischio-jambiers': ['ischio-jambiers', 'ischios', 'hamstrings'],
+  mollets: ['mollets', 'calves'],
+  fessiers: ['fessiers', 'fesses', 'glutes'],
+  adducteurs: ['adducteurs', 'adductors'],
   abdominaux: ['abdominaux', 'abdos', 'abs', 'sangle abdominale'],
 };
 
@@ -94,17 +97,21 @@ function withinOneEdit(a: string, b: string): boolean {
   return long.slice(i + 1) === short.slice(i);
 }
 
-/** Qualité de correspondance d'un mot saisi avec un mot de l'index : 1 exact, 0,8 début de mot, 0,5 faute de frappe. */
-function tokenQuality(query: string, token: string): number {
+/**
+ * Qualité de correspondance d'un mot saisi avec un mot de l'index : 1 exact, 0,8 début de mot, 0,5 faute de frappe.
+ * Un mot connu de la bibliothèque n'est jamais lu comme une faute de frappe (`typo` faux) : « abducteurs » ne trouve
+ * pas « adducteurs », ni « abduction » « adduction ».
+ */
+function tokenQuality(query: string, token: string, typo = true): number {
   if (query === token) return 1;
   if (token.startsWith(query)) return 0.8;
-  if (query.length >= 5 && token.length >= 5 && withinOneEdit(query, token)) return 0.5;
+  if (typo && query.length >= 5 && token.length >= 5 && withinOneEdit(query, token)) return 0.5;
   return 0;
 }
 
-function best(query: string, tokens: Set<string>): number {
+function best(query: string, tokens: Set<string>, typo: boolean): number {
   let q = 0;
-  for (const t of tokens) q = Math.max(q, tokenQuality(query, t));
+  for (const t of tokens) q = Math.max(q, tokenQuality(query, t, typo));
   return q;
 }
 
@@ -139,7 +146,7 @@ function phraseIn(phrase: string, phrases: readonly string[]): boolean {
   );
 }
 
-function scoreEntry(entry: SearchEntry, words: string[], phrase: string, raw: string): { score: number; via: MatchField } | null {
+function scoreEntry(entry: SearchEntry, words: string[], phrase: string, raw: string, exact: ReadonlySet<string>): { score: number; via: MatchField } | null {
   const phraseHit = phraseIn(phrase, entry.phrases) || (raw.includes(' ') && phraseIn(raw, entry.rawPhrases));
   let score = 0;
   let via: MatchField = 'name';
@@ -149,7 +156,7 @@ function scoreEntry(entry: SearchEntry, words: string[], phrase: string, raw: st
     let wordVia: MatchField = 'name';
     for (const field of ['name', 'primary', 'equipment', 'secondary'] as const) {
       const tokens = field === 'name' ? entry.names : entry[field];
-      const s = best(w, tokens) * WEIGHT[field];
+      const s = best(w, tokens, !exact.has(w)) * WEIGHT[field];
       if (s > wordBest) {
         wordBest = s;
         wordVia = field;
@@ -231,10 +238,12 @@ export function searchWithInfo(index: readonly SearchEntry[], query: string): Se
   // Requête faite seulement de matériel (« poulie », « dos haltère » sans autre mot) : le matériel est exigé.
   const scoredWords = required.length > 0 ? required : words;
   const phrase = words.join(' ');
+  // Mots tels quels dans la bibliothèque : jamais corrigés en un mot voisin.
+  const exactWords = new Set(words.filter((w) => vocab.has(w)));
 
   let results: SearchResult[] = [];
   for (const entry of index) {
-    const scored = scoreEntry(entry, scoredWords, phrase, raw);
+    const scored = scoreEntry(entry, scoredWords, phrase, raw, exactWords);
     if (!scored) continue;
     if (required.length > 0) for (const w of equipmentWords) if (hasEquipment(entry, w)) scored.score += WEIGHT.equipment;
     results.push({ entry, ...scored });

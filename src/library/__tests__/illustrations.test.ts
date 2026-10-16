@@ -20,15 +20,25 @@ describe('Illustrations embarquées (§4.0.1)', () => {
     }
   });
 
-  it('chaque illustration a une licence compatible, un auteur et ses deux sources Wikimedia Commons', () => {
+  it('chaque illustration a une licence compatible, un auteur et ses deux sources vérifiables', () => {
     const seedIds = new Set(SEED_EXERCISES.map((e) => e.id));
     for (const [id, ill] of Object.entries(ILLUSTRATIONS)) {
       expect(seedIds.has(id), id).toBe(true);
-      expect(ill.license, id).toBe('CC BY-SA 3.0');
       expect(ill.author, id).toBe('Everkinetic');
-      expect(ill.licenseUrl).toMatch(/^https:\/\/creativecommons\.org\/licenses\/by-sa\/3\.0\//);
-      for (const source of ill.sources) expect(source, id).toMatch(/^https:\/\/commons\.wikimedia\.org\/wiki\/File:/);
+      if (ill.origin === 'Wikimedia Commons') {
+        expect(ill.license, id).toBe('CC BY-SA 3.0');
+        expect(ill.licenseUrl).toMatch(/^https:\/\/creativecommons\.org\/licenses\/by-sa\/3\.0\//);
+        for (const source of ill.sources) expect(source, id).toMatch(/^https:\/\/commons\.wikimedia\.org\/wiki\/File:/);
+      } else {
+        // Dépôt everkinetic/data, publié sous CC BY-SA 4.0.
+        expect(ill.license, id).toBe('CC BY-SA 4.0');
+        expect(ill.licenseUrl).toMatch(/^https:\/\/creativecommons\.org\/licenses\/by-sa\/4\.0\//);
+        for (const source of ill.sources) expect(source, id).toMatch(/^https:\/\/github\.com\/everkinetic\/data\/blob\/main\/src\/images-web\/[a-z-]+-[12]\.png$/);
+      }
     }
+    // Abducteurs et adducteurs : deux paires distinctes, jamais la même image.
+    expect(ILLUSTRATIONS['abducteurs-machine']!.sources[0]).toMatch(/thigh-abductor-1/);
+    expect(ILLUSTRATIONS['adducteurs-machine']!.sources[0]).toMatch(/thigh-adductor-1/);
   });
 
   it('aucun fichier orphelin : chaque image et vignette est référencée', () => {
@@ -42,6 +52,6 @@ describe('Illustrations embarquées (§4.0.1)', () => {
     expect(ILLUSTRATIONS['crunch-machine']).toBeUndefined();
     // Dips assistés : les dessins disponibles montrent des dips au poids du corps, sans machine d'assistance.
     expect(ILLUSTRATIONS['dips-assistes']).toBeUndefined();
-    expect(Object.keys(ILLUSTRATIONS)).toHaveLength(17);
+    expect(Object.keys(ILLUSTRATIONS)).toHaveLength(21);
   });
 });

@@ -1,6 +1,7 @@
 /**
- * Illustrations embarquées (§4.0.1) : dessins au trait d'Everkinetic, CC BY-SA 3.0, via Wikimedia Commons.
- * Chaque image assemble les positions de début et de fin (fichiers « 1 » et « 2 » de Commons), recadrées
+ * Illustrations embarquées (§4.0.1) : dessins au trait d'Everkinetic, CC BY-SA 3.0 via Wikimedia Commons, ou
+ * CC BY-SA 4.0 via le dépôt everkinetic/data quand Commons n'a pas la bonne paire de dessins.
+ * Chaque image assemble les positions de début et de fin (fichiers « 1 » et « 2 »), recadrées
  * et converties en WebP. Sources et licences : docs/illustrations.md. Un exercice absent garde son pictogramme.
  */
 import tirageHorizontal from './illustrations/tirage-horizontal.webp';
@@ -37,6 +38,14 @@ import curlIschios from './illustrations/curl-ischios.webp';
 import curlIschiosThumb from './illustrations/curl-ischios-vignette.webp';
 import ecarteCoucheHalteres from './illustrations/ecarte-couche-halteres.webp';
 import ecarteCoucheHalteresThumb from './illustrations/ecarte-couche-halteres-vignette.webp';
+import curlBicepsBarreDroite from './illustrations/curl-biceps-barre-droite.webp';
+import curlBicepsBarreDroiteThumb from './illustrations/curl-biceps-barre-droite-vignette.webp';
+import molletsMachine from './illustrations/mollets-machine.webp';
+import molletsMachineThumb from './illustrations/mollets-machine-vignette.webp';
+import abducteursMachine from './illustrations/abducteurs-machine.webp';
+import abducteursMachineThumb from './illustrations/abducteurs-machine-vignette.webp';
+import adducteursMachine from './illustrations/adducteurs-machine.webp';
+import adducteursMachineThumb from './illustrations/adducteurs-machine-vignette.webp';
 
 export interface Illustration {
   src: string;
@@ -46,11 +55,26 @@ export interface Illustration {
   author: string;
   license: string;
   licenseUrl: string;
-  /** Pages Commons des deux fichiers d'origine (début et fin du mouvement). */
+  /** Pages des deux fichiers d'origine (début et fin du mouvement). */
   sources: [string, string];
+  /** Où se trouvent ces fichiers. */
+  origin: 'Wikimedia Commons' | 'everkinetic/data';
 }
 
-const EVERKINETIC = { author: 'Everkinetic', license: 'CC BY-SA 3.0', licenseUrl: 'https://creativecommons.org/licenses/by-sa/3.0/deed.fr' } as const;
+const EVERKINETIC = {
+  author: 'Everkinetic',
+  license: 'CC BY-SA 3.0',
+  licenseUrl: 'https://creativecommons.org/licenses/by-sa/3.0/deed.fr',
+  origin: 'Wikimedia Commons',
+} as const;
+/** Dépôt everkinetic/data (GitHub), qui publie les mêmes dessins sous CC BY-SA 4.0. */
+const EVERKINETIC_DATA = {
+  author: 'Everkinetic',
+  license: 'CC BY-SA 4.0',
+  licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/deed.fr',
+  origin: 'everkinetic/data',
+} as const;
+const EK_DATA = 'https://github.com/everkinetic/data/blob/main/src/images-web/';
 
 /** Illustration par exercice de la bibliothèque initiale ; ses variantes partagent la même image. */
 export const ILLUSTRATIONS: Readonly<Record<string, Illustration>> = {
@@ -71,6 +95,12 @@ export const ILLUSTRATIONS: Readonly<Record<string, Illustration>> = {
   'leg-curl': { src: legCurl, thumb: legCurlThumb, title: 'Seated leg curl', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Seated_leg_curl_1.svg', 'https://commons.wikimedia.org/wiki/File:Seated_leg_curl_2.svg'] },
   'ecarte-couche-halteres': { src: ecarteCoucheHalteres, thumb: ecarteCoucheHalteresThumb, title: 'Dumbbell flys', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Dumbbell_flys_1.svg', 'https://commons.wikimedia.org/wiki/File:Dumbbell_flys_2.svg'] },
   'curl-ischios': { src: curlIschios, thumb: curlIschiosThumb, title: 'Lying leg curl machine', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Lying_leg_curl_machine_1.svg', 'https://commons.wikimedia.org/wiki/File:Lying_leg_curl_machine_2.svg'] },
+  'curl-biceps-barre-droite': { src: curlBicepsBarreDroite, thumb: curlBicepsBarreDroiteThumb, title: 'Wide grip standing biceps curl with barbell', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Wide_grip_standing_biceps_curl_with_barbell_1.svg', 'https://commons.wikimedia.org/wiki/File:Wide_grip_standing_biceps_curl_with_barbell_2.svg'] },
+  'mollets-machine': { src: molletsMachine, thumb: molletsMachineThumb, title: 'Standing calf raises using machine', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Standing_calf_raises_using_machine_1.svg', 'https://commons.wikimedia.org/wiki/File:Standing_calf_raises_using_machine_2.svg'] },
+  // Commons n'a qu'une paire incohérente pour ces machines (« Thigh adductor 2.svg » décrit comme abducteur) :
+  // les paires correctes viennent du dépôt everkinetic/data. Abducteurs : jambes serrées puis écartées ; adducteurs : l'inverse.
+  'abducteurs-machine': { src: abducteursMachine, thumb: abducteursMachineThumb, title: 'Thigh abductor', ...EVERKINETIC_DATA, sources: [`${EK_DATA}thigh-abductor-1.png`, `${EK_DATA}thigh-abductor-2.png`] },
+  'adducteurs-machine': { src: adducteursMachine, thumb: adducteursMachineThumb, title: 'Thigh adductor', ...EVERKINETIC_DATA, sources: [`${EK_DATA}thigh-adductor-1.png`, `${EK_DATA}thigh-adductor-2.png`] },
 };
 
 export function illustrationFor(exerciseId: string): Illustration | undefined {

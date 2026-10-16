@@ -19,7 +19,7 @@ describe('Recherche par nom d’exercice ou de machine (§4.1 A)', () => {
 
   it('plusieurs machines correspondantes donnent plusieurs résultats distincts', () => {
     const curls = ids('curl biceps');
-    expect(curls.slice(0, 3).sort()).toEqual(['curl-biceps-banc-incline', 'curl-biceps-halteres', 'curl-biceps-poulie-corde']);
+    expect(curls.slice(0, 4).sort()).toEqual(['curl-biceps-banc-incline', 'curl-biceps-barre-droite', 'curl-biceps-halteres', 'curl-biceps-poulie-corde']);
     expect(ids('biceps poulie corde')[0]).toBe('curl-biceps-poulie-corde');
     expect(ids('press')).toEqual(expect.arrayContaining(['chest-press', 'developpe-couche', 'developpe-epaules-machine', 'presse-a-cuisses']));
   });
@@ -57,8 +57,8 @@ describe('Recherche par groupe musculaire (§4.1 B)', () => {
   it('le groupe principal passe avant les groupes secondaires', () => {
     const biceps = searchExercises(index, 'biceps');
     const primary = biceps.filter((r) => r.entry.exercise.primaryGroup === 'biceps').map((r) => r.entry.variant.id);
-    expect(primary).toHaveLength(3);
-    expect(biceps.slice(0, 3).map((r) => r.entry.variant.id).sort()).toEqual([...primary].sort());
+    expect(primary).toHaveLength(4);
+    expect(biceps.slice(0, 4).map((r) => r.entry.variant.id).sort()).toEqual([...primary].sort());
     // Les tirages (biceps en secondaire) suivent, signalés comme tels.
     const tirage = biceps.find((r) => r.entry.variant.id === 'tirage-vertical');
     expect(tirage?.via).toBe('secondary');
@@ -69,7 +69,7 @@ describe('Recherche par groupe musculaire (§4.1 B)', () => {
     expect(ids('pecs')).toEqual(expect.arrayContaining(['chest-press', 'pec-deck', 'developpe-couche']));
     expect(ids('epaules').slice(0, 2).sort()).toEqual(['developpe-epaules-machine', 'elevations-laterales']);
     expect(ids('triceps').slice(0, 2).sort()).toEqual(['extension-triceps-haltere-assis', 'extension-triceps-poulie']);
-    expect(ids('jambes').sort()).toEqual(['curl-ischios', 'leg-curl', 'leg-extension', 'presse-a-cuisses']);
+    expect(ids('jambes').sort()).toEqual(['abducteurs-machine', 'adducteurs-machine', 'curl-ischios', 'leg-curl', 'leg-extension', 'mollets-machine', 'presse-a-cuisses']);
     expect(ids('abdos')).toEqual(['crunch-machine']);
     expect(ids('abdominaux')).toEqual(['crunch-machine']);
     // Lexique (§4.2.1) : les ischio-jambiers et les quadriceps sont des sous-groupes des jambes.

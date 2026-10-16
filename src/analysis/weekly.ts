@@ -22,7 +22,13 @@ export const DEFAULT_RECAP_SETTINGS: WeeklyRecapSettings = {
 };
 
 /** Sous-groupes des jambes : comptés pour « jambes » quand ils ne sont pas affichés eux-mêmes. */
-const PARENT_GROUP: Partial<Record<MuscleGroup, MuscleGroup>> = { quadriceps: 'jambes', 'ischio-jambiers': 'jambes' };
+const PARENT_GROUP: Partial<Record<MuscleGroup, MuscleGroup>> = {
+  quadriceps: 'jambes',
+  'ischio-jambiers': 'jambes',
+  mollets: 'jambes',
+  fessiers: 'jambes',
+  adducteurs: 'jambes',
+};
 
 export interface RecapCell {
   group: MuscleGroup;
@@ -143,7 +149,9 @@ export function weeklyRecap(
 export function sanitizeRecapSettings(value: unknown): WeeklyRecapSettings {
   if (typeof value !== 'object' || value === null) return DEFAULT_RECAP_SETTINGS;
   const v = value as Record<string, unknown>;
-  const known: MuscleGroup[] = ['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes', 'quadriceps', 'ischio-jambiers', 'abdominaux'];
+  const known: MuscleGroup[] = [
+    'pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes', 'quadriceps', 'ischio-jambiers', 'mollets', 'fessiers', 'adducteurs', 'abdominaux',
+  ];
   const groups = Array.isArray(v.groups) ? known.filter((g) => (v.groups as unknown[]).includes(g)) : DEFAULT_RECAP_SETTINGS.groups;
   const t = v.redThreshold;
   const redThreshold = Number.isInteger(t) && (t as number) >= 2 && (t as number) <= 7 ? (t as number) : DEFAULT_RECAP_SETTINGS.redThreshold;
