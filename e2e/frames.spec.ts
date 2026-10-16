@@ -254,8 +254,10 @@ test.describe('Filtres du bilan et cadres de section', () => {
     expect(await section('Abdominaux')).toEqual([GROUP_RGB.abdominaux]);
     // Pictogrammes : fond de la couleur du groupe (crunch : gris clair ; squat kettlebell : blanc).
     await page.getByRole('searchbox', { name: 'Rechercher un exercice' }).fill('crunch');
+    await expect(page.locator('.pick-item')).toHaveCount(1);
     expect((await look('.pick-item'))[0]!.picto).toBe(GROUP_RGB.abdominaux);
     await page.getByRole('searchbox', { name: 'Rechercher un exercice' }).fill('squat kettlebell');
+    await expect(page.locator('.pick-item').first()).toContainText('Squat kettlebell');
     expect((await look('.pick-item'))[0]!.picto).toBe(GROUP_RGB.jambes);
 
     // Fiche : tous les cadres (cible, variantes, autres noms, graphiques, historique) ont la couleur du groupe.
@@ -265,11 +267,14 @@ test.describe('Filtres du bilan et cadres de section', () => {
     expect(sheet.length).toBeGreaterThanOrEqual(7);
     expect([...new Set(sheet)]).toEqual([GROUP_RGB.triceps]);
     await page.goto('./#/exercice/curl-ischios');
+    await expect(page.getByRole('heading', { name: 'Curl ischios' })).toBeVisible();
+    await expect(page.getByTestId('target-summary')).toBeVisible();
     expect([...new Set(await page.locator('[data-frame]').evaluateAll((els) => els.map((el) => getComputedStyle(el).borderTopColor)))]).toEqual([GROUP_RGB.jambes]);
 
     // Détail d'une séance passée : chaque exercice à la couleur de son groupe, le reste neutre.
     await page.goto('./#/historique');
     await page.locator('a.session-link').first().click();
+    await expect(page.locator('li.recap-item').first()).toBeVisible();
     const recap = await look('li.recap-item');
     expect(recap.length).toBeGreaterThanOrEqual(5);
     for (const it of recap) expect(it.border).toBe(GROUP_RGB[it.group!]);
