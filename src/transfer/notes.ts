@@ -5,6 +5,7 @@
 import type { Feeling } from '../domain/types';
 import { readFeelingSymbol } from './feelings';
 import { normalizeNotation, stripAccents } from '../library/text';
+import { readCardioNumbers } from '../cardio/model';
 
 export type ParseIssue =
   /** Aucune ligne de performance sous ce nom. */
@@ -38,6 +39,14 @@ export interface ParsedEntry {
   issues: ParseIssue[];
 }
 
+/** Ligne de cardio (« Tapis incliné 20 min ») : machine et inclinaison sont rapprochées dans le brouillon. */
+export interface ParsedCardio {
+  sourceName: string;
+  sourceLine: string;
+  minutes: number;
+  distanceKm: number | null;
+}
+
 export interface ParsedNotes {
   /** Date trouvée dans le texte (YYYY-MM-DD), à confirmer. */
   date: string | null;
@@ -45,6 +54,7 @@ export interface ParsedNotes {
   dateYearAssumed: boolean;
   title: string | null;
   entries: ParsedEntry[];
+  cardio: ParsedCardio[];
 }
 
 const W = String.raw`(\d+(?:\.\d+)?)\s*(?:kgs?|kilos?)?`;
@@ -191,7 +201,7 @@ function cleanName(s: string): string {
 
 /** Lit un bloc de notes correspondant à une séance. `today` (YYYY-MM-DD) sert à compléter une année absente. */
 export function parseNotes(text: string, today: string): ParsedNotes {
-  const result: ParsedNotes = { date: null, dateYearAssumed: false, title: null, entries: [] };
+  const result: ParsedNotes = { date: null, dateYearAssumed: false, title: null, entries: [], cardio: [] };
   let pending: string[] = [];
   let lastName: string | null = null;
 
@@ -206,7 +216,7 @@ export function parseNotes(text: string, today: string): ParsedNotes {
     const name = cleanName(pending.join(' '));
     pending = [];
     if (!name) return;
-    if (result.entries.length === 0 && result.title === null) {
+    if (result.entries.length === 0 && result.cardio.length === 0 && result.title === null) {
       result.title = name;
       return;
     }
@@ -230,6 +240,26 @@ export function parseNotes(text: string, today: string): ParsedNotes {
           continue;
         }
       }
+      // Cardio : une durée en minutes, avec la machine sur la même ligne ou sur la ligne précédente.
+      const cardio = readCardioNumbers(line);
+      if (cardio) {
+        const inline = cleanName(line.slice(0, cardio.index));
+        if (inline) flushPending();
+        else if (pending.length > 1 && result.entries.length === 0 && result.cardio.length === 0 && result.title === null) {
+          result.title = cleanName(pending.slice(0, -1).join(' '));
+          pending = pending.slice(-1);
+        }
+        let name = inline || cleanName(pending.join(' '));
+        // « Tapis », ligne vide, « 15 min » : le premier bloc, pris pour un titre, était le nom de la machine.
+        if (!name && result.entries.length === 0 && result.cardio.length === 0 && result.title) {
+          name = result.title;
+          result.title = null;
+        }
+        pending = [];
+        lastName = null;
+        result.cardio.push({ sourceName: name, sourceLine: line, minutes: cardio.minutes, distanceKm: cardio.distanceKm });
+        continue;
+      }
       if (looksLikeNotation(line)) {
         const name: string | null = pending.length ? cleanName(pending.join(' ')) : lastName;
         if (!pending.length && name) takeOrphan(name);
@@ -244,13 +274,13 @@ export function parseNotes(text: string, today: string): ParsedNotes {
 
     const inline = cleanName(line.slice(0, notation.index));
     // « Haut du corps / Seated row / 3x8x52kg » sans ligne vide : la première ligne est le titre.
-    if (!inline && pending.length > 1 && result.entries.length === 0 && result.title === null) {
+    if (!inline && pending.length > 1 && result.entries.length === 0 && result.cardio.length === 0 && result.title === null) {
       result.title = cleanName(pending.slice(0, -1).join(' '));
       pending = pending.slice(-1);
     }
     let name = inline ? cleanName([...pending, inline].join(' ')) : pending.length ? cleanName(pending.join(' ')) : lastName ?? '';
     // Le premier bloc, pris pour un titre, était en fait le nom du premier exercice.
-    if (!name && result.entries.length === 0 && result.title) {
+    if (!name && result.entries.length === 0 && result.cardio.length === 0 && result.title) {
       name = result.title;
       result.title = null;
     }

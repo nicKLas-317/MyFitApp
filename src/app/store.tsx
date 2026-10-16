@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { Exercise, Session } from '../domain/types';
+import type { CardioMachine, Exercise, Session } from '../domain/types';
+import { sanitizeCardioMachines } from '../cardio/model';
 import { rebuildProfile, resolveConfig, type EngineSettings, type ReplayResult } from '../engine';
 import { buildEngineSettings, indexVariants, type VariantRef } from '../library/catalog';
 import { exerciseHasHistory } from '../library/edit';
@@ -37,6 +38,11 @@ interface AppValue {
   /** Réglages du récapitulatif hebdomadaire de l'accueil (§19.6). */
   recapSettings: WeeklyRecapSettings;
   setRecapSettings(next: WeeklyRecapSettings): Promise<boolean>;
+  /** Machines de cardio proposées à la saisie, modifiables dans les réglages. */
+  cardioMachines: CardioMachine[];
+  setCardioMachines(next: CardioMachine[]): Promise<boolean>;
+  /** Réglages généraux inclus dans l'export (§11.10). */
+  generalSettings: Record<string, unknown>;
   ctxFor(variantId: string): VariantContext;
   /** Applique la nouvelle version d'une séance puis l'enregistre. Renvoie true si l'enregistrement a réussi. */
   commit(next: Session, undoLabel?: string): Promise<boolean>;
@@ -89,6 +95,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [lastFinish, setLastFinish] = useState<FinishInfo | null>(null);
   const [lastExportAt, setLastExportAt] = useState<number | null>(null);
   const [recapSettings, setRecapState] = useState<WeeklyRecapSettings>(DEFAULT_RECAP_SETTINGS);
+  const [cardioMachines, setMachinesState] = useState<CardioMachine[]>(() => sanitizeCardioMachines(undefined));
 
   const sessionsRef = useRef<Session[]>([]);
   const failedIds = useRef(new Set<string>());
@@ -100,11 +107,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         const repo = new Repository(await openAppDb());
         await repo.ensureSeed();
-        const [loadedSessions, loadedExercises, exportedAt, recap] = await Promise.all([
+        const [loadedSessions, loadedExercises, exportedAt, recap, machines] = await Promise.all([
           repo.loadSessions(),
           repo.loadExercises(),
           repo.getMeta<number>('lastExportAt'),
           repo.getMeta<unknown>('weeklyRecap'),
+          repo.getMeta<unknown>('cardioMachines'),
         ]);
         if (cancelled) return;
         sessionsRef.current = loadedSessions;
@@ -112,6 +120,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setExercises(loadedExercises);
         setLastExportAt(exportedAt ?? null);
         setRecapState(sanitizeRecapSettings(recap));
+        // Installation antérieure au cardio : aucune liste enregistrée, la liste par défaut s'applique.
+        setMachinesState(sanitizeCardioMachines(machines));
         setLoad({ kind: 'ready', repo });
 
         // §12 : stockage persistant demandé au premier lancement, état affiché ensuite.
@@ -268,6 +278,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [repo],
   );
 
+  const setCardioMachines = useCallback(
+    async (next: CardioMachine[]): Promise<boolean> => {
+      if (!repo) return false;
+      try {
+        await repo.setMeta('cardioMachines', next);
+      } catch {
+        return false;
+      }
+      setMachinesState(next);
+      return true;
+    },
+    [repo],
+  );
+
+  const generalSettings = useMemo(() => ({ weeklyRecap: recapSettings, cardioMachines }), [recapSettings, cardioMachines]);
+
   const markExported = useCallback(
     async (at: number): Promise<boolean> => {
       if (!repo) return false;
@@ -309,6 +335,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     lastExportAt,
     recapSettings,
     setRecapSettings,
+    cardioMachines,
+    setCardioMachines,
+    generalSettings,
     ctxFor,
     commit,
     retrySave,

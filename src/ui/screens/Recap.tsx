@@ -6,6 +6,8 @@ import { formatDay, formatDurationLong, formatHour, formatKg } from '../../sessi
 import { elapsedMs, renameSession, restoreRemoved } from '../../session/ops';
 import { FEELING_LABELS, formatRecommendation } from '../labels';
 import { StatusBadge } from '../StatusBadge';
+import { cardioOf } from '../../cardio/model';
+import { CardioLine } from '../CardioForm';
 
 /** Récapitulatif de fin de séance (§5.6) : la séance est déjà enregistrée, le nom est facultatif. */
 export function Recap({ sessionId }: { sessionId: string }) {
@@ -104,6 +106,11 @@ export function Recap({ sessionId }: { sessionId: string }) {
             </li>
           );
         })}
+        {cardioOf(session).map((b) => (
+          <li key={b.id} className="card recap-item cardio-item" data-cardio={b.id}>
+            <CardioLine block={b} />
+          </li>
+        ))}
       </ul>
     </main>
   );

@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useApp } from '../../app/store';
 import { parseHeight } from '../../body/model';
 import { useBody } from '../../body/store';
-import type { MuscleGroup } from '../../domain/types';
+import type { CardioMachine, MuscleGroup } from '../../domain/types';
+import { machineListErrors, newMachine, type MachineListError } from '../../cardio/model';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
 import { Stepper } from '../ExerciseCard';
 
@@ -24,6 +25,7 @@ export function Settings() {
       </header>
       <HeightField />
       <RecapSettingsField />
+      <CardioMachinesField />
       <dl className="settings-list">
         <dt>Stockage persistant</dt>
         <dd data-testid="persist-state">{persist ? PERSIST_LABELS[persist] : '…'}</dd>
@@ -124,6 +126,112 @@ function RecapSettingsField() {
           Enregistrement impossible : réessayez.
         </p>
       )}
+    </fieldset>
+  );
+}
+
+const MACHINE_ERRORS: Record<MachineListError, string> = {
+  empty_name: 'Chaque machine doit avoir un nom.',
+  duplicate_name: 'Deux machines portent le même nom.',
+  empty_list: 'Gardez au moins une machine.',
+};
+
+/**
+ * Machines de cardio proposées pendant la séance. Renommer ou retirer une machine ne modifie pas
+ * les séances déjà enregistrées : chaque bloc garde le nom de sa machine.
+ */
+function CardioMachinesField() {
+  const { cardioMachines, setCardioMachines } = useApp();
+  const [list, setList] = useState<CardioMachine[]>(cardioMachines);
+  const [added, setAdded] = useState('');
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  useEffect(() => setList(cardioMachines), [cardioMachines]);
+  const dirty = JSON.stringify(list) !== JSON.stringify(cardioMachines);
+  const errors = machineListErrors(list);
+
+  const change = (next: CardioMachine[]) => {
+    setMessage(null);
+    setList(next);
+  };
+
+  async function save() {
+    if (errors.length > 0) return;
+    const ok = await setCardioMachines(list.map((m) => ({ ...m, name: m.name.trim() })));
+    setMessage(ok ? { ok: true, text: 'Machines enregistrées.' } : { ok: false, text: 'Enregistrement impossible : réessayez.' });
+  }
+
+  return (
+    <fieldset className="chips-field cardio-machines">
+      <legend>Machines de cardio</legend>
+      <ul className="machine-list">
+        {list.map((m, i) => (
+          <li key={m.id} className="machine-row">
+            <input
+              type="text"
+              aria-label={`Nom de la machine ${i + 1}`}
+              value={m.name}
+              onChange={(e) => change(list.map((x) => (x.id === m.id ? { ...x, name: e.target.value } : x)))}
+            />
+            <button
+              type="button"
+              className="chip"
+              aria-pressed={m.incline}
+              aria-label={`Inclinaison : ${m.name}`}
+              onClick={() => change(list.map((x) => (x.id === m.id ? { ...x, incline: !x.incline } : x)))}
+            >
+              Inclinaison
+            </button>
+            <button
+              type="button"
+              className="link danger small"
+              aria-label={`Retirer ${m.name}`}
+              disabled={list.length === 1}
+              onClick={() => change(list.filter((x) => x.id !== m.id))}
+            >
+              Retirer
+            </button>
+          </li>
+        ))}
+      </ul>
+      <form
+        className="row"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!added.trim()) return;
+          change([...list, newMachine(added, false, list)]);
+          setAdded('');
+        }}
+      >
+        <input type="text" aria-label="Nouvelle machine" placeholder="Nouvelle machine" value={added} onChange={(e) => setAdded(e.target.value)} />
+        <button type="submit" className="btn">
+          Ajouter
+        </button>
+      </form>
+      {dirty && errors.length > 0 && (
+        <ul className="problems" role="alert">
+          {errors.map((e) => (
+            <li key={e} className="problem error">
+              {MACHINE_ERRORS[e]}
+            </li>
+          ))}
+        </ul>
+      )}
+      {dirty && (
+        <div className="row">
+          <button type="button" className="btn primary" disabled={errors.length > 0} onClick={() => void save()}>
+            Enregistrer les machines
+          </button>
+          <button type="button" className="btn" onClick={() => change(cardioMachines)}>
+            Annuler
+          </button>
+        </div>
+      )}
+      {message && (
+        <p className={message.ok ? 'ok-text small' : 'field-error'} role={message.ok ? 'status' : 'alert'}>
+          {message.text}
+        </p>
+      )}
+      <p className="muted small">Les séances déjà enregistrées gardent le nom de leur machine.</p>
     </fieldset>
   );
 }

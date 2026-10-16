@@ -784,13 +784,15 @@ textarea {
   gap: 10px;
 }
 
-.draft-exercise {
+.draft-exercise,
+.draft-cardio-entry {
   display: grid;
   gap: 10px;
   padding: 14px;
 }
 
-.draft-exercise.excluded {
+.draft-exercise.excluded,
+.draft-cardio-entry.excluded {
   opacity: 0.6;
 }
 
@@ -1391,4 +1393,70 @@ fieldset {
 .update-toast {
   bottom: calc(80px + env(safe-area-inset-bottom));
   flex-wrap: wrap;
+}
+
+/* Cardio : simple enregistrement, sans pastille de progression. */
+.cardio-form {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.cardio-form .feeling-options,
+.cardio-machines .feeling-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cardio-form .chip {
+  flex: none;
+  padding: 4px 14px;
+}
+
+.cardio-line {
+  overflow-wrap: anywhere;
+}
+
+.cardio-list {
+  margin-top: 10px;
+}
+
+.cardio-machines {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.machine-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.machine-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.machine-row .chip {
+  padding: 4px 10px;
+}
+
+.cardio-machines form.row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.draft-cardio {
+  margin-top: 10px;
+}
+
+.cardio-line .tag,
+.draft-cardio-entry .tag {
+  margin-left: 0;
 }

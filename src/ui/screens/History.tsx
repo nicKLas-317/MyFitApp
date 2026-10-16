@@ -1,8 +1,18 @@
 import { useMemo, useState } from 'react';
 import { useApp } from '../../app/store';
+import type { Session } from '../../domain/types';
 import { searchSessions } from '../../history/ops';
 import { formatDurationLong, formatHour, formatIsoDay } from '../../session/format';
 import { elapsedMs } from '../../session/ops';
+import { cardioMinutes, formatMinutes } from '../../cardio/model';
+
+/** « 2 ex. · 20 min cardio », « 15 min cardio », « 3 ex. ». */
+function contentSummary(s: Session): string {
+  const minutes = cardioMinutes(s);
+  const parts = s.performances.length > 0 || minutes === 0 ? [`${s.performances.length} ex.`] : [];
+  if (minutes > 0) parts.push(`${formatMinutes(minutes)} cardio`);
+  return parts.join(' · ');
+}
 
 /** Historique chronologique des séances, avec recherche par nom (§10). */
 export function History() {
@@ -50,7 +60,7 @@ export function History() {
                   </span>
                 </span>
                 <span className="pick-meta small">
-                  {s.performances.length} ex.
+                  {contentSummary(s)}
                   {s.origin === 'import' && <span className="tag">importée</span>}
                 </span>
               </a>

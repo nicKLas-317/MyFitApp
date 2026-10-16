@@ -9,6 +9,8 @@ import { defaultSessionName, formatDurationLong, formatHour, formatIsoDay, forma
 import { elapsedMs, newId, parseWeight, renameSession } from '../../session/ops';
 import { FEELING_LABELS } from '../labels';
 import { StatusBadge } from '../StatusBadge';
+import { addCardio, cardioOf, removeCardio, updateCardio } from '../../cardio/model';
+import { CardioForm, CardioList } from '../CardioForm';
 
 const FEELING_ORDER: Feeling[] = ['tres_bien', 'bien', 'moyen', 'mal', 'tres_mal', 'inconnu'];
 
@@ -25,11 +27,12 @@ const ERROR_LABELS: Record<CorrectionError, string> = {
 
 /** Détail d'une séance passée : consultation, renommage, correction, suppression, réutilisation (§10). */
 export function SessionDetail({ sessionId }: { sessionId: string }) {
-  const { sessions, variants, replay, settings, active, commit, deleteSession, ctxFor } = useApp();
+  const { sessions, variants, replay, settings, active, commit, deleteSession, ctxFor, cardioMachines } = useApp();
   const session = sessions.find((s) => s.id === sessionId);
   const [name, setName] = useState(session?.name ?? '');
   const [editing, setEditing] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [addingCardio, setAddingCardio] = useState(false);
   const [failed, setFailed] = useState(false);
   const id = useId();
 
@@ -140,6 +143,30 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
           </li>
         ))}
       </ul>
+
+      <CardioList
+        blocks={cardioOf(session)}
+        machines={cardioMachines}
+        newId={newId}
+        confirmRemove
+        onSave={(block) => void save(updateCardio(session, block, Date.now()))}
+        onRemove={(block) => void save(removeCardio(session, block.id, Date.now()))}
+      />
+      {addingCardio ? (
+        <CardioForm
+          machines={cardioMachines}
+          newId={newId}
+          onCancel={() => setAddingCardio(false)}
+          onSave={(block) => {
+            setAddingCardio(false);
+            void save(addCardio(session, block, Date.now()));
+          }}
+        />
+      ) : (
+        <button type="button" className="link small" onClick={() => setAddingCardio(true)}>
+          + Ajouter du cardio à cette séance
+        </button>
+      )}
 
       <form
         className="name-form"

@@ -8,14 +8,14 @@ import { downloadBackup } from '../download';
 import { WeeklyRecapBlock } from '../WeeklyRecap';
 
 export function Home() {
-  const { active, commit, sessions, exercises, lastExportAt, markExported, recapSettings } = useApp();
+  const { active, commit, sessions, exercises, lastExportAt, markExported, generalSettings } = useApp();
   const now = useNow();
   const remind = needsBackupReminder(sessions, lastExportAt, now);
   const body = useBody();
 
   async function exportNow() {
     const bodyTracking = (await body.snapshot()) ?? undefined;
-    await markExported(downloadBackup({ sessions, exercises, bodyTracking, settings: { weeklyRecap: recapSettings } }));
+    await markExported(downloadBackup({ sessions, exercises, bodyTracking, settings: generalSettings }));
   }
 
   async function start() {

@@ -1,24 +1,28 @@
 /**
  * Export complet et import JSON (§11.9, §11.10).
- * - schemaVersion 2 : format natif complet, restauré tel quel après validation stricte.
+ * - schemaVersion 3 : format natif complet, restauré tel quel après validation stricte (blocs de cardio dans les séances).
+ * - schemaVersion 2 : format natif antérieur au cardio, migré sans perte (les séances n'ont simplement pas de cardio).
  * - schemaVersion 1 : format simple (ex. `docs/exemples/seance-exemple-1.json`), adapté en brouillons à vérifier.
  * - Autre JSON : structure détectée si possible, sinon erreur détaillée. Jamais d'échec silencieux.
  * Aucune fonction de ce module n'écrit : l'import passe par un plan appliqué en une seule transaction.
  */
-import type { Exercise, Feeling, MuscleGroup, Session, Variant } from '../domain/types';
+import type { CardioMachine, Exercise, Feeling, Incline, MuscleGroup, Session, Variant } from '../domain/types';
+import { DEFAULT_CARDIO_MACHINES, INCLINES, isValidDistance, isValidMinutes } from '../cardio/model';
 import { MUSCLE_GROUP_LABELS, SEED_EXERCISES, sameNaming, seedNamings } from '../library/seed';
 import { EMPTY_BODY, isValidHeight, isValidWeighIn, type BodyTracking } from '../body/model';
 
 export { EMPTY_BODY, type BodyTracking };
 import { importedSessionName, isIsoDate, localDate } from '../session/format';
-import { draftExercise, findDuplicates, type DraftExerciseInput, type DraftIssue, type DraftSession } from './draft';
+import { draftCardio, draftExercise, findDuplicates, type DraftExerciseInput, type DraftIssue, type DraftSession } from './draft';
 import { isFeeling, readFeelingSymbol } from './feelings';
 import { detectDate } from './notes';
 import { newId } from '../session/ops';
 import { normalizeName } from '../library/text';
 
 export const APP_ID = 'MyFitApp';
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
+/** Plus ancienne version du format natif, migrée à l'import. */
+const FIRST_NATIVE_VERSION = 2;
 /** Délai au-delà duquel l'accueil rappelle d'exporter (§12). */
 export const BACKUP_REMINDER_MS = 14 * 24 * 60 * 60 * 1000;
 
@@ -81,8 +85,24 @@ const isInt = (v: unknown): v is number => Number.isInteger(v);
 const isStrArray = (v: unknown): v is string[] => Array.isArray(v) && v.every(isStr);
 const MUSCLE_GROUPS = Object.keys(MUSCLE_GROUP_LABELS) as MuscleGroup[];
 
-/** Analyse un contenu JSON collé ou chargé. `exercises` : bibliothèque locale (rapprochement des noms). */
-export function parseJsonImport(text: string, exercises: readonly Exercise[], today: string): ParsedImport {
+/**
+ * Migre une sauvegarde native validée vers le format actuel.
+ * 2 → 3 : ajout du cardio, champ facultatif des séances ; rien d'autre ne change.
+ */
+export function migrateBackup(data: Obj): Backup {
+  return { ...(data as unknown as Backup), schemaVersion: SCHEMA_VERSION };
+}
+
+/**
+ * Analyse un contenu JSON collé ou chargé. `exercises` : bibliothèque locale (rapprochement des noms) ;
+ * `machines` : machines de cardio des réglages (rapprochement du cardio d'un JSON simple).
+ */
+export function parseJsonImport(
+  text: string,
+  exercises: readonly Exercise[],
+  today: string,
+  machines: readonly CardioMachine[] = DEFAULT_CARDIO_MACHINES,
+): ParsedImport {
   let data: unknown;
   try {
     data = JSON.parse(text);
@@ -106,12 +126,12 @@ export function parseJsonImport(text: string, exercises: readonly Exercise[], to
         details: [],
       };
     }
-    if (version === SCHEMA_VERSION) {
+    if (version >= FIRST_NATIVE_VERSION) {
       const errors = validateBackup(data);
       if (errors.length > 0) {
         return { kind: 'error', message: 'Sauvegarde MyFitApp invalide : rien n’a été importé.', details: errors.slice(0, 20) };
       }
-      return { kind: 'backup', backup: data as unknown as Backup };
+      return { kind: 'backup', backup: migrateBackup(data) };
     }
   }
 
@@ -130,7 +150,7 @@ export function parseJsonImport(text: string, exercises: readonly Exercise[], to
   const notes: string[] = [];
   const drafts: DraftSession[] = [];
   rawSessions.forEach((raw, i) => {
-    const result = readSession(raw, i, exercises, today);
+    const result = readSession(raw, i, exercises, today, machines);
     if (typeof result === 'string') notes.push(result);
     else drafts.push(result);
   });
@@ -152,6 +172,7 @@ function pick(o: Obj, keys: readonly string[]): unknown {
 
 const SESSION_LIST_KEYS = ['sessions', 'seances', 'séances', 'workouts', 'history', 'historique'];
 const EXERCISE_LIST_KEYS = ['exercises', 'exercices', 'performances', 'items', 'entries'];
+const CARDIO_LIST_KEYS = ['cardio'];
 
 function findSessions(data: unknown): unknown[] | null {
   if (Array.isArray(data)) return data;
@@ -159,7 +180,7 @@ function findSessions(data: unknown): unknown[] | null {
   const list = pick(data, SESSION_LIST_KEYS);
   if (Array.isArray(list)) return list;
   // Une séance seule.
-  if (Array.isArray(pick(data, EXERCISE_LIST_KEYS))) return [data];
+  if (Array.isArray(pick(data, EXERCISE_LIST_KEYS)) || Array.isArray(pick(data, CARDIO_LIST_KEYS))) return [data];
   return null;
 }
 
@@ -198,11 +219,19 @@ function readGroup(v: unknown): MuscleGroup | null {
   return MUSCLE_GROUPS.find((g) => normalizeName(g) === n || normalizeName(MUSCLE_GROUP_LABELS[g]) === n) ?? null;
 }
 
-function readSession(raw: unknown, index: number, exercises: readonly Exercise[], today: string): DraftSession | string {
+function readSession(
+  raw: unknown,
+  index: number,
+  exercises: readonly Exercise[],
+  today: string,
+  machines: readonly CardioMachine[],
+): DraftSession | string {
   const label = `Séance ${index + 1}`;
   if (!isObj(raw)) return `${label} ignorée : ce n’est pas un objet.`;
-  const list = pick(raw, EXERCISE_LIST_KEYS);
-  if (!Array.isArray(list)) return `${label} ignorée : liste d’exercices introuvable.`;
+  const found = pick(raw, EXERCISE_LIST_KEYS);
+  const cardio = pick(raw, CARDIO_LIST_KEYS);
+  if (!Array.isArray(found) && !Array.isArray(cardio)) return `${label} ignorée : liste d’exercices introuvable.`;
+  const list = Array.isArray(found) ? found : [];
 
   const foundDate = readDate(pick(raw, ['date', 'day', 'jour', 'startTime', 'startedAt']), today);
   const date = foundDate ?? today;
@@ -229,7 +258,28 @@ function readSession(raw: unknown, index: number, exercises: readonly Exercise[]
     endedAt: startedAt !== null ? endedAt : null,
     sourceText: isStr(sourceText) && sourceText.trim() ? sourceText : null,
     exercises: list.map((e, i) => draftExercise(readExercise(e), exercises, `e${i + 1}`)),
+    cardio: (Array.isArray(cardio) ? cardio : []).map((c, i) => draftCardio(readCardio(c), machines, `c${i + 1}`)),
     allowDuplicate: false,
+  };
+}
+
+/** Bloc de cardio d'un JSON simple : `{ "machine": "Tapis", "inclinaison": "haute", "minutes": 20 }`. */
+function readCardio(raw: unknown) {
+  const o = isObj(raw) ? raw : {};
+  const name = pick(o, ['machine', 'name', 'nom', 'sourceName']);
+  const minutes = readNumber(pick(o, ['minutes', 'durationMinutes', 'duree', 'durée', 'duration']));
+  const distance = readNumber(pick(o, ['distanceKm', 'distance', 'km']));
+  const inclineValue = pick(o, ['incline', 'inclinaison']);
+  // Une inclinaison fournie mais inconnue reste à choisir ; absente, elle est lue dans le nom de la machine.
+  const incline: Incline | null | undefined = isStr(inclineValue)
+    ? (INCLINES.find((x) => x === normalizeName(inclineValue)) ?? null)
+    : undefined;
+  return {
+    sourceName: isStr(name) ? name.trim() : '',
+    sourceLine: null,
+    minutes,
+    distanceKm: distance,
+    ...(incline !== undefined ? { incline } : {}),
   };
 }
 
@@ -357,6 +407,20 @@ function validateSession(s: unknown, path: string, errors: string[]): void {
   if (s.sourceText !== undefined && !isStr(s.sourceText)) errors.push(`${path}.sourceText invalide.`);
   if (!Array.isArray(s.performances)) errors.push(`${path}.performances manquant.`);
   else s.performances.forEach((p, i) => validatePerformanceShape(p, `${path}.performances[${i}]`, errors));
+  if (s.cardio !== undefined) {
+    if (!Array.isArray(s.cardio)) errors.push(`${path}.cardio invalide.`);
+    else s.cardio.forEach((b, i) => validateCardioShape(b, `${path}.cardio[${i}]`, errors));
+  }
+}
+
+function validateCardioShape(b: unknown, path: string, errors: string[]): void {
+  if (!isObj(b)) return void errors.push(`${path} : bloc de cardio invalide.`);
+  if (!isStr(b.id) || !b.id) errors.push(`${path}.id manquant.`);
+  if (!isStr(b.machineId) || !b.machineId) errors.push(`${path}.machineId manquant.`);
+  if (!isStr(b.machine) || !b.machine.trim()) errors.push(`${path}.machine manquant.`);
+  if (b.incline !== undefined && !INCLINES.includes(b.incline as Incline)) errors.push(`${path}.incline inconnue.`);
+  if (!isValidMinutes(b.minutes)) errors.push(`${path}.minutes invalide.`);
+  if (b.distanceKm !== undefined && !isValidDistance(b.distanceKm)) errors.push(`${path}.distanceKm invalide.`);
 }
 
 /** Validation stricte d'une sauvegarde native. Liste vide = valide. */
@@ -405,6 +469,11 @@ export function validateBackup(data: Obj): string[] {
     if (sessionIds.has(s.id)) errors.push(`Séance en double : ${s.id}.`);
     sessionIds.add(s.id);
     if (s.state === 'active') active++;
+    const blocks = new Set<string>();
+    for (const b of s.cardio ?? []) {
+      if (blocks.has(b.id)) errors.push(`Séance ${s.id} : bloc de cardio en double ${b.id}.`);
+      blocks.add(b.id);
+    }
     for (const p of s.performances) {
       if (!variantIds.has(p.variantId)) errors.push(`Séance ${s.id} : exercice inconnu ${p.variantId}.`);
     }

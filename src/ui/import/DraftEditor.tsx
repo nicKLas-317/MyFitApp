@@ -1,12 +1,15 @@
 import { useId, useMemo, useState } from 'react';
-import type { Exercise, Feeling, MuscleGroup } from '../../domain/types';
+import type { CardioMachine, Exercise, Feeling, MuscleGroup } from '../../domain/types';
+import { INCLINE_LABELS, INCLINES, parseDistance, parseMinutes } from '../../cardio/model';
 import type { Evaluation } from '../../engine';
 import { displayName, indexVariants } from '../../library/catalog';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
 import { parseWeight } from '../../session/ops';
 import {
   setDraftDate,
+  updateDraftCardio,
   updateDraftExercise,
+  type DraftCardio,
   type DraftExercise,
   type DraftProblem,
   type DraftSession,
@@ -44,11 +47,12 @@ interface SessionProps {
   problems: readonly DraftProblem[];
   evaluations: Map<string, Evaluation | null> | undefined;
   exercises: readonly Exercise[];
+  machines: readonly CardioMachine[];
   onChange(next: DraftSession): void;
 }
 
 /** Séance détectée, corrigeable avant confirmation (§11.2, §11.8). */
-export function DraftSessionEditor({ draft, problems, evaluations, exercises, onChange }: SessionProps) {
+export function DraftSessionEditor({ draft, problems, evaluations, exercises, machines, onChange }: SessionProps) {
   const id = useId();
   const duplicate = draft.allowDuplicate || problems.some((p) => p.code === 'duplicate_session');
   const sessionProblems = problems.filter((p) => !p.exerciseKey && p.code !== 'duplicate_session' && p.code !== 'date_unconfirmed');
@@ -107,6 +111,21 @@ export function DraftSessionEditor({ draft, problems, evaluations, exercises, on
           </li>
         ))}
       </ol>
+
+      {draft.cardio.length > 0 && (
+        <ol className="draft-exercises draft-cardio">
+          {draft.cardio.map((c) => (
+            <li key={c.key}>
+              <DraftCardioEditor
+                entry={c}
+                machines={machines}
+                problems={problems.filter((p) => p.exerciseKey === c.key)}
+                onChange={(patch) => onChange(updateDraftCardio(draft, c.key, patch))}
+              />
+            </li>
+          ))}
+        </ol>
+      )}
 
       {draft.sourceText && (
         <details className="source-text">
@@ -309,6 +328,87 @@ function DraftExerciseEditor({ entry, problems, evaluation, exercises, onChange 
             J’ai vérifié
           </button>
         ))}
+    </article>
+  );
+}
+
+interface CardioProps {
+  entry: DraftCardio;
+  machines: readonly CardioMachine[];
+  problems: readonly DraftProblem[];
+  onChange(patch: Partial<DraftCardio>): void;
+}
+
+/** Bloc de cardio lu : machine, inclinaison (tapis), durée, distance ; rien n'est deviné. */
+function DraftCardioEditor({ entry, machines, problems, onChange }: CardioProps) {
+  const id = useId();
+  const title = entry.sourceName || 'Cardio';
+  // La machine reconnue reste proposée même si elle n'est plus dans la liste.
+  const list = entry.machine && !machines.some((m) => m.id === entry.machine!.id) ? [...machines, entry.machine] : machines;
+  return (
+    <article className={`card draft-cardio-entry${entry.include ? '' : ' excluded'}`} aria-label={`Cardio : ${title}`} data-key={entry.key}>
+      <div className="draft-head">
+        <div>
+          <span className="tag">Cardio</span> <strong>{title}</strong>
+          {entry.sourceLine && <div className="muted small source-line">{entry.sourceLine}</div>}
+        </div>
+      </div>
+      <label className="check-line">
+        <input type="checkbox" checked={entry.include} onChange={(e) => onChange({ include: e.target.checked })} />
+        <span>Importer ce cardio</span>
+      </label>
+      {entry.include && (
+        <>
+          <div className="draft-field">
+            <label htmlFor={`${id}-machine`}>Machine</label>
+            <select
+              id={`${id}-machine`}
+              value={entry.machine?.id ?? ''}
+              onChange={(e) => {
+                const machine = list.find((m) => m.id === e.target.value);
+                if (machine) onChange({ machine });
+              }}
+            >
+              {!entry.machine && <option value="">— Choisir —</option>}
+              {list.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          {entry.machine?.incline && (
+            <fieldset className="chips-field">
+              <legend>Inclinaison</legend>
+              <div className="feeling-options">
+                {INCLINES.map((x) => (
+                  <button key={x} type="button" className="chip" aria-pressed={entry.incline === x} onClick={() => onChange({ incline: x })}>
+                    {INCLINE_LABELS[x]}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+          )}
+          <div className="field-grid">
+            <TextField
+              label="Durée (min)"
+              inputMode="numeric"
+              initial={entry.minutes === null ? '' : String(entry.minutes)}
+              onChange={(t) => onChange({ minutes: parseMinutes(t) ?? (t.trim() ? -1 : null) })}
+            />
+            <TextField
+              label="Distance (km, facultatif)"
+              inputMode="decimal"
+              initial={entry.distanceKm === null ? '' : String(entry.distanceKm).replace('.', ',')}
+              onChange={(t) => {
+                const km = parseDistance(t);
+                onChange({ distanceKm: km === undefined ? null : (km ?? -1) });
+              }}
+            />
+          </div>
+        </>
+      )}
+      <ProblemList problems={entry.include ? problems : []} />
     </article>
   );
 }

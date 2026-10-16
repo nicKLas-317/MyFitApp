@@ -1,9 +1,10 @@
 /**
  * Récapitulatif hebdomadaire de l'accueil (§19.6) : quels groupes ont été travaillés cette semaine.
  * Calcul pur, jamais stocké : il est refait à partir des séances enregistrées à chaque affichage.
- * Aucun effet sur le moteur de progression.
+ * Aucun effet sur le moteur de progression. Le cardio n'entre dans aucun groupe : seul son total figure dans l'en-tête.
  */
 import type { Exercise, MuscleGroup, Session } from '../domain/types';
+import { cardioMinutes, formatMinutes } from '../cardio/model';
 
 export type RecapColor = 'vert' | 'orange' | 'rouge';
 export type Recency = 'today' | 'yesterday' | null;
@@ -37,7 +38,10 @@ export interface WeeklyRecap {
   start: Date;
   /** Dimanche de la semaine en cours. */
   end: Date;
+  /** Séances terminées de la semaine, y compris celles qui ne contiennent que du cardio. */
   sessionCount: number;
+  /** Total des blocs de cardio des séances de la semaine, en minutes. */
+  cardioMinutes: number;
   cells: RecapCell[];
 }
 
@@ -101,11 +105,15 @@ export function weeklyRecap(
   const counts = new Map<MuscleGroup, number>();
   const last = new Map<MuscleGroup, number>();
   let sessionCount = 0;
+  let cardio = 0;
   for (const s of sessions) {
     if (s.state !== 'done') continue;
     const startTime = sessionStartTime(s);
     const inWeek = startTime >= start.getTime() && startTime < next.getTime();
-    if (inWeek) sessionCount++;
+    if (inWeek) {
+      sessionCount++;
+      cardio += cardioMinutes(s);
+    }
     // Un groupe travaillé deux fois dans la même séance compte pour une.
     const groups = new Set(s.performances.map((p) => recapGroup(groupOfVariant.get(p.variantId))).filter((g): g is MuscleGroup => g !== null));
     for (const g of groups) {
@@ -128,7 +136,7 @@ export function weeklyRecap(
       Number(a.recency !== null) - Number(b.recency !== null) ||
       order.get(a.group)! - order.get(b.group)!,
   );
-  return { start, end, sessionCount, cells };
+  return { start, end, sessionCount, cardioMinutes: cardio, cells };
 }
 
 /** Réglage lu en base ou importé : valeurs inconnues écartées, défaut si invalide. */
@@ -145,13 +153,17 @@ export function sanitizeRecapSettings(value: unknown): WeeklyRecapSettings {
 const DAY = new Intl.DateTimeFormat('fr-FR', { day: 'numeric' });
 const MONTH = new Intl.DateTimeFormat('fr-FR', { month: 'short' });
 
-/** « Semaine du lun. 12 au dim. 18 oct. : 2 séances » (mois répété si la semaine change de mois). */
+/**
+ * « Semaine du lun. 12 au dim. 18 oct. : 2 séances » (mois répété si la semaine change de mois),
+ * suivi de « · 45 min de cardio » quand la semaine en contient.
+ */
 export function recapTitle(recap: WeeklyRecap): string {
-  const { start, end, sessionCount } = recap;
+  const { start, end, sessionCount, cardioMinutes: minutes } = recap;
   const sameMonth = start.getMonth() === end.getMonth();
   // Espaces insécables : « 2 séances » ou « dim. 18 oct. » ne sont jamais coupés en fin de ligne.
   const nb = '\u00a0';
   const from = `lun.${nb}${DAY.format(start)}${sameMonth ? '' : `${nb}${MONTH.format(start)}`}`;
   const to = `dim.${nb}${DAY.format(end)}${nb}${MONTH.format(end)}`;
-  return `Semaine du ${from} au ${to}${nb}: ${sessionCount}${nb}séance${sessionCount > 1 ? 's' : ''}`;
+  const cardio = minutes > 0 ? ` · ${formatMinutes(minutes).replace(/ /g, nb)}${nb}de cardio` : '';
+  return `Semaine du ${from} au ${to}${nb}: ${sessionCount}${nb}séance${sessionCount > 1 ? 's' : ''}${cardio}`;
 }

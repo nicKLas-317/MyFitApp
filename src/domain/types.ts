@@ -68,6 +68,33 @@ export interface Performance {
   partial?: boolean;
 }
 
+/** Inclinaison du tapis de marche, en trois niveaux, sans pourcentage. */
+export type Incline = 'neutre' | 'moyenne' | 'haute';
+
+/** Machine de cardio proposée à la saisie ; liste modifiable dans les réglages. */
+export interface CardioMachine {
+  /** Identifiant stable, indépendant du nom. */
+  id: string;
+  name: string;
+  /** La machine se règle en inclinaison (tapis de marche). */
+  incline: boolean;
+}
+
+/**
+ * Bloc de cardio d'une séance : simple enregistrement, sans progression, couleur, ressenti ni calories.
+ * Le nom de la machine est conservé tel qu'il était : renommer ou retirer une machine ne change pas l'historique.
+ */
+export interface CardioBlock {
+  id: string;
+  machineId: string;
+  machine: string;
+  /** Présente seulement pour une machine à inclinaison. */
+  incline?: Incline;
+  /** Durée en minutes entières. */
+  minutes: number;
+  distanceKm?: number;
+}
+
 export interface Session {
   id: string;
   name: string;
@@ -86,4 +113,6 @@ export interface Session {
   sourceText?: string;
   /** Dans l'ordre d'ajout (§5.2). Un seul exemplaire par exercice-variante. */
   performances: Performance[];
+  /** Blocs de cardio dans l'ordre d'ajout ; absent quand la séance n'en contient pas. */
+  cardio?: CardioBlock[];
 }

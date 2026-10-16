@@ -1,18 +1,21 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../../app/store';
 import { navigate, useNow } from '../../app/hooks';
-import { elapsedMs, finishSession, missingFeelings } from '../../session/ops';
+import { elapsedMs, finishSession, missingFeelings, newId } from '../../session/ops';
+import { addCardio, cardioOf, removeCardio, updateCardio } from '../../cardio/model';
+import { CardioForm, CardioList } from '../CardioForm';
 import { formatDuration } from '../../session/format';
 import { ExerciseCard } from '../ExerciseCard';
 import { finishLabel, MissingFeelings } from '../MissingFeelings';
 import { SaveIndicator } from '../SaveIndicator';
 
 export function SessionScreen({ openVariantId }: { openVariantId: string | undefined }) {
-  const { active, commit, setLastFinish } = useApp();
+  const { active, commit, setLastFinish, cardioMachines } = useApp();
   const now = useNow();
   const [openId, setOpenId] = useState<string | undefined>(openVariantId);
   /** Confirmation de fin ouverte : exercices sans ressenti relevés à l'ouverture. */
   const [confirmFinish, setConfirmFinish] = useState<string[] | null>(null);
+  const [addingCardio, setAddingCardio] = useState(false);
 
   useEffect(() => {
     if (!openVariantId) return;
@@ -59,7 +62,7 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
         <SaveIndicator />
       </header>
 
-      {active.performances.length === 0 && <p className="empty muted">Ajoutez un premier exercice.</p>}
+      {active.performances.length === 0 && cardioOf(active).length === 0 && <p className="empty muted">Ajoutez un premier exercice.</p>}
 
       <div className="cards">
         {active.performances.map((p) => (
@@ -73,10 +76,33 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
         ))}
       </div>
 
+      <CardioList
+        blocks={cardioOf(active)}
+        machines={cardioMachines}
+        newId={newId}
+        onSave={(block) => void commit(updateCardio(active, block, Date.now()))}
+        onRemove={(block) => void commit(removeCardio(active, block.id, Date.now()), 'Cardio retiré')}
+      />
+
       <div className="session-actions">
         <a className="btn primary big" href="#/ajouter">
           + Ajouter un exercice
         </a>
+        {addingCardio ? (
+          <CardioForm
+            machines={cardioMachines}
+            newId={newId}
+            onCancel={() => setAddingCardio(false)}
+            onSave={(block) => {
+              setAddingCardio(false);
+              void commit(addCardio(active, block, Date.now()));
+            }}
+          />
+        ) : (
+          <button type="button" className="btn big" onClick={() => setAddingCardio(true)}>
+            + Ajouter du cardio
+          </button>
+        )}
         {confirmFinish ? (
           <div className="confirm-box" role="group" aria-label="Terminer la séance">
             <p>Terminer la séance ?</p>

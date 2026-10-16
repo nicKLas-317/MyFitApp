@@ -12,6 +12,7 @@ import {
 } from '../../transfer/draft';
 import { EMPTY_BODY, planBodyImport } from '../../body/model';
 import { sanitizeRecapSettings } from '../../analysis/weekly';
+import { sanitizeCardioMachines } from '../../cardio/model';
 import { useBody } from '../../body/store';
 import { downloadBackup } from '../download';
 import { DraftSessionEditor, ProblemList } from '../import/DraftEditor';
@@ -25,7 +26,7 @@ type Outcome = { kind: 'ok' | 'error'; text: string };
 
 /** Import et export des données (§11, §12). */
 export function DataScreen() {
-  const { sessions, exercises, lastExportAt, markExported, recapSettings } = useApp();
+  const { sessions, exercises, lastExportAt, markExported, generalSettings, cardioMachines } = useApp();
   const body = useBody();
   const [text, setText] = useState('');
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
@@ -34,7 +35,7 @@ export function DataScreen() {
 
   async function exportNow() {
     const bodyTracking = await body.snapshot();
-    const at = downloadBackup({ sessions, exercises, bodyTracking: bodyTracking ?? undefined, settings: { weeklyRecap: recapSettings } });
+    const at = downloadBackup({ sessions, exercises, bodyTracking: bodyTracking ?? undefined, settings: generalSettings });
     const ok = await markExported(at);
     setOutcome(ok ? { kind: 'ok', text: 'Sauvegarde téléchargée.' } : { kind: 'error', text: 'Sauvegarde téléchargée, mais sa date n’a pas pu être enregistrée.' });
   }
@@ -50,10 +51,10 @@ export function DataScreen() {
     }
     const today = localDate(Date.now());
     if (/^[[{]/.test(trimmed)) {
-      const parsed = parseJsonImport(trimmed, exercises, today);
+      const parsed = parseJsonImport(trimmed, exercises, today, cardioMachines);
       setAnalysis({ ...parsed, id });
     } else {
-      setAnalysis({ kind: 'drafts', id, drafts: [draftFromNotes(trimmed, exercises, today)], notes: [] });
+      setAnalysis({ kind: 'drafts', id, drafts: [draftFromNotes(trimmed, exercises, today, cardioMachines)], notes: [] });
     }
   }
 
@@ -161,7 +162,7 @@ function plural(n: number, one: string, many: string): string {
 
 /** Aperçu éditable des séances détectées (notes ou JSON simple), puis confirmation. */
 function DraftsPreview({ initial, notes, onDone }: { initial: DraftSession[]; notes: string[]; onDone(outcome: Outcome): void }) {
-  const { sessions, exercises, replay, importData } = useApp();
+  const { sessions, exercises, replay, importData, cardioMachines } = useApp();
   const [drafts, setDrafts] = useState(initial);
   const [showErrors, setShowErrors] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -173,9 +174,16 @@ function DraftsPreview({ initial, notes, onDone }: { initial: DraftSession[]; no
   const evaluations = useMemo(() => previewEvaluations(drafts, exercises, sessions), [drafts, exercises, sessions]);
   const blocking = [...problems.values()].flat().filter((p) => p.level === 'error');
   // Dans le récapitulatif, chaque problème est rattaché au nom lu de son exercice.
-  const names = new Map(drafts.flatMap((d) => d.exercises.map((e) => [e.key, e.sourceName || 'Sans nom'] as const)));
+  const names = new Map(
+    drafts.flatMap((d) => [
+      ...d.exercises.map((e) => [e.key, e.sourceName || 'Sans nom'] as const),
+      ...d.cardio.map((c) => [c.key, c.sourceName || 'Cardio'] as const),
+    ]),
+  );
   const blockingLabeled = blocking.map((p) => (p.exerciseKey ? { ...p, message: `${names.get(p.exerciseKey)} : ${p.message}` } : p));
   const count = drafts.reduce((n, d) => n + d.exercises.filter((e) => e.include).length, 0);
+  const cardioCount = drafts.reduce((n, d) => n + d.cardio.filter((c) => c.include).length, 0);
+  const cardioText = cardioCount > 0 ? `, ${plural(cardioCount, 'bloc de cardio', 'blocs de cardio')}` : '';
 
   async function confirm() {
     if (hasBlockingProblems(blocking)) {
@@ -193,7 +201,11 @@ function DraftsPreview({ initial, notes, onDone }: { initial: DraftSession[]; no
             text:
               drafts.length > 1
                 ? `${drafts.length} séances importées.`
-                : `Séance importée : ${plural(result.sessions[0]?.performances.length ?? 0, 'exercice', 'exercices')}.`,
+                : `Séance importée : ${plural(result.sessions[0]?.performances.length ?? 0, 'exercice', 'exercices')}${
+                    (result.sessions[0]?.cardio?.length ?? 0) > 0
+                      ? `, ${plural(result.sessions[0]!.cardio!.length, 'bloc de cardio', 'blocs de cardio')}`
+                      : ''
+                  }.`,
           }
         : { kind: 'error', text: 'L’import a échoué : aucune donnée n’a été modifiée. Réessayez.' },
     );
@@ -214,6 +226,7 @@ function DraftsPreview({ initial, notes, onDone }: { initial: DraftSession[]; no
           problems={problems.get(d.key) ?? []}
           evaluations={evaluations.get(d.key)}
           exercises={exercises}
+          machines={cardioMachines}
           onChange={(next) => setDrafts((list) => list.map((x) => (x.key === next.key ? next : x)))}
         />
       ))}
@@ -224,7 +237,7 @@ function DraftsPreview({ initial, notes, onDone }: { initial: DraftSession[]; no
         </div>
       )}
       <button type="button" className="btn primary big" disabled={busy} onClick={() => void confirm()}>
-        {drafts.length > 1 ? `Importer les ${drafts.length} séances` : `Importer la séance (${plural(count, 'exercice', 'exercices')})`}
+        {drafts.length > 1 ? `Importer les ${drafts.length} séances` : `Importer la séance (${plural(count, 'exercice', 'exercices')}${cardioText})`}
       </button>
     </section>
   );
@@ -232,7 +245,7 @@ function DraftsPreview({ initial, notes, onDone }: { initial: DraftSession[]; no
 
 /** Aperçu d'une sauvegarde MyFitApp : fusion par défaut, remplacement sur confirmation explicite. */
 function BackupPreview({ backup, onDone }: { backup: Backup; onDone(outcome: Outcome): void }) {
-  const { sessions, exercises, importData, markExported, recapSettings, setRecapSettings } = useApp();
+  const { sessions, exercises, importData, markExported, generalSettings, setRecapSettings, setCardioMachines } = useApp();
   const body = useBody();
   const [includeDuplicates, setIncludeDuplicates] = useState(false);
   const [replaceConfirmed, setReplaceConfirmed] = useState(false);
@@ -269,10 +282,11 @@ function BackupPreview({ backup, onDone }: { backup: Backup; onDone(outcome: Out
     setBusy(true);
     // Les données actuelles sont sauvegardées avant d'être remplacées.
     const currentBody = await body.snapshot();
-    await markExported(downloadBackup({ sessions, exercises, bodyTracking: currentBody ?? undefined, settings: { weeklyRecap: recapSettings } }));
+    await markExported(downloadBackup({ sessions, exercises, bodyTracking: currentBody ?? undefined, settings: generalSettings }));
     const ok = await importData({ sessions: backup.sessions, exercises: backup.exercises, replace: true });
     // Remplacement global : les réglages de la sauvegarde remplacent aussi ceux de l'appareil.
     if (ok && backup.settings.weeklyRecap !== undefined) await setRecapSettings(sanitizeRecapSettings(backup.settings.weeklyRecap));
+    if (ok && backup.settings.cardioMachines !== undefined) await setCardioMachines(sanitizeCardioMachines(backup.settings.cardioMachines));
     const bodyOk = !ok || (await body.applyImport(planBodyImport(importedBody, body.data, 'replace')));
     setBusy(false);
     onDone(

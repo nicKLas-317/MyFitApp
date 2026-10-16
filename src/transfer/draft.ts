@@ -3,7 +3,8 @@
  * corrigeable dans l'aperçu avant confirmation. Rien n'est enregistré tant que l'import
  * n'est pas confirmé ; aucune donnée absente n'est inventée.
  */
-import type { Exercise, Feeling, MuscleGroup, Performance, Session } from '../domain/types';
+import type { CardioBlock, CardioMachine, Exercise, Feeling, Incline, MuscleGroup, Performance, Session } from '../domain/types';
+import { cardioErrors, cardioOf, DEFAULT_CARDIO_MACHINES, isValidDistance, isValidMinutes, makeCardioBlock, matchCardioMachine, readIncline } from '../cardio/model';
 import { rebuildProfile, resolveConfig, validatePerformance, type Evaluation, type Profile } from '../engine';
 import { buildEngineSettings } from '../library/catalog';
 import { allIds, slug, uniqueId } from '../library/edit';
@@ -65,8 +66,62 @@ export interface DraftSession {
   endedAt: number | null;
   sourceText: string | null;
   exercises: DraftExercise[];
+  /** Blocs de cardio lus (§ cardio) : simple enregistrement, sans effet sur la progression. */
+  cardio: DraftCardio[];
   /** Doublon potentiel importé quand même, après confirmation explicite (§11.9). */
   allowDuplicate: boolean;
+}
+
+export interface DraftCardio {
+  key: string;
+  sourceName: string;
+  sourceLine: string | null;
+  /** null tant que la machine n'est pas reconnue ou choisie. */
+  machine: CardioMachine | null;
+  /** null : inclinaison mentionnée sans niveau, à choisir (Moyenne ou Haute). Ignorée hors tapis. */
+  incline: Incline | null;
+  minutes: number | null;
+  distanceKm: number | null;
+  include: boolean;
+}
+
+export interface DraftCardioInput {
+  sourceName: string;
+  sourceLine: string | null;
+  minutes: number | null;
+  distanceKm: number | null;
+  /** Inclinaison fournie par la source (JSON) ; sinon lue dans le nom. */
+  incline?: Incline | null;
+}
+
+/**
+ * Bloc de cardio du brouillon. La machine est reconnue d'après la liste des réglages ; sans précision,
+ * l'inclinaison est Neutre ; « incliné » sans niveau reste à choisir, jamais deviné.
+ */
+export function draftCardio(input: DraftCardioInput, machines: readonly CardioMachine[], key: string): DraftCardio {
+  const reading = readIncline(input.sourceName);
+  const incline = input.incline !== undefined ? input.incline : reading.kind === 'level' ? reading.incline : reading.kind === 'absent' ? 'neutre' : null;
+  return {
+    key,
+    sourceName: input.sourceName,
+    sourceLine: input.sourceLine,
+    machine: matchCardioMachine(input.sourceName, machines),
+    incline,
+    minutes: input.minutes,
+    distanceKm: input.distanceKm,
+    include: true,
+  };
+}
+
+/** Bloc enregistrable, ou null si le brouillon est incomplet. */
+export function draftCardioBlock(c: DraftCardio, id: string): CardioBlock | null {
+  if (!c.machine) return null;
+  const input = { machine: c.machine, incline: c.incline, minutes: c.minutes, distanceKm: c.distanceKm };
+  return cardioErrors(input).length === 0 ? makeCardioBlock(input, id) : null;
+}
+
+export function updateDraftCardio(draft: DraftSession, key: string, patch: Partial<DraftCardio>): DraftSession {
+  return { ...draft, cardio: draft.cardio.map((c) => (c.key === key ? { ...c, ...patch } : c)) };
 }
 
 /** Données lues pour un exercice, avant rapprochement avec la bibliothèque. */
@@ -163,7 +218,12 @@ export function draftExercise(input: DraftExerciseInput, exercises: readonly Exe
 }
 
 /** Un bloc de notes collé = une séance (§11.2). `today` : date locale YYYY-MM-DD. */
-export function draftFromNotes(text: string, exercises: readonly Exercise[], today: string): DraftSession {
+export function draftFromNotes(
+  text: string,
+  exercises: readonly Exercise[],
+  today: string,
+  machines: readonly CardioMachine[] = DEFAULT_CARDIO_MACHINES,
+): DraftSession {
   const parsed = parseNotes(text, today);
   const date = parsed.date ?? today;
   return {
@@ -180,6 +240,7 @@ export function draftFromNotes(text: string, exercises: readonly Exercise[], tod
     endedAt: null,
     sourceText: text.trim() || null,
     exercises: parsed.entries.map((e, i) => draftExercise(e, exercises, `e${i + 1}`)),
+    cardio: parsed.cardio.map((c, i) => draftCardio(c, machines, `c${i + 1}`)),
     allowDuplicate: false,
   };
 }
@@ -348,6 +409,10 @@ export function finalizeDrafts(
 
     const id = draft.sourceId && !takenSessionIds.has(draft.sourceId) ? draft.sourceId : newId();
     takenSessionIds.add(id);
+    const cardio = draft.cardio
+      .filter((c) => c.include)
+      .map((c, i) => draftCardioBlock(c, `${id}-cardio-${i + 1}`))
+      .filter((b): b is CardioBlock => b !== null);
     const name = draft.name.trim() || importedSessionName(draft.date);
     sessions.push({
       id,
@@ -362,6 +427,7 @@ export function finalizeDrafts(
       state: 'done',
       ...(draft.sourceText ? { sourceText: draft.sourceText } : {}),
       performances,
+      ...(cardio.length > 0 ? { cardio } : {}),
     });
     variantIds.set(draft.key, byKey);
   });
@@ -371,16 +437,18 @@ export function finalizeDrafts(
 
 // ——— Doublons et contrôles ————————————————————————————————————————
 
-function signature(session: Pick<Session, 'performances'>): string {
-  return session.performances
-    .map((p) => `${p.variantId}|${Math.round(p.weightKg * 100)}|${p.reps.join('-')}`)
+function signature(session: Pick<Session, 'performances' | 'cardio'>): string {
+  return [
+    ...session.performances.map((p) => `${p.variantId}|${Math.round(p.weightKg * 100)}|${p.reps.join('-')}`),
+    ...cardioOf(session).map((b) => `cardio|${b.machineId}|${b.incline ?? ''}|${b.minutes}`),
+  ]
     .sort()
     .join('§');
 }
 
 /**
  * Doublons potentiels (§11.9) : séance terminée de même identifiant, ou de même date
- * avec les mêmes exercices, poids et répétitions.
+ * avec les mêmes exercices, poids et répétitions, et le même cardio.
  */
 export function findDuplicates(candidate: Session, existing: readonly Session[], sourceId: string | null = candidate.id): Session[] {
   const sig = signature(candidate);
@@ -494,7 +562,9 @@ export function draftProblems(draft: DraftSession, ctx: ProblemContext): DraftPr
   if (draft.dateYearAssumed) list.push({ level: 'warning', code: 'date_year_assumed', message: 'Année absente des notes : vérifiez-la.' });
 
   const included = draft.exercises.filter((e) => e.include);
-  if (included.length === 0) list.push({ level: 'error', code: 'no_exercise', message: 'Aucun exercice à importer.' });
+  const cardio = draft.cardio.filter((c) => c.include);
+  if (included.length === 0 && cardio.length === 0) list.push({ level: 'error', code: 'no_exercise', message: 'Aucun exercice à importer.' });
+  for (const c of cardio) list.push(...cardioProblems(c));
 
   const seen = new Set<string>();
   for (const e of included) {
@@ -509,10 +579,20 @@ export function draftProblems(draft: DraftSession, ctx: ProblemContext): DraftPr
   if (!draft.allowDuplicate && isIsoDate(draft.date)) {
     const { sessions } = finalizeDrafts([draft], ctx.exercises, ctx.sessions, 0);
     const candidate = sessions[0];
-    if (candidate && candidate.performances.length > 0 && findDuplicates(candidate, ctx.sessions, draft.sourceId).length > 0) {
+    if (candidate && (candidate.performances.length > 0 || cardioOf(candidate).length > 0) && findDuplicates(candidate, ctx.sessions, draft.sourceId).length > 0) {
       list.push({ level: 'error', code: 'duplicate_session', message: 'Une séance identique existe déjà à cette date.' });
     }
   }
+  return list;
+}
+
+function cardioProblems(c: DraftCardio): DraftProblem[] {
+  const list: DraftProblem[] = [];
+  const err = (code: string, message: string) => list.push({ level: 'error', code, exerciseKey: c.key, message });
+  if (!c.machine) err('cardio_machine', 'Machine de cardio non reconnue : choisissez-la.');
+  else if (c.machine.incline && c.incline === null) err('cardio_incline', 'Inclinaison non précisée : choisissez Moyenne ou Haute.');
+  if (!isValidMinutes(c.minutes)) err('cardio_minutes', 'Durée manquante ou invalide (en minutes entières).');
+  if (c.distanceKm !== null && !isValidDistance(c.distanceKm)) err('cardio_distance', 'Distance invalide.');
   return list;
 }
 

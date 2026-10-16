@@ -379,6 +379,31 @@ Le nom doit pouvoir être modifié facilement, par exemple en « Haut du corps �
 
 L'utilisateur doit pouvoir conserver le nom par défaut en une action. Le nommage ne doit jamais entraîner la perte d'une séance.
 
+### 5.7. Cardio (précision validée)
+
+Version minimale : le cardio est un simple enregistrement dans la séance.
+
+**Saisie**
+
+- Dans une séance, en plus des exercices de musculation, un bloc de cardio peut être ajouté à tout moment (début, milieu, fin). Une séance peut en contenir plusieurs, affichés dans l'ordre d'ajout.
+- Machines proposées par défaut : Tapis de marche, Rameur, Vélo elliptique, Autre. La liste est modifiable dans les réglages (ajouter, renommer, retirer, indiquer si la machine se règle en inclinaison). Un bloc enregistré garde le nom de sa machine : renommer ou retirer une machine ne modifie pas l'historique.
+- Tapis de marche uniquement : inclinaison en trois niveaux, Neutre, Moyenne ou Haute, avec trois boutons (Neutre par défaut). Aucune valeur en pourcentage.
+- Durée en minutes entières (1 à 600), seule donnée obligatoire. Distance en km facultative.
+- Saisie en quelques secondes : machine (la première de la liste est présélectionnée), inclinaison si tapis, durée, « Valider ». Un bloc peut être corrigé ou retiré (retrait annulable pendant la séance, confirmé sur une séance passée).
+
+**Règles**
+
+- Ni progression, ni couleur, ni ressenti, ni calories. Aucun effet sur le moteur (§7) : profil, statuts et recommandations sont identiques avec ou sans cardio.
+- Le cardio n'entre dans aucun groupe musculaire du récapitulatif hebdomadaire ; l'en-tête affiche le total de la semaine (§19.6).
+- Une séance ne contenant que du cardio est une séance comme une autre : elle est enregistrée à la fin et compte dans l'en-tête du récapitulatif.
+- Réutiliser une séance (§10) ne reprend que ses exercices, pas son cardio.
+
+**Affichage** : la séance en cours, le récapitulatif de fin de séance, l'historique (liste : « 2 ex. · 20 min cardio ») et le détail d'une séance passée affichent les blocs : machine, inclinaison, durée et distance éventuelle (« Tapis de marche · inclinaison haute · 20 min »).
+
+**Import de notes** : une ligne avec une durée en minutes est un bloc de cardio (« Tapis 15 min », « Tapis incliné 20 min », « Marche inclinée haute 20min », « Rameur 10 min », « Elliptique 15 min », « Vélo elliptique 20 min ») ; la machine peut aussi être sur la ligne précédente. La machine est reconnue d'après la liste des réglages et des noms usuels (« tapis » et « marche » → tapis ; « elliptique » → vélo elliptique). « Tapis » ou « marche » sans précision : inclinaison Neutre. « Incliné » ou « inclinée » sans niveau : l'aperçu demande de choisir Moyenne ou Haute (import bloqué jusque-là). Une machine non reconnue est à choisir dans l'aperçu (ou le bloc est exclu), jamais devinée. Un JSON simple peut contenir une liste `cardio` (`machine`, `minutes`, `inclinaison`, `distanceKm`).
+
+**Données** : les blocs sont inclus dans l'export et l'import JSON (format `schemaVersion` 3) ; une sauvegarde au format 2 est migrée sans perte. Une installation existante n'a aucune migration de base à subir : ses séances, sans cardio, restent intactes, et la liste de machines par défaut s'applique. Deux séances qui ne diffèrent que par leur cardio ne sont pas des doublons (§11.9).
+
 ## 6. Chronomètre global de séance
 
 Mettre en place un seul chronomètre global.
@@ -854,6 +879,7 @@ Prévoir un export complet de l'application au format JSON, contenant les donné
 - Exercices personnalisés, synonymes appris et métadonnées.
 - Réglages.
 - Taille et historique des pesées (§20).
+- Blocs de cardio des séances et liste des machines de cardio (§5.7).
 
 Utiliser un format versionné (`schemaVersion`) pour permettre de faire évoluer la structure des données, avec des migrations testées.
 
@@ -932,6 +958,7 @@ Prévoir une page de réglages simple permettant notamment :
 - D'importer des séances depuis des notes ou du JSON.
 - D'exporter les données complètes.
 - De voir l'état du stockage persistant.
+- De modifier la liste des machines de cardio (§5.7).
 - De consulter la version de l'application.
 
 Les valeurs par défaut doivent permettre d'utiliser immédiatement l'application, sans longue configuration initiale.
@@ -1083,6 +1110,22 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 103. (§4.0) « élévations latérales haltères », « lateral raise haltères », « dumbbell lateral raise » → haltères ; « élévations latérales machine », « lateral raise machine », « machine lateral raise » → machine ; sans matériel précisé (« latéral raise », « Epaules latéral raise », « élévations latérales »), l'aperçu demande de choisir ; « Tirage nuque » n'est plus reconnu comme tirage vertical.
 104. (§4.0, §11.11 C) Une sauvegarde d'une version antérieure de la bibliothèque ne réintroduit ni ancien nom ni ancien synonyme ; ses synonymes appris sont repris.
 
+### Cardio (§5.7)
+
+105. Un bloc s'enregistre avec la machine, la durée et, pour le tapis seulement, l'inclinaison (Neutre par défaut) ; la distance est facultative ; une durée nulle, décimale ou absente est refusée ; plusieurs blocs par séance, dans l'ordre d'ajout ; correction et retrait ; une séance sans cardio n'a pas de champ cardio.
+106. Le cardio n'a aucun effet sur le moteur (profil, statuts et recommandations identiques), ne demande aucun ressenti, et une séance réutilisée ne reprend pas le cardio.
+107. Terminer une séance conserve ses blocs ; une séance ne contenant que du cardio est enregistrée.
+108. (§19.6) Le cardio n'entre dans aucun groupe ; l'en-tête affiche « 3 séances · 45 min de cardio » (« 1 h 20 » au-delà d'une heure), rien de plus sans cardio ; une séance de cardio seul compte ; une séance en cours ne compte pas.
+109. Notes : « Tapis 15 min », « Tapis incliné 20 min », « Marche inclinée haute 20min », « Rameur 10 min », « Elliptique 15 min », « Vélo elliptique 20 min » sont reconnus ; « Tapis » ou « marche » sans précision = Neutre ; « incliné » sans niveau bloque l'import jusqu'au choix de Moyenne ou Haute.
+110. Notes mêlant exercices et cardio : les exercices sont inchangés ; une machine non reconnue est à choisir ou à exclure, jamais devinée ; une machine ajoutée dans les réglages est reconnue ; le cardio d'un JSON simple est lu de la même façon.
+111. Export puis import : blocs et liste des machines conservés, sans doublon ; deux séances qui ne diffèrent que par le cardio ne sont pas des doublons ; un bloc invalide fait refuser la sauvegarde.
+112. Une sauvegarde au format 2 est migrée sans perte ; un format plus récent est refusé ; une base existante, sans liste de machines enregistrée, reçoit la liste par défaut et ses séances restent intactes.
+113. Liste des machines : noms non vides et uniques, au moins une machine ; une liste invalide revient à la liste par défaut ; renommer une machine ne change pas les séances enregistrées.
+114. (bout en bout) Séance avec un exercice et deux blocs de cardio : saisie, rechargement, correction, récapitulatif de fin, en-tête de l'accueil (« 1 séance · 35 min de cardio », seul le groupe de l'exercice compté), historique et données enregistrées.
+115. (bout en bout) Une séance de cardio seul compte dans l'en-tête de l'accueil sans colorer de groupe ; le retrait d'un bloc s'annule.
+116. (bout en bout) Import de notes : « incliné » sans niveau demande de choisir, puis les blocs sont importés.
+117. (bout en bout) Les machines se modifient dans les réglages et sont proposées pendant la séance.
+
 Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
 
 ## 16. Vérification avant livraison
@@ -1217,7 +1260,7 @@ But : un coup d'œil de 2 secondes avant la séance pour savoir quels groupes tr
   [rouge] Épaules (2×)     [rouge] Triceps (2×) · hier
   ```
 
-- L'en-tête affiche les dates exactes de la semaine en cours (lundi et dimanche, mois répété si la semaine change de mois) et le nombre de séances (« 0 séance », « 1 séance », « 2 séances »).
+- L'en-tête affiche les dates exactes de la semaine en cours (lundi et dimanche, mois répété si la semaine change de mois) et le nombre de séances (« 0 séance », « 1 séance », « 2 séances »), suivi du total de cardio de la semaine quand il y en a (« 3 séances · 45 min de cardio », §5.7). Une séance ne contenant que du cardio compte comme une séance ; le cardio n'entre dans aucun groupe.
 - Couleur selon le nombre de séances de la semaine où le groupe a été travaillé : vert = 0, orange = 1, rouge = 2 ou plus. Le seuil du rouge est réglable (2 par défaut, de 2 à 7).
 - Mention « aujourd'hui » ou « hier » si le groupe a été travaillé il y a moins de 48 heures, même la semaine précédente. La mention suit le jour du calendrier : une séance d'avant-hier, même à moins de 48 heures, n'a pas de mention.
 - Tri : vert en haut, puis orange, puis rouge en bas. À couleur égale, les groupes « hier » ou « aujourd'hui » passent en dernier, puis l'ordre de la liste des groupes.
