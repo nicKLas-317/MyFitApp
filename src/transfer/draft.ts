@@ -7,12 +7,12 @@ import type { CardioBlock, CardioMachine, Exercise, Feeling, Incline, MuscleGrou
 import { cardioErrors, cardioOf, DEFAULT_CARDIO_MACHINES, isValidDistance, isValidMinutes, makeCardioBlock, matchCardioMachine, readIncline } from '../cardio/model';
 import { rebuildProfile, resolveConfig, validatePerformance, type Evaluation, type Profile } from '../engine';
 import { buildEngineSettings } from '../library/catalog';
-import { allIds, slug, uniqueId } from '../library/edit';
+import { allIds, slug, uniqueId, validateVariantName, withMediumGrip } from '../library/edit';
 import { importedSessionName, isIsoDate } from '../session/format';
 import { newId, WEIGHT_CONFIRM_RATIO } from '../session/ops';
 import { MATCH_MARGIN, matchExercise, qualifierOf, type MatchResult } from './match';
 import { parseNotes, type ParseIssue } from './notes';
-import { normalizeName, variantPrecisionOf } from '../library/text';
+import { gripOf, normalizeName, variantPrecisionOf } from '../library/text';
 
 export type ExerciseChoice =
   | { kind: 'variant'; variantId: string }
@@ -393,11 +393,15 @@ export function finalizeDrafts(
         const name = choice.name.trim();
         const exercise = work.get(choice.exerciseId);
         if (!name || !exercise) continue;
-        const createdKey = `variant:${exercise.id}:${normalizeName(name)}`;
+        const createdKey = `variant:${exercise.id}:${normalizeName(gripOf(name) ?? name)}`;
         variantId = created.get(createdKey) ?? null;
         if (!variantId) {
-          const id = uniqueId(`${exercise.id}--${slug(name)}`, takenIds);
-          work.set(exercise.id, { ...exercise, variants: [...exercise.variants, { id, name, synonyms: [], archived: false }] });
+          const grip = gripOf(name);
+          const label = grip ?? name;
+          const id = uniqueId(`${exercise.id}--${slug(label)}`, takenIds);
+          const next = { ...exercise, variants: [...exercise.variants, { id, name: label, synonyms: [], archived: false }] };
+          // Une prise rend l'exercice « à prise » : la variante standard devient « Prise moyenne » (§4.3.1).
+          work.set(exercise.id, grip ? withMediumGrip(next) : next);
           created.set(createdKey, id);
           variantId = id;
         }
@@ -504,7 +508,7 @@ function exerciseProblems(e: DraftExercise, ctx: ProblemContext): DraftProblem[]
     const name = normalizeName(choice.name);
     if (!exercise) err('unknown_variant', 'Exercice introuvable.');
     else if (!name) err('new_variant_name', 'Nom de la nouvelle variante manquant.');
-    else if (exercise.variants.some((v) => normalizeName(v.name) === name)) {
+    else if (validateVariantName(exercise, choice.name) === 'name_taken') {
       err('new_variant_exists', 'Cette variante existe déjà : sélectionnez-la.');
     } else {
       warn('new_variant', `Nouvelle variante « ${choice.name.trim()} » de « ${exercise.name} », avec son propre historique.`);
@@ -574,7 +578,7 @@ export function draftProblems(draft: DraftSession, ctx: ProblemContext): DraftPr
   const seen = new Set<string>();
   for (const e of included) {
     list.push(...exerciseProblems(e, ctx));
-    const id = e.choice?.kind === 'variant' ? e.choice.variantId : e.choice?.kind === 'new_variant' ? `${e.choice.exerciseId}:${normalizeName(e.choice.name)}` : e.choice ? `new:${normalizeName(e.choice.name)}` : null;
+    const id = e.choice?.kind === 'variant' ? e.choice.variantId : e.choice?.kind === 'new_variant' ? `${e.choice.exerciseId}:${normalizeName(gripOf(e.choice.name) ?? e.choice.name)}` : e.choice ? `new:${normalizeName(e.choice.name)}` : null;
     if (id !== null) {
       if (seen.has(id)) list.push({ level: 'error', code: 'duplicate_exercise', exerciseKey: e.key, message: 'Exercice déjà présent dans cette séance : excluez-en un.' });
       seen.add(id);

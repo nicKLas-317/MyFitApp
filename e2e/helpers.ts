@@ -58,7 +58,8 @@ export async function startSession(page: Page): Promise<void> {
 export async function addExercise(page: Page, query: string, name: string, startWeight?: string): Promise<Locator> {
   await page.getByRole('link', { name: '+ Ajouter un exercice' }).click();
   await page.getByRole('searchbox', { name: 'Rechercher un exercice' }).fill(query);
-  await page.getByRole('button', { name: new RegExp(`^${name}`) }).first().click();
+  // Le bouton de résultat affiche la variante sans tiret : « Tirage vertical Prise moyenne ».
+  await page.getByRole('button', { name: new RegExp(`^${name.replace(' — ', ' ')}`) }).first().click();
   if (startWeight !== undefined) {
     await page.getByLabel('Poids de départ (kg)').fill(startWeight);
     await page.getByRole('button', { name: 'Ajouter', exact: true }).click();

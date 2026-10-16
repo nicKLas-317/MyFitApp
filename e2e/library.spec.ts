@@ -49,7 +49,8 @@ test.describe('Bibliothèque et recherche', () => {
   test('48. Recherche par groupe musculaire : dos', async ({ page }) => {
     await openLibrary(page);
     await search(page, 'dos');
-    expect((await resultNames(page)).sort()).toEqual(['Rowing haltère', 'Tirage horizontal', 'Tirage vertical']);
+    // Les deux tirages ont trois prises, chacune un résultat (§4.3.1).
+    expect((await resultNames(page)).sort()).toEqual(['Rowing haltère', ...Array(3).fill('Tirage horizontal'), ...Array(3).fill('Tirage vertical')]);
     await search(page, 'biceps');
     const names = await resultNames(page);
     expect(names.slice(0, 3).every((n) => n.startsWith('Curl biceps'))).toBe(true);
@@ -81,8 +82,9 @@ test.describe('Bibliothèque et recherche', () => {
     await seedHistory(page, [doneSession('s1', '2026-10-01', 'tirage-vertical'), doneSession('s2', '2026-10-03', 'tirage-vertical')]);
     await openLibrary(page);
     await search(page, 'lat pulldown');
-    await page.getByRole('button', { name: /^Tirage vertical/ }).click();
+    await page.getByRole('button', { name: /^Tirage vertical Prise moyenne/ }).click();
     await expect(page.getByRole('heading', { name: 'Tirage vertical' })).toBeVisible();
+    await expect(page.getByText('Variante : Prise moyenne')).toBeVisible();
     await expect(page.getByText('Dernière fois :')).toContainText('40 kg');
     await expect(page.getByTestId('sheet-next')).toHaveText('3 × 9');
     await expect(page.getByRole('list', { name: 'Historique de l’exercice' }).getByRole('listitem')).toHaveCount(2);

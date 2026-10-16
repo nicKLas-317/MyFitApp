@@ -78,7 +78,7 @@ describe('Lexique d’équivalences (§4.2.1)', () => {
     expect(ids('écarté machine')).toEqual(['pec-deck']);
     expect(ids('curl poulie')).toEqual(['curl-biceps-poulie-corde']);
     // Le tirage vertical est à la poulie : « machine » ne l'exclut pas, aucun autre tirage vertical n'étant une machine.
-    expect(ids('tirage vertical machine')).toEqual(['tirage-vertical']);
+    expect(ids('tirage vertical machine')).toEqual(['tirage-vertical', 'tirage-vertical--prise-serree', 'tirage-vertical--prise-tres-large']);
     expect(choiceOf('latéral raise haltère')).toBe('elevations-laterales');
     expect(choiceOf('lateral raise machine')).toBe('elevations-laterales-machine');
     expect(matchExercise('curl biceps poulie', LIB).suggestion).toBe('curl-biceps-poulie-corde');

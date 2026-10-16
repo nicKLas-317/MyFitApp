@@ -1,7 +1,8 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { commitNow, STRICT } from './commit';
 import type { Exercise, Session } from '../domain/types';
-import { SEED_ADDITIONS, SEED_EXERCISES, SEED_GROUP_UPDATES, SEED_UPDATES, SEED_VERSION, sameGroups, sameNaming } from '../library/seed';
+import { SEED_ADDITIONS, SEED_EXERCISES, SEED_GRIP_EXERCISES, SEED_GROUP_UPDATES, SEED_UPDATES, SEED_VERSION, sameGroups, sameNaming } from '../library/seed';
+import { addGrips } from '../library/edit';
 
 /**
  * Base d'entraînement. Le suivi corporel (§20) aura sa propre base, séparée.
@@ -147,6 +148,15 @@ export class Repository {
         for (const [id, { from, to }] of Object.entries(changes)) {
           const current = updates.get(id) ?? (await store.get(id));
           if (current && sameGroups(current.secondaryGroups, from)) updates.set(id, { ...current, secondaryGroups: [...to] });
+        }
+      }
+      // Exercices devenus « à prise » : prise moyenne pour la variante standard, prises manquantes ajoutées une fois.
+      const all = await store.getAll();
+      for (const [v, ids] of Object.entries(SEED_GRIP_EXERCISES)) {
+        if (Number(v) <= version) continue;
+        for (const id of ids) {
+          const current = updates.get(id) ?? all.find((e) => e.id === id);
+          if (current) updates.set(id, addGrips(current, [...all, ...updates.values()]));
         }
       }
     }

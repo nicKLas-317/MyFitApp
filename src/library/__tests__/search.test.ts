@@ -48,8 +48,10 @@ describe('Recherche par nom d’exercice ou de machine (§4.1 A)', () => {
 
 describe('Recherche par groupe musculaire (§4.1 B)', () => {
   it('48. « dos » propose les exercices du dos, même sans « dos » dans leur nom', () => {
-    expect(ids('dos').sort()).toEqual(['rowing-haltere', 'tirage-horizontal', 'tirage-vertical']);
-    expect(ids('back').sort()).toEqual(['rowing-haltere', 'tirage-horizontal', 'tirage-vertical']);
+    // Les deux tirages ont trois prises, chacune une variante (§4.3.1).
+    const dos = ['rowing-haltere', 'tirage-horizontal', 'tirage-horizontal--prise-serree', 'tirage-horizontal--prise-tres-large', 'tirage-vertical', 'tirage-vertical--prise-serree', 'tirage-vertical--prise-tres-large'];
+    expect(ids('dos').sort()).toEqual(dos);
+    expect(ids('back').sort()).toEqual(dos);
   });
 
   it('le groupe principal passe avant les groupes secondaires', () => {

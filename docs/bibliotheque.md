@@ -1,8 +1,8 @@
 # Inventaire de la bibliothèque d’exercices
 
-Bibliothèque initiale de l’application (version 5), telle qu’installée sur un nouvel appareil. Les exercices et variantes créés ou modifiés ensuite dans l’application n’y figurent pas.
+Bibliothèque initiale de l’application (version 6), telle qu’installée sur un nouvel appareil. Les exercices et variantes créés ou modifiés ensuite dans l’application n’y figurent pas.
 
-**21 exercices, 21 variantes** (une variante standard par exercice).
+**21 exercices, 25 variantes** : une variante standard par exercice, et trois prises pour chacun des deux tirages (la variante standard y est la prise moyenne, §4.3.1 de CLAUDE.md).
 
 - Séries et répétitions : « standard » = 3 séries de 8 à 12 répétitions.
 - Illustration : « dessin » (source et licence indiquées), « pictogramme » (dessin SVG de l’application, par matériel et groupe) ou « manquante » (illustration prévue mais absente : aucun cas).
@@ -10,8 +10,12 @@ Bibliothèque initiale de l’application (version 5), telle qu’installée sur
 
 | Exercice | Variante | Synonymes (FR et EN) | Groupe principal | Groupes secondaires | Matériel | Assisté | Séries et répétitions | Illustration |
 |---|---|---|---|---|---|---|---|---|
-| Tirage horizontal | Standard | Seated row, Rowing assis, Tirage poulie basse | Dos | Biceps | machine | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Seated_cable_rows_1.svg), [2](https://commons.wikimedia.org/wiki/File:Seated_cable_rows_2.svg)) |
-| Tirage vertical | Standard | Lat pulldown, Tirage poitrine | Dos | Biceps | poulie | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Wide_grip_lat_pull_down_1.svg), [2](https://commons.wikimedia.org/wiki/File:Wide_grip_lat_pull_down_2.svg)) |
+| Tirage horizontal | Prise moyenne | Seated row, Rowing assis, Tirage poulie basse | Dos | Biceps | machine | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Seated_cable_rows_1.svg), [2](https://commons.wikimedia.org/wiki/File:Seated_cable_rows_2.svg)) |
+| Tirage horizontal | Prise très large | — | Dos | Biceps | machine | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Seated_cable_rows_1.svg), [2](https://commons.wikimedia.org/wiki/File:Seated_cable_rows_2.svg)) |
+| Tirage horizontal | Prise serrée | — | Dos | Biceps | machine | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Seated_cable_rows_1.svg), [2](https://commons.wikimedia.org/wiki/File:Seated_cable_rows_2.svg)) |
+| Tirage vertical | Prise moyenne | Lat pulldown, Tirage poitrine | Dos | Biceps | poulie | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Wide_grip_lat_pull_down_1.svg), [2](https://commons.wikimedia.org/wiki/File:Wide_grip_lat_pull_down_2.svg)) |
+| Tirage vertical | Prise très large | — | Dos | Biceps | poulie | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Wide_grip_lat_pull_down_1.svg), [2](https://commons.wikimedia.org/wiki/File:Wide_grip_lat_pull_down_2.svg)) |
+| Tirage vertical | Prise serrée | — | Dos | Biceps | poulie | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Wide_grip_lat_pull_down_1.svg), [2](https://commons.wikimedia.org/wiki/File:Wide_grip_lat_pull_down_2.svg)) |
 | Rowing haltère | Standard | Dumbbell row, Rowing un bras | Dos | Biceps | haltère | non | standard | pictogramme |
 | Chest press | Standard | Développé assis machine, Développé pectoraux machine | Pectoraux | Triceps, Épaules | machine | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Machine_bench_press_1.svg), [2](https://commons.wikimedia.org/wiki/File:Machine_bench_press_2.svg)) |
 | Pec deck | Standard | Butterfly, Pec fly, Écarté machine | Pectoraux | Épaules | machine | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Butterfly_machine_1.svg), [2](https://commons.wikimedia.org/wiki/File:Butterfly_machine_2.svg)) |

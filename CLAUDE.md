@@ -143,7 +143,7 @@ Chaque exercice doit comporter, dans la mesure du possible :
 
 Pré-charger au minimum les exercices suivants, avec leurs synonymes et groupes musculaires :
 
-- Tirage horizontal / Seated row (dos).
+- Tirage horizontal / Seated row (dos), avec ses trois prises (§4.3.1).
 - Tirage vertical / Lat pulldown (dos). « Tirage nuque » n'en est pas un synonyme : c'est un mouvement différent.
 - Rowing haltère / Dumbbell row (dos).
 - Chest press / Développé assis machine (pectoraux).
@@ -258,10 +258,18 @@ Exemples :
 
 - Curl biceps à la poulie avec corde.
 - Curl biceps avec haltères.
-- Tirage vertical avec une prise différente lorsque cela modifie significativement la performance.
+- Tirage vertical avec une prise différente (§4.3.1).
 - Machines différentes pour un même groupe musculaire.
 
 Ne jamais mélanger automatiquement les performances de variantes distinctes.
+
+### 4.3.1. Prises (précision validée)
+
+- Trois prises seulement, chacune une variante distincte avec son propre historique : **prise très large**, **prise moyenne**, **prise serrée**. Pas de supination, de pronation ni de prise neutre (ces mots ne créent aucune variante).
+- Sans précision de prise, un exercice est en prise moyenne : pour un exercice à prise, la variante standard s'appelle « Prise moyenne » (identifiant et historique inchangés) et s'affiche « Tirage vertical — Prise moyenne ». Un exercice sans prise (pec deck, crunch…) garde sa variante standard sans nom affiché.
+- Exercices à prise : le tirage vertical et le tirage horizontal, avec leurs trois prises créées d'avance (bibliothèque version 6 ; sur une base existante, la variante standard est renommée si elle s'appelle encore « Standard » et les prises manquantes sont ajoutées une seule fois, sans doublon d'une prise déjà créée par un import), puis tout exercice qui reçoit une prise très large ou serrée (import, création d'une variante).
+- Équivalences d'écriture du lexique (§4.2.1), sans jamais fusionner deux prises différentes : prise très large, très large, prise large, large, wide, wide grip, extra wide → prise très large ; prise moyenne, moyenne, normale, classique, standard → prise moyenne ; prise serrée, serrée, serré, très serrée, close, close grip, narrow → prise serrée. Une variante créée prend le nom de référence de sa prise ; deux écritures d'une même prise ne créent jamais deux variantes.
+- Le récapitulatif hebdomadaire ne change pas : toutes les prises d'un exercice de dos comptent comme « Dos » (groupe principal de l'exercice).
 
 Permettre d'ajouter, modifier et personnaliser des exercices, des variantes et leurs métadonnées.
 
@@ -905,7 +913,7 @@ L'import ne doit jamais supprimer ou remplacer silencieusement les données exis
 
 Ces règles précisent les §11.1 à §11.10. Elles ont été validées et s'appliquent telles quelles.
 
-**A. Angle ou prise précisés dans le nom.** Un angle chiffré (« Biceps curl banc incliné 70° », « 45 degrés ») ou une prise (« prise très large », « prise serrée », « prise neutre », « wide grip »…) dans un nom importé désigne par défaut une variante distincte de l'exercice reconnu : la variante correspondante si elle existe déjà, sinon une nouvelle variante nommée d'après cette précision (« 70° », « prise très large »), avec son propre historique. L'aperçu le signale et permet de rattacher la séance à une autre variante, notamment la variante standard. Sans précision, une hésitation entre les variantes d'un même exercice propose la variante standard, à vérifier. Les autres termes (« horizontal », « plat ») ne créent pas de variante automatiquement.
+**A. Angle ou prise précisés dans le nom.** Un angle chiffré (« Biceps curl banc incliné 70° », « 45 degrés ») ou une prise (« prise très large », « prise serrée », « wide grip »…, les trois prises du §4.3.1) dans un nom importé désigne par défaut une variante distincte de l'exercice reconnu : la variante correspondante si elle existe déjà (« prise moyenne » désigne la variante standard), sinon une nouvelle variante nommée d'après cette précision (« 70° », « Prise très large »), avec son propre historique. L'aperçu le signale et permet de rattacher la séance à une autre variante, notamment la variante standard. Sans précision, une hésitation entre les variantes d'un même exercice propose la variante standard, à vérifier. Les autres termes (« horizontal », « plat ») ne créent pas de variante automatiquement.
 
 **B. Répétitions détaillées.** Pour une notation série par série (`8-8-7 x 52kg`), la cible retenue est la meilleure série (ici 8), signalée dans l'aperçu pour vérification.
 
@@ -1168,6 +1176,12 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 131. « ischio », « ischios », « ischio-jambiers », « hamstrings » → leg curl et curl ischios ; « quadri », « quadriceps », « quads » → leg extension et presse ; « jambe », « jambes », « legs » → les quatre ; à l'import, un sous-groupe seul propose ses exercices et demande de choisir ; le récapitulatif compte tout dans « Jambes ».
 132. Bibliothèque version 5 : la presse perd les ischio-jambiers une seule fois, sauf groupes personnalisés ; une sauvegarde antérieure ne les réintroduit pas.
 133. « seated row », « row assis », « tirage horizontal » → Tirage horizontal, jamais le Rowing haltère ; « rowing haltère », « dumbbell row » → Rowing haltère.
+
+### Prises (§4.3.1)
+
+134. Trois prises seulement, écritures du lexique comprises, sans fusion ni supination, pronation ou prise neutre ; « tirage vertical » seul, « lat pull » et « latpull » → prise moyenne ; « tirage vertical wide grip », « tirage vertical prise large », « lat pull prise très large » → prise très large ; « prise très large » et « prise serrée » → variantes distinctes ; une prise demandée pour un exercice sans prise crée la variante.
+135. Tirage vertical prise moyenne le lundi et prise très large le jeudi : « Dos (2×) » dans le récapitulatif, deux historiques séparés.
+136. Bibliothèque version 6 : variante standard renommée « Prise moyenne », prises manquantes ajoutées une seule fois, sans doublon ni perte (synonymes appris conservés) ; les données de départ (exemple anonymisé) se réimportent avec la bonne prise.
 
 Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
 

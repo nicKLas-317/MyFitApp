@@ -33,7 +33,7 @@ async function doSets(card: Locator, reps: number[], feeling: string): Promise<v
 /** Séance complète d'un exercice, terminée ; renvoie la prochaine cible affichée au récapitulatif. */
 async function session(page: Page, reps: number[], feeling: string, startWeight?: string): Promise<string> {
   await startSession(page);
-  const card = await addExercise(page, 'lat pulldown', 'Tirage vertical', startWeight);
+  const card = await addExercise(page, 'lat pulldown', 'Tirage vertical — Prise moyenne', startWeight);
   await doSets(card, reps, feeling);
   await finishSession(page);
   const next = (await page.getByTestId('next-target').textContent()) ?? '';
@@ -58,7 +58,7 @@ test.describe('§16 Scénarios de progression, joués dans l’interface', () =>
     expect(await session(page, [12, 12, 12], 'Très bien')).toBe('Poids supérieur · 3 × 8');
 
     await startSession(page);
-    const card = await addExercise(page, 'lat pulldown', 'Tirage vertical');
+    const card = await addExercise(page, 'lat pulldown', 'Tirage vertical — Prise moyenne');
     await expect(card.getByText('Poids supérieur', { exact: true })).toBeVisible();
     await expect(card.getByTestId('target')).toHaveText('3 × 12');
     await card.getByLabel('Poids (kg)').fill('50');
@@ -75,7 +75,7 @@ test.describe('§16 Scénarios de progression, joués dans l’interface', () =>
     expect(await session(page, red, 'Moyen')).toBe('Poids inférieur · 3 × 10');
 
     await startSession(page);
-    const card = await addExercise(page, 'lat pulldown', 'Tirage vertical');
+    const card = await addExercise(page, 'lat pulldown', 'Tirage vertical — Prise moyenne');
     await expect(card.getByText('Poids inférieur', { exact: true })).toBeVisible();
     await card.getByLabel('Poids (kg)').fill('40');
     await card.getByLabel('Poids (kg)').press('Enter');

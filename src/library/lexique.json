@@ -5,6 +5,7 @@
     "Les accents, les majuscules et le pluriel en « s » sont ignorés : « haltère » couvre « Haltères ». Une écriture peut faire plusieurs mots (« lat pulldown »).",
     "Le lexique s'applique de la même façon à la saisie et aux noms et synonymes de la bibliothèque ; l'expression la plus longue l'emporte.",
     "« expressionsProtegees » : expressions gardées telles quelles, mot pour mot, pour que leurs mots ne soient pas remplacés (« pec » de « pec deck » reste « pec », et « leg curl » ne se confond pas avec « curl ischios »).",
+    "« prises » : les trois prises reconnues, chacune une variante distincte avec son propre historique (§4.3.1). Sans précision, un exercice est en prise moyenne.",
     "Pour compléter : ajouter une écriture dans la liste de sa forme de référence, ou une nouvelle forme de référence. Les tests vérifient ensuite que rien n'est cassé."
   ],
   "equivalences": {
@@ -15,7 +16,7 @@
     "latéral": ["latéral", "latérale", "latéraux", "latérales", "lateral", "laterals"],
     "développé": ["développé", "développés", "press"],
     "écarté": ["écarté", "écartés", "fly", "flye", "flyes", "flies"],
-    "tirage vertical": ["tirage vertical", "pulldown", "pull down", "lat pulldown", "lat pull down", "lat pull"],
+    "tirage vertical": ["tirage vertical", "pulldown", "pull down", "lat pulldown", "lat pull down", "lat pull", "latpull"],
     "tirage horizontal": ["tirage horizontal", "seated row"],
     "incliné": ["incliné", "inclinée", "inclinés", "inclinées", "incline", "inclined"],
     "assis": ["assis", "assise", "seated"],
@@ -23,6 +24,10 @@
     "assisté": ["assisté", "assistée", "assistés", "assisted"],
     "corde": ["corde", "rope"],
     "rowing": ["rowing", "row"],
+
+    "prise très large": ["prise très large", "très large", "prise large", "large", "wide", "wide grip", "extra wide"],
+    "prise moyenne": ["prise moyenne", "moyenne", "normale", "prise normale", "classique", "prise classique", "standard"],
+    "prise serrée": ["prise serrée", "serrée", "serré", "très serrée", "prise très serrée", "close", "close grip", "narrow"],
 
     "pectoraux": ["pec", "pecs", "pecto", "pectos", "pectoral", "pectoraux", "chest"],
     "épaules": ["épaule", "épaules", "shoulder", "shoulders", "delto", "deltos", "deltoïde", "deltoïdes", "delt", "delts"],
@@ -34,5 +39,6 @@
     "ischio-jambiers": ["ischio", "ischios", "ischio-jambiers", "ischio-jambier", "ischiojambiers", "hamstring", "hamstrings"],
     "abdominaux": ["abdo", "abdos", "abdominaux", "abs"]
   },
+  "prises": ["prise très large", "prise moyenne", "prise serrée"],
   "expressionsProtegees": ["pec deck", "pec fly", "leg curl", "curl ischio", "curl ischios"]
 }

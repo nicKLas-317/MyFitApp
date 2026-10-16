@@ -63,7 +63,8 @@ export function buildSearchIndex(exercises: readonly Exercise[], options: { incl
       if (!options.includeArchived && (exercise.archived || variant.archived)) continue;
       const standard = variant.id === exercise.id;
       const names = [exercise.name, ...exercise.synonyms, ...variant.synonyms];
-      if (!standard) names.push(variant.name, `${exercise.name} ${variant.name}`);
+      // La variante standard est aussi trouvée par son nom quand elle en a un (« Prise moyenne »).
+      if (!standard || variant.name !== 'Standard') names.push(variant.name, `${exercise.name} ${variant.name}`);
       entries.push({
         exercise,
         variant,

@@ -46,29 +46,22 @@ export function angleOf(s: string): string | null {
   return m ? `${m[1]!.replace(',', '.')}°` : null;
 }
 
-const GRIPS_FR = String.raw`(?:tr[eè]s\s+)?(?:serr[ée]e|large|neutre|marteau|supination|pronation|invers[ée]e|supin[ée]e|pron[ée]e)`;
-const GRIPS_EN: [RegExp, string][] = [
-  [/\b(?:wide|large)[\s-]grip\b/i, 'prise large'],
-  [/\b(?:close|narrow)[\s-]grip\b/i, 'prise serrée'],
-  [/\bneutral[\s-]grip\b/i, 'prise neutre'],
-];
-
 /**
- * Prise précisée dans un nom (« tirage vertical prise très large », « wide grip ») : « prise très large ».
- * Comme un angle, elle désigne une variante distincte (§11.11 A).
+ * Prise précisée dans un nom (« tirage vertical wide grip », « prise large ») : « Prise très large ».
+ * Trois prises seulement (§4.3.1), lues à travers le lexique : très large, moyenne, serrée. Comme un angle, une prise
+ * désigne une variante distincte ; « Standard », nom de la variante sans précision, vaut « Prise moyenne ».
  */
 export function gripOf(s: string): string | null {
-  const m = new RegExp(String.raw`\bprise\s+${GRIPS_FR}`, 'iu').exec(s);
-  if (m) return m[0].toLowerCase().replace(/\s+/g, ' ');
-  for (const [re, name] of GRIPS_EN) if (re.test(s)) return name;
+  for (const span of lexiconSpans(plainWords(s))) {
+    const grip = GRIP_LABELS.get(span.out.join(' '));
+    if (grip) return grip;
+  }
   return null;
 }
 
-/** Le nom sans ses précisions de variante (angle chiffré, prise) : pour repérer les mots vraiment inconnus. */
+/** Le nom sans son angle chiffré : pour repérer les mots vraiment inconnus (les prises sont dans le lexique). */
 export function withoutPrecision(s: string): string {
-  let out = s.replace(/(\d+(?:[.,]\d+)?)\s*(?:°|º|degr[eé]s?\b)/giu, ' ').replace(new RegExp(String.raw`\bprise\s+${GRIPS_FR}`, 'giu'), ' ');
-  for (const [re] of GRIPS_EN) out = out.replace(new RegExp(re.source, 'gi'), ' ');
-  return out;
+  return s.replace(/(\d+(?:[.,]\d+)?)\s*(?:°|º|degr[eé]s?\b)/giu, ' ');
 }
 
 /** Précision qui distingue une variante : angle chiffré ou prise. */
@@ -113,6 +106,15 @@ function buildLexicon(data: { equivalences: Record<string, string[]>; expression
 
 const LEXICON = buildLexicon(lexique);
 
+const capitalize = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
+
+/** Les trois prises, sous leur nom de variante : « Prise très large », « Prise moyenne », « Prise serrée ». */
+export const GRIPS: readonly string[] = lexique.prises.map(capitalize);
+/** Prise de la variante standard d'un exercice à prise (§4.3.1). */
+export const MEDIUM_GRIP = 'Prise moyenne';
+/** Forme de référence (mots au singulier) → nom de la prise. */
+const GRIP_LABELS = new Map(lexique.prises.map((p) => [plainWords(p).map(singular).join(' '), capitalize(p)]));
+
 interface Span {
   /** Mots d'origine (normalisés) couverts. */
   words: string[];
@@ -151,7 +153,7 @@ export function unknownWordsOf(s: string, known: (token: string) => boolean): st
   return [
     ...new Set(
       lexiconSpans(plainWords(s))
-        .filter((span) => span.words.length === 1 && !span.out.map(stem).every(known))
+        .filter((span) => span.words.length === 1 && !GRIP_LABELS.has(span.out.join(' ')) && !span.out.map(stem).every(known))
         .map((span) => span.words[0]!),
     ),
   ];

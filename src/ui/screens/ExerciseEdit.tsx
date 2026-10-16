@@ -223,7 +223,7 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false 
               const locked = variantHasHistory(v.id, sessions);
               return (
                 <fieldset key={v.id} className="card variant-form" aria-label={standard ? 'Variante standard' : `Variante ${v.name}`}>
-                  <legend>{standard ? 'Variante standard' : v.name || 'Variante'}</legend>
+                  <legend>{standard ? (v.name && v.name !== 'Standard' ? `Variante standard — ${v.name}` : 'Variante standard') : v.name || 'Variante'}</legend>
                   {!standard && (
                     <div className="draft-field">
                       <label htmlFor={`${id}-${v.id}-name`}>Nom de la variante</label>

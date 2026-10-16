@@ -39,7 +39,8 @@ describe('87. Deuxième jeu d’import (exemple anonymisé)', () => {
     expect(chest!).toMatchObject({ feeling: 'moyen', feelingSymbol: '+=', feelingConfirmed: true, weightKg: 47 });
     expect(chest!.toConfirm).toEqual(['Poids noté « 47gs » : unité non reconnue, lu 47 kg.']);
     expect(codes(draft, chest!.key)).toContain('to_confirm');
-    expect(lat!.choice).toEqual({ kind: 'new_variant', exerciseId: 'tirage-vertical', name: 'prise très large' });
+    // La prise très large existe d'avance (§4.3.1) : elle est retenue, avec son propre historique.
+    expect(lat!.choice).toEqual({ kind: 'variant', variantId: 'tirage-vertical--prise-tres-large' });
     expect(ecarte!.choice).toEqual({ kind: 'variant', variantId: 'ecarte-couche-halteres' });
 
     // Une fois la date, le poids et le triceps confirmés, l'import est possible et conserve le symbole d'origine.
@@ -49,7 +50,8 @@ describe('87. Deuxième jeu d’import (exemple anonymisé)', () => {
     expect(hasBlockingProblems(draftProblems(ready, ctx)), JSON.stringify(draftProblems(ready, ctx))).toBe(false);
     const { sessions, exercises } = finalizeDrafts([ready], LIB, [], 1);
     expect(sessions[0]!.performances.find((p) => p.variantId === 'chest-press')).toMatchObject({ feeling: 'moyen', feelingSymbol: '+=', weightKg: 47 });
-    expect(exercises.find((e) => e.id === 'tirage-vertical')?.variants.map((v) => v.id)).toEqual(['tirage-vertical', 'tirage-vertical--prise-tres-large']);
+    expect(sessions[0]!.performances.map((p) => p.variantId)).toContain('tirage-vertical--prise-tres-large');
+    expect(exercises.find((e) => e.id === 'tirage-vertical')?.variants.map((v) => v.id)).toEqual(['tirage-vertical', 'tirage-vertical--prise-tres-large', 'tirage-vertical--prise-serree']);
   });
 
   it('JSON : même lecture, la remarque du fichier est à confirmer, la charge d’aide des dips est reconnue', () => {
@@ -62,7 +64,7 @@ describe('87. Deuxième jeu d’import (exemple anonymisé)', () => {
       { kind: 'variant', variantId: 'dips-assistes' },
       { kind: 'variant', variantId: 'extension-triceps-haltere-assis' },
       { kind: 'variant', variantId: 'chest-press' },
-      { kind: 'new_variant', exerciseId: 'tirage-vertical', name: 'prise très large' },
+      { kind: 'variant', variantId: 'tirage-vertical--prise-tres-large' },
       { kind: 'variant', variantId: 'ecarte-couche-halteres' },
     ]);
     const [, dips, , chest] = draft.exercises;

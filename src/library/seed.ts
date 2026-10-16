@@ -1,4 +1,4 @@
-import type { Exercise, MuscleGroup, VariantConfig } from '../domain/types';
+import type { Exercise, MuscleGroup, Variant, VariantConfig } from '../domain/types';
 
 /**
  * Bibliothèque initiale (§4.0). Les identifiants sont stables et ne doivent jamais changer :
@@ -26,9 +26,23 @@ function exercise(
   };
 }
 
+/** Variantes de prise d'un exercice à prise (§4.3.1), la variante standard étant la prise moyenne. */
+export function gripVariants(id: string): Variant[] {
+  return [
+    { id, name: 'Prise moyenne', synonyms: [], archived: false },
+    { id: `${id}--prise-tres-large`, name: 'Prise très large', synonyms: [], archived: false },
+    { id: `${id}--prise-serree`, name: 'Prise serrée', synonyms: [], archived: false },
+  ];
+}
+
+/** Exercice à prise : trois variantes distinctes, avec chacune son historique (version 6). */
+function withGrips(e: Exercise): Exercise {
+  return { ...e, variants: gripVariants(e.id) };
+}
+
 export const SEED_EXERCISES: readonly Exercise[] = [
-  exercise('tirage-horizontal', 'Tirage horizontal', ['Seated row', 'Rowing assis', 'Tirage poulie basse'], 'dos', ['biceps'], 'machine'),
-  exercise('tirage-vertical', 'Tirage vertical', ['Lat pulldown', 'Tirage poitrine'], 'dos', ['biceps'], 'poulie'),
+  withGrips(exercise('tirage-horizontal', 'Tirage horizontal', ['Seated row', 'Rowing assis', 'Tirage poulie basse'], 'dos', ['biceps'], 'machine')),
+  withGrips(exercise('tirage-vertical', 'Tirage vertical', ['Lat pulldown', 'Tirage poitrine'], 'dos', ['biceps'], 'poulie')),
   exercise('rowing-haltere', 'Rowing haltère', ['Dumbbell row', 'Rowing un bras'], 'dos', ['biceps'], 'haltère'),
   exercise('chest-press', 'Chest press', ['Développé assis machine', 'Développé pectoraux machine'], 'pectoraux', ['triceps', 'epaules'], 'machine'),
   exercise('pec-deck', 'Pec deck', ['Butterfly', 'Pec fly', 'Écarté machine'], 'pectoraux', ['epaules'], 'machine'),
@@ -59,7 +73,15 @@ export const SEED_EXERCISES: readonly Exercise[] = [
 ];
 
 /** Version de la bibliothèque initiale ; chaque version ajoute des exercices (jamais de suppression). */
-export const SEED_VERSION = 5;
+export const SEED_VERSION = 6;
+
+/**
+ * Exercices devenus « à prise » à une version donnée : sur une base existante, leur variante standard prend le nom
+ * « Prise moyenne » (si elle s'appelle encore « Standard ») et les prises manquantes sont ajoutées une seule fois.
+ */
+export const SEED_GRIP_EXERCISES: Readonly<Record<number, readonly string[]>> = {
+  6: ['tirage-horizontal', 'tirage-vertical'],
+};
 
 /** Exercices ajoutés par chaque version, installés une seule fois sur une base existante. */
 export const SEED_ADDITIONS: Readonly<Record<number, readonly string[]>> = {

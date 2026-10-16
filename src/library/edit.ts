@@ -5,7 +5,7 @@
  */
 import type { Exercise, MuscleGroup, Session, Variant, VariantConfig } from '../domain/types';
 import { DEFAULT_VARIANT_CONFIG } from '../engine';
-import { normalizeName } from './text';
+import { GRIPS, gripOf, MEDIUM_GRIP, normalizeName } from './text';
 
 /** Matériel proposé à la saisie ; le champ reste libre pour les données importées. */
 export const EQUIPMENT_OPTIONS = ['machine', 'poulie', 'haltères', 'barre', 'poids du corps', 'autre'] as const;
@@ -101,14 +101,51 @@ export function validateVariantName(exercise: Exercise, name: string, selfId?: s
   const n = normalizeName(name);
   if (!n) return 'name_missing';
   if (exercise.variants.some((v) => v.id !== selfId && normalizeName(v.name) === n)) return 'name_taken';
+  // Une même prise écrite autrement (« prise large » = « Prise très large ») ; la prise moyenne est la variante standard.
+  const grip = gripOf(name);
+  if (grip && exercise.variants.some((v) => v.id !== selfId && variantGrip(exercise, v) === grip)) return 'name_taken';
   return null;
 }
 
-/** Ajoute une variante : historique distinct, identifiant `<exercice>--<nom>`. */
+/** Prise d'une variante (§4.3.1) : celle de son nom ; la variante standard est en prise moyenne. */
+export function variantGrip(exercise: Exercise, variant: Variant): string | null {
+  return gripOf(variant.name) ?? (variant.id === exercise.id ? MEDIUM_GRIP : null);
+}
+
+/**
+ * Un exercice qui reçoit une prise devient « à prise » (§4.3.1) : sa variante standard, si elle s'appelle encore
+ * « Standard », prend le nom « Prise moyenne ». Identifiant et historique ne changent pas.
+ */
+export function withMediumGrip(exercise: Exercise): Exercise {
+  return {
+    ...exercise,
+    variants: exercise.variants.map((v) => (v.id === exercise.id && v.name === 'Standard' ? { ...v, name: MEDIUM_GRIP } : v)),
+  };
+}
+
+/** Ajoute une variante : historique distinct, identifiant `<exercice>--<nom>`. Une prise prend son nom de référence. */
 export function addVariant(exercise: Exercise, name: string, exercises: readonly Exercise[]): { exercise: Exercise; variantId: string } {
-  const id = uniqueId(`${exercise.id}--${slug(name)}`, allIds(exercises));
-  const variant: Variant = { id, name: name.trim().replace(/\s+/g, ' '), synonyms: [], archived: false };
-  return { exercise: { ...exercise, variants: [...exercise.variants, variant] }, variantId: id };
+  const grip = gripOf(name);
+  const label = grip ?? name.trim().replace(/\s+/g, ' ');
+  const id = uniqueId(`${exercise.id}--${slug(label)}`, allIds(exercises));
+  const variant: Variant = { id, name: label, synonyms: [], archived: false };
+  const next = { ...exercise, variants: [...exercise.variants, variant] };
+  return { exercise: grip ? withMediumGrip(next) : next, variantId: id };
+}
+
+/**
+ * Rend un exercice « à prise » : prise moyenne pour la variante standard, prises très large et serrée ajoutées
+ * si aucune variante (même archivée) n'a déjà cette prise. Rien n'est supprimé ni renommé d'autre.
+ */
+export function addGrips(exercise: Exercise, exercises: readonly Exercise[]): Exercise {
+  let next = withMediumGrip(exercise);
+  const taken = allIds(exercises);
+  for (const grip of GRIPS) {
+    if (next.variants.some((v) => variantGrip(next, v) === grip)) continue;
+    const id = uniqueId(`${exercise.id}--${slug(grip)}`, taken);
+    next = { ...next, variants: [...next.variants, { id, name: grip, synonyms: [], archived: false }] };
+  }
+  return next;
 }
 
 /** Supprime une variante sans historique. La variante standard ne se supprime qu'avec l'exercice. */

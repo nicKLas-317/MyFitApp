@@ -67,13 +67,17 @@ describe('Gestion des exercices et variantes (§4.3)', () => {
   });
 
   it('les variantes ont leur propre identifiant, un nom unique, et seule une variante non standard se supprime', () => {
-    const ex = byId('tirage-vertical');
-    const { exercise, variantId } = addVariant(ex, 'Prise serrée', LIB);
-    expect(variantId).toBe('tirage-vertical--prise-serree');
+    const ex = byId('developpe-couche');
+    const { exercise, variantId } = addVariant(ex, 'close grip', LIB);
+    expect(variantId).toBe('developpe-couche--prise-serree');
+    // Une prise prend son nom de référence et fait de la variante standard la prise moyenne (§4.3.1).
+    expect(exercise.variants.map((v) => v.name)).toEqual(['Prise moyenne', 'Prise serrée']);
     expect(validateVariantName(exercise, 'prise serree')).toBe('name_taken');
+    expect(validateVariantName(exercise, 'narrow')).toBe('name_taken');
+    expect(validateVariantName(exercise, 'normale')).toBe('name_taken');
     expect(validateVariantName(exercise, '')).toBe('name_missing');
-    expect(removeVariant(exercise, variantId).variants.map((v) => v.id)).toEqual(['tirage-vertical']);
-    expect(() => removeVariant(exercise, 'tirage-vertical')).toThrow();
+    expect(removeVariant(exercise, variantId).variants.map((v) => v.id)).toEqual(['developpe-couche']);
+    expect(() => removeVariant(exercise, 'developpe-couche')).toThrow();
   });
 
   it('réglages spécifiques : validés, seules les différences sont conservées, et le moteur les applique', () => {

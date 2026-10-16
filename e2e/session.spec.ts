@@ -14,7 +14,7 @@ import {
 test.describe('Séance, persistance et chronomètre', () => {
   test('45 et 46. Le rechargement restaure la séance en cours et un chronomètre cohérent', async ({ page }) => {
     await startSession(page);
-    const card = await addExercise(page, 'lat pulldown', 'Tirage vertical', '40');
+    const card = await addExercise(page, 'lat pulldown', 'Tirage vertical — Prise moyenne', '40');
     await validateSets(card, 1);
     await card.getByRole('button', { name: 'Répétitions série 2 : moins' }).click();
     await card.getByRole('button', { name: 'Valider' }).click();
@@ -29,7 +29,7 @@ test.describe('Séance, persistance et chronomètre', () => {
     expect(chronoBefore).toMatch(/^00:0[2-9]$/);
 
     await page.reload();
-    const restored = exerciseCard(page, 'Tirage vertical');
+    const restored = exerciseCard(page, 'Tirage vertical — Prise moyenne');
     await expect(restored).toBeVisible();
     await expect(restored.getByText('2/3')).toBeVisible();
     await expect(restored.locator('.set.done .step-value')).toHaveText(['8', '7']);
@@ -71,7 +71,7 @@ test.describe('Séance, persistance et chronomètre', () => {
   test('57. Un même exercice ne peut pas être ajouté deux fois : l’existant est ouvert', async ({ page }) => {
     await startSession(page);
     await addExercise(page, 'pec deck', 'Pec deck', '35');
-    await addExercise(page, 'tirage', 'Tirage horizontal', '50');
+    await addExercise(page, 'tirage', 'Tirage horizontal — Prise moyenne', '50');
     await page.getByRole('link', { name: '+ Ajouter un exercice' }).click();
     // L'écran de choix s'ouvre en haut, quel que soit le défilement de la séance.
     await expect(page.getByRole('heading', { name: 'Récents' }).or(page.getByRole('searchbox'))).toBeInViewport();
@@ -87,7 +87,7 @@ test.describe('Séance, persistance et chronomètre', () => {
 
   test('58. Poids : confirmation au-delà de 50 %, refus d’un poids nul ou invalide', async ({ page }) => {
     await startSession(page);
-    const card = await addExercise(page, 'seated row', 'Tirage horizontal', '52');
+    const card = await addExercise(page, 'seated row', 'Tirage horizontal — Prise moyenne', '52');
     const weight = card.getByLabel('Poids (kg)');
 
     await weight.fill('520');
@@ -218,7 +218,7 @@ test.describe('Séance, persistance et chronomètre', () => {
   test('76. La confirmation de fin liste les ressentis manquants et permet de les compléter', async ({ page }) => {
     await startSession(page);
     await validateSets(await addExercise(page, 'pec deck', 'Pec deck', '35'), 3);
-    await doExercise(await addExercise(page, 'seated row', 'Tirage horizontal', '52'), 3, 'Bien');
+    await doExercise(await addExercise(page, 'seated row', 'Tirage horizontal — Prise moyenne', '52'), 3, 'Bien');
     await validateSets(await addExercise(page, 'curl', 'Curl biceps haltères', '12'), 2);
 
     await page.getByRole('button', { name: 'Terminer la séance' }).click();
@@ -226,7 +226,7 @@ test.describe('Séance, persistance et chronomètre', () => {
     await expect(confirm.getByText('Ressenti manquant (2)')).toBeVisible();
     await expect(confirm.getByRole('group', { name: 'Pec deck' })).toBeVisible();
     await expect(confirm.getByRole('group', { name: 'Curl biceps haltères' })).toBeVisible();
-    await expect(confirm.getByRole('group', { name: 'Tirage horizontal' })).toHaveCount(0);
+    await expect(confirm.getByRole('group', { name: 'Tirage horizontal — Prise moyenne' })).toHaveCount(0);
 
     await confirm.getByRole('group', { name: 'Pec deck' }).getByRole('button', { name: 'Très bien', exact: true }).click();
     await expect(confirm.getByText('Ressenti manquant (1)')).toBeVisible();

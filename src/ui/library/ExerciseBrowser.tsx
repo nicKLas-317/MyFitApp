@@ -1,7 +1,7 @@
 import { useMemo, type ReactNode } from 'react';
 import type { MuscleGroup } from '../../domain/types';
 import { useApp } from '../../app/store';
-import { displayName, type VariantRef } from '../../library/catalog';
+import { displayName, variantLabel, type VariantRef } from '../../library/catalog';
 import { buildSearchIndex, recentVariantIds, searchWithInfo, type MatchField } from '../../library/search';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
 import { formatKg } from '../../session/format';
@@ -107,7 +107,6 @@ function ExerciseItem({ ref_: ref, via, onPick, below, aside, note }: ItemProps)
   const { replay } = useApp();
   const state = replay.profile.variants[ref.variant.id];
   const extra = note?.(ref);
-  const standard = ref.variant.id === ref.exercise.id;
   const secondary = via === 'secondary' ? ref.exercise.secondaryGroups.map((g) => MUSCLE_GROUP_LABELS[g]).join(', ') : null;
   return (
     <li className="pick-item" data-variant={ref.variant.id}>
@@ -117,7 +116,7 @@ function ExerciseItem({ ref_: ref, via, onPick, below, aside, note }: ItemProps)
           <span className="pick-name">
             <strong>{ref.exercise.name}</strong>
             <span className="muted small">
-              {!standard && <span className="variant-tag">{ref.variant.name}</span>}
+              {variantLabel(ref) && <span className="variant-tag">{variantLabel(ref)}</span>}
               {MUSCLE_GROUP_LABELS[ref.exercise.primaryGroup]}
               {secondary && ` · secondaire : ${secondary}`}
               {extra && ` · ${extra}`}

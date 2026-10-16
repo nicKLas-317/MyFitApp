@@ -56,7 +56,10 @@ function score(source: string[], name: string): number {
 function variantNames(exercise: Exercise, variantId: string): string[] {
   const variant = exercise.variants.find((v) => v.id === variantId);
   if (!variant) return [];
-  if (variant.id === exercise.id) return [exercise.name, ...exercise.synonyms, ...variant.synonyms];
+  if (variant.id === exercise.id) {
+    const named = variant.name !== 'Standard' ? [`${exercise.name} ${variant.name}`] : [];
+    return [exercise.name, ...exercise.synonyms, ...named, ...variant.synonyms];
+  }
   return [`${exercise.name} ${variant.name}`, ...variant.synonyms];
 }
 

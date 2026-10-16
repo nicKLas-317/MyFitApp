@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useApp } from '../../app/store';
 import { navigate } from '../../app/hooks';
 import { sortSessions } from '../../engine';
-import { displayName } from '../../library/catalog';
+import { displayName, variantLabel } from '../../library/catalog';
 import { addVariant, updateVariant, validateVariantName } from '../../library/edit';
 import { illustrationFor } from '../../library/illustrations';
 import { chartSeries } from '../../analysis/progress';
@@ -82,7 +82,7 @@ export function ExerciseSheet({ variantId }: { variantId: string }) {
       <div className="sheet-head">
         <ExercisePicto exercise={exercise} large />
         <div>
-          {variant.id !== exercise.id && <p className="variant-line">Variante : {variant.name}</p>}
+          {variantLabel({ exercise, variant }) && <p className="variant-line">Variante : {variant.name}</p>}
           <p>
             {MUSCLE_GROUP_LABELS[exercise.primaryGroup]}
             {exercise.secondaryGroups.length > 0 && (
