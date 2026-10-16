@@ -193,6 +193,11 @@ export function draftExercise(input: DraftExerciseInput, exercises: readonly Exe
     const kg = input.weightKg.toLocaleString('fr-FR', { maximumFractionDigits: 2 });
     toConfirm.unshift(`Poids noté « ${input.weightText ?? kg} » : unité non reconnue, lu ${kg} kg.`);
   }
+  // Mot inconnu de la bibliothèque et du lexique : l'exercice est proposé, l'import attend la confirmation (§4.2.1).
+  if (choice && match.confidence !== 'learned' && match.unknownWords.length > 0) {
+    const many = match.unknownWords.length > 1;
+    toConfirm.push(`Mot${many ? 's' : ''} non reconnu${many ? 's' : ''} : « ${match.unknownWords.join(' ')} ». Vérifiez l’exercice proposé.`);
+  }
   if (!choice && match.confidence === 'none' && input.primaryGroup) {
     choice = { kind: 'new_exercise', name: input.sourceName, primaryGroup: input.primaryGroup };
   }

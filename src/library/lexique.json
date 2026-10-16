@@ -1,0 +1,36 @@
+{
+  "_lisezmoi": [
+    "Lexique d'équivalences de la recherche et de l'import (CLAUDE.md §4.2.1).",
+    "Chaque entrée de « equivalences » associe une forme de référence à ses autres écritures (français, anglais, argot de salle).",
+    "Les accents, les majuscules et le pluriel en « s » sont ignorés : « haltère » couvre « Haltères ». Une écriture peut faire plusieurs mots (« lat pulldown »).",
+    "Le lexique s'applique de la même façon à la saisie et aux noms et synonymes de la bibliothèque ; l'expression la plus longue l'emporte.",
+    "« expressionsProtegees » : expressions gardées telles quelles, mot pour mot, pour que leurs mots ne soient pas remplacés (« pec » de « pec deck » reste « pec », et « leg curl » ne se confond pas avec « curl ischios »).",
+    "Pour compléter : ajouter une écriture dans la liste de sa forme de référence, ou une nouvelle forme de référence. Les tests vérifient ensuite que rien n'est cassé."
+  ],
+  "equivalences": {
+    "haltères": ["haltère", "haltères", "dumbbell", "dumbbells", "db"],
+    "poulie": ["poulie", "câble", "cable"],
+    "barre": ["barre", "barbell"],
+    "élévation": ["élévation", "élévations", "raise", "raises"],
+    "latéral": ["latéral", "latérale", "latéraux", "latérales", "lateral", "laterals"],
+    "développé": ["développé", "développés", "press"],
+    "écarté": ["écarté", "écartés", "fly", "flye", "flyes", "flies"],
+    "tirage vertical": ["tirage vertical", "pulldown", "pull down", "lat pulldown", "lat pull down", "lat pull"],
+    "tirage horizontal": ["tirage horizontal", "seated row"],
+    "incliné": ["incliné", "inclinée", "inclinés", "inclinées", "incline", "inclined"],
+    "assis": ["assis", "assise", "seated"],
+    "allongé": ["allongé", "allongée", "lying"],
+    "assisté": ["assisté", "assistée", "assistés", "assisted"],
+    "corde": ["corde", "rope"],
+    "rowing": ["rowing", "row"],
+
+    "pectoraux": ["pec", "pecs", "pecto", "pectos", "pectoral", "pectoraux", "chest"],
+    "épaules": ["épaule", "épaules", "shoulder", "shoulders", "delto", "deltos", "deltoïde", "deltoïdes", "delt", "delts"],
+    "dos": ["dos", "back", "dorsaux", "lats"],
+    "biceps": ["biceps", "bi", "bis"],
+    "triceps": ["triceps", "tri", "tris"],
+    "jambes": ["jambe", "jambes", "leg", "legs", "quadri", "quadris", "quadriceps", "quads", "ischio", "ischios"],
+    "abdominaux": ["abdo", "abdos", "abdominaux", "abs"]
+  },
+  "expressionsProtegees": ["pec deck", "pec fly", "leg curl", "curl ischio", "curl ischios"]
+}

@@ -5,7 +5,7 @@
  */
 import type { Exercise, MuscleGroup, Session, Variant } from '../domain/types';
 import { MUSCLE_GROUP_LABELS } from './seed';
-import { nameTokens, normalizeName } from './text';
+import { canonicalName, nameTokens, normalizeName, unknownWordsOf } from './text';
 
 /** Termes désignant chaque groupe musculaire, en français et en anglais. */
 export const GROUP_ALIASES: Record<MuscleGroup, string[]> = {
@@ -43,8 +43,10 @@ export interface SearchEntry {
   variant: Variant;
   /** Racines des noms et synonymes (exercice et variante). */
   names: Set<string>;
-  /** Noms et synonymes complets normalisés, pour les correspondances d'expression. */
+  /** Noms et synonymes complets, sous leur forme comparable (lexique appliqué), pour les correspondances d'expression. */
   phrases: string[];
+  /** Les mêmes, seulement normalisés (sans lexique) : une saisie en cours (« lat pull ») y est retrouvée. */
+  rawPhrases: string[];
   primary: Set<string>;
   secondary: Set<string>;
   equipment: Set<string>;
@@ -66,7 +68,8 @@ export function buildSearchIndex(exercises: readonly Exercise[], options: { incl
         exercise,
         variant,
         names: tokensOf(names),
-        phrases: names.map(normalizeName),
+        phrases: names.map(canonicalName),
+        rawPhrases: names.map(normalizeName),
         primary: tokensOf(groupTokens(exercise.primaryGroup)),
         secondary: tokensOf(exercise.secondaryGroups.flatMap(groupTokens)),
         equipment: tokensOf([exercise.equipment, ...(EQUIPMENT_ALIASES[equipmentKey(exercise.equipment)] ?? [])]),
@@ -116,14 +119,27 @@ export interface SearchResult {
   via: MatchField;
 }
 
+/** Mots désignant le matériel (§4.2.1) : ils départagent les variantes au lieu d'exclure. */
+export const EQUIPMENT_WORDS: ReadonlySet<string> = new Set(['haltère', 'machine', 'poulie', 'barre'].flatMap(nameTokens));
+
+/** L'entrée correspond au matériel désigné : par son matériel ou par son nom. */
+function hasEquipment(entry: SearchEntry, word: string): boolean {
+  return entry.equipment.has(word) || entry.names.has(word);
+}
+
 /** Score d'une entrée, ou null si un mot saisi ne correspond à rien. */
-function scoreEntry(entry: SearchEntry, words: string[], phrase: string): { score: number; via: MatchField } | null {
+function phraseIn(phrase: string, phrases: readonly string[]): boolean {
   // Expression saisie en début de mot (« dos » ne correspond pas à « abdos ») ; une expression
   // en plusieurs mots est aussi comparée sans espaces (« pull down » = « pulldown »).
   const compact = phrase.replace(/ /g, '');
-  const phraseHit =
+  return (
     phrase.length >= 3 &&
-    entry.phrases.some((p) => ` ${p}`.includes(` ${phrase}`) || (phrase.includes(' ') && compact.length >= 6 && p.replace(/ /g, '').includes(compact)));
+    phrases.some((p) => ` ${p}`.includes(` ${phrase}`) || (phrase.includes(' ') && compact.length >= 6 && p.replace(/ /g, '').includes(compact)))
+  );
+}
+
+function scoreEntry(entry: SearchEntry, words: string[], phrase: string, raw: string): { score: number; via: MatchField } | null {
+  const phraseHit = phraseIn(phrase, entry.phrases) || (raw.includes(' ') && phraseIn(raw, entry.rawPhrases));
   let score = 0;
   let via: MatchField = 'name';
   let viaScore = -1;
@@ -154,27 +170,91 @@ function scoreEntry(entry: SearchEntry, words: string[], phrase: string): { scor
   return { score, via };
 }
 
-/**
- * Recherche instantanée. Une requête vide renvoie une liste vide : l'appelant affiche alors
- * favoris, récents et la bibliothèque complète.
- */
-export function searchExercises(index: readonly SearchEntry[], query: string): SearchResult[] {
-  const phrase = normalizeName(query);
-  const words = [...new Set(nameTokens(query))];
-  if (words.length === 0 && !phrase) return [];
-  if (words.length === 0) words.push(...phrase.split(' '));
-  const results: SearchResult[] = [];
-  for (const entry of index) {
-    const scored = scoreEntry(entry, words, phrase);
-    if (scored) results.push({ entry, ...scored });
+/** Tous les mots connus de l'index (noms, synonymes, groupes, matériel), pour repérer un mot inconnu. */
+const vocabularies = new WeakMap<readonly SearchEntry[], Set<string>>();
+function vocabulary(index: readonly SearchEntry[]): Set<string> {
+  let v = vocabularies.get(index);
+  if (!v) {
+    v = new Set(index.flatMap((e) => [...e.names, ...e.primary, ...e.secondary, ...e.equipment]));
+    vocabularies.set(index, v);
   }
-  return results.sort(
+  return v;
+}
+
+/** Mots connus de la bibliothèque (noms, synonymes, groupes, matériel), sous leur forme comparable. */
+const libraryVocabularies = new WeakMap<readonly Exercise[], Set<string>>();
+export function libraryVocabulary(exercises: readonly Exercise[]): Set<string> {
+  let v = libraryVocabularies.get(exercises);
+  if (!v) {
+    v = vocabulary(buildSearchIndex(exercises));
+    libraryVocabularies.set(exercises, v);
+  }
+  return v;
+}
+
+/** Mots désignant chaque groupe musculaire (« pec », « abdos », « legs »…), sous leur forme comparable. */
+export const GROUP_WORDS_BY_GROUP: ReadonlyMap<MuscleGroup, ReadonlySet<string>> = new Map(
+  (Object.keys(GROUP_ALIASES) as MuscleGroup[]).map((g) => [g, new Set(groupTokens(g).flatMap(nameTokens))]),
+);
+export const GROUP_WORDS: ReadonlySet<string> = new Set([...GROUP_WORDS_BY_GROUP.values()].flatMap((s) => [...s]));
+
+export interface SearchOutcome {
+  results: SearchResult[];
+  /** Mots inconnus de la bibliothèque, ignorés parce que les autres suffisent (§4.2.1). */
+  ignored: string[];
+}
+
+/**
+ * Recherche instantanée, sur la forme comparable de la saisie (lexique appliqué, §4.2.1).
+ * - Chaque mot doit correspondre, sauf un mot inconnu de toute la bibliothèque, ignoré si au moins deux autres
+ *   mots sont reconnus et qu'ils sont plus nombreux (« élévation latérale xyz » trouve les élévations latérales ;
+ *   « tirage nuque » ne trouve rien, « tirage » seul ne désignant pas un exercice).
+ * - Un mot de matériel (haltères, machine, poulie, barre) départage : si des résultats ont ce matériel,
+ *   les autres sont écartés (« latéral raise haltère » → haltères, jamais la machine).
+ * Une requête vide renvoie une liste vide : l'appelant affiche alors favoris, récents et la bibliothèque complète.
+ */
+export function searchWithInfo(index: readonly SearchEntry[], query: string): SearchOutcome {
+  const all = [...new Set(nameTokens(query))];
+  const raw = normalizeName(query);
+  if (all.length === 0 && !raw) return { results: [], ignored: [] };
+  if (all.length === 0) all.push(...raw.split(' '));
+  const vocab = vocabulary(index);
+  const known = all.filter((w) => [...vocab].some((t) => tokenQuality(w, t) > 0));
+  const unknown = all.filter((w) => !known.includes(w));
+  // Une saisie en cours d'une expression connue (« lat pull ») n'a pas de mot inconnu.
+  const typing = raw.includes(' ') && index.some((e) => phraseIn(raw, e.rawPhrases));
+  const ignore = !typing && unknown.length > 0 && known.length >= 2 && known.length > unknown.length;
+  const words = ignore ? known : all;
+  const equipmentWords = words.filter((w) => EQUIPMENT_WORDS.has(w));
+  const required = words.filter((w) => !EQUIPMENT_WORDS.has(w));
+  // Requête faite seulement de matériel (« poulie », « dos haltère » sans autre mot) : le matériel est exigé.
+  const scoredWords = required.length > 0 ? required : words;
+  const phrase = words.join(' ');
+
+  let results: SearchResult[] = [];
+  for (const entry of index) {
+    const scored = scoreEntry(entry, scoredWords, phrase, raw);
+    if (!scored) continue;
+    if (required.length > 0) for (const w of equipmentWords) if (hasEquipment(entry, w)) scored.score += WEIGHT.equipment;
+    results.push({ entry, ...scored });
+  }
+  for (const w of equipmentWords) {
+    if (results.some((r) => hasEquipment(r.entry, w))) results = results.filter((r) => hasEquipment(r.entry, w));
+  }
+  results.sort(
     (a, b) =>
       b.score - a.score ||
       Number(!!b.entry.variant.favorite) - Number(!!a.entry.variant.favorite) ||
       a.entry.exercise.name.localeCompare(b.entry.exercise.name, 'fr') ||
       a.entry.variant.name.localeCompare(b.entry.variant.name, 'fr'),
   );
+  // Mots montrés tels qu'écrits (normalisés), pas sous leur racine.
+  const shown = ignore ? unknownWordsOf(query, (t) => [...vocab].some((v) => tokenQuality(t, v) > 0)) : [];
+  return { results, ignored: shown.length > 0 ? shown : ignore ? unknown : [] };
+}
+
+export function searchExercises(index: readonly SearchEntry[], query: string): SearchResult[] {
+  return searchWithInfo(index, query).results;
 }
 
 /** Exercices-variantes récemment utilisés, du plus récent au plus ancien. */

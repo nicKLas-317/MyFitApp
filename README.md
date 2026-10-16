@@ -6,7 +6,7 @@ Application personnelle de suivi de musculation, en français, installable sur s
 
 - Saisie d'une séance en quelques secondes : poids, séries, répétitions, ressenti global. Chaque saisie est écrite aussitôt sur l'appareil : verrouiller le téléphone ou fermer l'appli juste après ne perd rien.
 - Surcharge progressive automatique : statut vert, orange ou rouge, et prochaine cible calculée par le moteur (deux séances vertes consécutives pour progresser, quatre rouges pour baisser la charge). Les exercices assistés (dips, tractions) suivent le sens inverse : « moins d'aide », « plus d'aide ».
-- Bibliothèque illustrée avec une recherche unique par exercice, machine ou groupe musculaire.
+- Bibliothèque illustrée avec une recherche unique par exercice, machine ou groupe musculaire, qui comprend le français, l'anglais et l'argot de salle (« latéral raise haltère », « DB », « pecs ») grâce à un lexique facile à compléter : [`src/library/lexique.json`](src/library/lexique.json).
 - Cardio en version minimale : blocs « machine, inclinaison du tapis, durée » ajoutés à la séance, sans progression ; total de la semaine sur l'accueil.
 - Import de l'historique depuis des notes en texte brut (`3x8x52kg ++`) ou du JSON, avec aperçu corrigeable.
 - Historique, graphiques, bilan de progression, récapitulatif de la semaine sur l'accueil, suivi du poids.

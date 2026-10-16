@@ -2,7 +2,7 @@ import { useMemo, type ReactNode } from 'react';
 import type { MuscleGroup } from '../../domain/types';
 import { useApp } from '../../app/store';
 import { displayName, type VariantRef } from '../../library/catalog';
-import { buildSearchIndex, recentVariantIds, searchExercises, type MatchField } from '../../library/search';
+import { buildSearchIndex, recentVariantIds, searchWithInfo, type MatchField } from '../../library/search';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
 import { formatKg } from '../../session/format';
 import { ExercisePicto } from '../Pictogram';
@@ -28,7 +28,7 @@ interface Props {
 export function ExerciseBrowser({ query, onPick, below, aside, note, createHref }: Props) {
   const { exercises, sessions, variants } = useApp();
   const index = useMemo(() => buildSearchIndex(exercises), [exercises]);
-  const results = useMemo(() => searchExercises(index, query), [index, query]);
+  const { results, ignored } = useMemo(() => searchWithInfo(index, query), [index, query]);
   const trimmed = query.trim();
 
   const item = (ref: VariantRef, via?: MatchField) => (
@@ -37,9 +37,16 @@ export function ExerciseBrowser({ query, onPick, below, aside, note, createHref 
 
   if (trimmed) {
     return results.length > 0 ? (
-      <ul className="pick-list" aria-label="Résultats">
-        {results.map((r) => item({ exercise: r.entry.exercise, variant: r.entry.variant }, r.via))}
-      </ul>
+      <>
+        {ignored.length > 0 && (
+          <p className="muted small ignored-words" data-testid="ignored-words">
+            Mot{ignored.length > 1 ? 's' : ''} non reconnu{ignored.length > 1 ? 's' : ''}, ignoré{ignored.length > 1 ? 's' : ''} : {ignored.join(', ')}
+          </p>
+        )}
+        <ul className="pick-list" aria-label="Résultats">
+          {results.map((r) => item({ exercise: r.entry.exercise, variant: r.entry.variant }, r.via))}
+        </ul>
+      </>
     ) : (
       <div className="no-result">
         <p className="muted">Aucun exercice trouvé.</p>

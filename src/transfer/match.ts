@@ -5,7 +5,8 @@
  */
 import type { Exercise } from '../domain/types';
 import { MUSCLE_GROUP_LABELS } from '../library/seed';
-import { nameTokens, normalizeName } from '../library/text';
+import { EQUIPMENT_WORDS, GROUP_WORDS, GROUP_WORDS_BY_GROUP, libraryVocabulary } from '../library/search';
+import { nameKey, nameTokens, normalizeName, unknownWordsOf, withoutPrecision } from '../library/text';
 
 export type MatchConfidence =
   /** Nom déjà confirmé lors d'un import précédent (synonyme appris). */
@@ -31,6 +32,8 @@ export interface MatchResult {
   candidates: MatchCandidate[];
   /** Précision non reconnue dans le nom (ex. « 70° »), utile pour créer une variante. */
   qualifier: string | null;
+  /** Mots du nom inconnus de la bibliothèque et du lexique : la proposition est alors à confirmer (§4.2.1). */
+  unknownWords: string[];
 }
 
 const CERTAIN = 0.85;
@@ -57,10 +60,23 @@ function variantNames(exercise: Exercise, variantId: string): string[] {
   return [`${exercise.name} ${variant.name}`, ...variant.synonyms];
 }
 
+/** L'exercice a ce matériel, par son champ matériel ou par son nom. */
+function hasEquipment(exercise: Exercise, variantId: string, word: string): boolean {
+  return nameTokens(exercise.equipment).includes(word) || variantNames(exercise, variantId).some((n) => nameTokens(n).includes(word));
+}
+
+/**
+ * Rapproche un nom importé de la bibliothèque, sur la forme comparable des noms (lexique appliqué, §4.2.1) :
+ * « latéral raise haltère » est le nom « Élévations latérales haltères ». Un mot de matériel départage les variantes ;
+ * un nom de groupe seul (« pecs ») ne désigne aucun exercice ; un mot inconnu rend la proposition « à confirmer ».
+ */
 export function matchExercise(sourceName: string, exercises: readonly Exercise[]): MatchResult {
   const normalized = normalizeName(sourceName);
+  const key = nameKey(sourceName);
   const tokens = nameTokens(sourceName);
   const active = exercises.filter((e) => !e.archived);
+  const vocabulary = libraryVocabulary(exercises);
+  const unknownWords = unknownWordsOf(withoutPrecision(sourceName), (t) => vocabulary.has(t));
 
   // Synonyme appris : correspondance exacte sur un nom déjà confirmé.
   for (const exercise of active) {
@@ -72,24 +88,34 @@ export function matchExercise(sourceName: string, exercises: readonly Exercise[]
           suggestion: variant.id,
           candidates: [{ variantId: variant.id, exerciseId: exercise.id, score: 2 }],
           qualifier: null,
+          unknownWords: [],
         };
       }
     }
   }
 
-  // Nom identique, mot pour mot, à un nom ou synonyme de la bibliothèque : reconnu sans ambiguïté
-  // (« leg curl allongé » est un synonyme du curl ischios, même s'il contient les mots « leg curl »).
+  // Nom identique, mot pour mot une fois le lexique appliqué (dans n'importe quel ordre), à un nom ou synonyme : reconnu
+  // sans ambiguïté (« leg curl allongé » est un synonyme du curl ischios, même s'il contient les mots « leg curl » ;
+  // « lateral raise dumbbell » est « Élévations latérales haltères »).
   const exact = active.flatMap((exercise) =>
     exercise.variants
-      .filter((v) => !v.archived && variantNames(exercise, v.id).some((n) => normalizeName(n) === normalized))
+      .filter((v) => !v.archived && variantNames(exercise, v.id).some((n) => nameKey(n) === key))
       .map((v) => ({ variantId: v.id, exerciseId: exercise.id, score: 1.5 })),
   );
   if (exact.length === 1) {
     const chosen = active.find((e) => e.id === exact[0]!.exerciseId)!;
-    return { confidence: 'certain', suggestion: exact[0]!.variantId, candidates: exact, qualifier: qualifierOf(sourceName, chosen) };
+    return { confidence: 'certain', suggestion: exact[0]!.variantId, candidates: exact, qualifier: qualifierOf(sourceName, chosen), unknownWords: [] };
   }
 
-  const candidates: MatchCandidate[] = [];
+  // Un nom de groupe seul (« pec », « pecs », « pectoraux ») désigne un groupe, pas un exercice :
+  // les exercices du groupe sont proposés et le choix est obligatoire.
+  if (tokens.length > 0 && tokens.every((t) => GROUP_WORDS.has(t))) {
+    const group = active.filter((e) => tokens.some((t) => GROUP_WORDS_BY_GROUP.get(e.primaryGroup)?.has(t)));
+    const list = group.map((e) => ({ variantId: e.id, exerciseId: e.id, score: CANDIDATE }));
+    return { confidence: list.length > 0 ? 'ambiguous' : 'none', suggestion: null, candidates: list, qualifier: null, unknownWords: [] };
+  }
+
+  let candidates: MatchCandidate[] = [];
   for (const exercise of active) {
     for (const variant of exercise.variants) {
       if (variant.archived) continue;
@@ -98,6 +124,12 @@ export function matchExercise(sourceName: string, exercises: readonly Exercise[]
     }
   }
   candidates.sort((a, b) => b.score - a.score || a.variantId.localeCompare(b.variantId));
+  // Un mot de matériel départage : si des candidats ont ce matériel, les autres sont écartés.
+  const exerciseOf = (c: MatchCandidate) => active.find((e) => e.id === c.exerciseId)!;
+  for (const word of tokens.filter((t) => EQUIPMENT_WORDS.has(t))) {
+    const fitting = candidates.filter((c) => hasEquipment(exerciseOf(c), c.variantId, word));
+    if (fitting.length > 0) candidates = fitting;
+  }
 
   const [first, second] = candidates;
   let confidence: MatchConfidence = 'none';
@@ -106,6 +138,8 @@ export function matchExercise(sourceName: string, exercises: readonly Exercise[]
     if (first.score >= PROBABLE && clear) confidence = first.score >= CERTAIN ? 'certain' : 'probable';
     else if (first.score >= CANDIDATE) confidence = 'ambiguous';
   }
+  // Un mot inconnu : l'exercice est proposé, jamais retenu d'office.
+  if (confidence === 'certain' && unknownWords.length > 0) confidence = 'probable';
   const suggestion = confidence === 'certain' || confidence === 'probable' ? first!.variantId : null;
   const chosen = suggestion ? active.find((e) => e.id === first!.exerciseId) : undefined;
   return {
@@ -113,6 +147,7 @@ export function matchExercise(sourceName: string, exercises: readonly Exercise[]
     suggestion,
     candidates: candidates.slice(0, 6),
     qualifier: chosen ? qualifierOf(sourceName, chosen) : null,
+    unknownWords,
   };
 }
 

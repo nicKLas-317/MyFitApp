@@ -236,6 +236,19 @@ La recherche doit reposer sur des métadonnées structurées, et non sur une sim
 
 Si aucun résultat n'est trouvé, afficher un message discret et permettre de créer un exercice personnalisé.
 
+### 4.2.1. Lexique d'équivalences (précision validée)
+
+Les notes mélangent le français, l'anglais et l'argot de salle : « latéral raise haltère » doit trouver « Élévations latérales haltères », exactement comme « élévation latérale haltères ».
+
+- Un lexique d'équivalences mot à mot, dans un fichier de données séparé et facile à compléter (`src/library/lexique.json`), associe chaque forme de référence à ses autres écritures. Il est appliqué après la normalisation (accents, majuscules, pluriels) et avant la comparaison, de la même façon sur la saisie et sur les noms et synonymes de la bibliothèque, en recherche comme à l'import. L'expression la plus longue l'emporte (« lat pulldown » avant « lats »).
+- Matériel et mouvements : haltère, haltères, dumbbell, dumbbells, DB → haltères ; poulie, câble, cable → poulie ; barre, barbell → barre ; élévation, élévations, raise → élévation ; latéral, latérale, latéraux, latérales, lateral → latéral ; développé, press → développé ; écarté, fly, flye → écarté ; tirage vertical, pulldown, lat pulldown, lat pull → tirage vertical ; tirage horizontal, seated row → tirage horizontal ; incliné, inclinée, incline → incliné ; assis, seated → assis ; allongé, lying → allongé ; assisté, assisted → assisté ; corde, rope → corde ; rowing, row → rowing.
+- Groupes musculaires : pec, pecs, pecto, pectos, pectoraux, chest → pectoraux ; épaule, épaules, shoulder, shoulders, delto, deltoïdes, delts → épaules ; dos, back, dorsaux, lats → dos ; biceps, bi, bis → biceps ; triceps, tri, tris → triceps ; jambe, jambes, leg, legs, quadri, quadriceps, ischio, ischios → jambes ; abdo, abdos, abdominaux, abs → abdominaux.
+- Expressions protégées, gardées mot pour mot : « pec deck » et « pec fly » trouvent toujours ces exercices précis, pas seulement le groupe pectoraux ; « leg curl » et « curl ischios » restent deux machines distinctes.
+- Un mot de matériel (haltères, machine, poulie, barre) départage les variantes : si des résultats ou des candidats ont ce matériel, les autres sont écartés (« latéral raise haltère » → haltères, jamais la machine). Si aucun ne l'a, il n'exclut rien (« tirage vertical machine » trouve le tirage vertical, à la poulie).
+- Mots inconnus de la bibliothèque et du lexique : la recherche ignore un mot inconnu si au moins deux autres mots sont reconnus et plus nombreux, et le signale discrètement (« Mot non reconnu, ignoré : xyz ») ; « tirage nuque » ne trouve rien. L'import propose l'exercice mais demande une confirmation explicite (« Mot non reconnu… Vérifiez l'exercice proposé », bouton « J'ai vérifié »), jamais retenu d'office.
+- À l'import, un nom de groupe seul (« pec », « pecs », « pectoraux ») désigne un groupe : les exercices du groupe sont proposés et le choix est obligatoire. Un nom identique à un nom ou synonyme de la bibliothèque une fois le lexique appliqué, dans n'importe quel ordre (« lateral raise dumbbell »), est reconnu directement.
+- Conséquence acceptée : « ischios » désigne les jambes (presse, leg extension compris).
+
 ### 4.3. Gestion des variantes
 
 Chaque variante dont les performances ne sont pas directement comparables doit posséder son propre historique.
@@ -1142,6 +1155,15 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 122. (§5.7) « Vélo » est une machine par défaut, sans inclinaison ; à l'import, « vélo » seul (ou « vélo classique ») → Vélo, « elliptique » ou « vélo elliptique » → Vélo elliptique.
 123. (§5.7) Une liste de machines enregistrée par une version antérieure reçoit « Vélo » une seule fois, avant « Autre », sans doublon de nom ; une liste à jour dont l'utilisateur a retiré « Vélo » ne le recrée pas.
 124. (§5.7, bout en bout) Au lancement, une liste enregistrée par la version 1.2.0 reçoit « Vélo » ; retiré puis enregistré, il n'est jamais recréé.
+
+### Lexique d'équivalences (§4.2.1)
+
+125. Recherche : « latéral raise haltère », « lateral raise dumbbell », « élévation latérale DB » et « élévation latérale haltères » → Élévations latérales haltères seules ; « curl biceps haltère » → curls aux haltères ; « pec fly machine » → Pec deck ; « rowing haltère » → Rowing haltère ; « développé épaules machine » et « shoulder press » → Développé épaules machine en tête ; « pec », « pecs », « pectoraux » → tous les exercices de pectoraux ; « pec deck » et « pec fly » → Pec deck.
+126. Import : les mêmes saisies sont reconnues ; « pec », « pecs », « pectoraux » proposent les exercices de pectoraux et demandent de choisir ; leg curl et curl ischios restent distincts ; « Epaules latéral raise » demande toujours de choisir.
+127. Un mot de matériel départage les variantes (haltères contre machine, poulie), sans rien exclure quand aucun résultat ne l'a.
+128. Mot inconnu : la recherche l'ignore si au moins deux autres mots sont reconnus et le signale ; « tirage nuque » ne trouve rien ; l'import propose l'exercice et bloque jusqu'à la confirmation.
+129. Chaque écriture du lexique a la forme de sa référence ; expressions protégées conservées ; les exercices de la bibliothèque restent tous distincts.
+130. (bout en bout) Recherche et import des saisies du point 125, mot ignoré affiché, import bloqué jusqu'à « J'ai vérifié ».
 
 Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
 
