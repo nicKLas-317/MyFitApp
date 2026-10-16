@@ -89,7 +89,7 @@ test.describe('Bibliothèque et recherche', () => {
     await page.getByRole('button', { name: /^Tirage vertical Prise moyenne/ }).click();
     await expect(page.getByRole('heading', { name: 'Tirage vertical' })).toBeVisible();
     await expect(page.getByText('Variante : Prise moyenne')).toBeVisible();
-    await expect(page.getByText('Dernière fois :')).toContainText('40 kg');
+    await expect(page.getByTestId('last-time')).toContainText('40 kg');
     await expect(page.getByTestId('sheet-next')).toHaveText('3 × 9');
     await expect(page.getByRole('list', { name: 'Historique de l’exercice' }).getByRole('listitem')).toHaveCount(2);
 

@@ -18,9 +18,7 @@ import {
 import { FeelingPicker } from './FeelingPicker';
 import { groupColorProps } from './groupColors';
 import { ExercisePicto } from './Pictogram';
-import { formatRecommendation } from './labels';
-import { StatusBadge } from './StatusBadge';
-import { ProgressMarkerBanner } from './ProgressMarker';
+import { TargetSummary } from './TargetSummary';
 import { WeightField } from './WeightField';
 
 interface Props {
@@ -31,7 +29,7 @@ interface Props {
 }
 
 export function ExerciseCard({ session, performance: p, open, onToggle }: Props) {
-  const { variants, ctxFor, commit } = useApp();
+  const { variants, ctxFor, commit, sessions } = useApp();
   const ref = variants.get(p.variantId);
   const ctx = ctxFor(p.variantId);
   const { state } = ctx;
@@ -83,18 +81,14 @@ export function ExerciseCard({ session, performance: p, open, onToggle }: Props)
 
       {open && (
         <div className="card-body">
-          <div className="last-perf">
-            <StatusBadge status={state?.lastStatus} />
-            {state ? (
-              <span>
-                Dernière fois : {formatKg(state.lastPerformance.weightKg)} · {state.lastPerformance.reps.join(' · ') || '—'}
-              </span>
-            ) : (
-              <span>Nouvel exercice</span>
-            )}
-          </div>
-
-          {shownMarker && <ProgressMarkerBanner marker={shownMarker} assisted={ctx.cfg.assisted} />}
+          <TargetSummary
+            state={state}
+            assisted={ctx.cfg.assisted}
+            lastDate={state ? (sessions.find((s) => s.id === state.lastSessionId)?.date ?? null) : null}
+            marker={shownMarker}
+            deviated={!!marker && !shownMarker}
+            start={{ sets: ctx.cfg.sets, reps: ctx.cfg.minReps }}
+          />
 
           <WeightField
             label={ctx.cfg.assisted ? 'Aide (kg)' : 'Poids (kg)'}
@@ -108,9 +102,6 @@ export function ExerciseCard({ session, performance: p, open, onToggle }: Props)
             <span>
               Cible : <strong data-testid="target">{planned} × {target}</strong>
             </span>
-            {rec && rec.kind !== 'keep' && rec.kind !== 'start' && !shownMarker && (
-              <span className="muted small">Prochaine : {formatRecommendation(rec, ctx.cfg.assisted)}</span>
-            )}
             <button type="button" className="link" onClick={() => setAdjust(!adjust)} aria-expanded={adjust}>
               Ajuster
             </button>

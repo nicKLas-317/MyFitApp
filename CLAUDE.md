@@ -129,7 +129,7 @@ Toutes les sections de l'application (cartes d'exercice, éléments de liste, gr
 - Bordure sur les quatre côtés, de même épaisseur (2 px) et de même couleur, coins arrondis (même rayon que les boutons).
 - Règle définie une seule fois : la liste des éléments encadrés est unique (`FRAME_SELECTOR`, `src/ui/frames.ts`) et le style est la seule règle `[data-frame]` de `styles.css`. Aucun écran ne définit sa propre bordure de section (pas de bordure gauche seule).
 - Couleurs vives et claires, qui alternent d'une section à la suivante dans l'ordre d'affichage : jaune, cyan, bleu clair, violet, rose magenta. Aucune couleur sombre ou terne, jamais de vert, d'orange ni de rouge (réservés aux statuts, §8). Contraste élevé sur le fond sombre.
-- Exceptions : les exercices prennent la couleur fixe de leur groupe musculaire (§3.2) ; dans le bilan (§19.3), chaque catégorie a sa couleur fixe, reprise sur son bouton de filtre (en progression : cyan ; stables : bleu clair ; en difficulté : rose magenta ; trop tôt pour conclure : jaune).
+- Cette alternance ne vaut que pour les écrans sans lien avec un groupe musculaire : accueil, réglages, « Mon poids », import/export. Les écrans liés à un exercice ou à des groupes suivent le §3.2 (couleur du groupe, ou cadre neutre).
 - Ne sont pas des cadres : les pastilles de statut (§8) et les cases du récapitulatif hebdomadaire (§19.6), qui gardent leur style.
 - Rien ne dépasse de l'écran d'un smartphone (vérifié à 412, 360 et 320 px de large) : les cartes d'exercice s'adaptent à la largeur, la ligne de série se resserre sous 380 px en gardant des boutons `+` et `−` de 48 px, et sous 340 px le bouton « Valider » passe sous ces boutons, sur toute la largeur.
 
@@ -147,17 +147,18 @@ Chaque groupe musculaire a sa propre couleur **fixe**, la même partout où elle
 | Jambes (et ses sous-groupes : quadriceps, ischio-jambiers, mollets, fessiers, adducteurs) | blanc |
 | Abdominaux | gris clair |
 
-- Elle s'applique :
-  - au cadre de chaque exercice de la bibliothèque, à la place de l'alternance, dans les sections de groupe comme dans les récents, les favoris, les résultats de recherche et l'écran « Ajouter un exercice » ;
+- Un exercice prend la couleur de son groupe principal. Elle s'applique :
+  - au cadre de chaque exercice de la bibliothèque, dans les sections de groupe comme dans les récents, les favoris, les résultats de recherche et l'écran « Ajouter un exercice » ;
   - au fond des pictogrammes d'exercice, avec un trait sombre ;
-  - à la carte de chaque exercice dans l'écran de séance ;
-  - à la carte de l'exercice sur sa fiche (dernière fois, prochaine cible).
-- Un exercice prend la couleur de son groupe principal.
-- Les autres cadres gardent l'alternance du §3.1, y compris les autres cadres de la fiche.
+  - à la carte de chaque exercice dans l'écran de séance, le récapitulatif de fin et le détail d'une séance passée, cadres intérieurs compris (repère de progression, confirmations) ;
+  - à chaque exercice listé dans le bilan ;
+  - sur la fiche d'un exercice et sur l'écran de modification d'un exercice : à **tous** les cadres (dernière fois / prochaine cible, variantes, autres noms, graphiques, historique), et à la prochaine cible elle-même (§5.3.2).
+- Aucun cadre d'une couleur de groupe n'apparaît sur un exercice d'un autre groupe. Sur les écrans liés à plusieurs groupes (séance, récapitulatif de fin, historique, détail d'une séance, bilan, bibliothèque, ajout d'un exercice, création d'un exercice), les cadres qui ne concernent pas un exercice précis (blocs de cardio, bandeaux d'information, confirmations, liste des séances, catégories du bilan) sont **neutres** : gris foncé discret `--frame-neutral`, distinct des sept couleurs (précision validée).
+- Les écrans sans lien avec un groupe (accueil, réglages, « Mon poids », import/export) gardent l'alternance du §3.1.
 - Les pastilles de statut et les cases du récapitulatif hebdomadaire ne changent pas : elles restent vert, orange ou rouge.
 - La correspondance est définie une seule fois : `GROUP_COLORS` dans `src/ui/groupColors.ts`.
   - Les teintes sont des jetons de `styles.css` : les cinq couleurs de la palette, plus le blanc `--frame-white` et le gris clair `--frame-grey`.
-  - Une seule règle CSS (`[data-group-color][data-frame]`) remplace l'alternance par la couleur du groupe.
+  - Une seule règle CSS donne la couleur du groupe à un cadre d'exercice et aux cadres qu'il contient (`[data-group-color]`, posé par `groupColorProps`) ; une seule règle rend neutres les cadres d'un écran lié à plusieurs groupes (`[data-neutral-frames]`, posé par `NEUTRAL_FRAMES`). La couleur du groupe l'emporte sur le neutre.
 - Les sept couleurs sont toutes distinctes et lisibles sur le fond noir (contraste d'au moins 7:1). Aucune n'est un vert, un orange ou un rouge.
 
 ## 4. Bibliothèque d'exercices illustrée
@@ -396,12 +397,24 @@ Prévoir une validation rapide de la préparation de l'exercice.
 
 ### 5.3.1. Repère de progression (précision validée)
 
-Quand j'ajoute un exercice à la séance et que sa cible a changé depuis ma dernière séance sur cet exercice-variante, un repère bien visible s'affiche en haut de l'exercice, au-dessus du champ de poids, dans le style du bandeau de changement de charge :
+Quand j'ajoute un exercice à la séance et que sa cible a changé depuis ma dernière séance sur cet exercice-variante, un repère bien visible s'affiche en haut de l'exercice, au-dessus du champ de poids, sous la prochaine cible (§5.3.2), dans le style du bandeau de changement de charge :
 
 - « ↑ +1 répétition : 3×9 (au lieu de 3×8) » pour une hausse de répétitions recommandée par le moteur (« +2 répétitions » si l'écart est de deux) ;
 - « ↑ Poids supérieur » et « ↓ Poids inférieur » comme avant, avec leur flèche (« ↑ Moins d'aide » et « ↓ Plus d'aide » pour un exercice assisté, §7.12).
 
 Pas de repère quand la cible ne change pas (palier conservé, exercice jamais réalisé, nouvelle cible déjà faite à la séance précédente). Le repère disparaît si je saisis une autre charge ou une autre cible : ce n'est plus la progression recommandée. Même repère sur la fiche de l'exercice, sous « Prochaine cible ». Il est dérivé de la recommandation du moteur et de la dernière performance réelle, sans règle nouvelle. Pas de vert, d'orange ni de rouge : ces couleurs sont réservées aux statuts (§8).
+
+### 5.3.2. Dernière fois / Prochaine cible (précision validée)
+
+Sur la fiche d'un exercice et en haut de sa carte dans l'écran de séance (au-dessus du champ de poids), le bloc est séparé en deux zones, avec un fin séparateur entre elles :
+
+- **Dernière fois** : zone secondaire. Libellé et texte gris clair, en plus petit, sur une seule ligne : poids · répétitions · date courte (« 15 oct. ») · pastille de statut. Sur un très petit écran (moins de 340 px), la ligne peut passer à la ligne plutôt que d'être tronquée. Pour un exercice jamais réalisé : « jamais réalisé ».
+- **Prochaine cible** : zone principale. Libellé visible, puis la cible en grand et en gras, dans la couleur du groupe de l'exercice (§3.2) : « 3 × 9 à 12 kg », « Poids supérieur · 3 × 8 ». Sous la cible, toujours une indication :
+  - quand la cible change : le repère de progression (§5.3.1) ;
+  - quand la cible est identique à la dernière fois : une mention discrète « = Même cible : consolide » ;
+  - pour un exercice jamais réalisé : « Poids de départ à saisir ».
+- Pendant la séance, si je saisis une autre charge ou une autre cible que celle recommandée, le repère disparaît (§5.3.1) et aucune mention ne le remplace : ce n'est plus la progression recommandée.
+- Pas de vert, d'orange ni de rouge en dehors de la pastille de statut.
 
 ### 5.4. Enregistrer les séries
 
@@ -1271,8 +1284,8 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 
 143. Palette des cadres : cinq couleurs vives et claires (contraste d'au moins 7:1 sur le fond), ni vert, ni orange, ni rouge ; une seule règle de bordure (quatre côtés), aucune bordure gauche seule.
 144. Les cadres sont numérotés dans l'ordre d'affichage et leur couleur alterne ; la liste des éléments encadrés est unique et exclut pastilles de statut et cases du récapitulatif.
-145. (bout en bout) Bilan : un bouton par catégorie et « Tous » (actif par défaut) ; une catégorie vide est visible mais désactivée ; un appui n'affiche que la catégorie et remplit le bouton de sa couleur ; un nouvel appui ou « Tous » réaffiche tout ; le filtre est mémorisé après rechargement ; chaque catégorie garde sa couleur sur son bouton et sa section.
-146. (bout en bout) Sur chaque écran (accueil, séance, fiche, bibliothèque, historique, détail de séance, bilan, Mon poids, réglages, import/export) : chaque cadre a une bordure de 2 px de la même couleur de la palette sur les quatre côtés et des coins arrondis ; deux cadres consécutifs n'ont pas la même couleur (sauf les couleurs fixes : catégories du bilan, groupes musculaires) ; un cadre d'exercice a la couleur de son groupe ; pastilles et cases du récapitulatif sans cadre ; rien ne dépasse de l'écran, et la ligne de série reste dans sa carte à 360 et 320 px.
+145. (bout en bout) Bilan : un bouton par catégorie et « Tous » (actif par défaut) ; une catégorie vide est visible mais désactivée ; un appui n'affiche que la catégorie et remplit le bouton ; un nouvel appui ou « Tous » réaffiche tout ; le filtre est mémorisé après rechargement ; boutons et sections de catégorie neutres, chaque exercice à la couleur de son groupe.
+146. (bout en bout) Sur chaque écran (accueil, séance, fiche, bibliothèque, historique, détail de séance, bilan, Mon poids, réglages, import/export) : chaque cadre a une bordure de 2 px de la même couleur sur les quatre côtés et des coins arrondis ; accueil, Mon poids, réglages et import/export en couleurs alternées (deux cadres consécutifs jamais de la même couleur) ; fiche entièrement à la couleur du groupe ; autres écrans : exercices à la couleur de leur groupe, le reste neutre ; pastilles et cases du récapitulatif sans cadre ; rien ne dépasse de l'écran, et la ligne de série reste dans sa carte à 360 et 320 px.
 
 ### Bibliothèque version 7 : curl à la barre, mollets, abducteurs, adducteurs (§4.0, §4.2.1)
 
@@ -1297,7 +1310,11 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 ### Couleurs des groupes musculaires (§3.2)
 
 161. Une couleur fixe par groupe, définie une seule fois : épaules jaune, pectoraux cyan, triceps bleu clair, dos violet, biceps rose, jambes blanc (sous-groupes compris), abdominaux gris clair ; toutes distinctes et lisibles sur le fond noir ; une seule règle CSS ; plus aucune teinte de pictogramme écrite à part.
-162. (bout en bout) Bibliothèque : chaque exercice, dans chaque section de groupe, a la bordure et le fond de pictogramme de son groupe ; fiche : la carte de l'exercice a la couleur du groupe, les autres cadres alternent ; séance : chaque carte d'exercice a la couleur de son groupe ; accueil inchangé ; pastilles de statut et cases du récapitulatif sans couleur de groupe.
+162. (bout en bout) Bibliothèque : chaque exercice, dans chaque section de groupe, a la bordure et le fond de pictogramme de son groupe ; fiche : tous les cadres ont la couleur du groupe de l'exercice ; détail d'une séance et séance : chaque carte d'exercice a la couleur de son groupe, un bloc de cardio est neutre ; accueil inchangé ; pastilles de statut et cases du récapitulatif sans couleur de groupe.
+
+### Dernière fois / Prochaine cible (§5.3.2)
+
+163. (bout en bout) Fiche et carte de séance : « Dernière fois » en petit, gris clair, sur une ligne (poids, répétitions, date courte, pastille), jamais tronquée à 360 et 320 px ; « Prochaine cible » en grand, en gras, dans la couleur du groupe, avec le poids ; séparateur entre les zones ; repère quand la cible change, « = Même cible : consolide » quand elle est identique, « Poids de départ à saisir » pour un exercice jamais réalisé ; en séance, une autre charge saisie retire repère et mention ; aucune couleur de statut hors de la pastille.
 
 Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
 
@@ -1411,8 +1428,8 @@ Ne jamais déclarer un exercice en stagnation sur la base d'une seule séance di
 - Un exercice qui n'a qu'une seule séance évaluée est classé « Trop tôt pour conclure ».
 - « En difficulté » (au moins 2 rouges consécutives en cours) l'emporte sur « En progression ».
 - Libellé de « Trop tôt pour conclure » : « Une seule séance sur cet exercice. »
-- Présentation : un résumé en tête donne le nombre d'exercices de chaque catégorie ; chaque catégorie a un titre de section bien visible, un pictogramme (↗ en progression, → stables, ↘ en difficulté, … trop tôt pour conclure), une couleur de cadre fixe (§3.1) et son nombre d'exercices. Pas de vert, d'orange ni de rouge (réservés aux statuts, §8).
-- Filtres : le résumé du haut est une rangée de vrais boutons rectangulaires arrondis, au style des boutons de l'accueil, un par catégorie (pictogramme, titre, nombre d'exercices) et un bouton « Tous ». Chaque bouton est bordé de la couleur fixe de sa catégorie (§3.1). Un appui n'affiche que la catégorie choisie et remplit le bouton de sa couleur ; un nouvel appui sur le bouton actif, ou « Tous », réaffiche tout. Une catégorie sans exercice reste visible mais n'est pas sélectionnable. Par défaut tout est affiché ; le dernier filtre est mémorisé sur l'appareil (s'il ne contient plus d'exercice, tout est affiché). « Dernières évolutions » n'apparaît que sans filtre.
+- Présentation : un résumé en tête donne le nombre d'exercices de chaque catégorie ; chaque catégorie a un titre de section bien visible, un pictogramme (↗ en progression, → stables, ↘ en difficulté, … trop tôt pour conclure), un cadre neutre et son nombre d'exercices ; chaque exercice listé est encadré à la couleur de son groupe (§3.2). Pas de vert, d'orange ni de rouge (réservés aux statuts, §8).
+- Filtres : le résumé du haut est une rangée de vrais boutons rectangulaires arrondis, au style des boutons de l'accueil, un par catégorie (pictogramme, titre, nombre d'exercices) et un bouton « Tous ». Les boutons sont neutres (les couleurs désignent les groupes, §3.2). Un appui n'affiche que la catégorie choisie et remplit le bouton, comme un bouton principal ; un nouvel appui sur le bouton actif, ou « Tous », réaffiche tout. Une catégorie sans exercice reste visible mais n'est pas sélectionnable. Par défaut tout est affiché ; le dernier filtre est mémorisé sur l'appareil (s'il ne contient plus d'exercice, tout est affiché). « Dernières évolutions » n'apparaît que sans filtre.
 - Un appui sur un exercice ouvre sa fiche directement sur son graphique d'évolution (§19.2) ; le retour ramène au bilan. Le bilan est accessible depuis l'accueil (§3) et depuis l'historique.
 
 ### 19.4. Séparation entre historique réel et recommandation

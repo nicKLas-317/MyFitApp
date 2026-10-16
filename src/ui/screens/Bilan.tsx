@@ -3,6 +3,7 @@ import { useApp } from '../../app/store';
 import { analyzeProgress, recentChanges, type ProgressCategory } from '../../analysis/progress';
 import { displayName } from '../../library/catalog';
 import { formatIsoDay, formatKg } from '../../session/format';
+import { exerciseColorProps, NEUTRAL_FRAMES } from '../groupColors';
 
 const SECTIONS: { category: ProgressCategory; title: string; icon: string; hint: string }[] = [
   { category: 'progressing', title: 'En progression', icon: '↗', hint: 'Au moins un palier validé sur les 6 dernières séances.' },
@@ -36,7 +37,7 @@ function saveFilter(filter: BilanFilter): void {
 
 /**
  * Bilan synthétique facultatif (§19.3) : classement factuel, sans score inventé. Catégories bien distinctes
- * (pictogramme, style, nombre d'exercices), sans les couleurs des statuts ; un exercice ouvre sa fiche sur son graphique.
+ * (pictogramme, titre, nombre d'exercices), en cadres neutres ; chaque exercice à la couleur de son groupe (§3.2) ; un exercice ouvre sa fiche sur son graphique.
  */
 export function Bilan() {
   const { replay, sessions, variants } = useApp();
@@ -56,7 +57,7 @@ export function Bilan() {
   };
 
   return (
-    <main className="screen bilan">
+    <main className="screen bilan" {...NEUTRAL_FRAMES}>
       <header className="simple-header">
         <a href="#/" className="back" aria-label="Accueil">
           ‹
@@ -106,7 +107,7 @@ export function Bilan() {
             <ul className="bilan-list">
               {list.map((p) => (
                 <li key={p.variantId}>
-                  <a className="bilan-item" href={`#/exercice/${encodeURIComponent(p.variantId)}/evolution`}>
+                  <a className="bilan-item" href={`#/exercice/${encodeURIComponent(p.variantId)}/evolution`} {...exerciseColorProps(variants.get(p.variantId)?.exercise)}>
                     <span className="bilan-item-text">
                       <strong>{name(p.variantId)}</strong>
                       <span className="muted small">

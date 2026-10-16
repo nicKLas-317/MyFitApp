@@ -8,6 +8,7 @@ import { FEELING_LABELS, formatRecommendation } from '../labels';
 import { StatusBadge } from '../StatusBadge';
 import { cardioOf } from '../../cardio/model';
 import { CardioLine } from '../CardioForm';
+import { NEUTRAL_FRAMES, exerciseColorProps } from '../groupColors';
 
 /** Récapitulatif de fin de séance (§5.6) : la séance est déjà enregistrée, le nom est facultatif. */
 export function Recap({ sessionId }: { sessionId: string }) {
@@ -37,7 +38,7 @@ export function Recap({ sessionId }: { sessionId: string }) {
   }
 
   return (
-    <main className="screen recap">
+    <main className="screen recap" {...NEUTRAL_FRAMES}>
       <h1>Séance terminée</h1>
       <p className="muted">
         {session.startedAt !== null && (
@@ -89,7 +90,7 @@ export function Recap({ sessionId }: { sessionId: string }) {
           const ev = evaluation(p.variantId);
           const next = replay.profile.variants[p.variantId]?.recommendation;
           return (
-            <li key={p.variantId} className="card recap-item" data-variant={p.variantId}>
+            <li key={p.variantId} className="card recap-item" data-variant={p.variantId} {...exerciseColorProps(variants.get(p.variantId)?.exercise)}>
               <div className="recap-head">
                 <strong>{displayName(variants.get(p.variantId))}</strong>
                 <StatusBadge status={ev?.status} />

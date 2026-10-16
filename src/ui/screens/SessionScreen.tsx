@@ -8,6 +8,7 @@ import { formatDuration } from '../../session/format';
 import { ExerciseCard } from '../ExerciseCard';
 import { finishLabel, MissingFeelings } from '../MissingFeelings';
 import { SaveIndicator } from '../SaveIndicator';
+import { NEUTRAL_FRAMES } from '../groupColors';
 
 export function SessionScreen({ openVariantId }: { openVariantId: string | undefined }) {
   const { active, commit, setLastFinish, cardioMachines } = useApp();
@@ -48,7 +49,7 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
   }
 
   return (
-    <main className="screen session">
+    <main className="screen session" {...NEUTRAL_FRAMES}>
       <header className="session-header">
         <a href="#/" className="back" aria-label="Accueil">
           ‹

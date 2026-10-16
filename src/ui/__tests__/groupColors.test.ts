@@ -42,7 +42,13 @@ describe('Couleurs fixes des groupes musculaires (§3.2)', () => {
     for (const g of ['quadriceps', 'ischio-jambiers', 'mollets', 'fessiers', 'adducteurs'] as const) expect(colorGroupOf(g), g).toBe('jambes');
     expect(groupColorProps('mollets')).toEqual({ 'data-group-color': 'jambes', style: { '--group-color': 'var(--frame-white)' } });
     // Une seule règle CSS applique la couleur du groupe aux cadres ; plus aucune teinte de groupe écrite à part.
-    expect(styles.match(/\[data-group-color\]\[data-frame\] \{\s*--frame-color: var\(--group-color\);\s*\}/g)).toHaveLength(1);
+    expect(styles.match(/\[data-group-color\]\[data-frame\],\s*\[data-group-color\] \[data-frame\] \{\s*--frame-color: var\(--group-color\);\s*\}/g)).toHaveLength(1);
+    // Cadres neutres (écrans liés à plusieurs groupes) : gris foncé discret, distinct des sept couleurs de groupe.
+    const neutral = token('--frame-neutral')!;
+    expect(styles.match(/\[data-neutral-frames\] \[data-frame\] \{\s*--frame-color: var\(--frame-neutral\);\s*\}/g)).toHaveLength(1);
+    for (const c of colors) expect(contrast(c, neutral), `${c} / neutre`).toBeGreaterThanOrEqual(2.5);
+    // La règle des groupes vient après la règle neutre : elle l'emporte pour un exercice.
+    expect(styles.indexOf('[data-group-color] [data-frame]')).toBeGreaterThan(styles.indexOf('[data-neutral-frames] [data-frame]'));
     expect(styles).not.toMatch(/\.picto-(dos|pectoraux|epaules|biceps|triceps|jambes|abdominaux)/);
     expect(styles).toMatch(/\.picto \{[^}]*background: var\(--group-color/);
   });

@@ -11,11 +11,11 @@ import { LineChart } from '../LineChart';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
 import { formatIsoDay, formatKg } from '../../session/format';
 import { findPerformance } from '../../session/ops';
-import { FEELING_LABELS, formatRecommendation } from '../labels';
+import { FEELING_LABELS } from '../labels';
 import { groupColorProps } from '../groupColors';
 import { equipmentLabel, ExercisePicto } from '../Pictogram';
 import { StatusBadge } from '../StatusBadge';
-import { ProgressMarkerBanner } from '../ProgressMarker';
+import { TargetSummary } from '../TargetSummary';
 
 /** Fiche d'un exercice-variante (§4) : dernière performance, prochaine cible, statut, variantes et historique. */
 /** Fiche d'un exercice-variante. `fromBilan` : ouverte depuis le bilan, directement sur le graphique d'évolution. */
@@ -79,7 +79,7 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
   }
 
   return (
-    <main className="screen sheet">
+    <main className="screen sheet" {...groupColorProps(exercise.primaryGroup)}>
       <header className="simple-header">
         <a href={fromBilan ? '#/bilan' : '#/bibliotheque'} className="back" aria-label={fromBilan ? 'Bilan' : 'Bibliothèque'}>
           ‹
@@ -139,32 +139,15 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
 
       {archived && <p className="banner info">Exercice archivé : masqué de la recherche, historique conservé.</p>}
 
-      <section className="card sheet-status" {...groupColorProps(exercise.primaryGroup)}>
-        {state ? (
-          <>
-            <div className="last-perf">
-              <StatusBadge status={state.lastStatus} />
-              <span>
-                Dernière fois : {ctx.cfg.assisted && 'aide '}
-                <strong>{formatKg(state.lastPerformance.weightKg)}</strong> · {state.lastPerformance.reps.join(' · ')}
-                {last && <span className="muted small"> ({formatIsoDay(last.session.date)})</span>}
-              </span>
-            </div>
-            <p>
-              Prochaine cible : <strong data-testid="sheet-next">{formatRecommendation(state.recommendation, ctx.cfg.assisted)}</strong>
-              {state.recommendation.kind === 'keep' || state.recommendation.kind === 'reps_up' ? ` à ${formatKg(state.palier.weightKg)}` : ''}
-            </p>
-            {progressMarker(state) && <ProgressMarkerBanner marker={progressMarker(state)!} assisted={ctx.cfg.assisted} />}
-          </>
-        ) : (
-          <p>
-            Jamais réalisé : poids de départ à saisir, cible{' '}
-            <strong data-testid="sheet-next">
-              {ctx.cfg.sets} × {ctx.cfg.minReps}
-            </strong>
-            .
-          </p>
-        )}
+      <section className="card sheet-status">
+        <TargetSummary
+          state={state}
+          assisted={ctx.cfg.assisted}
+          lastDate={last?.session.date ?? null}
+          marker={progressMarker(state)}
+          start={{ sets: ctx.cfg.sets, reps: ctx.cfg.minReps }}
+          targetTestId="sheet-next"
+        />
       </section>
 
       <div className="sheet-actions">

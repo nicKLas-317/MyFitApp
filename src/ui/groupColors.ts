@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import type { MuscleGroup } from '../domain/types';
+import type { Exercise, MuscleGroup } from '../domain/types';
 
 /** Groupes qui ont une couleur propre ; les sous-groupes des jambes prennent celle des jambes. */
 export type ColorGroup = 'epaules' | 'triceps' | 'dos' | 'pectoraux' | 'biceps' | 'jambes' | 'abdominaux';
@@ -46,3 +46,14 @@ export function groupColorProps(group: MuscleGroup): { 'data-group-color': Color
   const color = colorGroupOf(group);
   return { 'data-group-color': color, style: { '--group-color': `var(${GROUP_COLORS[color]})` } as CSSProperties };
 }
+
+/** Les mêmes attributs pour un exercice connu ; rien pour un exercice introuvable. */
+export function exerciseColorProps(exercise: Exercise | undefined): Partial<ReturnType<typeof groupColorProps>> {
+  return exercise ? groupColorProps(exercise.primaryGroup) : {};
+}
+
+/**
+ * Écran lié à des exercices de plusieurs groupes (séance, détail et récapitulatif d'une séance, historique, bilan,
+ * bibliothèque) : les cadres qui ne concernent pas un exercice précis sont neutres, jamais d'une couleur de groupe.
+ */
+export const NEUTRAL_FRAMES = { 'data-neutral-frames': '' } as const;

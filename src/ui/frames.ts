@@ -9,6 +9,7 @@ export const FRAME_SELECTOR = [
   '.frame',
   '.card',
   '.pick-item',
+  '.bilan-item',
   '.history-item',
   '.chart',
   '.reco',

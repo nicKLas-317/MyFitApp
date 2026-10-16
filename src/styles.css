@@ -22,6 +22,8 @@
   /* Couleurs de groupe en plus de la palette (§3.2) : jambes et abdominaux. */
   --frame-white: #f4f5f7; /* blanc */
   --frame-grey: #b4bcc8; /* gris clair */
+  /* Cadre neutre : écrans liés à plusieurs groupes, pour ce qui ne concerne pas un exercice précis (§3.2). */
+  --frame-neutral: #4a5163;
   --frame-width: 2px;
   --tap: 48px;
   color-scheme: dark;
@@ -271,10 +273,74 @@ h1 {
   gap: 12px;
 }
 
-.last-perf {
+/*
+ * Dernière fois / Prochaine cible (§5.3.2), sur la fiche et dans la carte de séance : deux zones séparées.
+ * Dernière fois : secondaire, petite, gris clair, sur une ligne. Prochaine cible : principale, en grand et en gras,
+ * dans la couleur du groupe de l'exercice. Aucune couleur de statut hors de la pastille.
+ */
+.target-summary {
+  display: grid;
+  gap: 10px;
+}
+
+.last-zone {
+  margin: 0;
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.last-zone .zone-label {
+  flex: none;
+  font-weight: 600;
+}
+
+.last-values {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.last-zone .status {
+  width: 16px;
+  height: 16px;
+}
+
+.next-zone {
+  display: grid;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.next-zone .zone-label {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.next-target {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--group-color, var(--text));
+}
+
+.next-target strong {
+  font-weight: inherit;
+}
+
+.next-hint {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
 }
 
 .reco {
@@ -422,8 +488,14 @@ input[aria-invalid='true'] {
   }
 }
 
-/* Très petit écran (320 px) : « Valider » passe sous les boutons − et +, sur toute la largeur de la ligne. */
+/* Très petit écran (320 px) : « Valider » passe sous les boutons − et +, sur toute la largeur de la ligne ;
+   « Dernière fois » peut passer à la ligne plutôt que d'être tronquée. */
 @media (max-width: 340px) {
+  .last-zone {
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+
   .set.next {
     flex-wrap: wrap;
     padding-bottom: 8px;
@@ -1488,11 +1560,6 @@ fieldset {
   background: var(--surface);
 }
 
-
-
-
-
-
 .bilan-title {
   display: flex;
   align-items: center;
@@ -1530,18 +1597,17 @@ fieldset {
   list-style: none;
   margin: 8px 0 0;
   padding: 0;
+  display: grid;
+  gap: 8px;
 }
 
-.bilan-list li + li {
-  border-top: 1px solid var(--border);
-}
-
+/* Chaque exercice du bilan est encadré à la couleur de son groupe (§3.2). */
 .bilan-item {
   display: flex;
   align-items: center;
   gap: 10px;
   min-height: var(--tap);
-  padding: 8px 0;
+  padding: 8px 12px;
   color: var(--text);
   text-decoration: none;
 }
@@ -1593,7 +1659,12 @@ fieldset {
  * Couleur fixe du groupe musculaire (§3.2) : exercices de la bibliothèque, carte d'exercice de la séance et de la fiche.
  * Elle remplace l'alternance pour ces cadres seulement (correspondance unique : src/ui/groupColors.ts).
  */
-[data-group-color][data-frame] {
+[data-neutral-frames] [data-frame] {
+  --frame-color: var(--frame-neutral);
+}
+
+[data-group-color][data-frame],
+[data-group-color] [data-frame] {
   --frame-color: var(--group-color);
 }
 
@@ -1615,29 +1686,7 @@ fieldset.frame > legend + * {
   clear: both;
 }
 
-/* Bilan (§19.3) : couleur fixe par catégorie, reprise sur son bouton de filtre. */
-.bilan-progressing {
-  --frame-color: var(--frame-2);
-  --category-color: var(--frame-2);
-}
-
-.bilan-stable {
-  --frame-color: var(--frame-3);
-  --category-color: var(--frame-3);
-}
-
-.bilan-difficulty {
-  --frame-color: var(--frame-5);
-  --category-color: var(--frame-5);
-}
-
-.bilan-new {
-  --frame-color: var(--frame-1);
-  --category-color: var(--frame-1);
-}
-
-
-/* Filtres du bilan : vrais boutons, au style des boutons de l'accueil, bordés de la couleur de leur catégorie. */
+/* Filtres du bilan : vrais boutons, au style des boutons de l'accueil, neutres (les couleurs désignent les groupes, §3.2). */
 .bilan-filters {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1651,13 +1700,12 @@ fieldset.frame > legend + * {
   justify-content: flex-start;
   gap: 8px;
   padding: 8px 12px;
-  border: var(--frame-width) solid var(--category-color);
+  border: var(--frame-width) solid var(--frame-neutral);
   text-align: left;
   line-height: 1.2;
 }
 
 .bilan-filter.bilan-all {
-  --category-color: var(--text);
   grid-column: 1 / -1;
   justify-content: center;
 }
@@ -1670,11 +1718,11 @@ fieldset.frame > legend + * {
   flex: none;
 }
 
-/* Filtre actif : fond plein de la couleur de la catégorie. */
+/* Filtre actif : fond plein, comme les boutons principaux. */
 .bilan-filter[aria-pressed='true'] {
-  background: var(--category-color);
-  border-color: var(--category-color);
-  color: var(--bg);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
 }
 
 .bilan-filter:disabled {

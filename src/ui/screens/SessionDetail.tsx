@@ -11,6 +11,7 @@ import { FEELING_LABELS } from '../labels';
 import { StatusBadge } from '../StatusBadge';
 import { addCardio, cardioOf, removeCardio, updateCardio } from '../../cardio/model';
 import { CardioForm, CardioList } from '../CardioForm';
+import { NEUTRAL_FRAMES, exerciseColorProps } from '../groupColors';
 
 const FEELING_ORDER: Feeling[] = ['tres_bien', 'bien', 'moyen', 'mal', 'tres_mal', 'inconnu'];
 
@@ -72,7 +73,7 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
   }
 
   return (
-    <main className="screen session-detail">
+    <main className="screen session-detail" {...NEUTRAL_FRAMES}>
       <header className="simple-header">
         <a href="#/historique" className="back" aria-label="Historique">
           ‹
@@ -93,7 +94,7 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
 
       <ul className="recap-list" aria-label="Exercices de la séance">
         {session.performances.map((p) => (
-          <li key={p.variantId} className="card recap-item" data-variant={p.variantId}>
+          <li key={p.variantId} className="card recap-item" data-variant={p.variantId} {...exerciseColorProps(variants.get(p.variantId)?.exercise)}>
             <div className="recap-head">
               <a href={`#/exercice/${encodeURIComponent(p.variantId)}`}>
                 <strong>{displayName(variants.get(p.variantId))}</strong>

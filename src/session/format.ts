@@ -62,6 +62,14 @@ export function formatIsoDay(date: string): string {
   return DAY_FORMAT.format(new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1));
 }
 
+const SHORT_DAY_FORMAT = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' });
+
+/** Date YYYY-MM-DD courte : « 15 oct. ». */
+export function formatShortDay(date: string): string {
+  const [y, m, d] = date.split('-').map(Number);
+  return SHORT_DAY_FORMAT.format(new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1));
+}
+
 /** Nom d'une séance importée sans heure connue : « Séance du 12 octobre 2026 ». */
 export function importedSessionName(date: string): string {
   return `Séance du ${formatIsoDay(date)}`;

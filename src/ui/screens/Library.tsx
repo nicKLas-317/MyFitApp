@@ -4,6 +4,7 @@ import { navigate } from '../../app/hooks';
 import { displayName } from '../../library/catalog';
 import { findPerformance } from '../../session/ops';
 import { ExerciseBrowser } from '../library/ExerciseBrowser';
+import { NEUTRAL_FRAMES } from '../groupColors';
 
 /** Bibliothèque d'exercices (§4) : recherche unique, fiches, création et exercices archivés. */
 export function Library() {
@@ -15,7 +16,7 @@ export function Library() {
     .sort((a, b) => displayName(a).localeCompare(displayName(b), 'fr'));
 
   return (
-    <main className="screen picker library">
+    <main className="screen picker library" {...NEUTRAL_FRAMES}>
       <header className="picker-header">
         <a href="#/" className="back" aria-label="Accueil">
           ‹

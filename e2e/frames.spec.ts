@@ -15,8 +15,9 @@ const GROUP_RGB: Record<string, string> = {
   jambes: 'rgb(244, 245, 247)',
   abdominaux: 'rgb(180, 188, 200)',
 };
-const CYAN = PALETTE[1];
-const YELLOW = PALETTE[0];
+/** Cadre neutre (§3.2) et fond du filtre actif du bilan (bouton principal). */
+const NEUTRAL = 'rgb(74, 81, 99)';
+const ACCENT = 'rgb(91, 157, 255)';
 
 /** Importe les données de départ anonymisées, comme un fichier choisi sur le téléphone. */
 async function importDepart(page: Page): Promise<void> {
@@ -31,7 +32,7 @@ async function importDepart(page: Page): Promise<void> {
   await expect(page.getByText('Import terminé : 2 séances ajoutées.')).toBeVisible();
 }
 
-type FrameInfo = { label: string; frame: string | null; widths: string[]; styles: string[]; colors: string[]; radii: string[]; bilan: boolean; group: string | null };
+type FrameInfo = { label: string; frame: string | null; widths: string[]; styles: string[]; colors: string[]; radii: string[]; bilan: boolean; group: string | null; neutral: boolean };
 
 /** Relève, dans l'ordre d'affichage, la bordure calculée de chaque cadre de l'écran. */
 function readFrames(page: Page): Promise<FrameInfo[]> {
@@ -48,14 +49,20 @@ function readFrames(page: Page): Promise<FrameInfo[]> {
         colors: sides.map((s) => c.getPropertyValue(`border-${s}-color`)),
         radii: corners.map((s) => c.getPropertyValue(`border-${s}-radius`)),
         bilan: el.classList.contains('bilan-section'),
-        group: el.getAttribute('data-group-color'),
+        // Couleur de groupe portée par le cadre ou par un conteneur (fiche, carte d'exercice).
+        group: el.closest('[data-group-color]')?.getAttribute('data-group-color') ?? null,
+        neutral: !!el.closest('[data-neutral-frames]'),
       };
     });
   }, FRAME_SELECTOR);
 }
 
-/** Vérifie la règle commune des cadres (§3.1) sur l'écran affiché. */
-async function checkFrames(page: Page, screen: string, minimum = 1): Promise<void> {
+/**
+ * Vérifie la règle commune des cadres (§3.1) sur l'écran affiché, et sa coloration (§3.2) : « alternance » (écrans
+ * sans lien avec un groupe), « neutre » (écrans liés à plusieurs groupes : exercices à leur couleur, le reste neutre)
+ * ou le groupe de l'exercice (fiche : tous les cadres).
+ */
+async function checkFrames(page: Page, screen: string, minimum: number, coloring: 'alternance' | 'neutre' | string): Promise<void> {
   await expect(page.locator('[data-frame]').first()).toBeAttached();
   const frames = await readFrames(page);
   expect(frames.length, `${screen} : nombre de cadres`).toBeGreaterThanOrEqual(minimum);
@@ -65,15 +72,19 @@ async function checkFrames(page: Page, screen: string, minimum = 1): Promise<voi
     expect(f.widths, where).toEqual(['2px', '2px', '2px', '2px']);
     expect(f.styles, where).toEqual(['solid', 'solid', 'solid', 'solid']);
     expect(new Set(f.colors).size, `${where} : même couleur sur les quatre côtés`).toBe(1);
-    // Cadre d'un exercice : couleur fixe de son groupe (§3.2) ; sinon, couleur alternée de la palette.
+    // Cadre d'un exercice : couleur fixe de son groupe (§3.2) ; sinon neutre, ou couleur alternée de la palette.
     if (f.group) expect(f.colors[0], `${where} : couleur du groupe ${f.group}`).toBe(GROUP_RGB[f.group]);
+    else if (f.neutral) expect(f.colors[0], `${where} : neutre`).toBe(NEUTRAL);
     else expect(PALETTE, `${where} : couleur de la palette`).toContain(f.colors[0]);
+    if (coloring === 'alternance') expect([f.group, f.neutral], `${where} : alternance`).toEqual([null, false]);
+    else if (coloring === 'neutre') expect(f.group !== null || f.neutral, `${where} : exercice ou neutre`).toBe(true);
+    else expect(f.group, `${where} : couleur du groupe de l'exercice`).toBe(coloring);
     expect(f.radii, where).toEqual(['14px', '14px', '14px', '14px']);
   }
   // Deux cadres consécutifs n'ont jamais la même couleur, sauf les couleurs fixes (catégories du bilan, groupes).
   frames.slice(1).forEach((f, i) => {
     const prev = frames[i]!;
-    if (f.bilan || prev.bilan || f.group || prev.group) return;
+    if (f.bilan || prev.bilan || f.group || prev.group || f.neutral || prev.neutral) return;
     expect(f.colors[0], `${screen} : ${prev.label} puis ${f.label}`).not.toBe(prev.colors[0]);
   });
   // Ni les pastilles de statut ni les cases du récapitulatif ne sont des cadres.
@@ -105,7 +116,7 @@ test.describe('Filtres du bilan et cadres de section', () => {
     await filters.getByRole('button', { name: /^Stables/ }).click({ force: true });
     await expect(all).toHaveAttribute('aria-pressed', 'true');
 
-    // Vrais boutons rectangulaires arrondis, au style des boutons de l'accueil, bordés de la couleur de la catégorie.
+    // Vrais boutons rectangulaires arrondis, au style des boutons de l'accueil, neutres : les couleurs désignent les groupes.
     const look = (b: typeof all) =>
       b.evaluate((el) => {
         const c = getComputedStyle(el);
@@ -113,19 +124,22 @@ test.describe('Filtres du bilan et cadres de section', () => {
       });
     const idle = await look(progressing);
     expect(idle.radius).toBe('14px');
-    expect(idle.border).toBe(CYAN);
-    expect(idle.background).not.toBe(CYAN);
+    expect(idle.border).toBe(NEUTRAL);
+    expect(idle.background).not.toBe(ACCENT);
     expect(idle.height).toBeGreaterThanOrEqual(48);
-    expect((await look(early)).border).toBe(YELLOW);
-    // Chaque catégorie garde sa couleur fixe, reprise sur sa section.
-    expect(await progressingRegion.evaluate((el) => getComputedStyle(el).borderTopColor)).toBe(CYAN);
-    expect(await earlyRegion.evaluate((el) => getComputedStyle(el).borderTopColor)).toBe(YELLOW);
+    expect((await look(early)).border).toBe(NEUTRAL);
+    // Sections de catégorie neutres ; chaque exercice est encadré à la couleur de son groupe (§3.2).
+    expect(await progressingRegion.evaluate((el) => getComputedStyle(el).borderTopColor)).toBe(NEUTRAL);
+    expect(await earlyRegion.evaluate((el) => getComputedStyle(el).borderTopColor)).toBe(NEUTRAL);
+    const items = await page.locator('a.bilan-item').evaluateAll((els) => els.map((el) => [el.getAttribute('data-group-color'), getComputedStyle(el).borderTopColor]));
+    expect(items.length).toBe(11);
+    for (const [group, color] of items) expect(color, group!).toBe(GROUP_RGB[group!]);
 
     // Un appui n'affiche que la catégorie choisie ; le bouton actif a un fond plein de sa couleur.
     await progressing.click();
     await expect(progressing).toHaveAttribute('aria-pressed', 'true');
     await expect(all).toHaveAttribute('aria-pressed', 'false');
-    expect((await look(progressing)).background).toBe(CYAN);
+    expect((await look(progressing)).background).toBe(ACCENT);
     await expect(progressingRegion).toBeVisible();
     await expect(earlyRegion).toHaveCount(0);
     await expect(page.getByRole('region', { name: 'Dernières évolutions' })).toHaveCount(0);
@@ -139,7 +153,7 @@ test.describe('Filtres du bilan et cadres de section', () => {
     // « Tous » réaffiche tout.
     await early.click();
     await expect(progressingRegion).toHaveCount(0);
-    expect((await look(early)).background).toBe(YELLOW);
+    expect((await look(early)).background).toBe(ACCENT);
     await all.click();
     await expect(progressingRegion).toBeVisible();
     await expect(earlyRegion).toBeVisible();
@@ -155,42 +169,42 @@ test.describe('Filtres du bilan et cadres de section', () => {
     await expect(early).toHaveAttribute('aria-pressed', 'true');
   });
 
-  test('146. Cadres : même règle sur chaque écran, quatre côtés, couleurs vives alternées (fixes pour les exercices), rien ne dépasse', async ({ page }) => {
+  test('146. Cadres : même règle sur chaque écran, quatre côtés, couleurs alternées, neutres ou de groupe selon l’écran, rien ne dépasse', async ({ page }) => {
     await importDepart(page);
-    await checkFrames(page, 'Import / export', 3);
+    await checkFrames(page, 'Import / export', 3, 'alternance');
 
     await page.goto('./');
-    await checkFrames(page, 'Accueil');
+    await checkFrames(page, 'Accueil', 1, 'alternance');
     await expect(page.getByTestId('weekly-recap')).toHaveAttribute('data-frame', /\d/);
 
     await page.goto('./#/bibliotheque');
-    await checkFrames(page, 'Bibliothèque', 5);
+    await checkFrames(page, 'Bibliothèque', 5, 'neutre');
 
     await page.goto('./#/exercice/extension-triceps-haltere-assis');
     await expect(page.getByTestId('chart-weight')).toBeVisible();
-    await checkFrames(page, 'Fiche', 3);
+    await checkFrames(page, 'Fiche', 3, 'triceps');
 
     await page.goto('./#/historique');
-    await checkFrames(page, 'Historique', 2);
+    await checkFrames(page, 'Historique', 2, 'neutre');
     await page.locator('a.session-link').first().click();
     await expect(page.locator('.card').first()).toBeVisible();
-    await checkFrames(page, 'Détail de séance', 2);
+    await checkFrames(page, 'Détail de séance', 2, 'neutre');
 
     await page.goto('./#/bilan');
-    await checkFrames(page, 'Bilan', 2);
+    await checkFrames(page, 'Bilan', 2, 'neutre');
 
     await page.goto('./#/poids');
-    await checkFrames(page, 'Mon poids');
+    await checkFrames(page, 'Mon poids', 1, 'alternance');
 
     await page.goto('./#/reglages');
-    await checkFrames(page, 'Réglages', 3);
+    await checkFrames(page, 'Réglages', 3, 'alternance');
 
     // Séance : la carte d'exercice tient dans l'écran, cadres compris.
     await page.goto('./');
     await page.getByRole('button', { name: 'Démarrer une séance' }).click();
     await addExercise(page, 'chest press', 'Chest press');
     await addExercise(page, 'pec deck', 'Pec deck', '30');
-    await checkFrames(page, 'Séance', 2);
+    await checkFrames(page, 'Séance', 2, 'neutre');
     // Écrans étroits : la ligne de série reste dans sa carte (à 320 px, « Valider » passe à la ligne).
     for (const width of [360, 320]) {
       await page.setViewportSize({ width, height: 800 });
@@ -199,11 +213,11 @@ test.describe('Filtres du bilan et cadres de section', () => {
         return Math.max(...[...card.querySelectorAll('.set, .set *')].map((e) => e.getBoundingClientRect().right - right));
       });
       expect(overflow, `séance à ${width} px`).toBeLessThanOrEqual(0);
-      await checkFrames(page, `Séance à ${width} px`, 2);
+      await checkFrames(page, `Séance à ${width} px`, 2, 'neutre');
     }
   });
 
-  test('162. Couleur fixe du groupe : exercices de la bibliothèque, pictogrammes, carte de séance et de fiche ; les autres cadres alternent', async ({ page }) => {
+  test('162. Couleur fixe du groupe : bibliothèque, pictogrammes, fiche entière, cartes de séance et détail ; cadres hors exercice neutres ; accueil inchangé', async ({ page }) => {
     await importDepart(page);
     const look = (selector: string) =>
       page.locator(selector).evaluateAll((els) =>
@@ -244,12 +258,21 @@ test.describe('Filtres du bilan et cadres de section', () => {
     await page.getByRole('searchbox', { name: 'Rechercher un exercice' }).fill('squat kettlebell');
     expect((await look('.pick-item'))[0]!.picto).toBe(GROUP_RGB.jambes);
 
-    // Fiche : la carte de l'exercice a la couleur du groupe ; les autres cadres alternent.
+    // Fiche : tous les cadres (cible, variantes, autres noms, graphiques, historique) ont la couleur du groupe.
     await page.goto('./#/exercice/extension-triceps-haltere-assis');
     await expect(page.getByTestId('chart-weight')).toBeVisible();
-    expect(await page.locator('.sheet-status').evaluate((el) => getComputedStyle(el).borderTopColor)).toBe(GROUP_RGB.triceps);
-    const others = await page.locator('[data-frame]:not([data-group-color])').evaluateAll((els) => els.map((el) => getComputedStyle(el).borderTopColor));
-    expect(new Set(others).size).toBeGreaterThan(2);
+    const sheet = await page.locator('[data-frame]').evaluateAll((els) => els.map((el) => getComputedStyle(el).borderTopColor));
+    expect(sheet.length).toBeGreaterThanOrEqual(7);
+    expect([...new Set(sheet)]).toEqual([GROUP_RGB.triceps]);
+    await page.goto('./#/exercice/curl-ischios');
+    expect([...new Set(await page.locator('[data-frame]').evaluateAll((els) => els.map((el) => getComputedStyle(el).borderTopColor)))]).toEqual([GROUP_RGB.jambes]);
+
+    // Détail d'une séance passée : chaque exercice à la couleur de son groupe, le reste neutre.
+    await page.goto('./#/historique');
+    await page.locator('a.session-link').first().click();
+    const recap = await look('li.recap-item');
+    expect(recap.length).toBeGreaterThanOrEqual(5);
+    for (const it of recap) expect(it.border).toBe(GROUP_RGB[it.group!]);
 
     // Séance : la carte de chaque exercice a la couleur de son groupe principal.
     await page.goto('./');
@@ -265,6 +288,13 @@ test.describe('Filtres du bilan et cadres de section', () => {
       ['biceps', GROUP_RGB.biceps],
       ['jambes', GROUP_RGB.jambes],
     ]);
+    // Un cadre qui ne concerne aucun exercice (bloc de cardio) est neutre.
+    await page.getByRole('button', { name: '+ Ajouter du cardio' }).click();
+    const cardio = page.getByRole('form', { name: 'Cardio' });
+    await cardio.getByLabel('Durée (min)').fill('15');
+    await cardio.getByRole('button', { name: 'Valider' }).click();
+    await expect(page.locator('.cardio-item').first()).toBeVisible();
+    expect(await page.locator('.cardio-item').first().evaluate((el) => getComputedStyle(el).borderTopColor)).toBe(NEUTRAL);
 
     // Accueil : rien ne change ; pastilles de statut et cases du récapitulatif sans couleur de groupe.
     await page.goto('./');

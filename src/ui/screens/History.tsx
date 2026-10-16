@@ -5,6 +5,7 @@ import { searchSessions } from '../../history/ops';
 import { formatDurationLong, formatHour, formatIsoDay } from '../../session/format';
 import { elapsedMs } from '../../session/ops';
 import { cardioMinutes, formatMinutes } from '../../cardio/model';
+import { NEUTRAL_FRAMES } from '../groupColors';
 
 /** « 2 ex. · 20 min cardio », « 15 min cardio », « 3 ex. ». */
 function contentSummary(s: Session): string {
@@ -22,7 +23,7 @@ export function History() {
   const total = sessions.filter((s) => s.state === 'done').length;
 
   return (
-    <main className="screen history-screen">
+    <main className="screen history-screen" {...NEUTRAL_FRAMES}>
       <header className="picker-header">
         <a href="#/" className="back" aria-label="Accueil">
           ‹
