@@ -129,9 +129,36 @@ Toutes les sections de l'application (cartes d'exercice, éléments de liste, gr
 - Bordure sur les quatre côtés, de même épaisseur (2 px) et de même couleur, coins arrondis (même rayon que les boutons).
 - Règle définie une seule fois : la liste des éléments encadrés est unique (`FRAME_SELECTOR`, `src/ui/frames.ts`) et le style est la seule règle `[data-frame]` de `styles.css`. Aucun écran ne définit sa propre bordure de section (pas de bordure gauche seule).
 - Couleurs vives et claires, qui alternent d'une section à la suivante dans l'ordre d'affichage : jaune, cyan, bleu clair, violet, rose magenta. Aucune couleur sombre ou terne, jamais de vert, d'orange ni de rouge (réservés aux statuts, §8). Contraste élevé sur le fond sombre.
-- Exception : dans le bilan (§19.3), chaque catégorie a sa couleur fixe, reprise sur son bouton de filtre (en progression : cyan ; stables : bleu clair ; en difficulté : rose magenta ; trop tôt pour conclure : jaune).
+- Exceptions : les exercices prennent la couleur fixe de leur groupe musculaire (§3.2) ; dans le bilan (§19.3), chaque catégorie a sa couleur fixe, reprise sur son bouton de filtre (en progression : cyan ; stables : bleu clair ; en difficulté : rose magenta ; trop tôt pour conclure : jaune).
 - Ne sont pas des cadres : les pastilles de statut (§8) et les cases du récapitulatif hebdomadaire (§19.6), qui gardent leur style.
 - Rien ne dépasse de l'écran d'un smartphone (vérifié à 412, 360 et 320 px de large) : les cartes d'exercice s'adaptent à la largeur, la ligne de série se resserre sous 380 px en gardant des boutons `+` et `−` de 48 px, et sous 340 px le bouton « Valider » passe sous ces boutons, sur toute la largeur.
+
+### 3.2. Couleurs des groupes musculaires (précision validée)
+
+Chaque groupe musculaire a sa propre couleur **fixe**, la même partout où elle apparaît :
+
+| Groupe | Couleur |
+|---|---|
+| Épaules | jaune |
+| Pectoraux | cyan |
+| Triceps | bleu clair |
+| Dos | mauve / violet |
+| Biceps | rose / magenta |
+| Jambes (et ses sous-groupes : quadriceps, ischio-jambiers, mollets, fessiers, adducteurs) | blanc |
+| Abdominaux | gris clair |
+
+- Elle s'applique :
+  - au cadre de chaque exercice de la bibliothèque, à la place de l'alternance, dans les sections de groupe comme dans les récents, les favoris, les résultats de recherche et l'écran « Ajouter un exercice » ;
+  - au fond des pictogrammes d'exercice, avec un trait sombre ;
+  - à la carte de chaque exercice dans l'écran de séance ;
+  - à la carte de l'exercice sur sa fiche (dernière fois, prochaine cible).
+- Un exercice prend la couleur de son groupe principal.
+- Les autres cadres gardent l'alternance du §3.1, y compris les autres cadres de la fiche.
+- Les pastilles de statut et les cases du récapitulatif hebdomadaire ne changent pas : elles restent vert, orange ou rouge.
+- La correspondance est définie une seule fois : `GROUP_COLORS` dans `src/ui/groupColors.ts`.
+  - Les teintes sont des jetons de `styles.css` : les cinq couleurs de la palette, plus le blanc `--frame-white` et le gris clair `--frame-grey`.
+  - Une seule règle CSS (`[data-group-color][data-frame]`) remplace l'alternance par la couleur du groupe.
+- Les sept couleurs sont toutes distinctes et lisibles sur le fond noir (contraste d'au moins 7:1). Aucune n'est un vert, un orange ou un rouge.
 
 ## 4. Bibliothèque d'exercices illustrée
 
@@ -1245,7 +1272,7 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 143. Palette des cadres : cinq couleurs vives et claires (contraste d'au moins 7:1 sur le fond), ni vert, ni orange, ni rouge ; une seule règle de bordure (quatre côtés), aucune bordure gauche seule.
 144. Les cadres sont numérotés dans l'ordre d'affichage et leur couleur alterne ; la liste des éléments encadrés est unique et exclut pastilles de statut et cases du récapitulatif.
 145. (bout en bout) Bilan : un bouton par catégorie et « Tous » (actif par défaut) ; une catégorie vide est visible mais désactivée ; un appui n'affiche que la catégorie et remplit le bouton de sa couleur ; un nouvel appui ou « Tous » réaffiche tout ; le filtre est mémorisé après rechargement ; chaque catégorie garde sa couleur sur son bouton et sa section.
-146. (bout en bout) Sur chaque écran (accueil, séance, fiche, bibliothèque, historique, détail de séance, bilan, Mon poids, réglages, import/export) : chaque cadre a une bordure de 2 px de la même couleur de la palette sur les quatre côtés et des coins arrondis ; deux cadres consécutifs n'ont pas la même couleur (sauf les catégories du bilan) ; pastilles et cases du récapitulatif sans cadre ; rien ne dépasse de l'écran, et la ligne de série reste dans sa carte à 360 et 320 px.
+146. (bout en bout) Sur chaque écran (accueil, séance, fiche, bibliothèque, historique, détail de séance, bilan, Mon poids, réglages, import/export) : chaque cadre a une bordure de 2 px de la même couleur de la palette sur les quatre côtés et des coins arrondis ; deux cadres consécutifs n'ont pas la même couleur (sauf les couleurs fixes : catégories du bilan, groupes musculaires) ; un cadre d'exercice a la couleur de son groupe ; pastilles et cases du récapitulatif sans cadre ; rien ne dépasse de l'écran, et la ligne de série reste dans sa carte à 360 et 320 px.
 
 ### Bibliothèque version 7 : curl à la barre, mollets, abducteurs, adducteurs (§4.0, §4.2.1)
 
@@ -1266,6 +1293,11 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 158. Récapitulatif : chaque nouvel exercice compte dans son groupe principal (shrugs et lombaires dans « Dos ») ; une variante compte dans le groupe de son exercice.
 159. Base existante en version 7 : les dix-neuf exercices ajoutés une seule fois ; mollets et extension poulie reçoivent leurs variantes sans perte (synonyme appris, nom personnalisé et séances conservés) ; une variante du même nom déjà créée n'est pas doublée ; un exercice supprimé n'est pas recréé ; une sauvegarde de la version 7 ne défait aucun nom de variante.
 160. (bout en bout) « squat », « hack », « mollets assis », « curl ez », « pushdown barre » ; dessins distincts debout / assis et corde / barre ; séance avec tractions assistées (champ « Aide ») et squat kettlebell, comptée dans « Dos » et « Jambes ».
+
+### Couleurs des groupes musculaires (§3.2)
+
+161. Une couleur fixe par groupe, définie une seule fois : épaules jaune, pectoraux cyan, triceps bleu clair, dos violet, biceps rose, jambes blanc (sous-groupes compris), abdominaux gris clair ; toutes distinctes et lisibles sur le fond noir ; une seule règle CSS ; plus aucune teinte de pictogramme écrite à part.
+162. (bout en bout) Bibliothèque : chaque exercice, dans chaque section de groupe, a la bordure et le fond de pictogramme de son groupe ; fiche : la carte de l'exercice a la couleur du groupe, les autres cadres alternent ; séance : chaque carte d'exercice a la couleur de son groupe ; accueil inchangé ; pastilles de statut et cases du récapitulatif sans couleur de groupe.
 
 Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
 

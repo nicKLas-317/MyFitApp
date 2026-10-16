@@ -100,4 +100,4 @@ Pour chaque nouvelle image : vérifier la licence et l'auteur à la source, ajou
 
 ## Pictogrammes
 
-Les pictogrammes (`src/ui/Pictogram.tsx`) sont des dessins SVG originaux créés pour MyFitApp, sans ressource externe : un par type de matériel, sur un fond teinté selon le groupe musculaire (teintes éloignées du vert, de l'orange et du rouge réservés aux statuts, §8). Ils suivent la licence du projet.
+Les pictogrammes (`src/ui/Pictogram.tsx`) sont des dessins SVG originaux créés pour MyFitApp, sans ressource externe : un par type de matériel, en trait sombre sur un fond de la couleur fixe du groupe musculaire principal (§3.2 de CLAUDE.md : jamais vert, orange ni rouge, réservés aux statuts). Ils suivent la licence du projet.

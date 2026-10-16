@@ -5,6 +5,7 @@ import { displayName, variantLabel, type VariantRef } from '../../library/catalo
 import { buildSearchIndex, recentVariantIds, searchWithInfo, type MatchField } from '../../library/search';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
 import { formatKg } from '../../session/format';
+import { groupColorProps } from '../groupColors';
 import { ExercisePicto } from '../Pictogram';
 import { StatusBadge } from '../StatusBadge';
 
@@ -109,7 +110,7 @@ function ExerciseItem({ ref_: ref, via, onPick, below, aside, note }: ItemProps)
   const extra = note?.(ref);
   const secondary = via === 'secondary' ? ref.exercise.secondaryGroups.map((g) => MUSCLE_GROUP_LABELS[g]).join(', ') : null;
   return (
-    <li className="pick-item" data-variant={ref.variant.id}>
+    <li className="pick-item" data-variant={ref.variant.id} {...groupColorProps(ref.exercise.primaryGroup)}>
       <div className="pick-row">
         <button type="button" className="pick-button" onClick={() => onPick(ref)}>
           <ExercisePicto exercise={ref.exercise} variantId={ref.variant.id} />

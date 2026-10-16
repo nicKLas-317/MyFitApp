@@ -19,6 +19,9 @@
   --frame-3: #8cc8ff; /* bleu clair */
   --frame-4: #c79bff; /* violet */
   --frame-5: #ff7ad6; /* rose magenta */
+  /* Couleurs de groupe en plus de la palette (§3.2) : jambes et abdominaux. */
+  --frame-white: #f4f5f7; /* blanc */
+  --frame-grey: #b4bcc8; /* gris clair */
   --frame-width: 2px;
   --tap: 48px;
   color-scheme: dark;
@@ -948,7 +951,8 @@ textarea {
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: var(--group, #3a4050);
+  /* Fond : couleur fixe du groupe principal (§3.2), donnée par groupColorProps. */
+  background: var(--group-color, var(--surface-2));
 }
 
 .picto.large {
@@ -961,22 +965,12 @@ textarea {
   width: 60%;
   height: 60%;
   fill: none;
-  stroke: #eef0f4;
+  stroke: var(--bg);
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
-/* Teintes de groupe, volontairement éloignées des trois couleurs de statut. */
-.picto-dos { --group: #284a78; }
-.picto-pectoraux { --group: #573a7d; }
-.picto-epaules { --group: #1f5e66; }
-.picto-biceps { --group: #6e335f; }
-.picto-triceps { --group: #44497a; }
-.picto-jambes,
-.picto-quadriceps,
-.picto-ischio-jambiers { --group: #5c5530; }
-.picto-abdominaux { --group: #3d5064; }
 
 .pick-row {
   display: flex;
@@ -1593,6 +1587,14 @@ fieldset {
 
 [data-frame='4'] {
   --frame-color: var(--frame-5);
+}
+
+/*
+ * Couleur fixe du groupe musculaire (§3.2) : exercices de la bibliothèque, carte d'exercice de la séance et de la fiche.
+ * Elle remplace l'alternance pour ces cadres seulement (correspondance unique : src/ui/groupColors.ts).
+ */
+[data-group-color][data-frame] {
+  --frame-color: var(--group-color);
 }
 
 /* Section sans style propre : mêmes marges intérieures et extérieures partout. */

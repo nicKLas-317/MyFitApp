@@ -1,11 +1,12 @@
 import type { Exercise } from '../domain/types';
 import { illustrationFor } from '../library/illustrations';
 import { equipmentKey } from '../library/search';
+import { groupColorProps } from './groupColors';
 
 /**
  * Visuel d'un exercice (§4.0.1) : la vignette de son illustration quand elle existe (licence vérifiée,
  * voir docs/illustrations.md), sinon un pictogramme SVG original par type de matériel, sur un fond
- * teinté selon le groupe musculaire principal.
+ * de la couleur fixe du groupe musculaire principal (§3.2).
  */
 const EQUIPMENT_PATHS: Record<string, string> = {
   // Haltère : barre courte et deux disques.
@@ -45,7 +46,7 @@ export function ExercisePicto({ exercise, variantId, large = false }: { exercise
   const key = equipmentKey(exercise.equipment);
   const path = EQUIPMENT_PATHS[key] ?? EQUIPMENT_PATHS.autre!;
   return (
-    <span className={`picto picto-${exercise.primaryGroup}${large ? ' large' : ''}`} aria-hidden="true" title={EQUIPMENT_LABELS[key] ?? exercise.equipment}>
+    <span className={`picto${large ? ' large' : ''}`} {...groupColorProps(exercise.primaryGroup)} aria-hidden="true" title={EQUIPMENT_LABELS[key] ?? exercise.equipment}>
       <svg viewBox="0 0 24 24">
         <path d={path} />
       </svg>

@@ -12,6 +12,7 @@ import { MUSCLE_GROUP_LABELS } from '../../library/seed';
 import { formatIsoDay, formatKg } from '../../session/format';
 import { findPerformance } from '../../session/ops';
 import { FEELING_LABELS, formatRecommendation } from '../labels';
+import { groupColorProps } from '../groupColors';
 import { equipmentLabel, ExercisePicto } from '../Pictogram';
 import { StatusBadge } from '../StatusBadge';
 import { ProgressMarkerBanner } from '../ProgressMarker';
@@ -138,7 +139,7 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
 
       {archived && <p className="banner info">Exercice archivé : masqué de la recherche, historique conservé.</p>}
 
-      <section className="card sheet-status">
+      <section className="card sheet-status" {...groupColorProps(exercise.primaryGroup)}>
         {state ? (
           <>
             <div className="last-perf">

@@ -16,6 +16,7 @@ import {
   setWeight,
 } from '../session/ops';
 import { FeelingPicker } from './FeelingPicker';
+import { groupColorProps } from './groupColors';
 import { ExercisePicto } from './Pictogram';
 import { formatRecommendation } from './labels';
 import { StatusBadge } from './StatusBadge';
@@ -60,7 +61,12 @@ export function ExerciseCard({ session, performance: p, open, onToggle }: Props)
   const nextValue = Math.min(draft ?? target, target);
 
   return (
-    <article className={`card exercise-card${open ? ' open' : ''}`} data-variant={p.variantId} aria-label={name}>
+    <article
+      className={`card exercise-card${open ? ' open' : ''}`}
+      data-variant={p.variantId}
+      aria-label={name}
+      {...(ref ? groupColorProps(ref.exercise.primaryGroup) : {})}
+    >
       <button type="button" className="card-header" onClick={onToggle} aria-expanded={open}>
         {ref && <ExercisePicto exercise={ref.exercise} variantId={ref.variant.id} />}
         <span className="card-title">
