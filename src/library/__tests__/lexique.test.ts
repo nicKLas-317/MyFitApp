@@ -21,14 +21,14 @@ const choiceOf = (name: string) => {
   const c = imported(name).choice;
   return c?.kind === 'variant' ? c.variantId : null;
 };
-const PECS = ['chest-press', 'pec-deck', 'developpe-couche', 'ecarte-couche-halteres'];
+const PECS = ['chest-press', 'pec-deck', 'developpe-couche', 'ecarte-couche-halteres', 'developpe-incline', 'developpe-couche-halteres', 'ecarte-poulie'];
 
 describe('Lexique d’équivalences (§4.2.1)', () => {
   it('125. Recherche : saisies en français, anglais et argot de salle', () => {
     for (const q of ['latéral raise haltère', 'lateral raise dumbbell', 'élévation latérale DB', 'élévation latérale haltères']) {
       expect(ids(q), q).toEqual(['elevations-laterales']);
     }
-    expect(ids('curl biceps haltère')).toEqual(['curl-biceps-halteres', 'curl-biceps-banc-incline']);
+    expect(ids('curl biceps haltère')).toEqual(['curl-biceps-halteres', 'curl-biceps-banc-incline', 'curl-marteau']);
     expect(ids('pec fly machine')).toEqual(['pec-deck']);
     expect(ids('rowing haltère')).toEqual(['rowing-haltere']);
     expect(ids('développé épaules machine')[0]).toBe('developpe-epaules-machine');
@@ -41,8 +41,9 @@ describe('Lexique d’équivalences (§4.2.1)', () => {
     // Autres groupes du lexique.
     expect(ids('delts')).toEqual(expect.arrayContaining(['developpe-epaules-machine', 'elevations-laterales', 'elevations-laterales-machine']));
     expect(ids('abs')).toEqual(['crunch-machine']);
-    expect(ids('tris').slice(0, 2).sort()).toEqual(['extension-triceps-haltere-assis', 'extension-triceps-poulie']);
-    expect(ids('legs').sort()).toEqual(['abducteurs-machine', 'adducteurs-machine', 'curl-ischios', 'leg-curl', 'leg-extension', 'mollets-machine', 'presse-a-cuisses']);
+    const tri = LIB.filter((e) => e.primaryGroup === 'triceps').flatMap((e) => e.variants.map((v) => v.id)).sort();
+    expect(ids('tris').slice(0, tri.length).sort()).toEqual(tri);
+    expect(ids('legs').sort()).toEqual(['abducteurs-machine', 'adducteurs-machine', 'curl-ischios', 'hack-squat', 'leg-curl', 'leg-extension', 'mollets-machine', 'mollets-machine--assis', 'presse-a-cuisses', 'squat-kettlebell']);
     expect(ids('lat pull')[0]).toBe('tirage-vertical');
     expect(ids('seated row')[0]).toBe('tirage-horizontal');
   });
@@ -88,7 +89,7 @@ describe('Lexique d’équivalences (§4.2.1)', () => {
     const found = searchWithInfo(INDEX, 'élévation latérale haltères xyz');
     expect(found.results.map((r) => r.entry.variant.id)).toEqual(['elevations-laterales']);
     expect(found.ignored).toEqual(['xyz']);
-    expect(searchWithInfo(INDEX, 'curl biceps marteau').ignored).toEqual(['marteau']);
+    expect(searchWithInfo(INDEX, 'curl biceps zottman').ignored).toEqual(['zottman']);
     // Un seul mot reconnu ne suffit pas à identifier un exercice.
     expect(ids('tirage nuque')).toEqual([]);
     expect(searchWithInfo(INDEX, 'latéral raise haltère').ignored).toEqual([]);
@@ -122,12 +123,12 @@ describe('Lexique d’équivalences (§4.2.1)', () => {
 
   it('131. Sous-groupes des jambes : « ischios » → leg curl et curl ischios, « quadri » → leg extension et presse, « jambes » → tous ; le récapitulatif compte tout dans « Jambes »', () => {
     for (const q of ['ischio', 'ischios', 'ischio-jambiers', 'hamstrings']) expect(ids(q).sort(), q).toEqual(['curl-ischios', 'leg-curl']);
-    for (const q of ['quadri', 'quadriceps', 'quads']) expect(ids(q).sort(), q).toEqual(['leg-extension', 'presse-a-cuisses']);
-    for (const q of ['jambe', 'jambes', 'legs']) expect(ids(q).sort(), q).toEqual(['abducteurs-machine', 'adducteurs-machine', 'curl-ischios', 'leg-curl', 'leg-extension', 'mollets-machine', 'presse-a-cuisses']);
+    for (const q of ['quadri', 'quadriceps', 'quads']) expect(ids(q).sort(), q).toEqual(['hack-squat', 'leg-extension', 'presse-a-cuisses', 'squat-kettlebell']);
+    for (const q of ['jambe', 'jambes', 'legs']) expect(ids(q).sort(), q).toEqual(['abducteurs-machine', 'adducteurs-machine', 'curl-ischios', 'hack-squat', 'leg-curl', 'leg-extension', 'mollets-machine', 'mollets-machine--assis', 'presse-a-cuisses', 'squat-kettlebell']);
     // Import : un sous-groupe seul propose ses exercices et demande de choisir.
     expect(matchExercise('ischios', LIB)).toMatchObject({ confidence: 'ambiguous', suggestion: null });
     expect(matchExercise('ischios', LIB).candidates.map((c) => c.variantId).sort()).toEqual(['curl-ischios', 'leg-curl']);
-    expect(matchExercise('quadri', LIB).candidates.map((c) => c.variantId).sort()).toEqual(['leg-extension', 'presse-a-cuisses']);
+    expect(matchExercise('quadri', LIB).candidates.map((c) => c.variantId).sort()).toEqual(['hack-squat', 'leg-extension', 'presse-a-cuisses', 'squat-kettlebell']);
     // Les noms précis restent reconnus.
     expect(choiceOf('curl ischios')).toBe('curl-ischios');
     expect(choiceOf('leg extension')).toBe('leg-extension');

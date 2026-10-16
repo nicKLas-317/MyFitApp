@@ -18,7 +18,7 @@ const choiceOf = (name: string) => {
   return c?.kind === 'variant' ? c.variantId : null;
 };
 const NEW = ['curl-biceps-barre-droite', 'mollets-machine', 'abducteurs-machine', 'adducteurs-machine'];
-const LEGS = ['abducteurs-machine', 'adducteurs-machine', 'curl-ischios', 'leg-curl', 'leg-extension', 'mollets-machine', 'presse-a-cuisses'];
+const LEGS = ['abducteurs-machine', 'adducteurs-machine', 'curl-ischios', 'hack-squat', 'leg-curl', 'leg-extension', 'mollets-machine', 'mollets-machine--assis', 'presse-a-cuisses', 'squat-kettlebell'];
 
 describe('Bibliothèque version 7 : curl à la barre, mollets, abducteurs, adducteurs (§4.0)', () => {
   it('147. Les quatre exercices, leurs groupes et leur matériel ; le curl à la barre est distinct des curls aux haltères et à la poulie', () => {
@@ -27,16 +27,21 @@ describe('Bibliothèque version 7 : curl à la barre, mollets, abducteurs, adduc
     expect(byId('mollets-machine')).toMatchObject({ name: 'Mollets machine', primaryGroup: 'jambes', secondaryGroups: ['mollets'], equipment: 'machine' });
     expect(byId('abducteurs-machine')).toMatchObject({ name: 'Abducteurs machine', primaryGroup: 'jambes', secondaryGroups: ['fessiers'], equipment: 'machine' });
     expect(byId('adducteurs-machine')).toMatchObject({ name: 'Adducteurs machine', primaryGroup: 'jambes', secondaryGroups: ['adducteurs'], equipment: 'machine' });
-    for (const id of NEW) expect(byId(id).variants, id).toEqual([{ id, name: 'Standard', synonyms: [], archived: false }]);
+    for (const id of NEW.filter((x) => x !== 'mollets-machine')) expect(byId(id).variants, id).toEqual([{ id, name: 'Standard', synonyms: [], archived: false }]);
+    // Version 8 : machine debout (variante standard) et machine assise.
+    expect(byId('mollets-machine').variants.map((v) => [v.id, v.name])).toEqual([['mollets-machine', 'Debout'], ['mollets-machine--assis', 'Assis']]);
     expect(SEED_ADDITIONS[7]).toEqual(NEW);
     // Curl à la barre : recherche et import, sans jamais retenir un autre curl.
-    for (const q of ['curl barre', 'curl barre droite', 'curl à la barre', 'barbell curl', 'straight bar curl', 'curl biceps barre']) {
-      expect(ids(q), q).toEqual(['curl-biceps-barre-droite']);
+    for (const q of ['curl barre', 'curl barre droite', 'curl à la barre', 'barbell curl', 'straight bar curl']) {
+      expect(ids(q)[0], q).toBe('curl-biceps-barre-droite');
       expect(choiceOf(q), q).toBe('curl-biceps-barre-droite');
     }
+    // Version 8 : « curl biceps barre » hésite entre la barre droite (proposée d'abord) et la barre EZ.
+    expect(ids('curl biceps barre').slice(0, 2)).toEqual(['curl-biceps-barre-droite', 'curl-biceps-barre-ez']);
+    expect(matchExercise('curl biceps barre', LIB).candidates.slice(0, 2).map((c) => c.variantId)).toEqual(['curl-biceps-barre-droite', 'curl-biceps-barre-ez']);
     expect(ids('curl haltères')).not.toContain('curl-biceps-barre-droite');
     expect(ids('curl poulie')).toEqual(['curl-biceps-poulie-corde']);
-    expect(ids('curl biceps').slice(0, 4).sort()).toEqual(['curl-biceps-banc-incline', 'curl-biceps-barre-droite', 'curl-biceps-halteres', 'curl-biceps-poulie-corde']);
+    expect(ids('curl biceps').slice(0, 5).sort()).toEqual(['curl-biceps-banc-incline', 'curl-biceps-barre-droite', 'curl-biceps-barre-ez', 'curl-biceps-halteres', 'curl-biceps-poulie-corde']);
     expect(matchExercise('curl biceps', LIB)).toMatchObject({ confidence: 'ambiguous', suggestion: null });
     // Tous les exercices restent distincts une fois le lexique appliqué.
     const keys = LIB.flatMap((e) => [e.name, ...e.synonyms].map((n) => [nameKey(n), e.id] as const));
@@ -44,7 +49,8 @@ describe('Bibliothèque version 7 : curl à la barre, mollets, abducteurs, adduc
   });
 
   it('148. Lexique : mollets, fessiers et adducteurs sont des sous-groupes des jambes ; « jambes » et « legs » trouvent tous les exercices de jambes', () => {
-    for (const q of ['mollet', 'mollets', 'calf', 'calves']) expect(ids(q), q).toEqual(['mollets-machine']);
+    // Machine debout (variante standard) en tête, machine assise ensuite (version 8).
+    for (const q of ['mollet', 'mollets', 'calf', 'calves']) expect(ids(q), q).toEqual(['mollets-machine', 'mollets-machine--assis']);
     for (const q of ['fessier', 'fessiers', 'fesses', 'glutes']) expect(ids(q), q).toEqual(['abducteurs-machine']);
     for (const q of ['adducteur', 'adducteurs', 'adductors']) expect(ids(q), q).toEqual(['adducteurs-machine']);
     for (const q of ['jambe', 'jambes', 'legs']) expect(ids(q).sort(), q).toEqual(LEGS);

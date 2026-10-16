@@ -8,7 +8,7 @@ import { DEFAULT_VARIANT_CONFIG } from '../engine';
 import { GRIPS, gripOf, MEDIUM_GRIP, normalizeName } from './text';
 
 /** Matériel proposé à la saisie ; le champ reste libre pour les données importées. */
-export const EQUIPMENT_OPTIONS = ['machine', 'poulie', 'haltères', 'barre', 'poids du corps', 'autre'] as const;
+export const EQUIPMENT_OPTIONS = ['machine', 'poulie', 'haltères', 'barre', 'kettlebell', 'poids du corps', 'autre'] as const;
 
 export function slug(name: string): string {
   return normalizeName(name).replace(/ /g, '-') || 'exercice';
@@ -146,6 +146,31 @@ export function addGrips(exercise: Exercise, exercises: readonly Exercise[]): Ex
     next = { ...next, variants: [...next.variants, { id, name: grip, synonyms: [], archived: false }] };
   }
   return next;
+}
+
+/**
+ * Variantes apportées par une version de la bibliothèque à un exercice existant (version 8 : mollets assis, extension
+ * triceps poulie à la barre). La variante standard prend son nom si elle s'appelle encore « Standard », et les
+ * synonymes de ce nom s'ajoutent aux siens ; une variante n'est ajoutée que si aucune variante (même archivée) ne
+ * porte déjà son identifiant ou son nom. Identifiants, synonymes appris et historique sont conservés.
+ */
+export function addSeedVariants(
+  exercise: Exercise,
+  spec: { standard: { name: string; synonyms: readonly string[] }; others: readonly { suffix: string; name: string; synonyms: readonly string[] }[] },
+): Exercise {
+  const known = (v: Variant) => normalizeName(v.name);
+  const variants = exercise.variants.map((v) => {
+    if (v.id !== exercise.id || v.name !== 'Standard') return v;
+    const synonyms = [...v.synonyms];
+    for (const s of spec.standard.synonyms) if (!synonyms.some((x) => normalizeName(x) === normalizeName(s))) synonyms.push(s);
+    return { ...v, name: spec.standard.name, synonyms };
+  });
+  for (const other of spec.others) {
+    const id = `${exercise.id}--${other.suffix}`;
+    if (variants.some((v) => v.id === id || known(v) === normalizeName(other.name))) continue;
+    variants.push({ id, name: other.name, synonyms: [...other.synonyms], archived: false });
+  }
+  return { ...exercise, variants };
 }
 
 /** Supprime une variante sans historique. La variante standard ne se supprime qu'avec l'exercice. */

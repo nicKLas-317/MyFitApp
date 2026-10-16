@@ -62,7 +62,7 @@ export function ExerciseCard({ session, performance: p, open, onToggle }: Props)
   return (
     <article className={`card exercise-card${open ? ' open' : ''}`} data-variant={p.variantId} aria-label={name}>
       <button type="button" className="card-header" onClick={onToggle} aria-expanded={open}>
-        {ref && <ExercisePicto exercise={ref.exercise} />}
+        {ref && <ExercisePicto exercise={ref.exercise} variantId={ref.variant.id} />}
         <span className="card-title">
           <strong>{name}</strong>
           {ref && <span className="muted small">{MUSCLE_GROUP_LABELS[ref.exercise.primaryGroup]}</span>}

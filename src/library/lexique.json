@@ -24,6 +24,19 @@
     "assisté": ["assisté", "assistée", "assistés", "assisted"],
     "corde": ["corde", "rope"],
     "rowing": ["rowing", "row"],
+    "kettlebell": ["kettlebell", "kettlebells", "kettle bell", "kettle bells", "kb"],
+    "hack squat": ["hack squat", "hack"],
+    "debout": ["debout", "standing"],
+    "traction": ["traction", "tractions", "pull-up", "pull-ups", "pull up", "pull ups", "pullup", "pullups", "chin-up", "chin up", "chinup"],
+    "pull-over": ["pull-over", "pull over", "pullover", "pull-overs", "pullovers"],
+    "lombaire": ["lombaire", "lombaires", "lower back", "back extension", "hyperextension", "hyperextensions"],
+    "shrug": ["shrug", "shrugs", "haussement d'épaules", "haussements d'épaules"],
+    "oiseau": ["oiseau", "oiseaux", "reverse pec deck", "pec deck inversé", "reverse fly", "reverse flye", "rear delt fly", "rear delt"],
+    "frontal": ["frontal", "frontale", "frontaux", "frontales", "front"],
+    "marteau": ["marteau", "marteaux", "hammer"],
+    "pupitre": ["pupitre", "preacher", "larry scott", "scott"],
+    "ez": ["ez", "barre ez", "ez bar", "ez-bar", "ezbar"],
+    "kickback": ["kickback", "kickbacks", "kick back", "kick backs"],
 
     "prise très large": ["prise très large", "très large", "prise large", "large", "wide", "wide grip", "extra wide"],
     "prise moyenne": ["prise moyenne", "moyenne", "normale", "prise normale", "classique", "prise classique", "standard"],
@@ -44,5 +57,5 @@
     "abdominaux": ["abdo", "abdos", "abdominaux", "abs"]
   },
   "prises": ["prise très large", "prise moyenne", "prise serrée"],
-  "expressionsProtegees": ["pec deck", "pec fly", "leg curl", "curl ischio", "curl ischios"]
+  "expressionsProtegees": ["pec deck", "pec fly", "leg curl", "curl ischio", "curl ischios", "barre au front"]
 }

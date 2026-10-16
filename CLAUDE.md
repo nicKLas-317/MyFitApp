@@ -164,16 +164,10 @@ Pré-charger au minimum les exercices suivants, avec leurs synonymes et groupes 
 - Développé épaules machine / Shoulder press (épaules).
 - Élévations latérales haltères (épaules, haltères). Synonymes : élévations latérales haltères, lateral raise haltères, dumbbell lateral raise.
 - Élévations latérales machine (épaules, machine) : exercice distinct, avec son propre historique (charges non comparables). Synonymes : élévations latérales machine, lateral raise machine, machine lateral raise.
-- Curl biceps barre droite (biceps, barre), distinct du curl aux haltères et du curl à la poulie. Synonymes : curl barre, curl barre droite, curl à la barre, barbell curl, straight bar curl.
-- Mollets machine (jambes, sous-groupe mollets, machine). Synonymes : mollets, calf press, calf raise, extension mollets, presse mollets, machine à mollets.
-- Abducteurs machine (jambes, sous-groupe fessiers, machine) : assis, on écarte les jambes. Synonymes : abducteurs, abduction, machine abducteurs, hip abduction, abductor machine, fessiers machine.
-- Adducteurs machine (jambes, sous-groupe adducteurs, machine) : assis, on ramène les jambes. Synonymes : adducteurs, adduction, machine adducteurs, hip adduction, adductor machine. Abducteurs et adducteurs ne sont jamais confondus (abduction ≠ adduction).
-
-Ces quatre derniers exercices forment la bibliothèque version 7 : sur une base existante, ils sont ajoutés une seule fois, sans perte de données et sans recréer un exercice supprimé ensuite.
 - Curl biceps poulie corde / Cable rope curl (biceps).
 - Curl biceps haltères (biceps).
 - Curl biceps banc incliné (biceps).
-- Extension triceps poulie / Triceps pushdown (triceps).
+- Extension triceps poulie / Triceps pushdown (triceps) : variante standard « Corde » ; la variante « Barre » est distincte, avec son propre historique (version 8).
 - Extension triceps haltère assis / Overhead dumbbell extension (triceps).
 - Presse à cuisses / Leg press (jambes).
 - Leg extension (jambes, quadriceps).
@@ -182,6 +176,26 @@ Ces quatre derniers exercices forment la bibliothèque version 7 : sur une base 
 - Crunch machine / Abdominaux (abdominaux).
 - Dips assistés / Assisted dips (triceps et pectoraux), réglage « assisté » activé (§7.12).
 - Écarté couché haltères / Dumbbell fly (pectoraux).
+
+Ajouts de la bibliothèque version 7 :
+
+- Curl biceps barre droite (biceps, barre), distinct du curl aux haltères, du curl à la poulie et du curl à la barre EZ. Synonymes : curl barre, curl barre droite, curl à la barre, barbell curl, straight bar curl.
+- Mollets machine (jambes, sous-groupe mollets, machine). Synonymes : mollets, calf press, calf raise, extension mollets, presse mollets, machine à mollets. Version 8 : variante standard « Debout » (« Mollets machine — Debout » : mollets seul, mollets debout, standing calf raise, calf press) et variante distincte « Assis », avec son propre historique et son dessin (mollets assis, seated calf raise, calf assis).
+- Abducteurs machine (jambes, sous-groupe fessiers, machine) : assis, on écarte les jambes. Synonymes : abducteurs, abduction, machine abducteurs, hip abduction, abductor machine, fessiers machine.
+- Adducteurs machine (jambes, sous-groupe adducteurs, machine) : assis, on ramène les jambes. Synonymes : adducteurs, adduction, machine adducteurs, hip adduction, adductor machine. Abducteurs et adducteurs ne sont jamais confondus (abduction ≠ adduction).
+
+Ajouts de la bibliothèque version 8 (groupe principal, groupes secondaires, matériel ; synonymes dans docs/bibliotheque.md). Quand deux versions ne sont pas comparables en charge, ce sont deux variantes distinctes, avec historiques séparés :
+
+- Pectoraux : Développé incliné (pectoraux ; épaules, triceps ; barre), variantes « Barre » (standard) et « Haltères » ; Développé couché haltères (pectoraux ; triceps, épaules ; haltères), distinct du développé couché à la barre ; Écarté à la poulie, vis-à-vis, cable crossover (pectoraux ; épaules ; poulie).
+- Dos : Tractions assistées (dos ; biceps ; machine), réglage « assisté » activé comme les dips assistés (§7.12) ; Rowing barre (dos ; biceps ; barre) ; Pull-over à la poulie (dos ; poulie) ; Lombaires au banc (dos ; banc) ; Shrugs (dos ; haltères).
+- Épaules : Développé militaire haltères (épaules ; triceps ; haltères) ; Oiseau / reverse pec deck (épaules ; dos), variantes « Machine » (standard, reverse pec deck) et « Haltères » (oiseau buste penché) ; Face pull (épaules ; dos ; poulie) ; Élévations frontales (épaules ; haltères).
+- Biceps : Curl marteau (haltères) ; Curl pupitre / Larry Scott (barre) ; Curl biceps barre EZ (barre), exercice distinct du curl à la barre droite.
+- Triceps : Barre au front / skull crusher (barre) ; Kickback (haltère) ; Extension triceps poulie à la barre (variante « Barre » de l'extension triceps poulie, ci-dessus).
+- Jambes : Hack squat (jambes ; quadriceps ; machine) ; Squat kettlebell, goblet squat : kettlebell tenu à deux mains contre la poitrine, sans machine (jambes ; quadriceps ; kettlebell). « squat » seul désigne le squat kettlebell.
+
+Volontairement non ajoutés (choix de l'utilisateur) : abdominaux (crunch à la poulie, relevés de jambes), squat à la barre, hip thrust, soulevé de terre jambes tendues, fentes. Les exercices au poids du corps (pompes, tractions et dips sans aide) et le gainage ne sont pas intégrés : l'utilisateur les fait hors application.
+
+Chaque version de la bibliothèque est installée une seule fois sur une base existante, sans perte de données et sans recréer un exercice supprimé ensuite. Une variante ajoutée à un exercice existant (mollets assis, extension poulie à la barre) l'est aussi une seule fois, sauf si une variante du même nom existe déjà ; la variante standard prend son nom (« Debout », « Corde ») si elle s'appelle encore « Standard », et ses synonymes appris sont conservés.
 
 Dans les notes de l'utilisateur, « leg curl » désigne toujours la version assise et « curl ischios » la version allongée. Pour les élévations latérales, le matériel est précisé dans le nom (« haltères » ou « machine ») ; s'il ne l'est pas (« latéral raise », « élévations latérales »), l'aperçu d'import demande de choisir, sans rattachement par défaut. Le choix fait dans l'aperçu est mémorisé comme synonyme pour les imports suivants. Un nom importé identique, mot pour mot, à un nom ou à un synonyme de la bibliothèque est reconnu directement (« leg curl allongé » → Curl ischios) ; en cas de doute entre les deux machines, l'aperçu d'import demande de choisir.
 
@@ -259,13 +273,16 @@ Si aucun résultat n'est trouvé, afficher un message discret et permettre de cr
 Les notes mélangent le français, l'anglais et l'argot de salle : « latéral raise haltère » doit trouver « Élévations latérales haltères », exactement comme « élévation latérale haltères ».
 
 - Un lexique d'équivalences mot à mot, dans un fichier de données séparé et facile à compléter (`src/library/lexique.json`), associe chaque forme de référence à ses autres écritures. Il est appliqué après la normalisation (accents, majuscules, pluriels) et avant la comparaison, de la même façon sur la saisie et sur les noms et synonymes de la bibliothèque, en recherche comme à l'import. L'expression la plus longue l'emporte (« lat pulldown » avant « lats »).
-- Matériel et mouvements : haltère, haltères, dumbbell, dumbbells, DB → haltères ; poulie, câble, cable → poulie ; barre, barbell, bar → barre ; élévation, élévations, raise → élévation ; latéral, latérale, latéraux, latérales, lateral → latéral ; développé, press → développé ; écarté, fly, flye → écarté ; tirage vertical, pulldown, lat pulldown, lat pull → tirage vertical ; tirage horizontal, seated row → tirage horizontal ; incliné, inclinée, incline → incliné ; assis, seated → assis ; allongé, lying → allongé ; assisté, assisted → assisté ; corde, rope → corde ; rowing, row → rowing.
+- Matériel et mouvements : haltère, haltères, dumbbell, dumbbells, DB → haltères ; poulie, câble, cable → poulie ; barre, barbell, bar → barre ; élévation, élévations, raise → élévation ; latéral, latérale, latéraux, latérales, lateral → latéral ; développé, press → développé ; écarté, fly, flye → écarté ; tirage vertical, pulldown, lat pulldown, lat pull → tirage vertical ; tirage horizontal, seated row → tirage horizontal ; incliné, inclinée, incline → incliné ; assis, seated → assis ; allongé, lying → allongé ; assisté, assisted → assisté ; corde, rope → corde ; rowing, row → rowing ; kettlebell, kettle bell, KB → kettlebell ; hack, hack squat → hack squat ; debout, standing → debout ; traction(s), pull-up, pull up, chin-up → traction ; pull-over, pullover → pull-over ; lombaire(s), lower back, back extension, hyperextension → lombaire ; shrug(s), haussement d'épaules → shrug ; oiseau, reverse pec deck, pec deck inversé, reverse fly, rear delt fly → oiseau ; frontal(e)(s), front → frontal ; marteau, hammer → marteau ; pupitre, preacher, Larry Scott → pupitre ; EZ, barre EZ, EZ bar → EZ ; kickback, kick back → kickback.
 - Groupes musculaires : pec, pecs, pecto, pectos, pectoraux, chest → pectoraux ; épaule, épaules, shoulder, shoulders, delto, deltoïdes, delts → épaules ; dos, back, dorsaux, lats → dos ; biceps, bi, bis → biceps ; triceps, tri, tris → triceps ; jambe, jambes, leg, legs → jambes ; quadri, quadriceps, quads → quadriceps ; ischio, ischios, ischio-jambiers, hamstrings → ischio-jambiers ; mollet, mollets, calf, calves → mollets ; fessier, fessiers, fesses, glutes → fessiers ; adducteur, adducteurs, adductor, adductors → adducteurs ; abdo, abdos, abdominaux, abs → abdominaux. Autre équivalence : abducteur, abducteurs, abductor, abductors → abducteurs (pas un groupe).
 - Expressions protégées, gardées mot pour mot : « pec deck » et « pec fly » trouvent toujours ces exercices précis, pas seulement le groupe pectoraux ; « leg curl » et « curl ischios » restent deux machines distinctes.
 - Un mot de matériel (haltères, machine, poulie, barre) départage les variantes : si des résultats ou des candidats ont ce matériel, les autres sont écartés (« latéral raise haltère » → haltères, jamais la machine). Si aucun ne l'a, il n'exclut rien (« tirage vertical machine » trouve le tirage vertical, à la poulie).
 - Mots inconnus de la bibliothèque et du lexique : la recherche ignore un mot inconnu si au moins deux autres mots sont reconnus et plus nombreux, et le signale discrètement (« Mot non reconnu, ignoré : xyz ») ; « tirage nuque » ne trouve rien. L'import propose l'exercice mais demande une confirmation explicite (« Mot non reconnu… Vérifiez l'exercice proposé », bouton « J'ai vérifié »), jamais retenu d'office.
 - À l'import, un nom de groupe seul (« pec », « pecs », « pectoraux ») désigne un groupe : les exercices du groupe sont proposés et le choix est obligatoire. Un nom identique à un nom ou synonyme de la bibliothèque une fois le lexique appliqué, dans n'importe quel ordre (« lateral raise dumbbell »), est reconnu directement.
 - Sous-groupes des jambes (précision validée) : « ischios » trouve le leg curl et le curl ischios ; « quadri » trouve le leg extension et la presse à cuisses ; « jambes » trouve tous les exercices de jambes. Pour cela, la presse à cuisses n'a que les quadriceps en groupe secondaire (bibliothèque version 5 : correction appliquée une seule fois à une base existante si ses groupes n'ont pas été personnalisés ; une ancienne sauvegarde ne réintroduit pas les ischio-jambiers). « mollets » trouve les mollets machine, « fessiers » les abducteurs machine, « adducteurs » les adducteurs machine (bibliothèque version 7). Le récapitulatif hebdomadaire n'est pas concerné : tout reste compté dans « Jambes » (§19.6).
+- Version 8 : « squat » seul, goblet squat, squat kettlebell, squat KB → Squat kettlebell ; « hack », « hack squat » → Hack squat ; « quadri » trouve aussi le hack squat et le squat kettlebell. « barre au front » est une expression protégée (le mot « front » n'y devient pas « frontal »). « pec deck » ne trouve toujours que le pec deck, jamais l'oiseau (reverse pec deck).
+- Matériel d'une variante : une variante dont le nom désigne un matériel (« Haltères », « Barre ») a ce matériel, et non celui de son exercice : « développé incliné barre » ne trouve pas la variante haltères. À égalité, la recherche présente la variante standard d'abord (« mollets » : debout, puis assis).
+- Import : un mot inconnu est écarté du rapprochement quand au moins deux autres mots sont reconnus et plus nombreux (« shoulder press xyz » propose le développé épaules machine, à confirmer) ; un nom identique à un exercice une fois sa prise ou son angle retirés (« Développé couché prise serrée ») désigne cet exercice et sa variante, même si un exercice voisin partage des mots (« Développé couché haltères »).
 - Fautes de frappe : la recherche tolère une lettre de différence dans un mot inconnu (« extenzion »), mais un mot connu de la bibliothèque n'est jamais lu comme une faute de frappe d'un autre : « abducteurs » ne trouve jamais les adducteurs, ni « abduction » l'adduction.
 - « seated row », « row assis » et « tirage horizontal » trouvent le Tirage horizontal, pas le Rowing haltère, malgré l'équivalence row → rowing (l'expression la plus longue l'emporte, et « assis » doit correspondre).
 
@@ -684,7 +701,7 @@ Une séance est **standard** si et seulement si elle est complète, faite avec l
 
 ### 7.12. Exercices assistés (précision validée)
 
-Certains exercices sont assistés (dips assistés, tractions assistées) : la charge saisie est une **aide**, et plus elle est basse, plus l'exercice est dur. Chaque exercice-variante possède un réglage « assisté » (désactivé par défaut).
+Certains exercices sont assistés (dips assistés, tractions assistées, tous deux dans la bibliothèque) : la charge saisie est une **aide**, et plus elle est basse, plus l'exercice est dur. Chaque exercice-variante possède un réglage « assisté » (désactivé par défaut).
 
 Pour une variante assistée, le sens de la charge est inversé dans toutes les règles du §7 :
 
@@ -1158,7 +1175,7 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 97. (§19.6) Les sous-groupes des jambes comptent pour « jambes » ; le récapitulatif ne modifie ni les séances ni le moteur.
 98. (§4.0) « leg curl », « leg curl assis », « seated leg curl » → Leg curl (assis) ; « curl ischios », « curl ischio allongé », « leg curl allongé », « lying leg curl » → Curl ischios (allongé) ; en cas de doute, l'aperçu demande de choisir ; historiques séparés.
 99. (§4.0) Une base existante reçoit « Curl ischios » une seule fois ; les synonymes du leg curl ne sont corrigés que s'ils n'ont pas été personnalisés.
-100. (§4.0.1) Chaque fiche illustrée affiche le dessin et l'attribution (auteur, licence CC BY-SA 3.0 ou 4.0 selon la source, deux sources) ; les fiches sans illustration n'en affichent pas.
+100. (§4.0.1) Chaque fiche illustrée affiche le dessin et l'attribution (auteur, licence CC BY-SA 3.0 ou 4.0 selon la source, deux sources), y compris le dessin propre à une variante ; les fiches sans illustration n'en affichent pas.
 101. (§1) Les tests s'exécutent à l'heure de Paris, quelle que soit la machine.
 
 ### Élévations latérales haltères / machine et corrections de la bibliothèque
@@ -1238,6 +1255,17 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 150. Récapitulatif : mollets, abducteurs et adducteurs comptent dans « Jambes », une fois par séance ; le curl à la barre dans « Biceps ».
 151. Base existante en version 6 : les quatre exercices ajoutés une seule fois, le reste inchangé (nom personnalisé, synonymes appris, séances) ; un exercice supprimé n'est pas recréé ; une sauvegarde de la version 6 ne retire rien, une sauvegarde de la version 7 garde les nouveaux groupes.
 152. (bout en bout) Recherche de « calves », « fessiers », « adductors », « abduction », « hip adduction », « barbell curl », « legs » ; fiches des abducteurs et des adducteurs avec deux dessins distincts (attribution CC BY-SA 4.0, everkinetic/data) ; séance avec les trois machines comptée une fois dans « Jambes ».
+
+### Bibliothèque version 8 (§4.0, §4.2.1, §7.12)
+
+153. Mollets : « Mollets machine — Debout » (variante standard) et « — Assis », historiques séparés ; « mollets », « mollets debout », « standing calf raise », « calf press » → debout ; « mollets assis », « seated calf raise », « calf assis » → assis.
+154. Dix-neuf exercices ajoutés avec leurs groupes et leur matériel ; développé incliné barre / haltères et oiseau machine / haltères en variantes ; chaque nom et synonyme de la bibliothèque désigne son exercice-variante à l'import, sans hésitation, et aucun ne se confond avec un autre.
+155. « squat », goblet squat, squat KB → Squat kettlebell ; « hack », « hack squat » → Hack squat ; « quadri » → leg extension, presse, hack squat, squat kettlebell ; autres équivalences (pull up, hammer, preacher, Larry Scott, front raise, skull crusher, reverse pec deck, back extension, pullover, vis-à-vis).
+156. Jamais confondus : curl barre droite / barre EZ, extension poulie corde / barre, développé incliné barre / haltères, développé couché barre / haltères (une prise crée toujours la variante), abduction / adduction ; « pec deck » ne trouve que le pec deck.
+157. Tractions assistées : réglage « assisté » ; deux validations à 3×12 → « Moins d'aide · 3 × 8 » ; moins d'aide suivie à 3×8 valide ; plus d'aide non recommandée ne valide pas ; quatre rouges → « Plus d'aide ».
+158. Récapitulatif : chaque nouvel exercice compte dans son groupe principal (shrugs et lombaires dans « Dos ») ; une variante compte dans le groupe de son exercice.
+159. Base existante en version 7 : les dix-neuf exercices ajoutés une seule fois ; mollets et extension poulie reçoivent leurs variantes sans perte (synonyme appris, nom personnalisé et séances conservés) ; une variante du même nom déjà créée n'est pas doublée ; un exercice supprimé n'est pas recréé ; une sauvegarde de la version 7 ne défait aucun nom de variante.
+160. (bout en bout) « squat », « hack », « mollets assis », « curl ez », « pushdown barre » ; dessins distincts debout / assis et corde / barre ; séance avec tractions assistées (champ « Aide ») et squat kettlebell, comptée dans « Dos » et « Jambes ».
 
 Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
 
@@ -1390,7 +1418,7 @@ But : un coup d'œil de 2 secondes avant la séance pour savoir quels groupes tr
 
 - Semaine du lundi 0 h 00 au dimanche 23 h 59 inclus, heure locale du téléphone (Paris). Une séance compte dans la semaine de sa date de début, même si elle se termine après minuit ; une séance importée sans heure compte selon sa date.
 - Groupes affichés par défaut : pectoraux, dos, épaules, biceps, triceps, jambes. Abdominaux exclus du récapitulatif mais gardés dans la bibliothèque. Liste modifiable dans les réglages ; elle est incluse dans l'export.
-- Seul le groupe principal d'un exercice compte ; un groupe travaillé deux fois dans la même séance compte pour une. Les exercices de jambes de la bibliothèque (presse, leg extension, leg curl, curl ischios, mollets, abducteurs, adducteurs) comptent dans « Jambes ». Un exercice personnalisé dont le groupe principal est un sous-groupe des jambes (quadriceps, ischio-jambiers, mollets, fessiers, adducteurs) compte pour « jambes » quand ce sous-groupe n'est pas affiché lui-même.
+- Seul le groupe principal d'un exercice compte (shrugs et lombaires au banc dans « Dos », oiseau et face pull dans « Épaules ») ; un groupe travaillé deux fois dans la même séance compte pour une. Les exercices de jambes de la bibliothèque (presse, leg extension, leg curl, curl ischios, mollets, abducteurs, adducteurs) comptent dans « Jambes ». Un exercice personnalisé dont le groupe principal est un sous-groupe des jambes (quadriceps, ischio-jambiers, mollets, fessiers, adducteurs) compte pour « jambes » quand ce sous-groupe n'est pas affiché lui-même.
 - Le récapitulatif n'est jamais stocké : il est recalculé à partir des séances enregistrées à chaque affichage de l'accueil. Il est donc à jour immédiatement après la fin d'une séance, un import, une suppression ou une modification de date.
 - Seules les séances terminées comptent ; une séance en cours n'est prise en compte qu'une fois terminée.
 - En début de semaine, sans séance, tous les groupes sont verts et l'en-tête indique « 0 séance ».

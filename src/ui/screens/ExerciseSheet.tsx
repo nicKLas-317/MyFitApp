@@ -45,7 +45,7 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
   const state = ctx.state;
   const archived = exercise.archived || variant.archived;
   const inSession = active ? !!findPerformance(active, variantId) : false;
-  const illustration = illustrationFor(exercise.id);
+  const illustration = illustrationFor(exercise.id, variant.id);
   // Graphique secondaire (§19.2) : une seule variante, jamais mélangée avec une autre.
   const series = chartSeries(variantId, sessions, replay.evaluations);
   const reps = series.flatMap((p) => (p.avgReps === null ? [] : [{ date: p.date, value: p.avgReps }]));
@@ -87,7 +87,7 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
       </header>
 
       <div className="sheet-head">
-        <ExercisePicto exercise={exercise} large />
+        <ExercisePicto exercise={exercise} variantId={variant.id} large />
         <div>
           {variantLabel({ exercise, variant }) && <p className="variant-line">Variante : {variant.name}</p>}
           <p>

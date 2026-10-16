@@ -112,7 +112,7 @@ function ExerciseItem({ ref_: ref, via, onPick, below, aside, note }: ItemProps)
     <li className="pick-item" data-variant={ref.variant.id}>
       <div className="pick-row">
         <button type="button" className="pick-button" onClick={() => onPick(ref)}>
-          <ExercisePicto exercise={ref.exercise} />
+          <ExercisePicto exercise={ref.exercise} variantId={ref.variant.id} />
           <span className="pick-name">
             <strong>{ref.exercise.name}</strong>
             <span className="muted small">

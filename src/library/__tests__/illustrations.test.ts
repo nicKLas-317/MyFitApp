@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ILLUSTRATIONS } from '../illustrations';
+import { ILLUSTRATIONS, illustrationFor } from '../illustrations';
 import { SEED_EXERCISES } from '../seed';
 
 /** Fichiers embarqués, lus en données (data URI base64) pour en mesurer la taille réelle. */
@@ -21,7 +21,8 @@ describe('Illustrations embarquées (§4.0.1)', () => {
   });
 
   it('chaque illustration a une licence compatible, un auteur et ses deux sources vérifiables', () => {
-    const seedIds = new Set(SEED_EXERCISES.map((e) => e.id));
+    // Clé : un exercice, ou une variante qui a son propre dessin (« mollets-machine--assis »).
+    const seedIds = new Set(SEED_EXERCISES.flatMap((e) => [e.id, ...e.variants.map((v) => v.id)]));
     for (const [id, ill] of Object.entries(ILLUSTRATIONS)) {
       expect(seedIds.has(id), id).toBe(true);
       expect(ill.author, id).toBe('Everkinetic');
@@ -52,6 +53,24 @@ describe('Illustrations embarquées (§4.0.1)', () => {
     expect(ILLUSTRATIONS['crunch-machine']).toBeUndefined();
     // Dips assistés : les dessins disponibles montrent des dips au poids du corps, sans machine d'assistance.
     expect(ILLUSTRATIONS['dips-assistes']).toBeUndefined();
-    expect(Object.keys(ILLUSTRATIONS)).toHaveLength(21);
+    // Version 8 : aucun dessin fiable pour ces exercices ou variantes.
+    for (const id of ['developpe-couche-halteres', 'tractions-assistees', 'pull-over-poulie', 'face-pull', 'oiseau', 'squat-kettlebell']) {
+      expect(ILLUSTRATIONS[id], id).toBeUndefined();
+    }
+    expect(Object.keys(ILLUSTRATIONS)).toHaveLength(38);
+  });
+
+  it('une variante peut avoir son propre dessin ; sinon elle reprend celui de son exercice', () => {
+    // Mollets : machine debout (variante standard) et machine assise, deux dessins.
+    expect(illustrationFor('mollets-machine', 'mollets-machine')?.title).toBe('Standing calf raises using machine');
+    expect(illustrationFor('mollets-machine', 'mollets-machine--assis')?.title).toBe('Seated calf raise using machine');
+    // Extension triceps poulie : la corde (variante standard) et la barre ont chacune leur dessin.
+    expect(illustrationFor('extension-triceps-poulie', 'extension-triceps-poulie')?.title).toBe('Triceps pushdown with rope and cable');
+    expect(illustrationFor('extension-triceps-poulie', 'extension-triceps-poulie--barre')?.title).toBe('Triceps pushdown with cable');
+    // Oiseau : dessin pour les haltères seulement, pictogramme pour la machine.
+    expect(illustrationFor('oiseau', 'oiseau')).toBeUndefined();
+    expect(illustrationFor('oiseau', 'oiseau--halteres')?.title).toBe('Bent over rear deltoid raise with head on bench');
+    // Une variante créée par l'utilisateur reprend le dessin de l'exercice.
+    expect(illustrationFor('tirage-vertical', 'tirage-vertical--prise-serree')).toBe(ILLUSTRATIONS['tirage-vertical']);
   });
 });

@@ -29,6 +29,7 @@ const EQUIPMENT_ALIASES: Record<string, string[]> = {
   poulie: ['poulie', 'câble', 'cable', 'vis-à-vis'],
   haltere: ['haltère', 'haltères', 'dumbbell', 'dumbbells'],
   barre: ['barre', 'barbell'],
+  kettlebell: ['kettlebell', 'kb'],
   'poids du corps': ['poids du corps', 'bodyweight', 'sans matériel'],
 };
 
@@ -39,6 +40,16 @@ export function equipmentKey(equipment: string): string {
     if (EQUIPMENT_ALIASES[key]!.some((a) => nameTokens(a).join(' ') === n)) return key;
   }
   return n || 'autre';
+}
+
+/**
+ * Matériel d'un exercice-variante : celui de l'exercice, sauf pour une variante dont le nom désigne un autre matériel
+ * (« Développé incliné — Haltères », exercice à la barre) : ce matériel-là seulement.
+ */
+export function variantEquipment(exercise: Exercise, variant: Variant): string[] {
+  const own = variant.id === exercise.id ? [] : nameTokens(variant.name).filter((t) => EQUIPMENT_WORDS.has(t));
+  const keys = own.length > 0 ? own.map(equipmentKey) : [equipmentKey(exercise.equipment)];
+  return [...(own.length > 0 ? [] : [exercise.equipment]), ...keys.flatMap((k) => EQUIPMENT_ALIASES[k] ?? [k])];
 }
 
 export interface SearchEntry {
@@ -53,6 +64,8 @@ export interface SearchEntry {
   primary: Set<string>;
   secondary: Set<string>;
   equipment: Set<string>;
+  /** Noms propres à l'exercice-variante, pour le matériel qu'ils désignent. */
+  ownNames: Set<string>;
 }
 
 const tokensOf = (list: readonly string[]) => new Set(list.flatMap(nameTokens));
@@ -76,7 +89,9 @@ export function buildSearchIndex(exercises: readonly Exercise[], options: { incl
         rawPhrases: names.map(normalizeName),
         primary: tokensOf(groupTokens(exercise.primaryGroup)),
         secondary: tokensOf(exercise.secondaryGroups.flatMap(groupTokens)),
-        equipment: tokensOf([exercise.equipment, ...(EQUIPMENT_ALIASES[equipmentKey(exercise.equipment)] ?? [])]),
+        equipment: tokensOf(variantEquipment(exercise, variant)),
+        // Une variante non standard ne reprend pas le matériel nommé par les synonymes de l'exercice.
+        ownNames: standard ? tokensOf(names) : tokensOf([exercise.name, variant.name, ...variant.synonyms]),
       });
     }
   }
@@ -128,11 +143,11 @@ export interface SearchResult {
 }
 
 /** Mots désignant le matériel (§4.2.1) : ils départagent les variantes au lieu d'exclure. */
-export const EQUIPMENT_WORDS: ReadonlySet<string> = new Set(['haltère', 'machine', 'poulie', 'barre'].flatMap(nameTokens));
+export const EQUIPMENT_WORDS: ReadonlySet<string> = new Set(['haltère', 'machine', 'poulie', 'barre', 'kettlebell'].flatMap(nameTokens));
 
 /** L'entrée correspond au matériel désigné : par son matériel ou par son nom. */
 function hasEquipment(entry: SearchEntry, word: string): boolean {
-  return entry.equipment.has(word) || entry.names.has(word);
+  return entry.equipment.has(word) || entry.ownNames.has(word);
 }
 
 /** Score d'une entrée, ou null si un mot saisi ne correspond à rien. */
@@ -147,7 +162,9 @@ function phraseIn(phrase: string, phrases: readonly string[]): boolean {
 }
 
 function scoreEntry(entry: SearchEntry, words: string[], phrase: string, raw: string, exact: ReadonlySet<string>): { score: number; via: MatchField } | null {
-  const phraseHit = phraseIn(phrase, entry.phrases) || (raw.includes(' ') && phraseIn(raw, entry.rawPhrases));
+  // Expression tapée telle quelle (chiffres compris) dans un nom : « incliné 70 » désigne la variante 70°.
+  const rawHit = raw.includes(' ') && phraseIn(raw, entry.rawPhrases);
+  const phraseHit = phraseIn(phrase, entry.phrases) || rawHit;
   let score = 0;
   let via: MatchField = 'name';
   let viaScore = -1;
@@ -175,6 +192,7 @@ function scoreEntry(entry: SearchEntry, words: string[], phrase: string, raw: st
     }
   }
   if (phraseHit) score += entry.phrases.includes(phrase) ? 4 : 2;
+  if (rawHit) score += 0.5;
   return { score, via };
 }
 
@@ -256,6 +274,8 @@ export function searchWithInfo(index: readonly SearchEntry[], query: string): Se
       b.score - a.score ||
       Number(!!b.entry.variant.favorite) - Number(!!a.entry.variant.favorite) ||
       a.entry.exercise.name.localeCompare(b.entry.exercise.name, 'fr') ||
+      // À égalité, la variante standard d'abord (« mollets » : machine debout avant la machine assise).
+      Number(b.entry.variant.id === b.entry.exercise.id) - Number(a.entry.variant.id === a.entry.exercise.id) ||
       a.entry.variant.name.localeCompare(b.entry.variant.name, 'fr'),
   );
   // Mots montrés tels qu'écrits (normalisés), pas sous leur racine.

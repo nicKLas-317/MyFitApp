@@ -43,14 +43,18 @@ test.describe('Bibliothèque et recherche', () => {
     await search(page, 'pec deck');
     expect(await resultNames(page)).toEqual(['Pec deck']);
     await search(page, 'curl biceps');
-    expect((await resultNames(page)).slice(0, 4).sort()).toEqual(['Curl biceps banc incliné', 'Curl biceps barre droite', 'Curl biceps haltères', 'Curl biceps poulie corde']);
+    expect((await resultNames(page)).slice(0, 5).sort()).toEqual(['Curl biceps banc incliné', 'Curl biceps barre droite', 'Curl biceps barre EZ', 'Curl biceps haltères', 'Curl biceps poulie corde'].sort());
   });
 
   test('48. Recherche par groupe musculaire : dos', async ({ page }) => {
     await openLibrary(page);
     await search(page, 'dos');
     // Les deux tirages ont trois prises, chacune un résultat (§4.3.1).
-    expect((await resultNames(page)).sort()).toEqual(['Rowing haltère', ...Array(3).fill('Tirage horizontal'), ...Array(3).fill('Tirage vertical')]);
+    const primary = ['Lombaires au banc', 'Pull-over à la poulie', 'Rowing barre', 'Rowing haltère', 'Shrugs', ...Array(3).fill('Tirage horizontal'), ...Array(3).fill('Tirage vertical'), 'Tractions assistées'];
+    // Groupe principal d'abord, puis l'oiseau (deux variantes) et le face pull, qui ont le dos en groupe secondaire.
+    const found = await resultNames(page);
+    expect(found.slice(0, primary.length).sort()).toEqual(primary);
+    expect(found.slice(primary.length).sort()).toEqual(['Face pull', 'Oiseau', 'Oiseau']);
     await search(page, 'biceps');
     const names = await resultNames(page);
     expect(names.slice(0, 3).every((n) => n.startsWith('Curl biceps'))).toBe(true);
@@ -116,32 +120,39 @@ test.describe('Bibliothèque et recherche', () => {
   });
 
   test('100. Attribution CC BY-SA affichée sur chaque fiche illustrée, absente des autres', async ({ page }) => {
-    const illustrated = [
+    // Dessins Everkinetic : Wikimedia Commons (CC BY-SA 3.0) ou dépôt everkinetic/data (CC BY-SA 4.0).
+    const commons = [
       'tirage-horizontal', 'tirage-vertical', 'chest-press', 'pec-deck', 'developpe-couche', 'developpe-epaules-machine',
       'elevations-laterales', 'curl-biceps-poulie-corde', 'curl-biceps-halteres', 'curl-biceps-banc-incline',
-      'extension-triceps-poulie', 'extension-triceps-haltere-assis', 'presse-a-cuisses', 'leg-extension', 'leg-curl',
-      'ecarte-couche-halteres', 'curl-ischios', 'curl-biceps-barre-droite', 'mollets-machine',
+      'extension-triceps-poulie--barre', 'extension-triceps-haltere-assis', 'presse-a-cuisses', 'leg-extension', 'leg-curl',
+      'ecarte-couche-halteres', 'curl-ischios', 'curl-biceps-barre-droite', 'mollets-machine', 'mollets-machine--assis', 'kickback',
     ];
-    for (const id of illustrated) {
-      await page.goto(`./#/exercice/${id}`);
-      const img = page.locator('figure.illustration img');
-      await expect(img, id).toBeVisible();
-      expect(await img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0), id).toBe(true);
-      const attribution = page.getByTestId('attribution');
-      await expect(attribution, id).toContainText('Illustration : Everkinetic');
-      await expect(attribution.getByRole('link', { name: 'CC BY-SA 3.0' }), id).toHaveAttribute('href', /creativecommons\.org\/licenses\/by-sa\/3\.0/);
-      await expect(attribution.getByRole('link', { name: /^[12]$/ }), id).toHaveCount(2);
+    const data = [
+      'abducteurs-machine', 'adducteurs-machine', 'extension-triceps-poulie', 'developpe-incline', 'developpe-incline--halteres',
+      'ecarte-poulie', 'rowing-barre', 'lombaires-banc', 'shrugs', 'developpe-militaire-halteres', 'oiseau--halteres',
+      'elevations-frontales', 'curl-marteau', 'curl-pupitre', 'curl-biceps-barre-ez', 'barre-au-front', 'hack-squat',
+    ];
+    for (const [ids, license, origin, source] of [
+      [commons, '3.0', 'Wikimedia Commons', /commons\.wikimedia\.org\/wiki\/File:/],
+      [data, '4.0', 'everkinetic/data', /github\.com\/everkinetic\/data\//],
+    ] as const) {
+      for (const id of ids) {
+        await page.goto(`./#/exercice/${id}`);
+        const img = page.locator('figure.illustration img');
+        await expect(img, id).toBeVisible();
+        expect(await img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0), id).toBe(true);
+        const attribution = page.getByTestId('attribution');
+        await expect(attribution, id).toContainText('Illustration : Everkinetic');
+        await expect(attribution, id).toContainText(`(${origin})`);
+        await expect(attribution.getByRole('link', { name: `CC BY-SA ${license}` }), id).toHaveAttribute('href', new RegExp(`creativecommons\\.org/licenses/by-sa/${license.replace('.', '\\.')}`));
+        await expect(attribution.getByRole('link', { name: '1' }), id).toHaveAttribute('href', source);
+        await expect(attribution.getByRole('link', { name: /^[12]$/ }), id).toHaveCount(2);
+      }
     }
-    // Dessins pris dans le dépôt everkinetic/data, sous CC BY-SA 4.0.
-    for (const id of ['abducteurs-machine', 'adducteurs-machine']) {
-      await page.goto(`./#/exercice/${id}`);
-      const attribution = page.getByTestId('attribution');
-      await expect(attribution, id).toContainText('Illustration : Everkinetic');
-      await expect(attribution, id).toContainText('(everkinetic/data)');
-      await expect(attribution.getByRole('link', { name: 'CC BY-SA 4.0' }), id).toHaveAttribute('href', /creativecommons\.org\/licenses\/by-sa\/4\.0/);
-      await expect(attribution.getByRole('link', { name: '1' }), id).toHaveAttribute('href', /github\.com\/everkinetic\/data\//);
-    }
-    for (const id of ['rowing-haltere', 'crunch-machine', 'dips-assistes', 'elevations-laterales-machine']) {
+    for (const id of [
+      'rowing-haltere', 'crunch-machine', 'dips-assistes', 'elevations-laterales-machine',
+      'developpe-couche-halteres', 'tractions-assistees', 'pull-over-poulie', 'face-pull', 'oiseau', 'squat-kettlebell',
+    ]) {
       await page.goto(`./#/exercice/${id}`);
       await expect(page.locator('.sheet-head'), id).toBeVisible();
       await expect(page.getByTestId('attribution'), id).toHaveCount(0);

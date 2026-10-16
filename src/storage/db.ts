@@ -1,8 +1,18 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { commitNow, STRICT } from './commit';
 import type { Exercise, Session } from '../domain/types';
-import { SEED_ADDITIONS, SEED_EXERCISES, SEED_GRIP_EXERCISES, SEED_GROUP_UPDATES, SEED_UPDATES, SEED_VERSION, sameGroups, sameNaming } from '../library/seed';
-import { addGrips } from '../library/edit';
+import {
+  SEED_ADDITIONS,
+  SEED_EXERCISES,
+  SEED_GRIP_EXERCISES,
+  SEED_GROUP_UPDATES,
+  SEED_UPDATES,
+  SEED_VARIANT_UPDATES,
+  SEED_VERSION,
+  sameGroups,
+  sameNaming,
+} from '../library/seed';
+import { addGrips, addSeedVariants } from '../library/edit';
 
 /**
  * Base d'entraînement. Le suivi corporel (§20) aura sa propre base, séparée.
@@ -157,6 +167,16 @@ export class Repository {
         for (const id of ids) {
           const current = updates.get(id) ?? all.find((e) => e.id === id);
           if (current) updates.set(id, addGrips(current, [...all, ...updates.values()]));
+        }
+      }
+      // Variantes ajoutées à un exercice existant (mollets assis, extension poulie à la barre), une seule fois.
+      for (const [v, changes] of Object.entries(SEED_VARIANT_UPDATES)) {
+        if (Number(v) <= version) continue;
+        for (const [id, spec] of Object.entries(changes)) {
+          const current = updates.get(id) ?? all.find((e) => e.id === id);
+          if (!current) continue;
+          const next = addSeedVariants(current, spec);
+          if (next !== current && JSON.stringify(next) !== JSON.stringify(current)) updates.set(id, next);
         }
       }
     }

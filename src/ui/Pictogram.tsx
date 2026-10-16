@@ -14,6 +14,8 @@ const EQUIPMENT_PATHS: Record<string, string> = {
   barre: 'M2 12h20M5 6v12M8 8v8M16 8v8M19 6v12',
   // Poulie : roue, câble et poignée.
   poulie: 'M12 3a2.5 2.5 0 1 0 0 5a2.5 2.5 0 1 0 0-5M12 8v9M8 17h8M9 17l-1 3M15 17l1 3',
+  // Kettlebell : anse et boule.
+  kettlebell: 'M9 10V8a3 3 0 0 1 6 0v2M12 10a5 5 0 1 0 0 10a5 5 0 1 0 0-10',
   // Machine : cadre et pile de charges.
   machine: 'M5 3h14v18H5zM12 3v7M8 12h8M8 15h8M8 18h8',
   // Poids du corps : silhouette.
@@ -25,13 +27,14 @@ const EQUIPMENT_LABELS: Record<string, string> = {
   haltere: 'haltères',
   barre: 'barre',
   poulie: 'poulie',
+  kettlebell: 'kettlebell',
   machine: 'machine',
   'poids du corps': 'poids du corps',
   autre: 'autre matériel',
 };
 
-export function ExercisePicto({ exercise, large = false }: { exercise: Exercise; large?: boolean }) {
-  const illustration = illustrationFor(exercise.id);
+export function ExercisePicto({ exercise, variantId, large = false }: { exercise: Exercise; variantId?: string; large?: boolean }) {
+  const illustration = illustrationFor(exercise.id, variantId);
   if (illustration) {
     return (
       <span className={`picto picto-image${large ? ' large' : ''}`} aria-hidden="true">

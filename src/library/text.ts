@@ -64,6 +64,14 @@ export function withoutPrecision(s: string): string {
   return s.replace(/(\d+(?:[.,]\d+)?)\s*(?:°|º|degr[eé]s?\b)/giu, ' ');
 }
 
+/** Le nom sans sa précision de variante (angle chiffré, prise) : « Développé couché prise serrée » → « développé couché ». */
+export function withoutVariantPrecision(s: string): string {
+  return lexiconSpans(plainWords(withoutPrecision(s)))
+    .filter((span) => !GRIP_LABELS.has(span.out.join(' ')))
+    .flatMap((span) => span.words)
+    .join(' ');
+}
+
 /** Précision qui distingue une variante : angle chiffré ou prise. */
 export function variantPrecisionOf(s: string): string | null {
   return angleOf(s) ?? gripOf(s);

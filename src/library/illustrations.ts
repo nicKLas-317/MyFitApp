@@ -1,56 +1,17 @@
 /**
  * Illustrations embarquées (§4.0.1) : dessins au trait d'Everkinetic, CC BY-SA 3.0 via Wikimedia Commons, ou
- * CC BY-SA 4.0 via le dépôt everkinetic/data quand Commons n'a pas la bonne paire de dessins.
+ * CC BY-SA 4.0 via le dépôt everkinetic/data (mêmes dessins, publiés en données ouvertes).
  * Chaque image assemble les positions de début et de fin (fichiers « 1 » et « 2 »), recadrées
  * et converties en WebP. Sources et licences : docs/illustrations.md. Un exercice absent garde son pictogramme.
  */
-import tirageHorizontal from './illustrations/tirage-horizontal.webp';
-import tirageHorizontalThumb from './illustrations/tirage-horizontal-vignette.webp';
-import tirageVertical from './illustrations/tirage-vertical.webp';
-import tirageVerticalThumb from './illustrations/tirage-vertical-vignette.webp';
-import chestPress from './illustrations/chest-press.webp';
-import chestPressThumb from './illustrations/chest-press-vignette.webp';
-import pecDeck from './illustrations/pec-deck.webp';
-import pecDeckThumb from './illustrations/pec-deck-vignette.webp';
-import developpeCouche from './illustrations/developpe-couche.webp';
-import developpeCoucheThumb from './illustrations/developpe-couche-vignette.webp';
-import developpeEpaulesMachine from './illustrations/developpe-epaules-machine.webp';
-import developpeEpaulesMachineThumb from './illustrations/developpe-epaules-machine-vignette.webp';
-import elevationsLaterales from './illustrations/elevations-laterales.webp';
-import elevationsLateralesThumb from './illustrations/elevations-laterales-vignette.webp';
-import curlBicepsPoulieCorde from './illustrations/curl-biceps-poulie-corde.webp';
-import curlBicepsPoulieCordeThumb from './illustrations/curl-biceps-poulie-corde-vignette.webp';
-import curlBicepsHalteres from './illustrations/curl-biceps-halteres.webp';
-import curlBicepsHalteresThumb from './illustrations/curl-biceps-halteres-vignette.webp';
-import curlBicepsBancIncline from './illustrations/curl-biceps-banc-incline.webp';
-import curlBicepsBancInclineThumb from './illustrations/curl-biceps-banc-incline-vignette.webp';
-import extensionTricepsPoulie from './illustrations/extension-triceps-poulie.webp';
-import extensionTricepsPoulieThumb from './illustrations/extension-triceps-poulie-vignette.webp';
-import extensionTricepsHaltereAssis from './illustrations/extension-triceps-haltere-assis.webp';
-import extensionTricepsHaltereAssisThumb from './illustrations/extension-triceps-haltere-assis-vignette.webp';
-import presseACuisses from './illustrations/presse-a-cuisses.webp';
-import presseACuissesThumb from './illustrations/presse-a-cuisses-vignette.webp';
-import legExtension from './illustrations/leg-extension.webp';
-import legExtensionThumb from './illustrations/leg-extension-vignette.webp';
-import legCurl from './illustrations/leg-curl.webp';
-import legCurlThumb from './illustrations/leg-curl-vignette.webp';
-import curlIschios from './illustrations/curl-ischios.webp';
-import curlIschiosThumb from './illustrations/curl-ischios-vignette.webp';
-import ecarteCoucheHalteres from './illustrations/ecarte-couche-halteres.webp';
-import ecarteCoucheHalteresThumb from './illustrations/ecarte-couche-halteres-vignette.webp';
-import curlBicepsBarreDroite from './illustrations/curl-biceps-barre-droite.webp';
-import curlBicepsBarreDroiteThumb from './illustrations/curl-biceps-barre-droite-vignette.webp';
-import molletsMachine from './illustrations/mollets-machine.webp';
-import molletsMachineThumb from './illustrations/mollets-machine-vignette.webp';
-import abducteursMachine from './illustrations/abducteurs-machine.webp';
-import abducteursMachineThumb from './illustrations/abducteurs-machine-vignette.webp';
-import adducteursMachine from './illustrations/adducteurs-machine.webp';
-import adducteursMachineThumb from './illustrations/adducteurs-machine-vignette.webp';
+
+/** Fichiers embarqués : `<clé>.webp` et sa vignette `<clé>-vignette.webp`. */
+const FILES = import.meta.glob<string>('./illustrations/*.webp', { eager: true, import: 'default' });
 
 export interface Illustration {
   src: string;
   thumb: string;
-  /** Titre de l'œuvre d'origine (Wikimedia Commons). */
+  /** Titre de l'œuvre d'origine. */
   title: string;
   author: string;
   license: string;
@@ -74,35 +35,69 @@ const EVERKINETIC_DATA = {
   licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/deed.fr',
   origin: 'everkinetic/data',
 } as const;
+const COMMONS = 'https://commons.wikimedia.org/wiki/File:';
 const EK_DATA = 'https://github.com/everkinetic/data/blob/main/src/images-web/';
 
-/** Illustration par exercice de la bibliothèque initiale ; ses variantes partagent la même image. */
+function drawn(key: string, title: string, source: typeof EVERKINETIC | typeof EVERKINETIC_DATA, sources: [string, string]): Illustration {
+  const file = (name: string) => {
+    const url = FILES[`./illustrations/${name}.webp`];
+    if (!url) throw new Error(`Illustration absente : ${name}.webp`);
+    return url;
+  };
+  return { src: file(key), thumb: file(`${key}-vignette`), title, ...source, sources };
+}
+
+/**
+ * Illustration par exercice de la bibliothèque initiale, ou par variante quand une variante a son propre dessin
+ * (clé = identifiant de la variante : « mollets-machine--assis »). Une variante sans dessin propre reprend celui de
+ * son exercice.
+ */
 export const ILLUSTRATIONS: Readonly<Record<string, Illustration>> = {
-  'tirage-horizontal': { src: tirageHorizontal, thumb: tirageHorizontalThumb, title: 'Seated cable rows', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Seated_cable_rows_1.svg', 'https://commons.wikimedia.org/wiki/File:Seated_cable_rows_2.svg'] },
-  'tirage-vertical': { src: tirageVertical, thumb: tirageVerticalThumb, title: 'Wide grip lat pull down', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Wide_grip_lat_pull_down_1.svg', 'https://commons.wikimedia.org/wiki/File:Wide_grip_lat_pull_down_2.svg'] },
-  'chest-press': { src: chestPress, thumb: chestPressThumb, title: 'Machine bench press', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Machine_bench_press_1.svg', 'https://commons.wikimedia.org/wiki/File:Machine_bench_press_2.svg'] },
-  'pec-deck': { src: pecDeck, thumb: pecDeckThumb, title: 'Butterfly machine', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Butterfly_machine_1.svg', 'https://commons.wikimedia.org/wiki/File:Butterfly_machine_2.svg'] },
-  'developpe-couche': { src: developpeCouche, thumb: developpeCoucheThumb, title: 'Bench press', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Bench_press_1.svg', 'https://commons.wikimedia.org/wiki/File:Bench_press_2.svg'] },
-  'developpe-epaules-machine': { src: developpeEpaulesMachine, thumb: developpeEpaulesMachineThumb, title: 'Seated shoulder press machine', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Seated_shoulder_press_machine_1.svg', 'https://commons.wikimedia.org/wiki/File:Seated_shoulder_press_machine_2.svg'] },
-  'elevations-laterales': { src: elevationsLaterales, thumb: elevationsLateralesThumb, title: 'Lateral dumbbell raises', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Lateral_dumbbell_raises_1.svg', 'https://commons.wikimedia.org/wiki/File:Lateral_dumbbell_raises_2.svg'] },
-  'curl-biceps-poulie-corde': { src: curlBicepsPoulieCorde, thumb: curlBicepsPoulieCordeThumb, title: 'Hammer curls with rope and cable', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Hammer_curls_with_rope_and_cable_1.svg', 'https://commons.wikimedia.org/wiki/File:Hammer_curls_with_rope_and_cable_2.svg'] },
-  'curl-biceps-halteres': { src: curlBicepsHalteres, thumb: curlBicepsHalteresThumb, title: 'Biceps curl with dumbbell', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Biceps_curl_with_dumbbell_1.svg', 'https://commons.wikimedia.org/wiki/File:Biceps_curl_with_dumbbell_2.svg'] },
-  'curl-biceps-banc-incline': { src: curlBicepsBancIncline, thumb: curlBicepsBancInclineThumb, title: 'Alternating incline curl with dumbbell', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Alternating_incline_curl_with_dumbbell_1.svg', 'https://commons.wikimedia.org/wiki/File:Alternating_incline_curl_with_dumbbell_2.svg'] },
-  'extension-triceps-poulie': { src: extensionTricepsPoulie, thumb: extensionTricepsPoulieThumb, title: 'Triceps pushdown with cable', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Triceps_pushdown_with_cable_1.svg', 'https://commons.wikimedia.org/wiki/File:Triceps_pushdown_with_cable_2.svg'] },
-  'extension-triceps-haltere-assis': { src: extensionTricepsHaltereAssis, thumb: extensionTricepsHaltereAssisThumb, title: 'Seated triceps press with dumbbell', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Seated_triceps_press_with_dumbbell_1.svg', 'https://commons.wikimedia.org/wiki/File:Seated_triceps_press_with_dumbbell_2.svg'] },
-  'presse-a-cuisses': { src: presseACuisses, thumb: presseACuissesThumb, title: 'Leg-press', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Leg-press-1-1024x670.png', 'https://commons.wikimedia.org/wiki/File:Leg-press-2-1024x670.png'] },
-  'leg-extension': { src: legExtension, thumb: legExtensionThumb, title: 'Leg extensions', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Leg_extensions_1.svg', 'https://commons.wikimedia.org/wiki/File:Leg_extensions_2.svg'] },
-  'leg-curl': { src: legCurl, thumb: legCurlThumb, title: 'Seated leg curl', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Seated_leg_curl_1.svg', 'https://commons.wikimedia.org/wiki/File:Seated_leg_curl_2.svg'] },
-  'ecarte-couche-halteres': { src: ecarteCoucheHalteres, thumb: ecarteCoucheHalteresThumb, title: 'Dumbbell flys', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Dumbbell_flys_1.svg', 'https://commons.wikimedia.org/wiki/File:Dumbbell_flys_2.svg'] },
-  'curl-ischios': { src: curlIschios, thumb: curlIschiosThumb, title: 'Lying leg curl machine', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Lying_leg_curl_machine_1.svg', 'https://commons.wikimedia.org/wiki/File:Lying_leg_curl_machine_2.svg'] },
-  'curl-biceps-barre-droite': { src: curlBicepsBarreDroite, thumb: curlBicepsBarreDroiteThumb, title: 'Wide grip standing biceps curl with barbell', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Wide_grip_standing_biceps_curl_with_barbell_1.svg', 'https://commons.wikimedia.org/wiki/File:Wide_grip_standing_biceps_curl_with_barbell_2.svg'] },
-  'mollets-machine': { src: molletsMachine, thumb: molletsMachineThumb, title: 'Standing calf raises using machine', ...EVERKINETIC, sources: ['https://commons.wikimedia.org/wiki/File:Standing_calf_raises_using_machine_1.svg', 'https://commons.wikimedia.org/wiki/File:Standing_calf_raises_using_machine_2.svg'] },
+  'tirage-horizontal': drawn('tirage-horizontal', 'Seated cable rows', EVERKINETIC, [`${COMMONS}Seated_cable_rows_1.svg`, `${COMMONS}Seated_cable_rows_2.svg`]),
+  'tirage-vertical': drawn('tirage-vertical', 'Wide grip lat pull down', EVERKINETIC, [`${COMMONS}Wide_grip_lat_pull_down_1.svg`, `${COMMONS}Wide_grip_lat_pull_down_2.svg`]),
+  'chest-press': drawn('chest-press', 'Machine bench press', EVERKINETIC, [`${COMMONS}Machine_bench_press_1.svg`, `${COMMONS}Machine_bench_press_2.svg`]),
+  'pec-deck': drawn('pec-deck', 'Butterfly machine', EVERKINETIC, [`${COMMONS}Butterfly_machine_1.svg`, `${COMMONS}Butterfly_machine_2.svg`]),
+  'developpe-couche': drawn('developpe-couche', 'Bench press', EVERKINETIC, [`${COMMONS}Bench_press_1.svg`, `${COMMONS}Bench_press_2.svg`]),
+  'developpe-epaules-machine': drawn('developpe-epaules-machine', 'Seated shoulder press machine', EVERKINETIC, [`${COMMONS}Seated_shoulder_press_machine_1.svg`, `${COMMONS}Seated_shoulder_press_machine_2.svg`]),
+  'elevations-laterales': drawn('elevations-laterales', 'Lateral dumbbell raises', EVERKINETIC, [`${COMMONS}Lateral_dumbbell_raises_1.svg`, `${COMMONS}Lateral_dumbbell_raises_2.svg`]),
+  'curl-biceps-poulie-corde': drawn('curl-biceps-poulie-corde', 'Hammer curls with rope and cable', EVERKINETIC, [`${COMMONS}Hammer_curls_with_rope_and_cable_1.svg`, `${COMMONS}Hammer_curls_with_rope_and_cable_2.svg`]),
+  'curl-biceps-halteres': drawn('curl-biceps-halteres', 'Biceps curl with dumbbell', EVERKINETIC, [`${COMMONS}Biceps_curl_with_dumbbell_1.svg`, `${COMMONS}Biceps_curl_with_dumbbell_2.svg`]),
+  'curl-biceps-banc-incline': drawn('curl-biceps-banc-incline', 'Alternating incline curl with dumbbell', EVERKINETIC, [`${COMMONS}Alternating_incline_curl_with_dumbbell_1.svg`, `${COMMONS}Alternating_incline_curl_with_dumbbell_2.svg`]),
+  // Ce dessin montre une barre droite : il illustre la variante « Barre » (version 8) ; la corde a le sien.
+  'extension-triceps-poulie--barre': drawn('extension-triceps-poulie--barre', 'Triceps pushdown with cable', EVERKINETIC, [`${COMMONS}Triceps_pushdown_with_cable_1.svg`, `${COMMONS}Triceps_pushdown_with_cable_2.svg`]),
+  'extension-triceps-haltere-assis': drawn('extension-triceps-haltere-assis', 'Seated triceps press with dumbbell', EVERKINETIC, [`${COMMONS}Seated_triceps_press_with_dumbbell_1.svg`, `${COMMONS}Seated_triceps_press_with_dumbbell_2.svg`]),
+  'presse-a-cuisses': drawn('presse-a-cuisses', 'Leg-press', EVERKINETIC, [`${COMMONS}Leg-press-1-1024x670.png`, `${COMMONS}Leg-press-2-1024x670.png`]),
+  'leg-extension': drawn('leg-extension', 'Leg extensions', EVERKINETIC, [`${COMMONS}Leg_extensions_1.svg`, `${COMMONS}Leg_extensions_2.svg`]),
+  'leg-curl': drawn('leg-curl', 'Seated leg curl', EVERKINETIC, [`${COMMONS}Seated_leg_curl_1.svg`, `${COMMONS}Seated_leg_curl_2.svg`]),
+  'ecarte-couche-halteres': drawn('ecarte-couche-halteres', 'Dumbbell flys', EVERKINETIC, [`${COMMONS}Dumbbell_flys_1.svg`, `${COMMONS}Dumbbell_flys_2.svg`]),
+  'curl-ischios': drawn('curl-ischios', 'Lying leg curl machine', EVERKINETIC, [`${COMMONS}Lying_leg_curl_machine_1.svg`, `${COMMONS}Lying_leg_curl_machine_2.svg`]),
+  'curl-biceps-barre-droite': drawn('curl-biceps-barre-droite', 'Wide grip standing biceps curl with barbell', EVERKINETIC, [`${COMMONS}Wide_grip_standing_biceps_curl_with_barbell_1.svg`, `${COMMONS}Wide_grip_standing_biceps_curl_with_barbell_2.svg`]),
+  'mollets-machine': drawn('mollets-machine', 'Standing calf raises using machine', EVERKINETIC, [`${COMMONS}Standing_calf_raises_using_machine_1.svg`, `${COMMONS}Standing_calf_raises_using_machine_2.svg`]),
   // Commons n'a qu'une paire incohérente pour ces machines (« Thigh adductor 2.svg » décrit comme abducteur) :
   // les paires correctes viennent du dépôt everkinetic/data. Abducteurs : jambes serrées puis écartées ; adducteurs : l'inverse.
-  'abducteurs-machine': { src: abducteursMachine, thumb: abducteursMachineThumb, title: 'Thigh abductor', ...EVERKINETIC_DATA, sources: [`${EK_DATA}thigh-abductor-1.png`, `${EK_DATA}thigh-abductor-2.png`] },
-  'adducteurs-machine': { src: adducteursMachine, thumb: adducteursMachineThumb, title: 'Thigh adductor', ...EVERKINETIC_DATA, sources: [`${EK_DATA}thigh-adductor-1.png`, `${EK_DATA}thigh-adductor-2.png`] },
+  'abducteurs-machine': drawn('abducteurs-machine', 'Thigh abductor', EVERKINETIC_DATA, [`${EK_DATA}thigh-abductor-1.png`, `${EK_DATA}thigh-abductor-2.png`]),
+  'adducteurs-machine': drawn('adducteurs-machine', 'Thigh adductor', EVERKINETIC_DATA, [`${EK_DATA}thigh-adductor-1.png`, `${EK_DATA}thigh-adductor-2.png`]),
+  // Version 8. Développé couché haltères, tractions assistées, pull-over à la poulie, face pull, oiseau à la machine et
+  // squat kettlebell : aucun dessin fiable (le « Bench press dumbbell » d'Everkinetic montre un banc incliné) → pictogramme.
+  'mollets-machine--assis': drawn('mollets-machine--assis', 'Seated calf raise using machine', EVERKINETIC, [`${COMMONS}Seated_calf_raise_using_machine_1.svg`, `${COMMONS}Seated_calf_raise_using_machine_2.svg`]),
+  'extension-triceps-poulie': drawn('extension-triceps-poulie', 'Triceps pushdown with rope and cable', EVERKINETIC_DATA, [`${EK_DATA}triceps-pushdown-with-rope-and-cable-1.png`, `${EK_DATA}triceps-pushdown-with-rope-and-cable-2.png`]),
+  'developpe-incline': drawn('developpe-incline', 'Incline bench press', EVERKINETIC_DATA, [`${EK_DATA}incline-bench-press-1.png`, `${EK_DATA}incline-bench-press-2.png`]),
+  'developpe-incline--halteres': drawn('developpe-incline--halteres', 'Incline dumbbell press', EVERKINETIC_DATA, [`${EK_DATA}incline-dumbbell-press-1.png`, `${EK_DATA}incline-dumbbell-press-2.png`]),
+  'ecarte-poulie': drawn('ecarte-poulie', 'Cable crossover', EVERKINETIC_DATA, [`${EK_DATA}cable-crossover-1.png`, `${EK_DATA}cable-crossover-2.png`]),
+  'rowing-barre': drawn('rowing-barre', 'Reverse grips bent over barbell rows', EVERKINETIC_DATA, [`${EK_DATA}reverse-grips-bent-over-barbell-rows-1.png`, `${EK_DATA}reverse-grips-bent-over-barbell-rows-2.png`]),
+  'lombaires-banc': drawn('lombaires-banc', 'Hyperextensions', EVERKINETIC_DATA, [`${EK_DATA}hyperextensions-1.png`, `${EK_DATA}hyperextensions-2.png`]),
+  'shrugs': drawn('shrugs', 'Shoulder shrugs', EVERKINETIC_DATA, [`${EK_DATA}shoulder-shrugs-1.png`, `${EK_DATA}shoulder-shrugs-2.png`]),
+  'developpe-militaire-halteres': drawn('developpe-militaire-halteres', 'Dumbbell shoulder press', EVERKINETIC_DATA, [`${EK_DATA}dumbbell-shoulder-press-1.png`, `${EK_DATA}dumbbell-shoulder-press-2.png`]),
+  'oiseau--halteres': drawn('oiseau--halteres', 'Bent over rear deltoid raise with head on bench', EVERKINETIC_DATA, [`${EK_DATA}bent-over-rear-deltoid-raise-with-head-on-bench-1.png`, `${EK_DATA}bent-over-rear-deltoid-raise-with-head-on-bench-2.png`]),
+  'elevations-frontales': drawn('elevations-frontales', 'Front dumbbell raise', EVERKINETIC_DATA, [`${EK_DATA}front-dumbbell-raise-1.png`, `${EK_DATA}front-dumbbell-raise-2.png`]),
+  'curl-marteau': drawn('curl-marteau', 'Bicep hammer curl with dumbbell', EVERKINETIC_DATA, [`${EK_DATA}bicep-hammer-curl-with-dumbbell-1.png`, `${EK_DATA}bicep-hammer-curl-with-dumbbell-2.png`]),
+  'curl-pupitre': drawn('curl-pupitre', 'Preacher curl with barbell', EVERKINETIC_DATA, [`${EK_DATA}preacher-curl-with-barbell-1.png`, `${EK_DATA}preacher-curl-with-barbell-2.png`]),
+  'curl-biceps-barre-ez': drawn('curl-biceps-barre-ez', 'Ez bar curl with barbell', EVERKINETIC_DATA, [`${EK_DATA}ez-bar-curl-with-barbell-1.png`, `${EK_DATA}ez-bar-curl-with-barbell-2.png`]),
+  'barre-au-front': drawn('barre-au-front', 'Lying triceps press with barbell', EVERKINETIC_DATA, [`${EK_DATA}lying-triceps-press-with-barbell-1.png`, `${EK_DATA}lying-triceps-press-with-barbell-2.png`]),
+  'kickback': drawn('kickback', 'Triceps kickback with dumbbell', EVERKINETIC, [`${COMMONS}Triceps_kickback_with_dumbbell_1.svg`, `${COMMONS}Triceps_kickback_with_dumbbell_2.svg`]),
+  'hack-squat': drawn('hack-squat', 'Hack squat machine', EVERKINETIC_DATA, [`${EK_DATA}hack-squat-machine-1.png`, `${EK_DATA}hack-squat-machine-2.png`]),
 };
 
-export function illustrationFor(exerciseId: string): Illustration | undefined {
-  return ILLUSTRATIONS[exerciseId];
+export function illustrationFor(exerciseId: string, variantId?: string): Illustration | undefined {
+  return (variantId ? ILLUSTRATIONS[variantId] : undefined) ?? ILLUSTRATIONS[exerciseId];
 }

@@ -5,8 +5,8 @@
  */
 import type { Exercise } from '../domain/types';
 import { MUSCLE_GROUP_LABELS } from '../library/seed';
-import { EQUIPMENT_WORDS, GROUP_WORDS, GROUP_WORDS_BY_GROUP, libraryVocabulary } from '../library/search';
-import { nameKey, nameTokens, normalizeName, unknownWordsOf, withoutPrecision } from '../library/text';
+import { EQUIPMENT_WORDS, GROUP_WORDS, GROUP_WORDS_BY_GROUP, libraryVocabulary, variantEquipment } from '../library/search';
+import { nameKey, nameTokens, normalizeName, unknownWordsOf, variantPrecisionOf, withoutPrecision, withoutVariantPrecision } from '../library/text';
 
 export type MatchConfidence =
   /** Nom déjà confirmé lors d'un import précédent (synonyme appris). */
@@ -65,7 +65,9 @@ function variantNames(exercise: Exercise, variantId: string): string[] {
 
 /** L'exercice a ce matériel, par son champ matériel ou par son nom. */
 function hasEquipment(exercise: Exercise, variantId: string, word: string): boolean {
-  return nameTokens(exercise.equipment).includes(word) || variantNames(exercise, variantId).some((n) => nameTokens(n).includes(word));
+  const variant = exercise.variants.find((v) => v.id === variantId);
+  const equipment = variant ? variantEquipment(exercise, variant) : [exercise.equipment];
+  return equipment.some((e) => nameTokens(e).includes(word)) || variantNames(exercise, variantId).some((n) => nameTokens(n).includes(word));
 }
 
 /**
@@ -80,6 +82,13 @@ export function matchExercise(sourceName: string, exercises: readonly Exercise[]
   const active = exercises.filter((e) => !e.archived);
   const vocabulary = libraryVocabulary(exercises);
   const unknownWords = unknownWordsOf(withoutPrecision(sourceName), (t) => vocabulary.has(t));
+  // Comme la recherche (§4.2.1), un mot inconnu est écarté du rapprochement quand au moins deux autres mots sont
+  // reconnus et plus nombreux ; la proposition reste à confirmer.
+  const unknownStems = new Set(unknownWords.flatMap(nameTokens));
+  const knownTokens = tokens.filter((t) => !unknownStems.has(t));
+  const ignoreUnknown = unknownStems.size > 0 && knownTokens.length >= 2 && knownTokens.length > unknownStems.size;
+  const scored = ignoreUnknown ? knownTokens : tokens;
+  const scoredKey = ignoreUnknown ? [...new Set(knownTokens)].sort().join(' ') : key;
 
   // Synonyme appris : correspondance exacte sur un nom déjà confirmé.
   for (const exercise of active) {
@@ -102,12 +111,25 @@ export function matchExercise(sourceName: string, exercises: readonly Exercise[]
   // « lateral raise dumbbell » est « Élévations latérales haltères »).
   const exact = active.flatMap((exercise) =>
     exercise.variants
-      .filter((v) => !v.archived && variantNames(exercise, v.id).some((n) => nameKey(n) === key))
+      .filter((v) => !v.archived && variantNames(exercise, v.id).some((n) => nameKey(n) === scoredKey))
       .map((v) => ({ variantId: v.id, exerciseId: exercise.id, score: 1.5 })),
   );
   if (exact.length === 1) {
     const chosen = active.find((e) => e.id === exact[0]!.exerciseId)!;
+    // Reconnu une fois le mot inconnu écarté : proposé, jamais retenu d'office.
+    if (ignoreUnknown) return { confidence: 'probable', suggestion: exact[0]!.variantId, candidates: exact, qualifier: null, unknownWords };
     return { confidence: 'certain', suggestion: exact[0]!.variantId, candidates: exact, qualifier: qualifierOf(sourceName, chosen), unknownWords: [] };
+  }
+  // Nom identique à un exercice une fois sa précision retirée (« Développé couché prise serrée ») : cet exercice,
+  // avec sa précision, même si un exercice voisin (« Développé couché haltères ») partage des mots.
+  if (exact.length === 0 && variantPrecisionOf(sourceName)) {
+    const bare = nameKey(withoutVariantPrecision(sourceName));
+    const same = bare ? active.filter((e) => [e.name, ...e.synonyms].some((n) => nameKey(n) === bare)) : [];
+    if (same.length === 1) {
+      const chosen = same[0]!;
+      const candidates = [{ variantId: chosen.id, exerciseId: chosen.id, score: 1.5 }];
+      return { confidence: 'certain', suggestion: chosen.id, candidates, qualifier: qualifierOf(sourceName, chosen), unknownWords: [] };
+    }
   }
 
   // Un nom de groupe seul (« pec », « pecs », « pectoraux ») désigne un groupe, pas un exercice :
@@ -125,7 +147,7 @@ export function matchExercise(sourceName: string, exercises: readonly Exercise[]
   for (const exercise of active) {
     for (const variant of exercise.variants) {
       if (variant.archived) continue;
-      const best = Math.max(0, ...variantNames(exercise, variant.id).map((n) => score(tokens, n)));
+      const best = Math.max(0, ...variantNames(exercise, variant.id).map((n) => score(scored, n)));
       if (best >= CANDIDATE) candidates.push({ variantId: variant.id, exerciseId: exercise.id, score: best });
     }
   }

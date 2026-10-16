@@ -19,7 +19,7 @@ describe('Recherche par nom d’exercice ou de machine (§4.1 A)', () => {
 
   it('plusieurs machines correspondantes donnent plusieurs résultats distincts', () => {
     const curls = ids('curl biceps');
-    expect(curls.slice(0, 4).sort()).toEqual(['curl-biceps-banc-incline', 'curl-biceps-barre-droite', 'curl-biceps-halteres', 'curl-biceps-poulie-corde']);
+    expect(curls.slice(0, 5).sort()).toEqual(['curl-biceps-banc-incline', 'curl-biceps-barre-droite', 'curl-biceps-barre-ez', 'curl-biceps-halteres', 'curl-biceps-poulie-corde']);
     expect(ids('biceps poulie corde')[0]).toBe('curl-biceps-poulie-corde');
     expect(ids('press')).toEqual(expect.arrayContaining(['chest-press', 'developpe-couche', 'developpe-epaules-machine', 'presse-a-cuisses']));
   });
@@ -49,16 +49,23 @@ describe('Recherche par nom d’exercice ou de machine (§4.1 A)', () => {
 describe('Recherche par groupe musculaire (§4.1 B)', () => {
   it('48. « dos » propose les exercices du dos, même sans « dos » dans leur nom', () => {
     // Les deux tirages ont trois prises, chacune une variante (§4.3.1).
-    const dos = ['rowing-haltere', 'tirage-horizontal', 'tirage-horizontal--prise-serree', 'tirage-horizontal--prise-tres-large', 'tirage-vertical', 'tirage-vertical--prise-serree', 'tirage-vertical--prise-tres-large'];
-    expect(ids('dos').sort()).toEqual(dos);
-    expect(ids('back').sort()).toEqual(dos);
+    const dos = [
+      'lombaires-banc', 'pull-over-poulie', 'rowing-barre', 'rowing-haltere', 'shrugs', 'tirage-horizontal', 'tirage-horizontal--prise-serree',
+      'tirage-horizontal--prise-tres-large', 'tirage-vertical', 'tirage-vertical--prise-serree', 'tirage-vertical--prise-tres-large', 'tractions-assistees',
+    ];
+    // Groupe principal d'abord ; l'oiseau et le face pull (dos en groupe secondaire) suivent.
+    const secondary = ['face-pull', 'oiseau', 'oiseau--halteres'];
+    for (const q of ['dos', 'back']) {
+      expect(ids(q).slice(0, dos.length).sort(), q).toEqual(dos);
+      expect(ids(q).slice(dos.length).sort(), q).toEqual(secondary);
+    }
   });
 
   it('le groupe principal passe avant les groupes secondaires', () => {
     const biceps = searchExercises(index, 'biceps');
     const primary = biceps.filter((r) => r.entry.exercise.primaryGroup === 'biceps').map((r) => r.entry.variant.id);
-    expect(primary).toHaveLength(4);
-    expect(biceps.slice(0, 4).map((r) => r.entry.variant.id).sort()).toEqual([...primary].sort());
+    expect(primary).toHaveLength(7);
+    expect(biceps.slice(0, 7).map((r) => r.entry.variant.id).sort()).toEqual([...primary].sort());
     // Les tirages (biceps en secondaire) suivent, signalés comme tels.
     const tirage = biceps.find((r) => r.entry.variant.id === 'tirage-vertical');
     expect(tirage?.via).toBe('secondary');
@@ -67,19 +74,21 @@ describe('Recherche par groupe musculaire (§4.1 B)', () => {
   it('chaque groupe du brief est reconnu, avec ses variantes d’écriture', () => {
     expect(ids('pectoraux')).toEqual(expect.arrayContaining(['chest-press', 'pec-deck', 'developpe-couche']));
     expect(ids('pecs')).toEqual(expect.arrayContaining(['chest-press', 'pec-deck', 'developpe-couche']));
-    expect(ids('epaules').slice(0, 2).sort()).toEqual(['developpe-epaules-machine', 'elevations-laterales']);
-    expect(ids('triceps').slice(0, 2).sort()).toEqual(['extension-triceps-haltere-assis', 'extension-triceps-poulie']);
-    expect(ids('jambes').sort()).toEqual(['abducteurs-machine', 'adducteurs-machine', 'curl-ischios', 'leg-curl', 'leg-extension', 'mollets-machine', 'presse-a-cuisses']);
+    expect(ids('epaules').slice(0, 2).sort()).toEqual(['developpe-epaules-machine', 'developpe-militaire-halteres']);
+    expect(ids('epaules')).toEqual(expect.arrayContaining(['elevations-laterales', 'elevations-laterales-machine', 'elevations-frontales', 'oiseau', 'face-pull']));
+    const tri = LIB.filter((e) => e.primaryGroup === 'triceps').flatMap((e) => e.variants.map((v) => v.id)).sort();
+    for (const q of ['triceps', 'tris']) expect(ids(q).slice(0, tri.length).sort(), q).toEqual(tri);
+    expect(ids('jambes').sort()).toEqual(['abducteurs-machine', 'adducteurs-machine', 'curl-ischios', 'hack-squat', 'leg-curl', 'leg-extension', 'mollets-machine', 'mollets-machine--assis', 'presse-a-cuisses', 'squat-kettlebell']);
     expect(ids('abdos')).toEqual(['crunch-machine']);
     expect(ids('abdominaux')).toEqual(['crunch-machine']);
     // Lexique (§4.2.1) : les ischio-jambiers et les quadriceps sont des sous-groupes des jambes.
     expect(ids('ischios').sort()).toEqual(['curl-ischios', 'leg-curl']);
-    expect(ids('quadri').sort()).toEqual(['leg-extension', 'presse-a-cuisses']);
+    expect(ids('quadri').sort()).toEqual(['hack-squat', 'leg-extension', 'presse-a-cuisses', 'squat-kettlebell']);
   });
 
   it('recherche par matériel, combinable avec un groupe', () => {
     expect(ids('poulie')).toEqual(expect.arrayContaining(['curl-biceps-poulie-corde', 'extension-triceps-poulie', 'tirage-vertical']));
-    expect(ids('dos haltère')).toEqual(['rowing-haltere']);
+    expect(ids('dos haltère')).toEqual(['rowing-haltere', 'shrugs', 'oiseau--halteres']);
     expect(equipmentKey('haltère')).toBe(equipmentKey('Haltères'));
   });
 });
