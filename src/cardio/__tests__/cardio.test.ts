@@ -25,6 +25,8 @@ import {
   removeCardio,
   sanitizeCardioMachines,
   updateCardio,
+  upgradeCardioMachines,
+  CARDIO_MACHINES_VERSION,
 } from '../model';
 
 const LIB: Exercise[] = [...SEED_EXERCISES];
@@ -183,18 +185,18 @@ describe('Cardio : import de notes', () => {
   });
 
   it('110. Cardio mêlé aux exercices : les exercices sont inchangés ; une machine inconnue est à choisir, jamais devinée', () => {
-    const text = `${NOTES_11_3}\n\nTapis\n12 min\n\nVélo 20 min`;
+    const text = `${NOTES_11_3}\n\nTapis\n12 min\n\nStepper 20 min`;
     const parsed = parseNotes(text, TODAY);
     expect(parsed.entries).toHaveLength(6);
     expect(parsed.title).toBeNull();
-    expect(parsed.cardio.map((c) => [c.sourceName, c.minutes])).toEqual([['Tapis', 12], ['Vélo', 20]]);
+    expect(parsed.cardio.map((c) => [c.sourceName, c.minutes])).toEqual([['Tapis', 12], ['Stepper', 20]]);
     const draft = withExampleChoices(setDraftDate(draftFromNotes(text, LIB, TODAY), '2026-10-14'));
     expect(draft.cardio[1]!.machine).toBeNull();
     const ctx = { exercises: LIB, sessions: [], profile: rebuildProfile([], buildEngineSettings(LIB)).profile };
     expect(draftProblems(draft, ctx).filter((p) => p.level === 'error').map((p) => p.code)).toEqual(['cardio_machine']);
     // Un nom de machine des réglages est reconnu.
-    const machines = [...DEFAULT_CARDIO_MACHINES, newMachine('Vélo', false, DEFAULT_CARDIO_MACHINES)];
-    expect(draftFromNotes(text, LIB, TODAY, machines).cardio[1]!.machine?.name).toBe('Vélo');
+    const machines = [...DEFAULT_CARDIO_MACHINES, newMachine('Stepper', false, DEFAULT_CARDIO_MACHINES)];
+    expect(draftFromNotes(text, LIB, TODAY, machines).cardio[1]!.machine?.name).toBe('Stepper');
     // Exclure le bloc inconnu suffit aussi.
     const excluded = updateDraftCardio(draft, 'c2', { include: false });
     expect(hasBlockingProblems(draftProblems(excluded, ctx))).toBe(false);
@@ -216,10 +218,46 @@ describe('Cardio : import de notes', () => {
   });
 });
 
+describe('Cardio : vélo classique et vélo elliptique', () => {
+  it('122. « Vélo » est une machine par défaut, sans inclinaison ; « vélo » seul = Vélo, « elliptique » ou « vélo elliptique » = Vélo elliptique', () => {
+    expect(DEFAULT_CARDIO_MACHINES.map((m) => m.name)).toEqual(['Tapis de marche', 'Rameur', 'Vélo elliptique', 'Vélo', 'Autre']);
+    const velo = machine('velo');
+    expect(velo.incline).toBe(false);
+    expect(makeCardioBlock({ machine: velo, incline: 'haute', minutes: 30 }, 'v').incline).toBeUndefined();
+
+    const lines = ['Vélo 30 min', 'velo 10 min', 'Vélo elliptique 20 min', 'Elliptique 15 min', 'Velo elliptique 5 min', 'Vélo classique 12 min'];
+    const draft = draftFromNotes(lines.join('\n'), LIB, TODAY);
+    expect(draft.cardio.map((c) => [c.machine?.id, c.minutes])).toEqual([
+      ['velo', 30],
+      ['velo', 10],
+      ['elliptique', 20],
+      ['elliptique', 15],
+      ['elliptique', 5],
+      ['velo', 12],
+    ]);
+    const ctx = { exercises: LIB, sessions: [], profile: rebuildProfile([], buildEngineSettings(LIB)).profile };
+    expect(hasBlockingProblems(draftProblems(setDraftDate(draft, '2026-10-14'), ctx))).toBe(false);
+    const [session] = finalizeDrafts([setDraftDate(draft, '2026-10-14')], LIB, [], at(15)).sessions;
+    expect(cardioOf(session!).map(formatCardio).slice(0, 3)).toEqual(['Vélo · 30 min', 'Vélo · 10 min', 'Vélo elliptique · 20 min']);
+  });
+
+  it('123. Une liste de machines enregistrée par la version 1.2.0 reçoit « Vélo » une seule fois, avant « Autre », sans recréer une machine retirée', () => {
+    const old = DEFAULT_CARDIO_MACHINES.filter((m) => m.id !== 'velo');
+    expect(upgradeCardioMachines(old, 1).map((m) => m.id)).toEqual(['tapis', 'rameur', 'elliptique', 'velo', 'autre']);
+    // Liste personnalisée, sans « Autre » : ajout en fin de liste ; une machine déjà nommée « Vélo » n'est pas doublée.
+    const custom = [old[0]!, { id: 'cardio-stepper', name: 'Stepper', incline: false }];
+    expect(upgradeCardioMachines(custom, 1).map((m) => m.id)).toEqual(['tapis', 'cardio-stepper', 'velo']);
+    const named = [old[0]!, { id: 'cardio-velo', name: 'vélo', incline: false }];
+    expect(upgradeCardioMachines(named, 1)).toEqual(named);
+    // Liste déjà à jour (version 2) dont l'utilisateur a retiré « Vélo » : rien n'est recréé.
+    expect(upgradeCardioMachines(old, CARDIO_MACHINES_VERSION)).toEqual(old);
+  });
+});
+
 describe('Cardio : sauvegarde, migration et réglages', () => {
   it('111. Export puis import : blocs et machines conservés ; un doublon tient compte du cardio ; un bloc invalide est refusé', async () => {
     const sessions = [done(at(12), 'a', [{ m: TAPIS, min: 20, incline: 'haute' }, { m: RAMEUR, min: 10 }]), done(at(13), 'b', [], false)];
-    const machines = [...DEFAULT_CARDIO_MACHINES.slice(0, 3), { id: 'cardio-velo', name: 'Vélo', incline: false }];
+    const machines = [...DEFAULT_CARDIO_MACHINES.slice(0, 3), { id: 'cardio-stepper', name: 'Stepper', incline: false }];
     const backup = buildBackup({ sessions, exercises: LIB, settings: { cardioMachines: machines } }, at(15));
     expect(backup.schemaVersion).toBe(SCHEMA_VERSION);
     const parsed = parseJsonImport(JSON.stringify(backup), LIB, TODAY);

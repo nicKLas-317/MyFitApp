@@ -1,4 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
+import { commitNow, STRICT } from './commit';
 import type { Exercise, Session } from '../domain/types';
 import { SEED_ADDITIONS, SEED_EXERCISES, SEED_UPDATES, SEED_VERSION, sameNaming } from '../library/seed';
 
@@ -41,14 +42,19 @@ export class Repository {
     return this.db.getAll('sessions');
   }
 
+  /** Enregistre une séance, validée aussitôt (`commitNow`) et écrite sur le disque avant d'être annoncée. */
   async putSession(session: Session): Promise<void> {
-    const tx = this.db.transaction('sessions', 'readwrite');
-    await Promise.all([tx.store.put(session), tx.done]);
+    const tx = this.db.transaction('sessions', 'readwrite', STRICT);
+    const done = Promise.all([tx.store.put(session), tx.done]);
+    commitNow(tx);
+    await done;
   }
 
   async deleteSession(id: string): Promise<void> {
-    const tx = this.db.transaction('sessions', 'readwrite');
-    await Promise.all([tx.store.delete(id), tx.done]);
+    const tx = this.db.transaction('sessions', 'readwrite', STRICT);
+    const done = Promise.all([tx.store.delete(id), tx.done]);
+    commitNow(tx);
+    await done;
   }
 
   loadExercises(): Promise<Exercise[]> {
@@ -56,7 +62,7 @@ export class Repository {
   }
 
   async putExercises(exercises: readonly Exercise[]): Promise<void> {
-    const tx = this.db.transaction('exercises', 'readwrite');
+    const tx = this.db.transaction('exercises', 'readwrite', STRICT);
     const writes: Promise<unknown>[] = [];
     try {
       for (const e of exercises) writes.push(tx.store.put(e));
@@ -64,12 +70,16 @@ export class Repository {
       abortQuietly(tx, writes);
       throw error;
     }
-    await Promise.all([...writes, tx.done]);
+    const done = Promise.all([...writes, tx.done]);
+    commitNow(tx);
+    await done;
   }
 
   async deleteExercise(id: string): Promise<void> {
-    const tx = this.db.transaction('exercises', 'readwrite');
-    await Promise.all([tx.store.delete(id), tx.done]);
+    const tx = this.db.transaction('exercises', 'readwrite', STRICT);
+    const done = Promise.all([tx.store.delete(id), tx.done]);
+    commitNow(tx);
+    await done;
   }
 
   async getMeta<T>(key: string): Promise<T | undefined> {
@@ -77,8 +87,10 @@ export class Repository {
   }
 
   async setMeta(key: string, value: unknown): Promise<void> {
-    const tx = this.db.transaction('meta', 'readwrite');
-    await Promise.all([tx.store.put(value, key), tx.done]);
+    const tx = this.db.transaction('meta', 'readwrite', STRICT);
+    const done = Promise.all([tx.store.put(value, key), tx.done]);
+    commitNow(tx);
+    await done;
   }
 
   /**
@@ -86,7 +98,7 @@ export class Repository {
    * `replace` vide d'abord séances et exercices ; l'appelant ne le demande qu'après confirmation explicite.
    */
   async applyImport(data: { sessions: readonly Session[]; exercises: readonly Exercise[]; replace?: boolean }): Promise<void> {
-    const tx = this.db.transaction(['sessions', 'exercises'], 'readwrite');
+    const tx = this.db.transaction(['sessions', 'exercises'], 'readwrite', STRICT);
     const sessions = tx.objectStore('sessions');
     const exercises = tx.objectStore('exercises');
     const writes: Promise<unknown>[] = [];
@@ -98,7 +110,9 @@ export class Repository {
       abortQuietly(tx, writes);
       throw error;
     }
-    await Promise.all([...writes, tx.done]);
+    const done = Promise.all([...writes, tx.done]);
+    commitNow(tx);
+    await done;
   }
 
   /**

@@ -4,7 +4,7 @@ Application personnelle de suivi de musculation, en français, installable sur s
 
 **Adresse : https://nicklas-317.github.io/MyFitApp/**
 
-- Saisie d'une séance en quelques secondes : poids, séries, répétitions, ressenti global.
+- Saisie d'une séance en quelques secondes : poids, séries, répétitions, ressenti global. Chaque saisie est écrite aussitôt sur l'appareil : verrouiller le téléphone ou fermer l'appli juste après ne perd rien.
 - Surcharge progressive automatique : statut vert, orange ou rouge, et prochaine cible calculée par le moteur (deux séances vertes consécutives pour progresser, quatre rouges pour baisser la charge). Les exercices assistés (dips, tractions) suivent le sens inverse : « moins d'aide », « plus d'aide ».
 - Bibliothèque illustrée avec une recherche unique par exercice, machine ou groupe musculaire.
 - Cardio en version minimale : blocs « machine, inclinaison du tapis, durée » ajoutés à la séance, sans progression ; total de la semaine sur l'accueil.
@@ -16,19 +16,11 @@ Le cahier des charges complet est dans [CLAUDE.md](CLAUDE.md).
 
 ## Installer sur le téléphone
 
-L'application doit être ouverte une première fois avec le réseau ; ensuite, elle fonctionne hors ligne.
-
-**Android (Chrome)**
+Plateforme visée : **Android, avec Chrome**. L'application doit être ouverte une première fois avec le réseau ; ensuite, elle fonctionne hors ligne.
 
 1. Ouvrir https://nicklas-317.github.io/MyFitApp/ dans Chrome.
 2. Menu ⋮ → **Installer l'application** (ou **Ajouter à l'écran d'accueil**), puis confirmer.
 3. Lancer MyFitApp depuis l'icône : l'application s'ouvre en plein écran.
-
-**iPhone (Safari)**
-
-1. Ouvrir https://nicklas-317.github.io/MyFitApp/ dans **Safari** (pas un autre navigateur).
-2. Bouton **Partager** → **Sur l'écran d'accueil** → **Ajouter**.
-3. Lancer MyFitApp depuis l'icône. Sur iPhone, utiliser l'application installée plutôt que l'onglet Safari : Safari peut effacer les données d'un site non installé et inutilisé pendant plusieurs jours.
 
 Dans **Réglages**, la ligne « Stockage persistant » indique si le navigateur s'est engagé à ne pas effacer les données en cas de manque de place.
 

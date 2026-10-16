@@ -119,9 +119,47 @@ test.describe('Cardio', () => {
     await expect(page.getByText('Machines enregistrées.')).toBeVisible();
 
     await page.reload();
-    await expect(page.getByLabel('Nom de la machine 4')).toHaveValue('Vélo droit');
+    await expect(page.getByLabel('Nom de la machine 5')).toHaveValue('Vélo droit');
     await startSession(page);
     await page.getByRole('button', { name: '+ Ajouter du cardio' }).click();
-    await expect(cardioForm(page).locator('.chip')).toHaveText(['Tapis de marche', 'Rameur', 'Vélo elliptique', 'Vélo droit', 'Neutre', 'Moyenne', 'Haute']);
+    await expect(cardioForm(page).locator('.chip')).toHaveText(['Tapis de marche', 'Rameur', 'Vélo elliptique', 'Vélo', 'Vélo droit', 'Neutre', 'Moyenne', 'Haute']);
+  });
+
+  test('124. Une liste enregistrée par la version 1.2.0 reçoit « Vélo » une seule fois au lancement', async ({ page }) => {
+    await page.goto('./');
+    await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
+    // Liste personnalisée enregistrée avant l'ajout du vélo, sans numéro de version.
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve, reject) => {
+          const open = indexedDB.open('myfitapp');
+          open.onsuccess = () => {
+            const tx = open.result.transaction('meta', 'readwrite');
+            const old = [
+              { id: 'tapis', name: 'Tapis', incline: true },
+              { id: 'rameur', name: 'Rameur', incline: false },
+              { id: 'elliptique', name: 'Vélo elliptique', incline: false },
+              { id: 'autre', name: 'Autre', incline: false },
+            ];
+            tx.objectStore('meta').put(old, 'cardioMachines');
+            tx.oncomplete = () => {
+              open.result.close();
+              resolve();
+            };
+            tx.onerror = () => reject(tx.error);
+          };
+        }),
+    );
+    await page.goto('./#/reglages');
+    await page.reload();
+    const names = () => page.locator('.machine-row input').evaluateAll((list) => list.map((i) => (i as HTMLInputElement).value));
+    await expect.poll(names).toEqual(['Tapis', 'Rameur', 'Vélo elliptique', 'Vélo', 'Autre']);
+
+    // Retirée par l'utilisateur, elle n'est jamais recréée.
+    await page.getByRole('button', { name: 'Retirer Vélo', exact: true }).click();
+    await page.getByRole('button', { name: 'Enregistrer les machines' }).click();
+    await expect(page.getByText('Machines enregistrées.')).toBeVisible();
+    await page.reload();
+    await expect.poll(names).toEqual(['Tapis', 'Rameur', 'Vélo elliptique', 'Autre']);
   });
 });

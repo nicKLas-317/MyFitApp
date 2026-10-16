@@ -12,8 +12,32 @@ export const DEFAULT_CARDIO_MACHINES: readonly CardioMachine[] = [
   { id: 'tapis', name: 'Tapis de marche', incline: true },
   { id: 'rameur', name: 'Rameur', incline: false },
   { id: 'elliptique', name: 'Vélo elliptique', incline: false },
+  { id: 'velo', name: 'Vélo', incline: false },
   { id: 'autre', name: 'Autre', incline: false },
 ];
+
+/** Version de la liste par défaut ; chaque version indique les machines qu'elle ajoute. */
+export const CARDIO_MACHINES_VERSION = 2;
+const CARDIO_ADDITIONS: Record<number, string[]> = { 2: ['velo'] };
+
+/**
+ * Ajoute à une liste enregistrée par une version antérieure les machines apparues depuis, une seule fois,
+ * avant « Autre » : rien n'est ajouté si une machine porte déjà cet identifiant ou ce nom.
+ * Une machine retirée ensuite par l'utilisateur n'est jamais recréée (la version enregistrée est à jour).
+ */
+export function upgradeCardioMachines(list: readonly CardioMachine[], fromVersion: number): CardioMachine[] {
+  const next = [...list];
+  for (const [version, ids] of Object.entries(CARDIO_ADDITIONS)) {
+    if (Number(version) <= fromVersion) continue;
+    for (const id of ids) {
+      const machine = DEFAULT_CARDIO_MACHINES.find((m) => m.id === id)!;
+      if (next.some((m) => m.id === id || normalizeName(m.name) === normalizeName(machine.name))) continue;
+      const other = next.findIndex((m) => m.id === 'autre');
+      next.splice(other === -1 ? next.length : other, 0, machine);
+    }
+  }
+  return next;
+}
 
 export const INCLINES: readonly Incline[] = ['neutre', 'moyenne', 'haute'];
 export const INCLINE_LABELS: Record<Incline, string> = { neutre: 'Neutre', moyenne: 'Moyenne', haute: 'Haute' };
@@ -161,6 +185,8 @@ const MACHINE_ALIASES: Record<string, string[]> = {
   tapis: ['tapis', 'tapis de marche', 'marche', 'treadmill'],
   rameur: ['rameur', 'rowing machine', 'rower'],
   elliptique: ['elliptique', 'velo elliptique', 'elliptical', 'cross trainer'],
+  // « vélo » seul = vélo classique ; « vélo elliptique », plus long, l'emporte pour l'elliptique.
+  velo: ['velo', 'velo classique', 'velo droit', 'bike'],
 };
 
 /** Machine désignée par un nom de notes : la correspondance la plus longue, en mots entiers. null si aucune. */

@@ -1,12 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { CardioMachine, Exercise, Session } from '../domain/types';
-import { sanitizeCardioMachines } from '../cardio/model';
+import { CARDIO_MACHINES_VERSION, sanitizeCardioMachines, upgradeCardioMachines } from '../cardio/model';
 import { rebuildProfile, resolveConfig, type EngineSettings, type ReplayResult } from '../engine';
 import { buildEngineSettings, indexVariants, type VariantRef } from '../library/catalog';
 import { exerciseHasHistory } from '../library/edit';
 import { DEFAULT_RECAP_SETTINGS, sanitizeRecapSettings, type WeeklyRecapSettings } from '../analysis/weekly';
 import type { RemovedPerformance, VariantContext } from '../session/ops';
 import { openAppDb, Repository, requestPersistence, type PersistState } from '../storage/db';
+import { PendingWrites } from '../storage/pending';
 
 export type SaveStatus = { kind: 'idle' } | { kind: 'saving' } | { kind: 'saved' } | { kind: 'error' };
 
@@ -98,7 +99,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [cardioMachines, setMachinesState] = useState<CardioMachine[]>(() => sanitizeCardioMachines(undefined));
 
   const sessionsRef = useRef<Session[]>([]);
-  const failedIds = useRef(new Set<string>());
+  const pending = useRef(new PendingWrites<Session>());
   const undoCounter = useRef(0);
 
   useEffect(() => {
@@ -107,21 +108,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         const repo = new Repository(await openAppDb());
         await repo.ensureSeed();
-        const [loadedSessions, loadedExercises, exportedAt, recap, machines] = await Promise.all([
+        const [loadedSessions, loadedExercises, exportedAt, recap, machines, machinesVersion] = await Promise.all([
           repo.loadSessions(),
           repo.loadExercises(),
           repo.getMeta<number>('lastExportAt'),
           repo.getMeta<unknown>('weeklyRecap'),
           repo.getMeta<unknown>('cardioMachines'),
+          repo.getMeta<number>('cardioMachinesVersion'),
         ]);
+        // Installation antérieure au cardio : aucune liste enregistrée, la liste par défaut s'applique.
+        // Liste enregistrée par une version antérieure : les nouvelles machines sont ajoutées une seule fois.
+        let machineList = sanitizeCardioMachines(machines);
+        if (machines !== undefined && (machinesVersion ?? 1) < CARDIO_MACHINES_VERSION) {
+          machineList = upgradeCardioMachines(machineList, machinesVersion ?? 1);
+          try {
+            await repo.setMeta('cardioMachines', machineList);
+            await repo.setMeta('cardioMachinesVersion', CARDIO_MACHINES_VERSION);
+          } catch (error) {
+            // Sans gravité : la mise à niveau sera refaite au prochain lancement.
+            console.error('[MyFitApp] liste des machines non mise à jour', error);
+          }
+        }
         if (cancelled) return;
         sessionsRef.current = loadedSessions;
         setSessions(loadedSessions);
         setExercises(loadedExercises);
         setLastExportAt(exportedAt ?? null);
         setRecapState(sanitizeRecapSettings(recap));
-        // Installation antérieure au cardio : aucune liste enregistrée, la liste par défaut s'applique.
-        setMachinesState(sanitizeCardioMachines(machines));
+        setMachinesState(machineList);
         setLoad({ kind: 'ready', repo });
 
         // §12 : stockage persistant demandé au premier lancement, état affiché ensuite.
@@ -140,18 +154,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const repo = load.kind === 'ready' ? load.repo : null;
 
+  /**
+   * Écrit la séance tout de suite : aucun délai ni regroupement entre une saisie et IndexedDB (§12).
+   * L'écriture reste suivie jusqu'à sa confirmation, pour être relancée si besoin (arrière-plan, échec).
+   */
   const persistSession = useCallback(
     async (session: Session): Promise<boolean> => {
       if (!repo) return false;
+      pending.current.begin(session);
       setSave({ kind: 'saving' });
       try {
         await repo.putSession(session);
-        failedIds.current.delete(session.id);
-        setSave(failedIds.current.size > 0 ? { kind: 'error' } : { kind: 'saved' });
+        pending.current.confirm(session);
+        setSave(pending.current.hasFailures() ? { kind: 'error' } : { kind: 'saved' });
         return true;
       } catch (error) {
         console.error('[MyFitApp] échec d’enregistrement', error);
-        failedIds.current.add(session.id);
+        pending.current.fail(session);
         setSave({ kind: 'error' });
         return false;
       }
@@ -175,12 +194,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [persistSession],
   );
 
-  const retrySave = useCallback(() => {
-    for (const id of [...failedIds.current]) {
-      const latest = sessionsRef.current.find((s) => s.id === id);
-      if (latest) void persistSession(latest);
-    }
-  }, [persistSession]);
+  /** Relance les écritures non confirmées (toutes, ou seulement celles qui ont échoué), dans leur dernière version. */
+  const flushWrites = useCallback(
+    (onlyFailed: boolean) => {
+      for (const item of pending.current.toRetry(onlyFailed)) {
+        const latest = sessionsRef.current.find((s) => s.id === item.id);
+        if (latest) void persistSession(latest);
+        else pending.current.forget(item.id);
+      }
+    },
+    [persistSession],
+  );
+
+  const retrySave = useCallback(() => flushWrites(true), [flushWrites]);
+
+  // Android peut geler ou fermer l'appli dès qu'elle passe en arrière-plan (écran verrouillé, autre appli) :
+  // les écritures non confirmées sont relancées à ce moment-là, puis au retour au premier plan.
+  useEffect(() => {
+    const onHide = () => flushWrites(false);
+    const onVisibility = () => flushWrites(document.visibilityState === 'visible');
+    document.addEventListener('visibilitychange', onVisibility);
+    document.addEventListener('freeze', onHide);
+    document.addEventListener('resume', retrySave);
+    window.addEventListener('pagehide', onHide);
+    window.addEventListener('pageshow', retrySave);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      document.removeEventListener('freeze', onHide);
+      document.removeEventListener('resume', retrySave);
+      window.removeEventListener('pagehide', onHide);
+      window.removeEventListener('pageshow', retrySave);
+    };
+  }, [flushWrites, retrySave]);
 
   const applyUndo = useCallback(() => {
     if (!undo) return;
@@ -200,7 +245,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return false;
       }
       const list = data.replace ? [...data.sessions] : upsert(sessionsRef.current, data.sessions);
-      if (data.replace) failedIds.current.clear();
+      if (data.replace) pending.current.clear();
       sessionsRef.current = list;
       setSessions(list);
       setExercises((current) => (data.replace ? [...data.exercises] : upsert(current, data.exercises)));
@@ -224,7 +269,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return false;
       }
       setExercises((current) => upsert(current, list));
-      setSave(failedIds.current.size > 0 ? { kind: 'error' } : { kind: 'saved' });
+      setSave(pending.current.hasFailures() ? { kind: 'error' } : { kind: 'saved' });
       return true;
     },
     [repo],
@@ -257,7 +302,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const list = sessionsRef.current.filter((s) => s.id !== id);
       sessionsRef.current = list;
       setSessions(list);
-      failedIds.current.delete(id);
+      pending.current.forget(id);
       setUndo(null);
       return true;
     },
@@ -283,6 +328,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!repo) return false;
       try {
         await repo.setMeta('cardioMachines', next);
+        await repo.setMeta('cardioMachinesVersion', CARDIO_MACHINES_VERSION);
       } catch {
         return false;
       }
@@ -292,7 +338,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [repo],
   );
 
-  const generalSettings = useMemo(() => ({ weeklyRecap: recapSettings, cardioMachines }), [recapSettings, cardioMachines]);
+  const generalSettings = useMemo(
+    () => ({ weeklyRecap: recapSettings, cardioMachines, cardioMachinesVersion: CARDIO_MACHINES_VERSION }),
+    [recapSettings, cardioMachines],
+  );
 
   const markExported = useCallback(
     async (at: number): Promise<boolean> => {

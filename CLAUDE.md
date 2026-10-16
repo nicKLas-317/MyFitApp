@@ -70,7 +70,7 @@ L'application doit :
 - Fonctionner hors ligne après son premier chargement complet.
 - Conserver les séances, les exercices, les réglages et les historiques après fermeture ou redémarrage.
 - Restaurer une séance en cours après rechargement ou fermeture accidentelle.
-- Être utilisable sur smartphone et ordinateur, en particulier avec Chrome sur Android et Safari sur iOS.
+- Être utilisable sur smartphone et ordinateur. Plateforme mobile visée : **Chrome sur Android** uniquement (précision validée : Safari sur iOS n'est plus une cible).
 - Proposer un thème sombre confortable.
 - Stocker les données localement.
 - Permettre l'export et l'import des données.
@@ -386,7 +386,7 @@ Version minimale : le cardio est un simple enregistrement dans la séance.
 **Saisie**
 
 - Dans une séance, en plus des exercices de musculation, un bloc de cardio peut être ajouté à tout moment (début, milieu, fin). Une séance peut en contenir plusieurs, affichés dans l'ordre d'ajout.
-- Machines proposées par défaut : Tapis de marche, Rameur, Vélo elliptique, Autre. La liste est modifiable dans les réglages (ajouter, renommer, retirer, indiquer si la machine se règle en inclinaison). Un bloc enregistré garde le nom de sa machine : renommer ou retirer une machine ne modifie pas l'historique.
+- Machines proposées par défaut : Tapis de marche, Rameur, Vélo elliptique, Vélo (vélo classique, sans inclinaison), Autre. La liste est modifiable dans les réglages (ajouter, renommer, retirer, indiquer si la machine se règle en inclinaison). Un bloc enregistré garde le nom de sa machine : renommer ou retirer une machine ne modifie pas l'historique. Une machine ajoutée à la liste par défaut après une première installation (comme « Vélo ») est ajoutée une seule fois à une liste déjà enregistrée, avant « Autre », sans doublon de nom et sans recréer une machine que l'utilisateur a retirée ensuite.
 - Tapis de marche uniquement : inclinaison en trois niveaux, Neutre, Moyenne ou Haute, avec trois boutons (Neutre par défaut). Aucune valeur en pourcentage.
 - Durée en minutes entières (1 à 600), seule donnée obligatoire. Distance en km facultative.
 - Saisie en quelques secondes : machine (la première de la liste est présélectionnée), inclinaison si tapis, durée, « Valider ». Un bloc peut être corrigé ou retiré (retrait annulable pendant la séance, confirmé sur une séance passée).
@@ -400,7 +400,7 @@ Version minimale : le cardio est un simple enregistrement dans la séance.
 
 **Affichage** : la séance en cours, le récapitulatif de fin de séance, l'historique (liste : « 2 ex. · 20 min cardio ») et le détail d'une séance passée affichent les blocs : machine, inclinaison, durée et distance éventuelle (« Tapis de marche · inclinaison haute · 20 min »).
 
-**Import de notes** : une ligne avec une durée en minutes est un bloc de cardio (« Tapis 15 min », « Tapis incliné 20 min », « Marche inclinée haute 20min », « Rameur 10 min », « Elliptique 15 min », « Vélo elliptique 20 min ») ; la machine peut aussi être sur la ligne précédente. La machine est reconnue d'après la liste des réglages et des noms usuels (« tapis » et « marche » → tapis ; « elliptique » → vélo elliptique). « Tapis » ou « marche » sans précision : inclinaison Neutre. « Incliné » ou « inclinée » sans niveau : l'aperçu demande de choisir Moyenne ou Haute (import bloqué jusque-là). Une machine non reconnue est à choisir dans l'aperçu (ou le bloc est exclu), jamais devinée. Un JSON simple peut contenir une liste `cardio` (`machine`, `minutes`, `inclinaison`, `distanceKm`).
+**Import de notes** : une ligne avec une durée en minutes est un bloc de cardio (« Tapis 15 min », « Tapis incliné 20 min », « Marche inclinée haute 20min », « Rameur 10 min », « Elliptique 15 min », « Vélo elliptique 20 min ») ; la machine peut aussi être sur la ligne précédente. La machine est reconnue d'après la liste des réglages et des noms usuels (« tapis » et « marche » → tapis ; « vélo » seul → Vélo, le vélo classique ; « elliptique » ou « vélo elliptique » → Vélo elliptique). « Tapis » ou « marche » sans précision : inclinaison Neutre. « Incliné » ou « inclinée » sans niveau : l'aperçu demande de choisir Moyenne ou Haute (import bloqué jusque-là). Une machine non reconnue est à choisir dans l'aperçu (ou le bloc est exclu), jamais devinée. Un JSON simple peut contenir une liste `cardio` (`machine`, `minutes`, `inclinaison`, `distanceKm`).
 
 **Données** : les blocs sont inclus dans l'export et l'import JSON (format `schemaVersion` 3) ; une sauvegarde au format 2 est migrée sans perte. Une installation existante n'a aucune migration de base à subir : ses séances, sans cardio, restent intactes, et la liste de machines par défaut s'applique. Deux séances qui ne diffèrent que par leur cardio ne sont pas des doublons (§11.9).
 
@@ -926,6 +926,13 @@ Restaurer une séance en cours avec ses exercices, ses poids, ses répétitions,
 
 Prévoir une gestion claire des erreurs de sauvegarde. Ne jamais annoncer qu'une donnée est sauvegardée si l'opération a échoué.
 
+**Écriture immédiate (précision validée).** À la salle, l'utilisateur peut valider une série puis verrouiller le téléphone ou fermer l'appli aussitôt, et Chrome sur Android peut geler ou fermer une appli en arrière-plan. Donc :
+
+- Aucun délai volontaire (debounce, regroupement d'écritures) entre une saisie de séance et l'écriture dans IndexedDB : l'écriture part dans le gestionnaire de l'action elle-même.
+- Chaque transaction d'écriture est validée explicitement (`commit()`) dès sa dernière requête émise, sans attendre un aller-retour avec la page, et en durabilité stricte (`durability: 'strict'`) : « Enregistré » n'est affiché qu'une fois la donnée sur le disque.
+- Les écritures non confirmées (en cours ou échouées) sont relancées dans leur dernière version au passage en arrière-plan (`visibilitychange`, `pagehide`, `freeze`), et les échecs au retour au premier plan.
+- Un poids tapé sans quitter le champ est enregistré au passage en arrière-plan (avec la même protection contre les fautes de frappe).
+
 **Rappel de sauvegarde** : si aucun export n'a été fait depuis 14 jours et que de nouvelles séances existent, afficher un rappel discret sur l'écran d'accueil, avec un bouton d'export direct. Pas de fenêtre bloquante.
 
 Prévoir une procédure simple pour transférer les données vers un autre appareil grâce à l'export et à l'import JSON.
@@ -1126,6 +1133,16 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 116. (bout en bout) Import de notes : « incliné » sans niveau demande de choisir, puis les blocs sont importés.
 117. (bout en bout) Les machines se modifient dans les réglages et sont proposées pendant la séance.
 
+### Fiabilité de l'enregistrement et vélo classique
+
+118. (§12) Une écriture de séance part sans délai : transaction en durabilité stricte, requête émise et validation (`commit()`) demandée avant toute attente ; toutes les écritures suivent la même règle.
+119. (§12) Les écritures non confirmées sont relancées dans leur dernière version ; une ancienne version confirmée ne libère pas une version plus récente ; une écriture confirmée ou une séance supprimée n'est plus relancée.
+120. (§12, bout en bout) « Valider » puis fermeture immédiate de l'appli, trois fois de suite : chaque série est enregistrée et réaffichée à la réouverture.
+121. (§12, bout en bout) Passage en arrière-plan : une écriture échouée est relancée sans action de l'utilisateur, et un poids tapé sans quitter le champ est enregistré.
+122. (§5.7) « Vélo » est une machine par défaut, sans inclinaison ; à l'import, « vélo » seul (ou « vélo classique ») → Vélo, « elliptique » ou « vélo elliptique » → Vélo elliptique.
+123. (§5.7) Une liste de machines enregistrée par une version antérieure reçoit « Vélo » une seule fois, avant « Autre », sans doublon de nom ; une liste à jour dont l'utilisateur a retiré « Vélo » ne le recrée pas.
+124. (§5.7, bout en bout) Au lancement, une liste enregistrée par la version 1.2.0 reçoit « Vélo » ; retiré puis enregistré, il n'est jamais recréé.
+
 Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
 
 ## 16. Vérification avant livraison
@@ -1308,7 +1325,7 @@ But : un coup d'œil de 2 secondes avant la séance pour savoir quels groupes tr
 L'application est déployée sur **GitHub Pages**, ce qui fournit le HTTPS nécessaire à l'installation de la PWA sur smartphone.
 
 - Dépôt : `MyFitApp` (public, compte `nicKLas-317`), remote SSH `git@github.com:nicKLas-317/MyFitApp.git`. Adresse finale : https://nicklas-317.github.io/MyFitApp/. `base` de Vite : `/MyFitApp/` (majuscules exactes).
-- Aucun push tant que le nettoyage des données personnelles et de l'identité (§22) n'a pas été vérifié et validé par l'utilisateur.
+- **Publication (précision validée)** : pour les ajouts et corrections normaux, pousser directement après une vérification propre (§22). La validation explicite de l'utilisateur reste obligatoire avant toute réécriture d'historique et tout push forcé.
 - Configurer le manifeste (`start_url`, `scope`) et le service worker pour ce chemin.
 - Utiliser un routage compatible avec un hébergement statique (routage par hash, ou fallback `404.html`), pour qu'un rechargement sur une page interne ne donne pas d'erreur.
 - Ajouter un workflow GitHub Actions qui, à chaque push sur `main` : installe les dépendances, lance la compilation TypeScript et les tests unitaires, construit l'application et la publie sur GitHub Pages. Le déploiement ne se fait pas si un test échoue.

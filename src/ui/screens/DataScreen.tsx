@@ -12,7 +12,7 @@ import {
 } from '../../transfer/draft';
 import { EMPTY_BODY, planBodyImport } from '../../body/model';
 import { sanitizeRecapSettings } from '../../analysis/weekly';
-import { sanitizeCardioMachines } from '../../cardio/model';
+import { sanitizeCardioMachines, upgradeCardioMachines } from '../../cardio/model';
 import { useBody } from '../../body/store';
 import { downloadBackup } from '../download';
 import { DraftSessionEditor, ProblemList } from '../import/DraftEditor';
@@ -286,7 +286,11 @@ function BackupPreview({ backup, onDone }: { backup: Backup; onDone(outcome: Out
     const ok = await importData({ sessions: backup.sessions, exercises: backup.exercises, replace: true });
     // Remplacement global : les réglages de la sauvegarde remplacent aussi ceux de l'appareil.
     if (ok && backup.settings.weeklyRecap !== undefined) await setRecapSettings(sanitizeRecapSettings(backup.settings.weeklyRecap));
-    if (ok && backup.settings.cardioMachines !== undefined) await setCardioMachines(sanitizeCardioMachines(backup.settings.cardioMachines));
+    if (ok && backup.settings.cardioMachines !== undefined) {
+      const version = backup.settings.cardioMachinesVersion;
+      const from = typeof version === 'number' ? version : 1;
+      await setCardioMachines(upgradeCardioMachines(sanitizeCardioMachines(backup.settings.cardioMachines), from));
+    }
     const bodyOk = !ok || (await body.applyImport(planBodyImport(importedBody, body.data, 'replace')));
     setBusy(false);
     onDone(

@@ -1,4 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
+import { commitNow, STRICT } from '../storage/commit';
 import { type BodyImportPlan, type BodyTracking, sortWeighIns, type WeighIn } from './model';
 
 /**
@@ -35,33 +36,41 @@ export class BodyRepository {
 
   /** Enregistre une pesée ; `replacedDate` retire l'ancienne date en cas de correction de date (même transaction). */
   async putWeighIn(w: WeighIn, replacedDate?: string): Promise<void> {
-    const tx = this.db.transaction('weighIns', 'readwrite');
+    const tx = this.db.transaction('weighIns', 'readwrite', STRICT);
     const writes: Promise<unknown>[] = [];
     if (replacedDate && replacedDate !== w.date) writes.push(tx.store.delete(replacedDate));
     writes.push(tx.store.put(w));
-    await Promise.all([...writes, tx.done]);
+    const done = Promise.all([...writes, tx.done]);
+    commitNow(tx);
+    await done;
   }
 
   async deleteWeighIn(date: string): Promise<void> {
-    const tx = this.db.transaction('weighIns', 'readwrite');
-    await Promise.all([tx.store.delete(date), tx.done]);
+    const tx = this.db.transaction('weighIns', 'readwrite', STRICT);
+    const done = Promise.all([tx.store.delete(date), tx.done]);
+    commitNow(tx);
+    await done;
   }
 
   async setHeight(heightCm: number | null): Promise<void> {
-    const tx = this.db.transaction('meta', 'readwrite');
-    await Promise.all([heightCm === null ? tx.store.delete('heightCm') : tx.store.put(heightCm, 'heightCm'), tx.done]);
+    const tx = this.db.transaction('meta', 'readwrite', STRICT);
+    const done = Promise.all([heightCm === null ? tx.store.delete('heightCm') : tx.store.put(heightCm, 'heightCm'), tx.done]);
+    commitNow(tx);
+    await done;
   }
 
   /** Applique un import en une transaction. */
   async applyImport(plan: BodyImportPlan): Promise<void> {
-    const tx = this.db.transaction(['weighIns', 'meta'], 'readwrite');
+    const tx = this.db.transaction(['weighIns', 'meta'], 'readwrite', STRICT);
     const store = tx.objectStore('weighIns');
     const meta = tx.objectStore('meta');
     const writes: Promise<unknown>[] = [];
     if (plan.replace) writes.push(store.clear());
     for (const w of plan.weighIns) writes.push(store.put(w));
     if (plan.heightCm !== undefined) writes.push(plan.heightCm === null ? meta.delete('heightCm') : meta.put(plan.heightCm, 'heightCm'));
-    await Promise.all([...writes, tx.done]);
+    const done = Promise.all([...writes, tx.done]);
+    commitNow(tx);
+    await done;
   }
 
   close(): void {

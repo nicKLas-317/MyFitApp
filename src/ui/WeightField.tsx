@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { checkWeight } from '../session/ops';
 import { formatKg } from '../session/format';
 
@@ -23,6 +23,21 @@ export function WeightField({ value, previous, label = 'Poids (kg)', highlight =
   useEffect(() => {
     setText(format(value));
   }, [value]);
+
+  // Un poids tapé sans quitter le champ est enregistré si l'appli passe en arrière-plan (écran verrouillé).
+  const submitRef = useRef(submit);
+  submitRef.current = submit;
+  useEffect(() => {
+    const onHide = () => {
+      if (document.visibilityState === 'hidden') submitRef.current();
+    };
+    document.addEventListener('visibilitychange', onHide);
+    window.addEventListener('pagehide', onHide);
+    return () => {
+      document.removeEventListener('visibilitychange', onHide);
+      window.removeEventListener('pagehide', onHide);
+    };
+  }, []);
 
   function submit() {
     if (pending !== null) return;
