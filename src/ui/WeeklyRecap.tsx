@@ -18,7 +18,7 @@ export function WeeklyRecapBlock() {
   const recap = useMemo(() => weeklyRecap(sessions, exercises, Date.now(), recapSettings), [sessions, exercises, minute, recapSettings]);
 
   return (
-    <section className="weekly-recap" aria-label="Récapitulatif de la semaine" data-testid="weekly-recap">
+    <section className="weekly-recap frame" aria-label="Récapitulatif de la semaine" data-testid="weekly-recap">
       <h2 className="recap-title">{recapTitle(recap)}</h2>
       <ul className="recap-grid">
         {recap.cells.map((c) => {

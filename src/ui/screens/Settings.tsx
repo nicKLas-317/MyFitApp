@@ -26,7 +26,7 @@ export function Settings() {
       <HeightField />
       <RecapSettingsField />
       <CardioMachinesField />
-      <dl className="settings-list">
+      <dl className="settings-list frame">
         <dt>Stockage persistant</dt>
         <dd data-testid="persist-state">{persist ? PERSIST_LABELS[persist] : '…'}</dd>
         <dt>Version</dt>
@@ -61,7 +61,7 @@ function HeightField() {
 
   return (
     <form
-      className="name-form"
+      className="name-form frame"
       onSubmit={(e) => {
         e.preventDefault();
         void save();
@@ -92,7 +92,7 @@ function RecapSettingsField() {
   const save = async (next: typeof recapSettings) => setFailed(!(await setRecapSettings(next)));
 
   return (
-    <fieldset className="chips-field recap-settings">
+    <fieldset className="chips-field recap-settings frame">
       <legend>Récapitulatif de la semaine</legend>
       <div className="feeling-options" role="group" aria-label="Groupes affichés">
         {RECAP_CHOICES.map((g) => {
@@ -161,7 +161,7 @@ function CardioMachinesField() {
   }
 
   return (
-    <fieldset className="chips-field cardio-machines">
+    <fieldset className="chips-field cardio-machines frame">
       <legend>Machines de cardio</legend>
       <ul className="machine-list">
         {list.map((m, i) => (

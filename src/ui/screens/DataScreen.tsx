@@ -104,7 +104,7 @@ export function DataScreen() {
         </p>
       )}
 
-      <section className="data-section">
+      <section className="data-section frame">
         <h2>Exporter</h2>
         <p className="muted small">
           Sauvegarde complète (séances, exercices, synonymes, réglages), à réimporter sur cet appareil ou un autre.{' '}
@@ -115,7 +115,7 @@ export function DataScreen() {
         </button>
       </section>
 
-      <section className="data-section">
+      <section className="data-section frame">
         <h2>Importer</h2>
         <label htmlFor="import-text">Notes de séance ou JSON</label>
         <textarea
@@ -223,7 +223,7 @@ function DraftsPreview({ initial, notes, onDone }: { initial: DraftSession[]; no
   }
 
   return (
-    <section className="data-section preview" aria-label="Aperçu de l’import">
+    <section className="data-section preview frame" aria-label="Aperçu de l’import">
       <h2>Aperçu</h2>
       {notes.map((n, i) => (
         <p key={i} className="muted small">
@@ -312,7 +312,7 @@ function BackupPreview({ backup, onDone }: { backup: Backup; onDone(outcome: Out
   }
 
   return (
-    <section className="data-section preview" aria-label="Aperçu de l’import">
+    <section className="data-section preview frame" aria-label="Aperçu de l’import">
       <h2>Sauvegarde MyFitApp</h2>
       <p className="muted small">
         {Number.isFinite(exportedAt) && `Exportée le ${formatDay(exportedAt)} · `}

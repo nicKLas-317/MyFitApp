@@ -13,6 +13,13 @@
   --rouge: #fca5a5;
   --danger: #fca5a5;
   --radius: 14px;
+  /* Cadres de section (§3.1) : couleurs vives et claires, alternées ; jamais vert, orange ni rouge (statuts). */
+  --frame-1: #ffe44a; /* jaune */
+  --frame-2: #3ee6ee; /* cyan */
+  --frame-3: #8cc8ff; /* bleu clair */
+  --frame-4: #c79bff; /* violet */
+  --frame-5: #ff7ad6; /* rose magenta */
+  --frame-width: 2px;
   --tap: 48px;
   color-scheme: dark;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -215,13 +222,13 @@ h1 {
 /* Cartes d'exercice */
 .cards {
   display: grid;
+  /* Une carte ne dépasse jamais la largeur de l'écran, même avec une ligne de série large. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
 }
 
 .card {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
 }
 
 .card-header {
@@ -257,6 +264,7 @@ h1 {
 .card-body {
   padding: 0 16px 16px;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
 }
 
@@ -269,11 +277,9 @@ h1 {
 .reco {
   margin: 0;
   padding: 10px 14px;
-  border-radius: 10px;
   font-weight: 700;
   font-size: 1.1rem;
   background: var(--surface-2);
-  border-left: 4px solid var(--accent);
 }
 
 .weight-field label,
@@ -325,9 +331,7 @@ input[aria-invalid='true'] {
 .confirm-box {
   margin-top: 8px;
   padding: 12px;
-  border-radius: 10px;
   background: var(--surface-2);
-  border: 1px solid var(--orange);
 }
 
 .confirm-box p {
@@ -367,7 +371,7 @@ input[aria-invalid='true'] {
 .set {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   min-height: 56px;
   padding: 4px 8px 4px 12px;
   border-radius: 10px;
@@ -392,6 +396,40 @@ input[aria-invalid='true'] {
 
 .set .validate {
   margin-left: auto;
+}
+
+/* Écran étroit (360 px) : la ligne de série tient dans la carte ; les boutons − et + gardent leur taille tactile. */
+@media (max-width: 380px) {
+  .card-body {
+    padding: 0 12px 14px;
+  }
+
+  .set {
+    gap: 4px;
+    padding: 4px 6px 4px 8px;
+  }
+
+  .set-label {
+    min-width: 0;
+    font-size: 0.85rem;
+  }
+
+  .set .validate {
+    padding: 0 10px;
+  }
+}
+
+/* Très petit écran (320 px) : « Valider » passe sous les boutons − et +, sur toute la largeur de la ligne. */
+@media (max-width: 340px) {
+  .set.next {
+    flex-wrap: wrap;
+    padding-bottom: 8px;
+  }
+
+  .set.next .validate {
+    flex: 1 1 100%;
+    margin-left: 0;
+  }
 }
 
 .stepper {
@@ -524,8 +562,6 @@ input[aria-invalid='true'] {
 
 .pick-item {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
 }
 
 .pick-button {
@@ -624,7 +660,6 @@ input[aria-invalid='true'] {
 
 .banner.info {
   background: var(--surface-2);
-  border: 1px solid var(--border);
 }
 
 .toast {
@@ -660,8 +695,6 @@ input[aria-invalid='true'] {
   width: 100%;
   max-width: 420px;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
   padding: 20px;
   display: grid;
   gap: 10px;
@@ -849,8 +882,6 @@ textarea {
 }
 
 .to-fix {
-  border: 1px solid var(--danger);
-  border-radius: var(--radius);
   padding: 12px;
 }
 
@@ -862,7 +893,6 @@ textarea {
 
 .banner.error-inline {
   background: #3a1616;
-  border: 1px solid #6b2a2a;
   color: #ffe1e1;
 }
 
@@ -1099,8 +1129,6 @@ textarea {
   gap: 2px 10px;
   padding: 10px 14px;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
 }
 
 .history-item .status {
@@ -1233,8 +1261,6 @@ fieldset {
   height: auto;
   margin: 4px 0 12px;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
 }
 
 .chart-axis {
@@ -1462,61 +1488,16 @@ fieldset {
 }
 
 /* Bilan de progression (§19.3) : catégories distinctes par pictogramme et style, sans couleurs de statut. */
-.bilan-summary {
-  list-style: none;
-  margin: 8px 0 4px;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-}
 
-.bilan-chip {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  font-size: 0.9rem;
-  line-height: 1.25;
-}
 
 .bilan-section {
-  margin: 18px 0 8px;
-  padding: 12px 14px 6px;
-  border-radius: var(--radius);
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-left-width: 5px;
 }
 
-.bilan-progressing {
-  border-left-color: var(--accent);
-}
 
-.bilan-stable {
-  border-left-color: var(--muted);
-}
 
-.bilan-difficulty {
-  border-left-style: double;
-  border-left-width: 6px;
-  border-left-color: var(--text);
-}
 
-.bilan-new {
-  border-left-style: dashed;
-  border-left-color: var(--muted);
-}
 
-.bilan-chip.bilan-progressing,
-.bilan-chip.bilan-stable,
-.bilan-chip.bilan-difficulty,
-.bilan-chip.bilan-new {
-  border-left-width: 4px;
-}
 
 .bilan-title {
   display: flex;
@@ -1539,11 +1520,6 @@ fieldset {
   line-height: 1;
 }
 
-.bilan-chip .bilan-icon {
-  width: 24px;
-  height: 24px;
-  font-size: 0.85rem;
-}
 
 .bilan-name {
   flex: 1;
@@ -1586,4 +1562,126 @@ fieldset {
 .bilan-chevron {
   color: var(--muted);
   font-size: 1.4rem;
+}
+
+/*
+ * Cadres de section (§3.1) : règle commune à toute l'application. Les éléments encadrés sont listés une seule fois
+ * (FRAME_SELECTOR, src/ui/frames.ts) et numérotés dans l'ordre d'affichage (data-frame) : bordure sur les quatre
+ * côtés, même épaisseur, même arrondi, couleur alternée. Les pastilles de statut et les cases du récapitulatif
+ * hebdomadaire ne sont pas des cadres.
+ */
+[data-frame] {
+  border: var(--frame-width) solid var(--frame-color);
+  border-radius: var(--radius);
+}
+
+[data-frame='0'] {
+  --frame-color: var(--frame-1);
+}
+
+[data-frame='1'] {
+  --frame-color: var(--frame-2);
+}
+
+[data-frame='2'] {
+  --frame-color: var(--frame-3);
+}
+
+[data-frame='3'] {
+  --frame-color: var(--frame-4);
+}
+
+[data-frame='4'] {
+  --frame-color: var(--frame-5);
+}
+
+/* Section sans style propre : mêmes marges intérieures et extérieures partout. */
+.frame {
+  margin: 14px 0;
+  padding: 12px 14px;
+}
+
+/* Un groupe de champs encadré : la légende reste à l'intérieur du cadre, sans entaille dans la bordure. */
+fieldset.frame > legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+  margin: 0 0 8px;
+}
+
+fieldset.frame > legend + * {
+  clear: both;
+}
+
+/* Bilan (§19.3) : couleur fixe par catégorie, reprise sur son bouton de filtre. */
+.bilan-progressing {
+  --frame-color: var(--frame-2);
+  --category-color: var(--frame-2);
+}
+
+.bilan-stable {
+  --frame-color: var(--frame-3);
+  --category-color: var(--frame-3);
+}
+
+.bilan-difficulty {
+  --frame-color: var(--frame-5);
+  --category-color: var(--frame-5);
+}
+
+.bilan-new {
+  --frame-color: var(--frame-1);
+  --category-color: var(--frame-1);
+}
+
+
+/* Filtres du bilan : vrais boutons, au style des boutons de l'accueil, bordés de la couleur de leur catégorie. */
+.bilan-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 8px 0 4px;
+}
+
+.bilan-filter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  border: var(--frame-width) solid var(--category-color);
+  text-align: left;
+  line-height: 1.2;
+}
+
+.bilan-filter.bilan-all {
+  --category-color: var(--text);
+  grid-column: 1 / -1;
+  justify-content: center;
+}
+
+.bilan-filter-label {
+  flex: 1;
+}
+
+.bilan-filter.bilan-all .bilan-filter-label {
+  flex: none;
+}
+
+/* Filtre actif : fond plein de la couleur de la catégorie. */
+.bilan-filter[aria-pressed='true'] {
+  background: var(--category-color);
+  border-color: var(--category-color);
+  color: var(--bg);
+}
+
+.bilan-filter:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.bilan-filter .bilan-icon {
+  width: 26px;
+  height: 26px;
+  font-size: 0.9rem;
 }

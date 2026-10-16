@@ -122,6 +122,17 @@ L'application doit rester lisible en mode sombre, notamment pour les trois coule
 
 Ne pas ajouter de fonctionnalités sociales, de calories, de programmes complexes ou de tableaux de bord encombrants.
 
+### 3.1. Cadres de section (précision validée)
+
+Toutes les sections de l'application (cartes d'exercice, éléments de liste, graphiques, bandeaux d'information, blocs des réglages, de l'import/export, de « Mon poids », de la fiche et du bilan, fenêtres de confirmation) sont encadrées selon **une seule règle commune** :
+
+- Bordure sur les quatre côtés, de même épaisseur (2 px) et de même couleur, coins arrondis (même rayon que les boutons).
+- Règle définie une seule fois : la liste des éléments encadrés est unique (`FRAME_SELECTOR`, `src/ui/frames.ts`) et le style est la seule règle `[data-frame]` de `styles.css`. Aucun écran ne définit sa propre bordure de section (pas de bordure gauche seule).
+- Couleurs vives et claires, qui alternent d'une section à la suivante dans l'ordre d'affichage : jaune, cyan, bleu clair, violet, rose magenta. Aucune couleur sombre ou terne, jamais de vert, d'orange ni de rouge (réservés aux statuts, §8). Contraste élevé sur le fond sombre.
+- Exception : dans le bilan (§19.3), chaque catégorie a sa couleur fixe, reprise sur son bouton de filtre (en progression : cyan ; stables : bleu clair ; en difficulté : rose magenta ; trop tôt pour conclure : jaune).
+- Ne sont pas des cadres : les pastilles de statut (§8) et les cases du récapitulatif hebdomadaire (§19.6), qui gardent leur style.
+- Rien ne dépasse de l'écran d'un smartphone (vérifié à 412, 360 et 320 px de large) : les cartes d'exercice s'adaptent à la largeur, la ligne de série se resserre sous 380 px en gardant des boutons `+` et `−` de 48 px, et sous 340 px le bouton « Valider » passe sous ces boutons, sur toute la largeur.
+
 ## 4. Bibliothèque d'exercices illustrée
 
 Créer une bibliothèque d'exercices permettant d'identifier rapidement le mouvement, le groupe musculaire et le matériel utilisé.
@@ -1205,6 +1216,13 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 141. Fichier d'import : un .json, même sans type reconnu, du texte ou des notes sont acceptés ; un fichier vide, binaire, tronqué ou trop volumineux est refusé avec un message clair.
 142. (bout en bout) Champ fichier sans filtre de type ; fichier non valide refusé sans rien importer ; .json annoncé en `application/octet-stream` importé ; bouton « Bilan de progression » parmi les boutons de l'accueil, sous le récapitulatif, de même taille et de même style que « Historique » ; résumé et titres avec le nombre d'exercices par catégorie, libellé « Une seule séance sur cet exercice. », aucune couleur de statut ; un exercice ouvre sa fiche sur son graphique (deux points), un exercice à une seule séance montre un point et le message.
 
+### Cadres de section et filtres du bilan (§3.1, §19.3)
+
+143. Palette des cadres : cinq couleurs vives et claires (contraste d'au moins 7:1 sur le fond), ni vert, ni orange, ni rouge ; une seule règle de bordure (quatre côtés), aucune bordure gauche seule.
+144. Les cadres sont numérotés dans l'ordre d'affichage et leur couleur alterne ; la liste des éléments encadrés est unique et exclut pastilles de statut et cases du récapitulatif.
+145. (bout en bout) Bilan : un bouton par catégorie et « Tous » (actif par défaut) ; une catégorie vide est visible mais désactivée ; un appui n'affiche que la catégorie et remplit le bouton de sa couleur ; un nouvel appui ou « Tous » réaffiche tout ; le filtre est mémorisé après rechargement ; chaque catégorie garde sa couleur sur son bouton et sa section.
+146. (bout en bout) Sur chaque écran (accueil, séance, fiche, bibliothèque, historique, détail de séance, bilan, Mon poids, réglages, import/export) : chaque cadre a une bordure de 2 px de la même couleur de la palette sur les quatre côtés et des coins arrondis ; deux cadres consécutifs n'ont pas la même couleur (sauf les catégories du bilan) ; pastilles et cases du récapitulatif sans cadre ; rien ne dépasse de l'écran, et la ligne de série reste dans sa carte à 360 et 320 px.
+
 Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
 
 ## 16. Vérification avant livraison
@@ -1317,7 +1335,8 @@ Ne jamais déclarer un exercice en stagnation sur la base d'une seule séance di
 - Un exercice qui n'a qu'une seule séance évaluée est classé « Trop tôt pour conclure ».
 - « En difficulté » (au moins 2 rouges consécutives en cours) l'emporte sur « En progression ».
 - Libellé de « Trop tôt pour conclure » : « Une seule séance sur cet exercice. »
-- Présentation : un résumé en tête donne le nombre d'exercices de chaque catégorie ; chaque catégorie a un titre de section bien visible, un pictogramme (↗ en progression, → stables, ↘ en difficulté, … trop tôt pour conclure), un style de bordure distinct et son nombre d'exercices. Pas de vert, d'orange ni de rouge (réservés aux statuts, §8).
+- Présentation : un résumé en tête donne le nombre d'exercices de chaque catégorie ; chaque catégorie a un titre de section bien visible, un pictogramme (↗ en progression, → stables, ↘ en difficulté, … trop tôt pour conclure), une couleur de cadre fixe (§3.1) et son nombre d'exercices. Pas de vert, d'orange ni de rouge (réservés aux statuts, §8).
+- Filtres : le résumé du haut est une rangée de vrais boutons rectangulaires arrondis, au style des boutons de l'accueil, un par catégorie (pictogramme, titre, nombre d'exercices) et un bouton « Tous ». Chaque bouton est bordé de la couleur fixe de sa catégorie (§3.1). Un appui n'affiche que la catégorie choisie et remplit le bouton de sa couleur ; un nouvel appui sur le bouton actif, ou « Tous », réaffiche tout. Une catégorie sans exercice reste visible mais n'est pas sélectionnable. Par défaut tout est affiché ; le dernier filtre est mémorisé sur l'appareil (s'il ne contient plus d'exercice, tout est affiché). « Dernières évolutions » n'apparaît que sans filtre.
 - Un appui sur un exercice ouvre sa fiche directement sur son graphique d'évolution (§19.2) ; le retour ramène au bilan. Le bilan est accessible depuis l'accueil (§3) et depuis l'historique.
 
 ### 19.4. Séparation entre historique réel et recommandation

@@ -183,7 +183,7 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
         </a>
       </div>
 
-      <section>
+      <section className="frame">
         <h2 className="section-title">Variantes</h2>
         <ul className="plain-list variants">
           {exercise.variants.map((v) => (
@@ -240,7 +240,7 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
       </section>
 
       {exercise.synonyms.length + variant.synonyms.length > 0 && (
-        <section>
+        <section className="frame">
           <h2 className="section-title">Autres noms</h2>
           <p className="small">{[...exercise.synonyms, ...variant.synonyms].join(' · ')}</p>
         </section>

@@ -39,24 +39,26 @@ export function BodyScreen() {
       )}
       {status === 'ready' && (
         <>
-          <WeighInForm
-            today={today}
-            submitLabel="Enregistrer"
-            existing={data.weighIns}
-            onSubmit={async (w) => {
-              const ok = await saveWeighIn(w);
-              setFailed(!ok);
-              return ok;
-            }}
-          />
-          {failed && (
-            <p className="field-error" role="alert">
-              Enregistrement impossible : réessayez.
+          <section className="frame" aria-label="Nouvelle pesée">
+            <WeighInForm
+              today={today}
+              submitLabel="Enregistrer"
+              existing={data.weighIns}
+              onSubmit={async (w) => {
+                const ok = await saveWeighIn(w);
+                setFailed(!ok);
+                return ok;
+              }}
+            />
+            {failed && (
+              <p className="field-error" role="alert">
+                Enregistrement impossible : réessayez.
+              </p>
+            )}
+            <p className="muted small">
+              Taille : {data.heightCm ? `${data.heightCm} cm` : 'non renseignée'} · <a href="#/reglages">modifier dans les réglages</a>
             </p>
-          )}
-          <p className="muted small">
-            Taille : {data.heightCm ? `${data.heightCm} cm` : 'non renseignée'} · <a href="#/reglages">modifier dans les réglages</a>
-          </p>
+          </section>
 
           {data.weighIns.length > 0 && (
             <section aria-label="Évolution">

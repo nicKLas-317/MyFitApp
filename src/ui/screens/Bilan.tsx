@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useApp } from '../../app/store';
 import { analyzeProgress, recentChanges, type ProgressCategory } from '../../analysis/progress';
 import { displayName } from '../../library/catalog';
@@ -13,6 +13,27 @@ const SECTIONS: { category: ProgressCategory; title: string; icon: string; hint:
 
 const count = (n: number) => `${n} exercice${n > 1 ? 's' : ''}`;
 
+export type BilanFilter = ProgressCategory | 'all';
+const FILTER_KEY = 'myfitapp.bilan.filtre';
+
+/** Dernier filtre choisi, mémorisé sur cet appareil ; absent ou illisible : toutes les catégories. */
+function readFilter(): BilanFilter {
+  try {
+    const v = localStorage.getItem(FILTER_KEY);
+    return v && SECTIONS.some((x) => x.category === v) ? (v as ProgressCategory) : 'all';
+  } catch {
+    return 'all';
+  }
+}
+
+function saveFilter(filter: BilanFilter): void {
+  try {
+    localStorage.setItem(FILTER_KEY, filter);
+  } catch {
+    // Préférence d'affichage seulement : sans stockage, le bilan s'ouvre sur toutes les catégories.
+  }
+}
+
 /**
  * Bilan synthétique facultatif (§19.3) : classement factuel, sans score inventé. Catégories bien distinctes
  * (pictogramme, style, nombre d'exercices), sans les couleurs des statuts ; un exercice ouvre sa fiche sur son graphique.
@@ -26,6 +47,13 @@ export function Bilan() {
     ...section,
     list: progress.filter((p) => p.category === section.category).sort((a, b) => name(a.variantId).localeCompare(name(b.variantId), 'fr')),
   }));
+  const [chosen, setChosen] = useState<BilanFilter>(readFilter);
+  // Une catégorie mémorisée devenue vide : toutes les catégories.
+  const filter: BilanFilter = chosen !== 'all' && byCategory.some((c) => c.category === chosen && c.list.length > 0) ? chosen : 'all';
+  const choose = (next: BilanFilter) => {
+    setChosen(next);
+    saveFilter(next);
+  };
 
   return (
     <main className="screen bilan">
@@ -38,23 +66,35 @@ export function Bilan() {
       {progress.length === 0 ? (
         <p className="empty muted">Pas encore de séance évaluée.</p>
       ) : (
-        <ul className="bilan-summary" aria-label="Résumé du bilan">
+        <div className="bilan-filters" role="group" aria-label="Filtrer par catégorie">
+          <button type="button" className="btn bilan-filter bilan-all" aria-pressed={filter === 'all'} onClick={() => choose('all')}>
+            <span className="bilan-filter-label">Tous</span>
+            <strong>{progress.length}</strong>
+          </button>
           {byCategory.map(({ category, title, icon, list }) => (
-            <li key={category} className={`bilan-chip bilan-${category}`} data-category={category}>
+            <button
+              key={category}
+              type="button"
+              className={`btn bilan-filter bilan-${category}`}
+              data-category={category}
+              aria-pressed={filter === category}
+              disabled={list.length === 0}
+              // Un nouvel appui sur le filtre actif réaffiche toutes les catégories.
+              onClick={() => choose(filter === category ? 'all' : category)}
+            >
               <span className="bilan-icon" aria-hidden="true">
                 {icon}
               </span>
-              <span>
-                {title} <strong data-testid={`count-${category}`}>{list.length}</strong>
-              </span>
-            </li>
+              <span className="bilan-filter-label">{title}</span>
+              <strong data-testid={`count-${category}`}>{list.length}</strong>
+            </button>
           ))}
-        </ul>
+        </div>
       )}
       {byCategory.map(({ category, title, icon, hint, list }) => {
-        if (list.length === 0) return null;
+        if (list.length === 0 || (filter !== 'all' && filter !== category)) return null;
         return (
-          <section key={category} aria-label={title} data-category={category} className={`bilan-section bilan-${category}`}>
+          <section key={category} aria-label={title} data-category={category} className={`frame bilan-section bilan-${category}`}>
             <h2 className="bilan-title">
               <span className="bilan-icon" aria-hidden="true">
                 {icon}
@@ -85,8 +125,8 @@ export function Bilan() {
           </section>
         );
       })}
-      {changes.length > 0 && (
-        <section aria-label="Dernières évolutions">
+      {filter === 'all' && changes.length > 0 && (
+        <section aria-label="Dernières évolutions" className="frame">
           <h2 className="section-title">Dernières évolutions</h2>
           <ul className="plain-list">
             {changes.map((c) => (

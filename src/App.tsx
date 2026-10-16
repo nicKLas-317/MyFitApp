@@ -3,6 +3,7 @@ import { AppProvider } from './app/store';
 import { BodyProvider } from './body/store';
 import { ErrorBoundary } from './ui/ErrorBoundary';
 import { useHashRoute } from './app/hooks';
+import { useFramePalette } from './ui/frames';
 import { ForgottenDialog } from './ui/ForgottenDialog';
 import { SaveErrorBanner } from './ui/SaveIndicator';
 import { UndoToast } from './ui/UndoToast';
@@ -23,6 +24,7 @@ import { Settings } from './ui/screens/Settings';
 
 function Router() {
   const [page, param, extra] = useHashRoute();
+  useFramePalette();
   // Chaque écran s'ouvre en haut : la position de défilement de l'écran précédent ne s'applique pas.
   useEffect(() => {
     window.scrollTo(0, 0);

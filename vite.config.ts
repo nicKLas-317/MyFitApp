@@ -49,5 +49,7 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
     // L'application vit à l'heure de Paris : les tests aussi, quelle que soit la machine (intégration continue en UTC).
     env: { TZ: 'Europe/Paris' },
+    // La feuille de style est lue telle quelle par le test des cadres de section (§3.1).
+    css: { include: [/styles\.css/] },
   },
 });
