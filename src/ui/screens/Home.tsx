@@ -28,9 +28,6 @@ export function Home() {
     <main className="screen home">
       <h1 className="brand">MyFitApp</h1>
       <WeeklyRecapBlock />
-      <a className="recap-link" href="#/bilan">
-        Bilan de progression ›
-      </a>
       {active ? (
         <button type="button" className="btn primary huge" onClick={() => navigate('seance')}>
           Reprendre la séance
@@ -52,6 +49,9 @@ export function Home() {
       <nav className="home-nav">
         <a className="btn" href="#/historique">
           Historique
+        </a>
+        <a className="btn" href="#/bilan">
+          Bilan de progression
         </a>
         <a className="btn" href="#/bibliotheque">
           Bibliothèque d’exercices

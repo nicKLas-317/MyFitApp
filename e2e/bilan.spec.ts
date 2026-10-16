@@ -36,11 +36,20 @@ test.describe('Bilan, graphiques et import de fichier sur Android', () => {
     await page.getByRole('button', { name: 'Ajouter à mes données' }).click();
     await expect(page.getByText('Import terminé : 2 séances ajoutées.')).toBeVisible();
 
-    // Accueil : accès direct au bilan, sous le récapitulatif.
+    // Accueil : bouton du bilan avec les autres boutons, sous le récapitulatif, au même format qu'eux.
     await page.goto('./');
     const recapBox = await page.getByTestId('weekly-recap').boundingBox();
-    const link = page.getByRole('link', { name: 'Bilan de progression ›' });
-    expect((await link.boundingBox())!.y).toBeGreaterThan(recapBox!.y + recapBox!.height - 1);
+    const nav = page.locator('nav.home-nav');
+    const link = nav.getByRole('link', { name: 'Bilan de progression', exact: true });
+    await expect(nav.getByRole('link')).toHaveText(['Historique', 'Bilan de progression', 'Bibliothèque d’exercices', 'Mon poids', 'Importer / exporter', 'Réglages']);
+    const [box, historyBox] = await Promise.all([link.boundingBox(), nav.getByRole('link', { name: 'Historique' }).boundingBox()]);
+    expect(box!.y).toBeGreaterThan(recapBox!.y + recapBox!.height - 1);
+    expect([box!.width, box!.height]).toEqual([historyBox!.width, historyBox!.height]);
+    const style = (l: typeof link) => l.evaluate((el) => {
+      const c = getComputedStyle(el);
+      return [c.backgroundColor, c.color, c.borderRadius, c.fontSize, c.fontWeight, c.fontFamily].join('|');
+    });
+    expect(await style(link)).toBe(await style(nav.getByRole('link', { name: 'Historique' })));
     await link.click();
 
     await expect(page.getByRole('heading', { name: 'Bilan de progression' })).toBeVisible();

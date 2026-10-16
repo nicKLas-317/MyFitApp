@@ -1462,15 +1462,6 @@ fieldset {
 }
 
 /* Bilan de progression (§19.3) : catégories distinctes par pictogramme et style, sans couleurs de statut. */
-.recap-link {
-  display: inline-block;
-  margin: -6px 0 12px;
-  padding: 4px 0;
-  font-size: 0.9rem;
-  color: var(--accent);
-  text-decoration: none;
-}
-
 .bilan-summary {
   list-style: none;
   margin: 8px 0 4px;

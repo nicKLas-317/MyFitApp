@@ -104,7 +104,7 @@ L'écran principal doit donner accès directement à :
 - L'import et l'export des données.
 - Des réglages simples.
 - La rubrique « Mon poids ».
-- Le bilan de progression (§19.3), par un lien discret sous le récapitulatif hebdomadaire.
+- Le bilan de progression (§19.3), par un bouton du même style que les autres boutons de l'accueil, placé avec eux sous le récapitulatif hebdomadaire (juste après « Historique »).
 
 Éviter les menus profonds, les écrans superflus, les animations inutiles et les longs textes explicatifs.
 
@@ -1203,7 +1203,7 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 
 140. Données de départ (exemple anonymisé) : l'extension triceps haltère assis (deux vertes, palier validé) est « En progression » ; les exercices à une seule séance sont « Trop tôt pour conclure » ; le graphique a un point dès la première séance.
 141. Fichier d'import : un .json, même sans type reconnu, du texte ou des notes sont acceptés ; un fichier vide, binaire, tronqué ou trop volumineux est refusé avec un message clair.
-142. (bout en bout) Champ fichier sans filtre de type ; fichier non valide refusé sans rien importer ; .json annoncé en `application/octet-stream` importé ; lien « Bilan de progression » sous le récapitulatif de l'accueil ; résumé et titres avec le nombre d'exercices par catégorie, libellé « Une seule séance sur cet exercice. », aucune couleur de statut ; un exercice ouvre sa fiche sur son graphique (deux points), un exercice à une seule séance montre un point et le message.
+142. (bout en bout) Champ fichier sans filtre de type ; fichier non valide refusé sans rien importer ; .json annoncé en `application/octet-stream` importé ; bouton « Bilan de progression » parmi les boutons de l'accueil, sous le récapitulatif, de même taille et de même style que « Historique » ; résumé et titres avec le nombre d'exercices par catégorie, libellé « Une seule séance sur cet exercice. », aucune couleur de statut ; un exercice ouvre sa fiche sur son graphique (deux points), un exercice à une seule séance montre un point et le message.
 
 Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
 
