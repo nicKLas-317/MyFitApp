@@ -76,6 +76,18 @@ function upsert<T extends { id: string }>(list: readonly T[], items: readonly T[
   return next;
 }
 
+/** Même version de chaque séance (identifiant et dernière modification) dans les deux listes. */
+function sameVersions(a: readonly Session[], b: readonly Session[]): boolean {
+  const versions = new Map(a.map((s) => [s.id, s.updatedAt]));
+  return a.length === b.length && b.every((s) => versions.get(s.id) === s.updatedAt);
+}
+
+/**
+ * Canal entre les fenêtres de l'appli ouvertes en même temps sur l'appareil (appli installée et onglet Chrome,
+ * par exemple) : chacune prévient les autres de ses écritures pour qu'aucune n'écrase une séance plus récente.
+ */
+const CHANNEL_NAME = 'myfitapp-donnees';
+
 const AppContext = createContext<AppValue | null>(null);
 
 export function useApp(): AppValue {
@@ -101,6 +113,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const sessionsRef = useRef<Session[]>([]);
   const pending = useRef(new PendingWrites<Session>());
   const undoCounter = useRef(0);
+  /** Nombre de modifications locales : une relecture de la base commencée avant l'une d'elles est périmée. */
+  const localChanges = useRef(0);
+  const channel = useRef<BroadcastChannel | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -154,6 +169,56 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const repo = load.kind === 'ready' ? load.repo : null;
 
+  /** Prévient les autres fenêtres qu'une écriture a abouti. */
+  const announce = useCallback(() => {
+    try {
+      channel.current?.postMessage('changed');
+    } catch {
+      // Canal fermé ou indisponible : les autres fenêtres reliront la base en revenant au premier plan.
+    }
+  }, []);
+
+  /**
+   * Relit séances et bibliothèque dans la base, écrites peut-être par une autre fenêtre : une fenêtre restée
+   * en arrière-plan n'écrit jamais une ancienne version d'une séance par-dessus une version plus récente.
+   * Une écriture locale non confirmée garde sa version, plus récente que la base.
+   */
+  const reloadFromDb = useCallback(async () => {
+    if (!repo) return;
+    const startedAt = localChanges.current;
+    let loadedSessions: Session[];
+    let loadedExercises: Exercise[];
+    try {
+      [loadedSessions, loadedExercises] = await Promise.all([repo.loadSessions(), repo.loadExercises()]);
+    } catch (error) {
+      console.error('[MyFitApp] relecture de la base impossible', error);
+      return;
+    }
+    // Une modification faite ici entre-temps est plus récente que ce qui vient d'être lu.
+    if (localChanges.current !== startedAt) return;
+    const unconfirmed = new Map(pending.current.toRetry().map((s) => [s.id, s]));
+    const list = loadedSessions.map((s) => unconfirmed.get(s.id) ?? s);
+    for (const s of unconfirmed.values()) if (!loadedSessions.some((x) => x.id === s.id)) list.push(s);
+    if (!sameVersions(sessionsRef.current, list)) {
+      sessionsRef.current = list;
+      setSessions(list);
+      // L'annulation reprendrait une version antérieure aux modifications de l'autre fenêtre.
+      setUndo(null);
+    }
+    setExercises((current) => (JSON.stringify(current) === JSON.stringify(loadedExercises) ? current : loadedExercises));
+  }, [repo]);
+
+  useEffect(() => {
+    if (!repo || typeof BroadcastChannel === 'undefined') return;
+    const bc = new BroadcastChannel(CHANNEL_NAME);
+    bc.onmessage = () => void reloadFromDb();
+    channel.current = bc;
+    return () => {
+      bc.close();
+      channel.current = null;
+    };
+  }, [repo, reloadFromDb]);
+
   /**
    * Écrit la séance tout de suite : aucun délai ni regroupement entre une saisie et IndexedDB (§12).
    * L'écriture reste suivie jusqu'à sa confirmation, pour être relancée si besoin (arrière-plan, échec).
@@ -166,6 +231,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         await repo.putSession(session);
         pending.current.confirm(session);
+        announce();
         setSave(pending.current.hasFailures() ? { kind: 'error' } : { kind: 'saved' });
         return true;
       } catch (error) {
@@ -175,7 +241,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return false;
       }
     },
-    [repo],
+    [repo, announce],
   );
 
   const commit = useCallback(
@@ -185,6 +251,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ? sessionsRef.current.map((s) => (s.id === next.id ? next : s))
         : [...sessionsRef.current, next];
       sessionsRef.current = list;
+      localChanges.current++;
       setSessions(list);
       // Toute nouvelle modification remplace la précédente possibilité d'annulation :
       // annuler ne doit jamais défaire une action plus récente (ni rouvrir une séance terminée).
@@ -212,20 +279,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // les écritures non confirmées sont relancées à ce moment-là, puis au retour au premier plan.
   useEffect(() => {
     const onHide = () => flushWrites(false);
-    const onVisibility = () => flushWrites(document.visibilityState === 'visible');
+    // Au retour au premier plan, la base peut avoir été modifiée par une autre fenêtre de l'appli.
+    const onVisible = () => {
+      retrySave();
+      void reloadFromDb();
+    };
+    const onVisibility = () => (document.visibilityState === 'visible' ? onVisible() : flushWrites(false));
     document.addEventListener('visibilitychange', onVisibility);
     document.addEventListener('freeze', onHide);
-    document.addEventListener('resume', retrySave);
+    document.addEventListener('resume', onVisible);
     window.addEventListener('pagehide', onHide);
-    window.addEventListener('pageshow', retrySave);
+    window.addEventListener('pageshow', onVisible);
     return () => {
       document.removeEventListener('visibilitychange', onVisibility);
       document.removeEventListener('freeze', onHide);
-      document.removeEventListener('resume', retrySave);
+      document.removeEventListener('resume', onVisible);
       window.removeEventListener('pagehide', onHide);
-      window.removeEventListener('pageshow', retrySave);
+      window.removeEventListener('pageshow', onVisible);
     };
-  }, [flushWrites, retrySave]);
+  }, [flushWrites, retrySave, reloadFromDb]);
 
   const applyUndo = useCallback(() => {
     if (!undo) return;
@@ -246,6 +318,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       const list = data.replace ? [...data.sessions] : upsert(sessionsRef.current, data.sessions);
       if (data.replace) pending.current.clear();
+      localChanges.current++;
+      announce();
       sessionsRef.current = list;
       setSessions(list);
       setExercises((current) => (data.replace ? [...data.exercises] : upsert(current, data.exercises)));
@@ -254,7 +328,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setLastFinish(null);
       return true;
     },
-    [repo],
+    [repo, announce],
   );
 
   const saveExercises = useCallback(
@@ -268,11 +342,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setSave({ kind: 'error' });
         return false;
       }
+      localChanges.current++;
+      announce();
       setExercises((current) => upsert(current, list));
       setSave(pending.current.hasFailures() ? { kind: 'error' } : { kind: 'saved' });
       return true;
     },
-    [repo],
+    [repo, announce],
   );
 
   const deleteExercise = useCallback(
@@ -284,10 +360,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       } catch {
         return false;
       }
+      localChanges.current++;
+      announce();
       setExercises((current) => current.filter((e) => e.id !== exercise.id));
       return true;
     },
-    [repo],
+    [repo, announce],
   );
 
   const deleteSession = useCallback(
@@ -300,13 +378,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return false;
       }
       const list = sessionsRef.current.filter((s) => s.id !== id);
+      localChanges.current++;
+      announce();
       sessionsRef.current = list;
       setSessions(list);
       pending.current.forget(id);
       setUndo(null);
       return true;
     },
-    [repo],
+    [repo, announce],
   );
 
   const setRecapSettings = useCallback(

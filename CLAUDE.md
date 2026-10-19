@@ -497,6 +497,7 @@ Version minimale : le cardio est un simple enregistrement dans la séance.
 - Tapis de marche uniquement : inclinaison en trois niveaux, Neutre, Moyenne ou Haute, avec trois boutons (Neutre par défaut). Aucune valeur en pourcentage.
 - Durée en minutes entières (1 à 600), seule donnée obligatoire. Distance en km facultative.
 - Saisie en quelques secondes : machine (la première de la liste est présélectionnée), inclinaison si tapis, durée, « Valider ». Un bloc peut être corrigé ou retiré (retrait annulable pendant la séance, confirmé sur une séance passée).
+- Bloc rempli mais pas validé au moment de « Terminer la séance » (précision validée) : la confirmation l'affiche (« Cardio non validé : Vélo elliptique · 11 min ») et le bouton devient « Enregistrer le cardio et terminer » ; une saisie invalide bloque la fin avec un message, jusqu'à correction ou « Annuler ». Un formulaire ouvert mais vide ne change rien.
 
 **Règles**
 
@@ -1039,6 +1040,7 @@ Prévoir une gestion claire des erreurs de sauvegarde. Ne jamais annoncer qu'une
 - Chaque transaction d'écriture est validée explicitement (`commit()`) dès sa dernière requête émise, sans attendre un aller-retour avec la page, et en durabilité stricte (`durability: 'strict'`) : « Enregistré » n'est affiché qu'une fois la donnée sur le disque.
 - Les écritures non confirmées (en cours ou échouées) sont relancées dans leur dernière version au passage en arrière-plan (`visibilitychange`, `pagehide`, `freeze`), et les échecs au retour au premier plan.
 - Un poids tapé sans quitter le champ est enregistré au passage en arrière-plan (avec la même protection contre les fautes de frappe).
+- **Plusieurs fenêtres de l'appli (précision validée).** L'appli installée et un onglet Chrome partagent la même base : une fenêtre restée en mémoire ne doit jamais écrire une ancienne version d'une séance par-dessus une plus récente (cardio ajouté ailleurs effacé par la série suivante). Chaque écriture réussie est annoncée aux autres fenêtres (`BroadcastChannel`), qui relisent séances et bibliothèque ; chaque fenêtre relit aussi la base en revenant au premier plan. Une écriture locale non confirmée garde sa version.
 
 **Rappel de sauvegarde** : si aucun export n'a été fait depuis 14 jours et que de nouvelles séances existent, afficher un rappel discret sur l'écran d'accueil, avec un bouton d'export direct. Pas de fenêtre bloquante.
 
@@ -1315,6 +1317,11 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 ### Dernière fois / Prochaine cible (§5.3.2)
 
 163. (bout en bout) Fiche et carte de séance : « Dernière fois » en petit, gris clair, sur une ligne (poids, répétitions, date courte, pastille), jamais tronquée à 360 et 320 px ; « Prochaine cible » en grand, en gras, dans la couleur du groupe, avec le poids ; séparateur entre les zones ; repère quand la cible change, « = Même cible : consolide » quand elle est identique, « Poids de départ à saisir » pour un exercice jamais réalisé ; en séance, une autre charge saisie retire repère et mention ; aucune couleur de statut hors de la pastille.
+
+### Cardio et fenêtres multiples (§5.7, §12)
+
+164. (bout en bout) Deux fenêtres de l'appli ouvertes sur la même séance : un cardio ajouté dans l'une est affiché par l'autre, dont les séries suivantes et la fin de séance le conservent (séance terminée en base avec le bloc) ; une fenêtre sans canal entre fenêtres relit la base en revenant au premier plan, avant toute écriture.
+165. (bout en bout) Cardio rempli mais pas validé à « Terminer la séance » : la confirmation l'affiche et « Enregistrer le cardio et terminer » l'enregistre avec la séance ; une durée invalide bloque la fin avec un message, sans bouton inactif ; un formulaire vide ne change rien.
 
 Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
 

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { activeSession, addExercise, doExercise, readSessions, startSession } from './helpers';
+import { activeSession, addExercise, doExercise, finishSession, readSessions, startSession, validateSets } from './helpers';
 
 const cardioForm = (page: Page) => page.getByRole('form', { name: 'Cardio' });
 
@@ -123,6 +123,87 @@ test.describe('Cardio', () => {
     await startSession(page);
     await page.getByRole('button', { name: '+ Ajouter du cardio' }).click();
     await expect(cardioForm(page).locator('.chip')).toHaveText(['Tapis de marche', 'Rameur', 'Vélo elliptique', 'Vélo', 'Vélo droit', 'Neutre', 'Moyenne', 'Haute']);
+  });
+
+  test('164. Deux fenêtres de l’appli ouvertes : le cardio ajouté dans l’une n’est jamais écrasé par les séries de l’autre', async ({ page, context }) => {
+    // Fenêtre restée ouverte sur la séance (appli installée), puis seconde fenêtre (onglet Chrome).
+    await startSession(page);
+    const card = await addExercise(page, 'pec deck', 'Pec deck', '30');
+    await validateSets(card, 1);
+    const other = await context.newPage();
+    await other.goto('./#/seance');
+    await addCardio(other, 'Vélo elliptique', '11');
+    await expect.poll(async () => (await activeSession(page)).cardio?.map((b) => b.minutes)).toEqual([11]);
+
+    // La première fenêtre est prévenue de l'écriture : ses séries suivantes gardent le bloc.
+    await expect(page.getByTestId('cardio-text')).toHaveText(['Vélo elliptique · 11 min']);
+    await validateSets(card, 2);
+    await card.getByRole('button', { name: 'Bien', exact: true }).click();
+    await finishSession(page);
+    await expect(page.getByTestId('cardio-text')).toHaveText(['Vélo elliptique · 11 min']);
+    await expect(page.locator('.recap-item').first()).toContainText('Pec deck');
+    const [done] = await readSessions(page);
+    expect(done?.state).toBe('done');
+    expect(done?.performances[0]?.reps).toEqual([8, 8, 8]);
+    expect(done?.cardio?.map((b) => `${b.machine} ${b.minutes}`)).toEqual(['Vélo elliptique 11']);
+
+    // Fenêtre sans canal entre fenêtres (gelée en arrière-plan) : elle relit la base en revenant au premier plan.
+    const background = await context.newPage();
+    await background.addInitScript(() => {
+      delete (window as { BroadcastChannel?: unknown }).BroadcastChannel;
+    });
+    await startSession(background);
+    const legCurl = await addExercise(background, 'leg curl', 'Leg curl', '30');
+    await validateSets(legCurl, 1);
+    // Cette fenêtre-là n'a pas de canal pour prévenir : l'autre fenêtre est rouverte pour voir la séance.
+    await other.reload();
+    await addCardio(other, 'Rameur', '10');
+    await expect(background.getByTestId('cardio-text')).toHaveCount(0);
+    await background.evaluate(() => {
+      Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    await expect(background.getByTestId('cardio-text')).toHaveText(['Rameur · 10 min']);
+    await validateSets(legCurl, 2);
+    await legCurl.getByRole('button', { name: 'Bien', exact: true }).click();
+    await finishSession(background);
+    const second = (await readSessions(background)).find((s) => s.id !== done?.id);
+    expect(second?.state).toBe('done');
+    expect(second?.performances[0]?.reps).toEqual([8, 8, 8]);
+    expect(second?.cardio?.map((b) => `${b.machine} ${b.minutes}`)).toEqual(['Rameur 10']);
+  });
+
+  test('165. Cardio rempli mais pas validé à la fin de la séance : proposé à l’enregistrement, jamais perdu', async ({ page }) => {
+    await startSession(page);
+    const card = await addExercise(page, 'pec deck', 'Pec deck', '30');
+    await doExercise(card, 3, 'Bien');
+    await page.getByRole('button', { name: '+ Ajouter du cardio' }).click();
+    await cardioForm(page).getByRole('button', { name: 'Vélo elliptique', exact: true }).click();
+    await cardioForm(page).getByLabel('Durée (min)').fill('0');
+
+    // Durée invalide : la fin est bloquée avec un message, sans bouton inactif.
+    await page.getByRole('button', { name: 'Terminer la séance' }).click();
+    const confirm = page.getByRole('group', { name: 'Terminer la séance' });
+    await expect(confirm.getByRole('alert')).toHaveText('Cardio non validé : Durée invalide : un nombre entier de minutes. Corrigez-le ou annulez-le.');
+    await expect(confirm.getByRole('button', { name: /terminer/i })).toHaveCount(0);
+
+    await cardioForm(page).getByLabel('Durée (min)').fill('11');
+    await expect(confirm.getByTestId('unsaved-cardio')).toHaveText('Cardio non validé : Vélo elliptique · 11 min');
+    await confirm.getByRole('button', { name: 'Enregistrer le cardio et terminer' }).click();
+    await expect(page.getByRole('heading', { name: 'Séance terminée' })).toBeVisible();
+    await expect(page.getByTestId('cardio-text')).toHaveText(['Vélo elliptique · 11 min']);
+    const [done] = await readSessions(page);
+    expect(done?.state).toBe('done');
+    expect(done?.cardio?.map((b) => `${b.machine} ${b.minutes}`)).toEqual(['Vélo elliptique 11']);
+
+    // Formulaire ouvert mais vide : la fin est inchangée.
+    await page.getByRole('button', { name: 'Garder ce nom' }).click();
+    await startSession(page);
+    await page.getByRole('button', { name: '+ Ajouter du cardio' }).click();
+    await page.getByRole('button', { name: 'Terminer la séance' }).click();
+    await expect(page.getByTestId('unsaved-cardio')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Oui, terminer' }).click();
+    await expect(page.getByRole('heading', { name: 'Séance terminée' })).toBeVisible();
   });
 
   test('124. Une liste enregistrée par la version 1.2.0 reçoit « Vélo » une seule fois au lancement', async ({ page }) => {

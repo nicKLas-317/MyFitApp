@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { useApp } from '../../app/store';
 import { navigate, useNow } from '../../app/hooks';
 import { elapsedMs, finishSession, missingFeelings, newId } from '../../session/ops';
-import { addCardio, cardioOf, removeCardio, updateCardio } from '../../cardio/model';
-import { CardioForm, CardioList } from '../CardioForm';
+import { addCardio, cardioOf, formatCardio, removeCardio, updateCardio } from '../../cardio/model';
+import { CardioForm, CardioList, type CardioDraft } from '../CardioForm';
 import { formatDuration } from '../../session/format';
 import { ExerciseCard } from '../ExerciseCard';
 import { finishLabel, MissingFeelings } from '../MissingFeelings';
@@ -17,6 +17,8 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
   /** Confirmation de fin ouverte : exercices sans ressenti relevés à l'ouverture. */
   const [confirmFinish, setConfirmFinish] = useState<string[] | null>(null);
   const [addingCardio, setAddingCardio] = useState(false);
+  /** Saisie du formulaire de cardio ouvert, proposée à l'enregistrement si la séance est terminée sans « Valider ». */
+  const [cardioDraft, setCardioDraft] = useState<CardioDraft>({ kind: 'empty' });
 
   useEffect(() => {
     if (!openVariantId) return;
@@ -39,10 +41,20 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
   }
 
   const current = openId ?? active.performances.at(-1)?.variantId;
+  const unsavedCardio = addingCardio && cardioDraft.kind !== 'empty' ? cardioDraft : null;
+
+  function openCardio(open: boolean) {
+    setAddingCardio(open);
+    setCardioDraft({ kind: 'empty' });
+  }
 
   async function finish() {
-    if (!active) return;
-    const { session, removed } = finishSession(active, Date.now());
+    if (!active || unsavedCardio?.kind === 'error') return;
+    const now = Date.now();
+    // Un bloc rempli mais pas validé est enregistré avec la fin de la séance, dans la même écriture.
+    const withCardio = unsavedCardio ? addCardio(active, unsavedCardio.block, now) : active;
+    openCardio(false);
+    const { session, removed } = finishSession(withCardio, now);
     setLastFinish({ sessionId: session.id, removed });
     navigate('recap', session.id);
     await commit(session);
@@ -93,14 +105,15 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
           <CardioForm
             machines={cardioMachines}
             newId={newId}
-            onCancel={() => setAddingCardio(false)}
+            onCancel={() => openCardio(false)}
+            onDraft={setCardioDraft}
             onSave={(block) => {
-              setAddingCardio(false);
+              openCardio(false);
               void commit(addCardio(active, block, Date.now()));
             }}
           />
         ) : (
-          <button type="button" className="btn big" onClick={() => setAddingCardio(true)}>
+          <button type="button" className="btn big" onClick={() => openCardio(true)}>
             + Ajouter du cardio
           </button>
         )}
@@ -108,10 +121,22 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
           <div className="confirm-box" role="group" aria-label="Terminer la séance">
             <p>Terminer la séance ?</p>
             <MissingFeelings session={active} variantIds={confirmFinish} />
+            {unsavedCardio?.kind === 'block' && (
+              <p className="small" data-testid="unsaved-cardio">
+                Cardio non validé : {formatCardio(unsavedCardio.block)}
+              </p>
+            )}
+            {unsavedCardio?.kind === 'error' && (
+              <p className="field-error" role="alert">
+                Cardio non validé : {unsavedCardio.message} Corrigez-le ou annulez-le.
+              </p>
+            )}
             <div className="row">
-              <button type="button" className="btn primary" onClick={() => void finish()}>
-                {finishLabel(active, confirmFinish)}
-              </button>
+              {unsavedCardio?.kind !== 'error' && (
+                <button type="button" className="btn primary" onClick={() => void finish()}>
+                  {unsavedCardio ? 'Enregistrer le cardio et terminer' : finishLabel(active, confirmFinish)}
+                </button>
+              )}
               <button type="button" className="btn" onClick={() => setConfirmFinish(null)}>
                 Non
               </button>

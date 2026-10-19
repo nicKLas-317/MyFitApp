@@ -1,6 +1,9 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import type { CardioBlock, CardioMachine, Incline } from '../domain/types';
 import { cardioErrors, formatCardio, INCLINE_LABELS, INCLINES, makeCardioBlock, parseDistance, parseMinutes } from '../cardio/model';
+
+/** Contenu du formulaire : rien de saisi, bloc prêt à enregistrer, ou saisie invalide. */
+export type CardioDraft = { kind: 'empty' } | { kind: 'block'; block: CardioBlock } | { kind: 'error'; message: string };
 
 interface FormProps {
   machines: readonly CardioMachine[];
@@ -9,13 +12,15 @@ interface FormProps {
   newId(): string;
   onSave(block: CardioBlock): void;
   onCancel(): void;
+  /** Suit la saisie en cours, pour ne pas perdre un bloc rempli mais pas encore validé. */
+  onDraft?(draft: CardioDraft): void;
 }
 
 /**
  * Saisie d'un bloc de cardio en quelques secondes : machine, inclinaison (tapis seulement, Neutre par défaut),
  * durée, puis « Valider ». Distance facultative.
  */
-export function CardioForm({ machines, initial, newId, onSave, onCancel }: FormProps) {
+export function CardioForm({ machines, initial, newId, onSave, onCancel, onDraft }: FormProps) {
   const id = useId();
   // Une machine retirée des réglages reste proposée pour corriger un bloc qui l'utilise.
   const list =
@@ -27,19 +32,32 @@ export function CardioForm({ machines, initial, newId, onSave, onCancel }: FormP
   const [minutes, setMinutes] = useState(initial ? String(initial.minutes) : '');
   const [distance, setDistance] = useState(initial?.distanceKm !== undefined ? String(initial.distanceKm).replace('.', ',') : '');
   const [error, setError] = useState<string | null>(null);
+  const [blockId] = useState(() => initial?.id ?? newId());
   const machine = list.find((m) => m.id === machineId);
 
-  function submit() {
-    if (!machine) return setError('Choisissez une machine.');
+  function read(): CardioDraft {
+    if (!initial && !minutes.trim() && !distance.trim()) return { kind: 'empty' };
+    if (!machine) return { kind: 'error', message: 'Choisissez une machine.' };
     const value = parseMinutes(minutes);
     const km = parseDistance(distance);
-    if (value === null) return setError('Durée invalide : un nombre entier de minutes.');
-    if (km === null) return setError('Distance invalide.');
+    if (value === null) return { kind: 'error', message: 'Durée invalide : un nombre entier de minutes.' };
+    if (km === null) return { kind: 'error', message: 'Distance invalide.' };
     const input = { machine, incline, minutes: value, distanceKm: km };
-    if (cardioErrors(input).length > 0) return setError('Bloc de cardio invalide.');
+    if (cardioErrors(input).length > 0) return { kind: 'error', message: 'Bloc de cardio invalide.' };
     // Le nom enregistré reste celui du bloc corrigé si la machine n'a pas changé.
     const named = initial && initial.machineId === machine.id ? { ...machine, name: initial.machine } : machine;
-    onSave(makeCardioBlock({ ...input, machine: named }, initial?.id ?? newId()));
+    return { kind: 'block', block: makeCardioBlock({ ...input, machine: named }, blockId) };
+  }
+
+  const draft = read();
+  const draftKey = JSON.stringify(draft);
+  useEffect(() => {
+    onDraft?.(draft);
+  }, [draftKey]);
+
+  function submit() {
+    if (draft.kind === 'block') onSave(draft.block);
+    else setError(draft.kind === 'error' ? draft.message : 'Durée invalide : un nombre entier de minutes.');
   }
 
   return (
