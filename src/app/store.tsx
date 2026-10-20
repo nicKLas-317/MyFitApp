@@ -123,6 +123,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         const repo = new Repository(await openAppDb());
         await repo.ensureSeed();
+        try {
+          await repo.ensurePlusEqualFix();
+        } catch (error) {
+          // Sans gravité : la correction sera refaite au prochain lancement.
+          console.error('[MyFitApp] correction des ressentis « += » non appliquée', error);
+        }
         const [loadedSessions, loadedExercises, exportedAt, recap, machines, machinesVersion] = await Promise.all([
           repo.loadSessions(),
           repo.loadExercises(),

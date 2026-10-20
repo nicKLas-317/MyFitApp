@@ -585,6 +585,11 @@ Tout autre symbole est signalé à l'import et soumis à confirmation, jamais de
 
 Le symbole d'origine d'une performance importée (par exemple `+=`) est conservé avec elle et affiché dans l'historique.
 
+**Précision validée (version 1.12.2) :** un symbole connu impose son ressenti ; `+=` est toujours Moyen (orange), jamais lu comme `+`.
+
+- Dans l'aperçu d'import, un ressenti choisi à la main qui contredit un symbole connu le remplace : le symbole n'est alors pas enregistré. Un symbole inconnu reste conservé avec le ressenti choisi.
+- Correction automatique, appliquée une seule fois à une base existante : toute performance dont le symbole d'origine est `+=` et dont le ressenti n'est pas Moyen passe à Moyen, puis le profil est recalculé. Aucun autre ressenti n'est touché. Une sauvegarde restaurée reçoit la même correction.
+
 ### 7.4. Calcul du statut (vert / orange / rouge)
 
 Le statut est calculé pour chaque performance, de façon déterministe, selon cette table. Appliquer les règles dans l'ordre : la première qui s'applique détermine le statut.
@@ -1322,6 +1327,17 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 
 164. (bout en bout) Deux fenêtres de l'appli ouvertes sur la même séance : un cardio ajouté dans l'une est affiché par l'autre, dont les séries suivantes et la fin de séance le conservent (séance terminée en base avec le bloc) ; une fenêtre sans canal entre fenêtres relit la base en revenant au premier plan, avant toute écriture.
 165. (bout en bout) Cardio rempli mais pas validé à « Terminer la séance » : la confirmation l'affiche et « Enregistrer le cardio et terminer » l'enregistre avec la séance ; une durée invalide bloque la fin avec un message, sans bouton inactif ; un formulaire vide ne change rien.
+
+### Symboles de ressenti collés (§7.3)
+
+166. Texte collé exact « Chest press\n3x8x52kg += » : Moyen, symbole « += » conservé, orange ; écritures voisines (« += » collé au poids, « + = », « × », « kgs ») identiques.
+167. `++`, `+`, `=`, `-=`, `--` collés de la même façon donnent Très bien (vert), Bien (vert), Moyen (orange), Mal passé (orange), Très mal passé (rouge) ; sans symbole : inconnu, orange.
+168. Aperçu : un ressenti choisi qui contredit un symbole connu le remplace (« += » jamais enregistré avec Bien) ; un symbole inconnu reste conservé avec le ressenti choisi.
+169. Correction : seuls les « += » sans Moyen passent à Moyen ; les autres ressentis ne sont pas touchés.
+170. Après correction, le profil est recalculé : le chest press n'est plus compté vert et « +1 répétition » disparaît.
+171. La correction de la base est appliquée une seule fois, en une transaction.
+172. Une sauvegarde contenant un « += » enregistré avec Bien est restaurée corrigée.
+173. (bout en bout) Une base d'une version antérieure est corrigée au lancement : chest press orange, cible 3 × 8, historique « Moyen (+=) ».
 
 Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
 

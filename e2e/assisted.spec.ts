@@ -43,4 +43,41 @@ test.describe('Exercices assistés et données de départ', () => {
     await card.getByLabel('Aide (kg)').press('Enter');
     await expect(card.getByTestId('target')).toHaveText('3 × 8');
   });
+
+  test('173. Une base où « += » était enregistré avec « Bien » est corrigée au lancement : chest press orange, cible conservée', async ({ page }) => {
+    await page.goto('./');
+    await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
+    const chest = (id: string, date: string, feeling: 'tres_bien' | 'bien', feelingSymbol: string): Session => {
+      const t = Date.parse(`${date}T18:00:00`);
+      return {
+        id, name: id, date, startedAt: null, endedAt: null, createdAt: t, updatedAt: t, origin: 'import', state: 'done',
+        performances: [{ variantId: 'chest-press', weightKg: 52, targetReps: 8, plannedSets: 3, reps: [8, 8, 8], feeling, feelingSymbol }],
+      };
+    };
+    await writeSessions(page, [chest('c1', '2026-10-12', 'tres_bien', '++'), chest('c2', '2026-10-15', 'bien', '+=')]);
+    // Base d'une version antérieure : la correction n'y a jamais été appliquée.
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve, reject) => {
+          const open = indexedDB.open('myfitapp');
+          open.onsuccess = () => {
+            const tx = open.result.transaction('meta', 'readwrite');
+            tx.objectStore('meta').delete('plusEqualFeelingFixed');
+            tx.oncomplete = () => {
+              open.result.close();
+              resolve();
+            };
+            tx.onerror = () => reject(tx.error);
+          };
+        }),
+    );
+    await page.goto('./#/exercice/chest-press');
+    await page.reload();
+    await expect(page.locator('.sheet-status [data-status]')).toHaveAttribute('data-status', 'orange');
+    await expect(page.getByTestId('sheet-next')).toHaveText('3 × 8');
+    await expect(page.getByRole('list', { name: 'Historique de l’exercice' })).toContainText('Moyen (+=)');
+    const stored = await readSessions(page);
+    expect(stored.find((s) => s.id === 'c2')?.performances[0]).toMatchObject({ feeling: 'moyen', feelingSymbol: '+=' });
+    expect(stored.find((s) => s.id === 'c1')?.performances[0]).toMatchObject({ feeling: 'tres_bien', feelingSymbol: '++' });
+  });
 });

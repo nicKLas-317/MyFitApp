@@ -13,6 +13,10 @@ import {
   sameNaming,
 } from '../library/seed';
 import { addGrips, addSeedVariants } from '../library/edit';
+import { fixPlusEqualFeelings } from '../transfer/feelings';
+
+/** Correction « += » → Moyen déjà appliquée à cette base. */
+const PLUS_EQUAL_FIX_KEY = 'plusEqualFeelingFixed';
 
 /**
  * Base d'entraînement. Le suivi corporel (§20) aura sa propre base, séparée.
@@ -187,6 +191,25 @@ export class Repository {
       tx.objectStore('meta').put(SEED_VERSION, 'seedVersion'),
       tx.done,
     ]);
+  }
+
+  /**
+   * Correction unique (§7.3) : les performances « += » enregistrées avec un autre ressenti que Moyen
+   * passent à Moyen, dans une seule transaction. Le profil, dérivé des séances, est recalculé au chargement.
+   * Renvoie le nombre de séances corrigées.
+   */
+  async ensurePlusEqualFix(): Promise<number> {
+    const tx = this.db.transaction(['sessions', 'meta'], 'readwrite', STRICT);
+    const meta = tx.objectStore('meta');
+    if ((await meta.get(PLUS_EQUAL_FIX_KEY)) === true) {
+      await tx.done;
+      return 0;
+    }
+    const fixed = fixPlusEqualFeelings(await tx.objectStore('sessions').getAll());
+    const done = Promise.all([...fixed.map((s) => tx.objectStore('sessions').put(s)), meta.put(true, PLUS_EQUAL_FIX_KEY), tx.done]);
+    commitNow(tx);
+    await done;
+    return fixed.length;
   }
 
   close(): void {

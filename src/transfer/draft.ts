@@ -11,6 +11,7 @@ import { allIds, slug, uniqueId, validateVariantName, withMediumGrip } from '../
 import { importedSessionName, isIsoDate } from '../session/format';
 import { newId, WEIGHT_CONFIRM_RATIO } from '../session/ops';
 import { MATCH_MARGIN, matchExercise, qualifierOf, type MatchResult } from './match';
+import { symbolMatches } from './feelings';
 import { parseNotes, type ParseIssue } from './notes';
 import { gripOf, normalizeName, variantPrecisionOf } from '../library/text';
 
@@ -306,8 +307,11 @@ function learnSynonym(work: Map<string, Exercise>, variantId: string, sourceName
   }
 }
 
-/** Symbole de ressenti d'origine, conservé dans l'historique (§7.3). */
-const symbol = (e: DraftExercise) => (e.feelingSymbol ? { feelingSymbol: e.feelingSymbol } : {});
+/**
+ * Symbole de ressenti d'origine, conservé dans l'historique (§7.3). Un ressenti choisi à la main qui
+ * contredit un symbole connu le remplace : « += » n'est jamais enregistré avec « Bien ».
+ */
+const symbol = (e: DraftExercise) => (e.feelingSymbol && symbolMatches(e.feelingSymbol, e.feeling) ? { feelingSymbol: e.feelingSymbol } : {});
 
 /** Performance d'un exercice du brouillon, ou null si ses données sont inexploitables. */
 export function draftPerformance(e: DraftExercise, variantId: string): Performance | null {

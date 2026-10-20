@@ -14,7 +14,7 @@ import { EMPTY_BODY, isValidHeight, isValidWeighIn, type BodyTracking } from '..
 export { EMPTY_BODY, type BodyTracking };
 import { importedSessionName, isIsoDate, localDate } from '../session/format';
 import { draftCardio, draftExercise, findDuplicates, type DraftExerciseInput, type DraftIssue, type DraftSession } from './draft';
-import { isFeeling, readFeelingSymbol } from './feelings';
+import { fixPlusEqualFeelings, isFeeling, readFeelingSymbol } from './feelings';
 import { detectDate } from './notes';
 import { newId } from '../session/ops';
 import { normalizeName } from '../library/text';
@@ -88,9 +88,12 @@ const MUSCLE_GROUPS = Object.keys(MUSCLE_GROUP_LABELS) as MuscleGroup[];
 /**
  * Migre une sauvegarde native validée vers le format actuel.
  * 2 → 3 : ajout du cardio, champ facultatif des séances ; rien d'autre ne change.
+ * Toutes versions : une performance « += » enregistrée avec un autre ressenti que Moyen est corrigée (§7.3).
  */
 export function migrateBackup(data: Obj): Backup {
-  return { ...(data as unknown as Backup), schemaVersion: SCHEMA_VERSION };
+  const backup = data as unknown as Backup;
+  const fixed = new Map(fixPlusEqualFeelings(backup.sessions).map((s) => [s.id, s]));
+  return { ...backup, sessions: backup.sessions.map((s) => fixed.get(s.id) ?? s), schemaVersion: SCHEMA_VERSION };
 }
 
 /**
