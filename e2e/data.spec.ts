@@ -100,7 +100,7 @@ test.describe('Import et export', () => {
     // Réimport sur le même appareil : rien de nouveau. Le contenu du fichier s'affiche dans la zone de saisie.
     await page.getByLabel('Fichier à importer').setInputFiles(file);
     const backup = JSON.parse(await page.getByLabel('Notes de séance ou JSON').inputValue());
-    expect(backup).toMatchObject({ app: 'MyFitApp', schemaVersion: 3, sessions: original });
+    expect(backup).toMatchObject({ app: 'MyFitApp', schemaVersion: 4, sessions: original });
     await expect(page.getByTestId('plan-new')).toHaveText('0 séance à ajouter');
     await expect(page.getByText('Rien de nouveau à importer.')).toBeVisible();
     expect(await readSessions(page)).toEqual(original);

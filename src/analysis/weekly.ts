@@ -3,9 +3,11 @@
  * Calcul pur, jamais stocké : il est refait à partir des séances enregistrées à chaque affichage.
  * Aucun effet sur le moteur de progression. Le cardio n'entre dans aucun groupe : seul son total figure dans l'en-tête.
  * Une séance compte 1 pour un groupe travaillé en groupe principal, ½ pour un groupe seulement secondaire (travail indirect).
+ * Une activité habituelle confirmée (badminton…) compte ½ pour chacun de ses groupes, comme un travail indirect.
  */
 import type { Exercise, MuscleGroup, Session } from '../domain/types';
 import { cardioMinutes, formatMinutes } from '../cardio/model';
+import { activityEnd, activityStart, doneActivities, type ActivityRecord } from '../activities/model';
 
 export type RecapColor = 'vert' | 'orange' | 'rouge';
 export type Recency = 'today' | 'yesterday' | null;
@@ -54,6 +56,8 @@ export interface WeeklyRecap {
   end: Date;
   /** Séances terminées de la semaine, y compris celles qui ne contiennent que du cardio. */
   sessionCount: number;
+  /** Activités habituelles confirmées de la semaine : ce ne sont pas des séances de salle. */
+  activityCount: number;
   /** Total des blocs de cardio des séances de la semaine, en minutes. */
   cardioMinutes: number;
   cells: RecapCell[];
@@ -97,7 +101,7 @@ const COLOR_RANK: Record<RecapColor, number> = { vert: 0, orange: 1, rouge: 2 };
 export interface GroupWork {
   /** Séances de la période où le groupe est groupe principal d'au moins un exercice. */
   counts: Map<MuscleGroup, number>;
-  /** Séances de la période où le groupe n'est que groupe secondaire. */
+  /** Séances de la période où le groupe n'est que groupe secondaire, et activités habituelles qui le sollicitent. */
   indirects: Map<MuscleGroup, number>;
   /** Dernier moment où le groupe a été travaillé, directement ou non, toutes séances terminées confondues. */
   last: Map<MuscleGroup, number>;
@@ -106,13 +110,18 @@ export interface GroupWork {
 /**
  * Travail de chaque groupe affiché (§19.6), commun au récapitulatif et aux bilans de la semaine et du mois :
  * une séance compte 1 pour un groupe principal, ½ pour un groupe seulement secondaire, jamais plus de 1.
+ * Une activité habituelle confirmée compte ½ (indirect) pour chacun de ses groupes, sans que le total du jour pour
+ * un groupe dépasse 1 : après une séance où il était principal, elle n'ajoute rien ; après une séance où il n'était
+ * que secondaire, elle ajoute ½. Elle compte toujours pour « hier » / « aujourd'hui ».
  * Les sous-groupes des jambes comptent pour « jambes » quand ils ne sont pas affichés eux-mêmes.
+ * `inPeriod` reçoit le début d'une séance ou d'une activité.
  */
 export function groupWork(
   sessions: readonly Session[],
   exercises: readonly Exercise[],
   groups: readonly MuscleGroup[],
-  inPeriod: (s: Session) => boolean,
+  inPeriod: (time: number) => boolean,
+  activities: readonly ActivityRecord[] = [],
 ): GroupWork {
   const exerciseOfVariant = new Map<string, Exercise>();
   for (const e of exercises) for (const v of e.variants) exerciseOfVariant.set(v.id, e);
@@ -127,9 +136,12 @@ export function groupWork(
   const counts = new Map<MuscleGroup, number>();
   const indirects = new Map<MuscleGroup, number>();
   const last = new Map<MuscleGroup, number>();
+  /** Travail compté par jour et par groupe (1 ou ½ par séance), pour plafonner les activités. */
+  const daily = new Map<string, number>();
+  const add = (day: string, g: MuscleGroup, value: number) => daily.set(`${day}|${g}`, (daily.get(`${day}|${g}`) ?? 0) + value);
   for (const s of sessions) {
     if (s.state !== 'done') continue;
-    const counted = inPeriod(s);
+    const counted = inPeriod(sessionStartTime(s));
     // Un groupe travaillé deux fois dans la même séance compte pour une ; principal dans un exercice et
     // secondaire dans un autre, il compte comme principal (jamais plus de 1 par séance).
     const direct = new Set<MuscleGroup>();
@@ -145,11 +157,26 @@ export function groupWork(
       }
     }
     for (const g of direct) secondary.delete(g);
-    for (const [found, tally] of [[direct, counts], [secondary, indirects]] as const) {
+    for (const [found, tally, value] of [[direct, counts, 1], [secondary, indirects, 0.5]] as const) {
       for (const g of found) {
-        if (counted) tally.set(g, (tally.get(g) ?? 0) + 1);
+        if (counted) {
+          tally.set(g, (tally.get(g) ?? 0) + 1);
+          add(dayKey(sessionStartTime(s)), g, value);
+        }
         last.set(g, Math.max(last.get(g) ?? 0, sessionLastTime(s)));
       }
+    }
+  }
+  for (const a of [...doneActivities(activities)].sort((x, y) => activityStart(x) - activityStart(y))) {
+    const counted = inPeriod(activityStart(a));
+    const day = dayKey(activityStart(a));
+    const found = new Set(a.groups.map(recapGroup).filter((g): g is MuscleGroup => g !== null));
+    for (const g of found) {
+      if (counted && (daily.get(`${day}|${g}`) ?? 0) + 0.5 <= 1) {
+        indirects.set(g, (indirects.get(g) ?? 0) + 1);
+        add(day, g, 0.5);
+      }
+      last.set(g, Math.max(last.get(g) ?? 0, activityEnd(a)));
     }
   }
   return { counts, indirects, last };
@@ -160,6 +187,7 @@ export function weeklyRecap(
   exercises: readonly Exercise[],
   now: number,
   settings: WeeklyRecapSettings = DEFAULT_RECAP_SETTINGS,
+  activities: readonly ActivityRecord[] = [],
 ): WeeklyRecap {
   const start = weekStart(new Date(now));
   const next = new Date(start);
@@ -167,18 +195,16 @@ export function weeklyRecap(
   const end = new Date(next);
   end.setDate(end.getDate() - 1);
 
-  const inWeek = (s: Session) => {
-    const t = sessionStartTime(s);
-    return t >= start.getTime() && t < next.getTime();
-  };
+  const inWeek = (t: number) => t >= start.getTime() && t < next.getTime();
   let sessionCount = 0;
   let cardio = 0;
   for (const s of sessions) {
-    if (s.state !== 'done' || !inWeek(s)) continue;
+    if (s.state !== 'done' || !inWeek(sessionStartTime(s))) continue;
     sessionCount++;
     cardio += cardioMinutes(s);
   }
-  const { counts, indirects, last } = groupWork(sessions, exercises, settings.groups, inWeek);
+  const activityCount = doneActivities(activities).filter((a) => inWeek(activityStart(a))).length;
+  const { counts, indirects, last } = groupWork(sessions, exercises, settings.groups, inWeek, activities);
 
   const cells: RecapCell[] = settings.groups.map((group) => {
     const count = counts.get(group) ?? 0;
@@ -198,7 +224,7 @@ export function weeklyRecap(
       a.score - b.score ||
       order.get(a.group)! - order.get(b.group)!,
   );
-  return { start, end, sessionCount, cardioMinutes: cardio, cells };
+  return { start, end, sessionCount, activityCount, cardioMinutes: cardio, cells };
 }
 
 /**
@@ -228,15 +254,16 @@ const MONTH = new Intl.DateTimeFormat('fr-FR', { month: 'short' });
 
 /**
  * « Semaine du lun. 12 au dim. 18 oct. : 2 séances » (mois répété si la semaine change de mois),
- * suivi de « · 45 min de cardio » quand la semaine en contient.
+ * suivi de « · 1 activité » et de « · 45 min de cardio » quand la semaine en contient.
  */
 export function recapTitle(recap: WeeklyRecap): string {
-  const { start, end, sessionCount, cardioMinutes: minutes } = recap;
+  const { start, end, sessionCount, activityCount, cardioMinutes: minutes } = recap;
   const sameMonth = start.getMonth() === end.getMonth();
   // Espaces insécables : « 2 séances » ou « dim. 18 oct. » ne sont jamais coupés en fin de ligne.
   const nb = '\u00a0';
   const from = `lun.${nb}${DAY.format(start)}${sameMonth ? '' : `${nb}${MONTH.format(start)}`}`;
   const to = `dim.${nb}${DAY.format(end)}${nb}${MONTH.format(end)}`;
   const cardio = minutes > 0 ? ` · ${formatMinutes(minutes).replace(/ /g, nb)}${nb}de cardio` : '';
-  return `Semaine du ${from} au ${to}${nb}: ${sessionCount}${nb}séance${sessionCount > 1 ? 's' : ''}${cardio}`;
+  const activities = activityCount > 0 ? ` · ${activityCount}${nb}activité${activityCount > 1 ? 's' : ''}` : '';
+  return `Semaine du ${from} au ${to}${nb}: ${sessionCount}${nb}séance${sessionCount > 1 ? 's' : ''}${activities}${cardio}`;
 }

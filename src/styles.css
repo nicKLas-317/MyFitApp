@@ -1845,10 +1845,47 @@ fieldset.frame > legend + * {
   padding: 10px;
 }
 
-.report-banner {
+.report-banner,
+.activity-banner {
   flex-wrap: wrap;
+}
+
+.activity-banner .report-message {
+  flex-basis: 100%;
 }
 
 .report-settings .section-title {
   margin-top: 0;
+}
+
+/* Activités habituelles hors salle dans l'historique : pas des séances, supprimables après confirmation. */
+.activity-actions {
+  padding: 0 16px 12px;
+}
+
+.habit-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.habit-row {
+  display: grid;
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.habit-when {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.habit-when select,
+.habit-when input {
+  min-height: var(--tap);
 }

@@ -1,9 +1,10 @@
 /**
  * Bilans de la semaine et du mois (§19.7) : calcul pur, refait à chaque affichage à partir des séances, des
- * évaluations du moteur (seule source de vérité) et des pesées. Aucun score ni conseil inventé ; aucun effet
+ * évaluations du moteur (seule source de vérité), des activités habituelles confirmées et des pesées. Aucun score ni conseil inventé ; aucun effet
  * sur le moteur de progression. Le texte du mail est du texte brut, sans HTML.
  */
 import type { WeighIn } from '../body/model';
+import { activityMinutes, activityStart, doneActivities, type ActivityRecord } from '../activities/model';
 import { cardioOf, formatMinutes } from '../cardio/model';
 import type { Exercise, MuscleGroup, Session } from '../domain/types';
 import { resolveConfig, type EngineSettings, type Evaluation, type Palier } from '../engine';
@@ -145,6 +146,8 @@ export interface PeriodReport {
   previous: PeriodTotals;
   /** Minutes de cardio par machine, de la plus longue à la plus courte. */
   cardio: { machine: string; minutes: number }[];
+  /** Activités habituelles confirmées (hors salle) par nom : nombre et durée totale, dans l'ordre de la première. */
+  activities: { name: string; count: number; minutes: number }[];
   /** Groupes affichés au récapitulatif, dans leur ordre : séances directes et indirectes. */
   groups: { group: MuscleGroup; count: number; indirect: number }[];
   progressions: ReportProgression[];
@@ -164,6 +167,8 @@ export interface ReportInput {
   /** Groupes affichés au récapitulatif hebdomadaire (§19.6). */
   groups: readonly MuscleGroup[];
   weighIns: readonly WeighIn[];
+  /** Activités habituelles (réponses) : seules les confirmées comptent. */
+  activities?: readonly ActivityRecord[];
   now: number;
 }
 
@@ -188,7 +193,13 @@ export function buildReport(period: ReportPeriod, input: ReportInput): PeriodRep
   const cardio = new Map<string, number>();
   for (const s of list) for (const b of cardioOf(s)) cardio.set(b.machine, (cardio.get(b.machine) ?? 0) + b.minutes);
 
-  const work = groupWork(sessions, exercises, input.groups, belongs);
+  const done = doneActivities(input.activities ?? []);
+  const work = groupWork(sessions, exercises, input.groups, (t) => containsTime(period, t), done);
+  const activities = new Map<string, { name: string; count: number; minutes: number }>();
+  for (const a of [...done].filter((x) => containsTime(period, activityStart(x))).sort((x, y) => activityStart(x) - activityStart(y))) {
+    const entry = activities.get(a.name) ?? { name: a.name, count: 0, minutes: 0 };
+    activities.set(a.name, { ...entry, count: entry.count + 1, minutes: entry.minutes + activityMinutes(a) });
+  }
   const groups = input.groups.map((group) => ({ group, count: work.counts.get(group) ?? 0, indirect: work.indirects.get(group) ?? 0 }));
 
   // Évaluations du moteur, dans l'ordre du rejeu : paliers validés, rouges et passages en « poids inférieur ».
@@ -242,6 +253,7 @@ export function buildReport(period: ReportPeriod, input: ReportInput): PeriodRep
     totals: totalsOf(sessions, period),
     previous: totalsOf(sessions, shiftPeriod(period, -1)),
     cardio: [...cardio].map(([machine, minutes]) => ({ machine, minutes })).sort((a, b) => b.minutes - a.minutes),
+    activities: [...activities.values()],
     groups,
     progressions,
     reds: [...reds.values()],
@@ -301,9 +313,13 @@ export function reportSections(report: PeriodReport, name: (variantId: string) =
       minutes > 0 ? [`Cardio : ${formatMinutes(minutes)} (${report.cardio.map((c) => `${c.machine} ${formatMinutes(c.minutes)}`).join(', ')})`] : ['Cardio : aucun'],
     );
   }
+  // Activités hors salle : pas des séances, listées à part (« Badminton ×4, 6 h 00 »).
+  if (report.activities.length > 0) {
+    sessionsLines.push([`Activités : ${report.activities.map((a) => `${a.name} ×${a.count}, ${formatMinutes(a.minutes)}`).join(' ; ')}`]);
+  }
   const sections: ReportSection[] = [{ title: 'Séances', lines: sessionsLines }];
 
-  if (totals.sessionCount > 0) {
+  if (totals.sessionCount > 0 || report.activities.length > 0) {
     const worked = report.groups.filter((g) => g.count > 0 || g.indirect > 0);
     const idle = report.groups.filter((g) => g.count === 0 && g.indirect === 0);
     const lines: ReportLine[] = worked.map((g) => {
@@ -312,7 +328,9 @@ export function reportSections(report: PeriodReport, name: (variantId: string) =
     });
     if (idle.length > 0) lines.push([em(`Non travaillés : ${idle.map((g) => MUSCLE_GROUP_LABELS[g.group]).join(', ')}`)]);
     sections.push({ title: 'Groupes travaillés', lines });
+  }
 
+  if (totals.sessionCount > 0) {
     sections.push({
       title: 'Progressions',
       lines:

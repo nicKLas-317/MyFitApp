@@ -1,6 +1,8 @@
 /**
  * Export complet et import JSON (§11.9, §11.10).
- * - schemaVersion 3 : format natif complet, restauré tel quel après validation stricte (blocs de cardio dans les séances).
+ * - schemaVersion 4 : format natif complet, restauré tel quel après validation stricte (blocs de cardio dans les séances,
+ *   activités habituelles hors salle et leurs réponses).
+ * - schemaVersion 3 : format natif antérieur aux activités habituelles, migré sans perte (aucune activité).
  * - schemaVersion 2 : format natif antérieur au cardio, migré sans perte (les séances n'ont simplement pas de cardio).
  * - schemaVersion 1 : format simple (ex. `docs/exemples/seance-exemple-1.json`), adapté en brouillons à vérifier.
  * - Autre JSON : structure détectée si possible, sinon erreur détaillée. Jamais d'échec silencieux.
@@ -10,6 +12,7 @@ import type { CardioMachine, Exercise, Feeling, Incline, MuscleGroup, Session, V
 import { DEFAULT_CARDIO_MACHINES, INCLINES, isValidDistance, isValidMinutes } from '../cardio/model';
 import { MUSCLE_GROUP_LABELS, SEED_EXERCISES, redefineSeedExercises, sameGroups, sameNaming, seedNamings, seedSecondaryGroups } from '../library/seed';
 import { EMPTY_BODY, isValidHeight, isValidWeighIn, type BodyTracking } from '../body/model';
+import { activityErrors, type ActivityRecord } from '../activities/model';
 
 export { EMPTY_BODY, type BodyTracking };
 import { importedSessionName, isIsoDate, localDate } from '../session/format';
@@ -20,7 +23,7 @@ import { newId } from '../session/ops';
 import { normalizeName } from '../library/text';
 
 export const APP_ID = 'MyFitApp';
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 /** Plus ancienne version du format natif, migrée à l'import. */
 const FIRST_NATIVE_VERSION = 2;
 /** Délai au-delà duquel l'accueil rappelle d'exporter (§12). */
@@ -36,11 +39,18 @@ export interface Backup {
   /** Réglages généraux ; les réglages par exercice sont portés par les variantes. */
   settings: Record<string, unknown>;
   bodyTracking: BodyTracking;
+  /** Activités habituelles hors salle : réponses « Oui » (activités confirmées) et « Non ». */
+  activities: ActivityRecord[];
 }
 
-
 export function buildBackup(
-  data: { sessions: readonly Session[]; exercises: readonly Exercise[]; bodyTracking?: BodyTracking; settings?: Record<string, unknown> },
+  data: {
+    sessions: readonly Session[];
+    exercises: readonly Exercise[];
+    bodyTracking?: BodyTracking;
+    settings?: Record<string, unknown>;
+    activities?: readonly ActivityRecord[];
+  },
   now: number,
 ): Backup {
   return {
@@ -51,6 +61,7 @@ export function buildBackup(
     exercises: [...data.exercises],
     settings: { ...data.settings },
     bodyTracking: data.bodyTracking ?? EMPTY_BODY,
+    activities: [...(data.activities ?? [])],
   };
 }
 
@@ -88,6 +99,7 @@ const MUSCLE_GROUPS = Object.keys(MUSCLE_GROUP_LABELS) as MuscleGroup[];
 /**
  * Migre une sauvegarde native validée vers le format actuel.
  * 2 → 3 : ajout du cardio, champ facultatif des séances ; rien d'autre ne change.
+ * 3 → 4 : ajout des activités habituelles (aucune dans une sauvegarde antérieure).
  * Toutes versions : une performance « += » enregistrée avec un autre ressenti que Moyen est corrigée (§7.3).
  */
 export function migrateBackup(data: Obj): Backup {
@@ -98,6 +110,7 @@ export function migrateBackup(data: Obj): Backup {
     // Une sauvegarde antérieure à la bibliothèque version 9 reçoit le tirage horizontal machine (appui pectoral).
     exercises: redefineSeedExercises(backup.exercises),
     sessions: backup.sessions.map((s) => fixed.get(s.id) ?? s),
+    activities: backup.activities ?? [],
     schemaVersion: SCHEMA_VERSION,
   };
 }
@@ -457,6 +470,14 @@ export function validateBackup(data: Obj): string[] {
         const dates = body.weighIns.map((w) => (isObj(w) ? w.date : null));
         if (new Set(dates).size !== dates.length) errors.push('bodyTracking.weighIns : plusieurs pesées à la même date.');
       }
+    }
+  }
+  if (data.activities !== undefined) {
+    if (!Array.isArray(data.activities)) errors.push('activities invalide.');
+    else {
+      data.activities.forEach((a, i) => errors.push(...activityErrors(a, `activities[${i}]`)));
+      const ids = data.activities.map((a) => (isObj(a) ? a.id : null));
+      if (new Set(ids).size !== ids.length) errors.push('activities : plusieurs réponses avec le même identifiant.');
     }
   }
   if (errors.length > 0) return errors;

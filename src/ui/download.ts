@@ -1,3 +1,4 @@
+import type { ActivityRecord } from '../activities/model';
 import type { BodyTracking } from '../body/model';
 import type { Exercise, Session } from '../domain/types';
 import { backupFileName, buildBackup } from '../transfer/backup';
@@ -8,6 +9,7 @@ export function downloadBackup(data: {
   exercises: readonly Exercise[];
   bodyTracking?: BodyTracking;
   settings?: Record<string, unknown>;
+  activities?: readonly ActivityRecord[];
 }): number {
   const now = Date.now();
   const blob = new Blob([JSON.stringify(buildBackup(data, now), null, 2)], { type: 'application/json' });

@@ -9,7 +9,7 @@ Application personnelle de suivi de musculation, en français, installable sur s
 - Bibliothèque illustrée avec une recherche unique par exercice, machine ou groupe musculaire, qui comprend le français, l'anglais et l'argot de salle (« latéral raise haltère », « DB », « pecs ») grâce à un lexique facile à compléter : [`src/library/lexique.json`](src/library/lexique.json).
 - Cardio en version minimale : blocs « machine, inclinaison du tapis, durée » ajoutés à la séance, sans progression ; total de la semaine sur l'accueil.
 - Import de l'historique depuis des notes en texte brut (`3x8x52kg ++`) ou du JSON, avec aperçu corrigeable.
-- Historique, graphiques, bilan de progression, récapitulatif de la semaine sur l'accueil, bilans de la semaine et du mois envoyables par mail, suivi du poids.
+- Historique, graphiques, bilan de progression, récapitulatif de la semaine sur l'accueil, bilans de la semaine et du mois envoyables par mail, activités habituelles hors salle confirmées en un geste, suivi du poids.
 - Aucun compte ni serveur : les données restent sur l'appareil, dans le navigateur (IndexedDB).
 
 Le cahier des charges complet est dans [CLAUDE.md](CLAUDE.md).
@@ -90,6 +90,7 @@ L'avancement est visible dans l'onglet **Actions** du dépôt ; l'adresse publi�
 | `src/library/` | Bibliothèque initiale, recherche, gestion des exercices, illustrations |
 | `src/transfer/` | Lecture des notes, import et export JSON, brouillons d'import |
 | `src/cardio/` | Cardio : blocs de séance, machines, lecture dans les notes |
+| `src/activities/` | Activités habituelles hors salle : habitudes, questions de l'accueil |
 | `src/analysis/` | Bilan, graphiques, récapitulatif hebdomadaire, bilans de la semaine et du mois |
 | `src/body/` | Suivi du poids, base séparée |
 | `src/storage/` | Persistance IndexedDB |

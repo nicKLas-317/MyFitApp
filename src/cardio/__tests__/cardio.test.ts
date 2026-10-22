@@ -292,11 +292,11 @@ describe('Cardio : sauvegarde, migration et réglages', () => {
     const v2 = { ...buildBackup({ sessions: [old], exercises: LIB, settings: { weeklyRecap: { groups: ['dos'], redThreshold: 3 } } }, 1), schemaVersion: 2 };
     const parsed = parseJsonImport(JSON.stringify(v2), LIB, TODAY);
     if (parsed.kind !== 'backup') throw new Error(parsed.kind);
-    expect(parsed.backup.schemaVersion).toBe(3);
+    expect(parsed.backup.schemaVersion).toBe(SCHEMA_VERSION);
     expect(parsed.backup.sessions).toEqual([old]);
     expect(parsed.backup.settings).toEqual({ weeklyRecap: { groups: ['dos'], redThreshold: 3 } });
     // Format plus récent : refusé, rien n'est importé.
-    expect(parseJsonImport(JSON.stringify({ ...v2, schemaVersion: 4 }), LIB, TODAY).kind).toBe('error');
+    expect(parseJsonImport(JSON.stringify({ ...v2, schemaVersion: SCHEMA_VERSION + 1 }), LIB, TODAY).kind).toBe('error');
 
     // Base d'une version antérieure : séances sans cardio relues telles quelles, aucune liste de machines enregistrée.
     const repo = new Repository(await openAppDb('test-cardio-2'));

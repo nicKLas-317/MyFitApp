@@ -5,6 +5,7 @@ import { useBody } from '../../body/store';
 import type { CardioMachine, MuscleGroup } from '../../domain/types';
 import { machineListErrors, newMachine, type MachineListError } from '../../cardio/model';
 import { isValidEmail } from '../../analysis/report';
+import { HABIT_GROUPS, WEEKDAY_LABELS, WEEKDAYS, habitErrors, newHabit, type Habit, type HabitError, type Weekday } from '../../activities/model';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
 import { Stepper } from '../ExerciseCard';
 
@@ -27,6 +28,7 @@ export function Settings() {
       <HeightField />
       <RecapSettingsField />
       <ReportSettingsField />
+      <HabitsField />
       <CardioMachinesField />
       <dl className="settings-list frame">
         <dt>Stockage persistant</dt>
@@ -288,6 +290,137 @@ function CardioMachinesField() {
         </p>
       )}
       <p className="muted small">Les séances déjà enregistrées gardent le nom de leur machine.</p>
+    </fieldset>
+  );
+}
+
+const HABIT_ERRORS: Record<HabitError, string> = {
+  empty_name: 'Donnez un nom à l’activité.',
+  duplicate_name: 'Deux activités portent le même nom.',
+  bad_time: 'Heures de début et de fin à indiquer.',
+  end_before_start: 'L’heure de fin doit suivre l’heure de début (même jour).',
+};
+
+const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
+/**
+ * Activités habituelles hors salle (badminton…) : jour, heures et groupes sollicités. Après l'heure de fin, l'accueil
+ * demande « Oui » ou « Non ». Désactiver une activité (vacances) suspend la question. Modifier ou supprimer une
+ * habitude ne change pas les activités déjà enregistrées.
+ */
+function HabitsField() {
+  const { habits, setHabits } = useApp();
+  const [list, setList] = useState<Habit[]>(habits);
+  const [added, setAdded] = useState('');
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  useEffect(() => setList(habits), [habits]);
+  const dirty = JSON.stringify(list) !== JSON.stringify(habits);
+  const errors = new Map(list.map((h) => [h.id, habitErrors(h, list)]));
+  const invalid = [...errors.values()].some((e) => e.length > 0);
+
+  const change = (next: Habit[]) => {
+    setMessage(null);
+    setList(next);
+  };
+  const update = (id: string, patch: Partial<Habit>) => change(list.map((h) => (h.id === id ? { ...h, ...patch } : h)));
+
+  async function save() {
+    if (invalid) return;
+    const ok = await setHabits(list.map((h) => ({ ...h, name: h.name.trim() })));
+    setMessage(ok ? { ok: true, text: 'Activités enregistrées.' } : { ok: false, text: 'Enregistrement impossible : réessayez.' });
+  }
+
+  return (
+    <fieldset className="chips-field habits frame">
+      <legend>Activités habituelles</legend>
+      <p className="muted small">Hors salle : après l’heure de fin, l’accueil demande si l’activité a eu lieu.</p>
+      {list.length === 0 && <p className="muted small">Aucune activité habituelle.</p>}
+      <ul className="habit-list">
+        {list.map((h, i) => {
+          const name = h.name.trim() || `Activité ${i + 1}`;
+          return (
+            <li key={h.id} className="habit-row" aria-label={name}>
+              <input type="text" aria-label={`Nom de l’activité ${i + 1}`} value={h.name} onChange={(e) => update(h.id, { name: e.target.value })} />
+              <div className="habit-when">
+                <select aria-label={`Jour : ${name}`} value={h.weekday} onChange={(e) => update(h.id, { weekday: Number(e.target.value) as Weekday })}>
+                  {WEEKDAYS.map((d) => (
+                    <option key={d} value={d}>
+                      {capitalize(WEEKDAY_LABELS[d])}
+                    </option>
+                  ))}
+                </select>
+                <input type="time" aria-label={`Début : ${name}`} value={h.start} onChange={(e) => update(h.id, { start: e.target.value })} />
+                <span aria-hidden="true">–</span>
+                <input type="time" aria-label={`Fin : ${name}`} value={h.end} onChange={(e) => update(h.id, { end: e.target.value })} />
+              </div>
+              <div className="feeling-options" role="group" aria-label={`Groupes sollicités : ${name}`}>
+                {HABIT_GROUPS.map((g) => {
+                  const on = h.groups.includes(g);
+                  return (
+                    <button
+                      key={g}
+                      type="button"
+                      className="chip"
+                      aria-pressed={on}
+                      onClick={() => update(h.id, { groups: on ? h.groups.filter((x) => x !== g) : HABIT_GROUPS.filter((x) => x === g || h.groups.includes(x)) })}
+                    >
+                      {MUSCLE_GROUP_LABELS[g]}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="row">
+                <label className="check-line">
+                  <input type="checkbox" checked={h.enabled} onChange={(e) => update(h.id, { enabled: e.target.checked })} />
+                  <span>Activée</span>
+                </label>
+                <button type="button" className="btn" aria-label={`Supprimer ${name}`} onClick={() => change(list.filter((x) => x.id !== h.id))}>
+                  Supprimer
+                </button>
+              </div>
+              {dirty && (errors.get(h.id) ?? []).length > 0 && (
+                <ul className="problems" role="alert">
+                  {errors.get(h.id)!.map((e) => (
+                    <li key={e} className="report-message small">
+                      {HABIT_ERRORS[e]}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <form
+        className="row"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!added.trim()) return;
+          change([...list, newHabit(added, list)]);
+          setAdded('');
+        }}
+      >
+        <input type="text" aria-label="Nouvelle activité" placeholder="Nouvelle activité" value={added} onChange={(e) => setAdded(e.target.value)} />
+        <button type="submit" className="btn">
+          Ajouter l’activité
+        </button>
+      </form>
+      {dirty && (
+        <div className="row">
+          <button type="button" className="btn primary" disabled={invalid} onClick={() => void save()}>
+            Enregistrer les activités
+          </button>
+          <button type="button" className="btn" onClick={() => change(habits)}>
+            Annuler
+          </button>
+        </div>
+      )}
+      {message && (
+        <p className="report-message small" role={message.ok ? 'status' : 'alert'}>
+          {message.text}
+        </p>
+      )}
+      <p className="muted small">Les activités déjà enregistrées gardent leur nom, leurs heures et leurs groupes.</p>
     </fieldset>
   );
 }

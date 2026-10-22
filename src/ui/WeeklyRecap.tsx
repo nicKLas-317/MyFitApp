@@ -11,11 +11,14 @@ const RECENCY_LABELS = { today: 'aujourd’hui', yesterday: 'hier' } as const;
  * Recalculé à chaque affichage à partir des séances enregistrées ; rien d'autre que la grille.
  */
 export function WeeklyRecapBlock() {
-  const { sessions, exercises, recapSettings } = useApp();
+  const { sessions, exercises, recapSettings, activities } = useApp();
   // Recalculé à chaque affichage, à l'heure exacte ; l'horloge rafraîchit l'accueil chaque minute
   // (passage de minuit, mention « hier »).
   const minute = Math.floor(useNow(60_000) / 60_000);
-  const recap = useMemo(() => weeklyRecap(sessions, exercises, Date.now(), recapSettings), [sessions, exercises, minute, recapSettings]);
+  const recap = useMemo(
+    () => weeklyRecap(sessions, exercises, Date.now(), recapSettings, activities),
+    [sessions, exercises, minute, recapSettings, activities],
+  );
 
   return (
     <section className="weekly-recap frame" aria-label="Récapitulatif de la semaine" data-testid="weekly-recap">

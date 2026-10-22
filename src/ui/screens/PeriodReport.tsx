@@ -41,16 +41,16 @@ export function kindOfSegment(segment: string | undefined): ReportKind {
  * Écran lié à plusieurs groupes : cadres neutres (§3.2), aucune couleur de statut.
  */
 export function PeriodReport({ kind, periodParam }: { kind: ReportKind; periodParam?: string }) {
-  const { sessions, exercises, replay, settings, variants, recapSettings, reportSettings, markReportSeen } = useApp();
+  const { sessions, exercises, replay, settings, variants, recapSettings, reportSettings, markReportSeen, activities } = useApp();
   const body = useBody();
   const now = Date.now();
   const period = (periodParam ? parsePeriodKey(kind, periodParam) : null) ?? defaultPeriod(kind, sessions, now);
   const key = periodKey(period);
   const weighIns = body.status === 'ready' ? body.data.weighIns : [];
   const report = useMemo(
-    () => buildReport(period, { sessions, exercises, evaluations: replay.evaluations, settings, groups: recapSettings.groups, weighIns, now }),
+    () => buildReport(period, { sessions, exercises, evaluations: replay.evaluations, settings, groups: recapSettings.groups, weighIns, activities, now }),
     // `now` change à chaque rendu : la période (clé) et les données suffisent.
-    [key, kind, sessions, exercises, replay, settings, recapSettings, weighIns],
+    [key, kind, sessions, exercises, replay, settings, recapSettings, weighIns, activities],
   );
   const name = (id: string) => displayName(variants.get(id));
   const sections = reportSections(report, name);

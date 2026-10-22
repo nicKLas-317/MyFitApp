@@ -106,6 +106,7 @@ L'écran principal doit donner accès directement à :
 - La rubrique « Mon poids ».
 - Le bilan de progression (§19.3), par un bouton du même style que les autres boutons de l'accueil, placé avec eux sous le récapitulatif hebdomadaire (juste après « Historique »).
 - Le bandeau discret « Ton bilan de la semaine est prêt » / « Ton bilan du mois est prêt » (§19.7), tout en haut, sous le titre et au-dessus du récapitulatif hebdomadaire, quand un bilan est à voir.
+- La question d'une activité habituelle (« Badminton lundi soir (21 h – 22 h 30) ? », §19.8), tout en haut, avant le bandeau du bilan.
 
 Éviter les menus profonds, les écrans superflus, les animations inutiles et les longs textes explicatifs.
 
@@ -520,7 +521,7 @@ Version minimale : le cardio est un simple enregistrement dans la séance.
 
 **Import de notes** : une ligne avec une durée en minutes est un bloc de cardio (« Tapis 15 min », « Tapis incliné 20 min », « Marche inclinée haute 20min », « Rameur 10 min », « Elliptique 15 min », « Vélo elliptique 20 min ») ; la machine peut aussi être sur la ligne précédente. La machine est reconnue d'après la liste des réglages et des noms usuels (« tapis » et « marche » → tapis ; « vélo » seul → Vélo, le vélo classique ; « elliptique » ou « vélo elliptique » → Vélo elliptique). « Tapis » ou « marche » sans précision : inclinaison Neutre. « Incliné » ou « inclinée » sans niveau : l'aperçu demande de choisir Moyenne ou Haute (import bloqué jusque-là). Une machine non reconnue est à choisir dans l'aperçu (ou le bloc est exclu), jamais devinée. Un JSON simple peut contenir une liste `cardio` (`machine`, `minutes`, `inclinaison`, `distanceKm`).
 
-**Données** : les blocs sont inclus dans l'export et l'import JSON (format `schemaVersion` 3) ; une sauvegarde au format 2 est migrée sans perte. Une installation existante n'a aucune migration de base à subir : ses séances, sans cardio, restent intactes, et la liste de machines par défaut s'applique. Deux séances qui ne diffèrent que par leur cardio ne sont pas des doublons (§11.9).
+**Données** : les blocs sont inclus dans l'export et l'import JSON (format `schemaVersion` 3, puis 4 avec les activités habituelles, §19.8) ; une sauvegarde au format 2 est migrée sans perte. Une installation existante n'a aucune migration de base à subir : ses séances, sans cardio, restent intactes, et la liste de machines par défaut s'applique. Deux séances qui ne diffèrent que par leur cardio ne sont pas des doublons (§11.9).
 
 ## 6. Chronomètre global de séance
 
@@ -1003,6 +1004,7 @@ Prévoir un export complet de l'application au format JSON, contenant les donné
 - Réglages.
 - Taille et historique des pesées (§20).
 - Réglages des bilans de la semaine et du mois : bandeaux et adresse e-mail (§19.7).
+- Activités habituelles hors salle : liste des habitudes (réglages) et réponses « Oui » / « Non » (§19.8), format `schemaVersion` 4 ; une sauvegarde au format 2 ou 3 est migrée sans perte (aucune activité, habitudes par défaut).
 - Blocs de cardio des séances et liste des machines de cardio (§5.7).
 
 Utiliser un format versionné (`schemaVersion`) pour permettre de faire évoluer la structure des données, avec des migrations testées.
@@ -1092,6 +1094,7 @@ Prévoir une page de réglages simple permettant notamment :
 - De voir l'état du stockage persistant.
 - De modifier la liste des machines de cardio (§5.7).
 - De désactiver le bandeau du bilan de la semaine et/ou du mois, et de renseigner une adresse e-mail facultative pour les bilans (§19.7).
+- De gérer les activités habituelles hors salle : ajout, modification, suppression, désactivation (§19.8).
 - De consulter la version de l'application.
 
 Les valeurs par défaut doivent permettre d'utiliser immédiatement l'application, sans longue configuration initiale.
@@ -1382,6 +1385,16 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 194. (bout en bout, format smartphone) Lundi : bandeau de la semaine seul, au-dessus du récapitulatif resté visible sans défilement ; « Plus tard » le masque jusqu'à la prochaine ouverture ; « Voir » ouvre la semaine écoulée avec toutes ses sections ; aucune couleur de statut, rien ne dépasse à 412, 360 et 320 px ; « Envoyer par mail » transmet l'objet et le texte au partage natif ; « Copier le texte » ; navigation précédente / suivante jusqu'à la période en cours ; onglet Mois ; bandeau disparu après ouverture, même après relance ; accès depuis le bilan de progression ; adresse invalide refusée, adresse et bandeaux conservés ; bouton « Mail à … » quand une adresse est renseignée ; éléments importants en gras.
 195. Mise en évidence : comparaisons (y compris « autant que »), « Non travaillés », changement de cible des progressions, séances rouges de la période et « poids inférieur recommandé », valeurs des pesées ; noms, nombres de séances et dates en texte simple ; le mail sans aucune marque.
 
+### Activités habituelles hors salle (§19.8)
+
+196. Habitudes : badminton par défaut (lundi 21 h – 22 h 30, jambes et épaules, active) ; une liste enregistrée, même vide, est gardée ; entrées invalides écartées ; erreurs (nom vide ou en double, fin avant le début, heure invalide).
+197. Question : pas avant 22 h 30 le lundi, posée à 22 h 30 (« Badminton lundi soir (21 h – 22 h 30) ? »), toujours là jusqu'au dimanche soir, disparue le lundi suivant ; habitude désactivée : aucune question ; « matin » pour une habitude du matin.
+198. « Oui » enregistre l'activité à la date du lundi (« Badminton · 1 h 30 ») ; « Non » n'enregistre rien ; la question ne revient plus ; une activité supprimée n'est ni comptée ni redemandée.
+199. Récapitulatif : badminton lundi → jambes et épaules « +1 indirect · hier » le mardi, vertes ; « aujourd'hui » le lundi soir ; en-tête « 3 séances · 1 activité · 45 min de cardio » ; au plus 1 par jour et par groupe (rien de plus après une séance où le groupe est principal, ½ de plus après une séance où il est secondaire) ; « hier » aussi pour la semaine précédente.
+200. Bilan du mois : « Activités : Badminton ×4, 6 h 00 », groupes indirects, texte du mail ; nombre et durée des séances inchangés ; semaine sans séance avec du badminton ; moteur inchangé.
+201. Export / import : activités et habitudes dans la sauvegarde (format 4), format 3 migré sans perte, activité invalide refusée, fusion sans doublon, écriture avec les séances dans une seule transaction.
+202. (bout en bout, format smartphone) Question absente à 22 h, présente à 22 h 31 au-dessus du récapitulatif ; « Oui » ; mardi : jambes et épaules « (+1 indirect) · hier » vertes ; historique « Badminton · 1 h 30 » ; bilan de la semaine et texte du mail ; export ; suppression confirmée ; « Non » ; sans réponse jusqu'au dimanche ; réglages (désactivation, nouvelle activité, erreur d'heures) ; rien ne dépasse à 412, 360 et 320 px.
+
 Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
 
 ## 16. Vérification avant livraison
@@ -1522,7 +1535,7 @@ But : un coup d'œil de 2 secondes avant la séance pour savoir quels groupes tr
   [rouge] Épaules (2×)          [rouge] Triceps (2×) · hier
   ```
 
-- L'en-tête affiche les dates exactes de la semaine en cours (lundi et dimanche, mois répété si la semaine change de mois) et le nombre de séances (« 0 séance », « 1 séance », « 2 séances »), suivi du total de cardio de la semaine quand il y en a (« 3 séances · 45 min de cardio », §5.7). Une séance ne contenant que du cardio compte comme une séance ; le cardio n'entre dans aucun groupe.
+- L'en-tête affiche les dates exactes de la semaine en cours (lundi et dimanche, mois répété si la semaine change de mois) et le nombre de séances (« 0 séance », « 1 séance », « 2 séances »), suivi du nombre d'activités habituelles confirmées et du total de cardio de la semaine quand il y en a (« 3 séances · 1 activité · 45 min de cardio », §5.7, §19.8). Une séance ne contenant que du cardio compte comme une séance ; le cardio n'entre dans aucun groupe. Une activité n'est pas une séance de salle.
 - Couleur selon le score de la semaine (voir Calcul), pour qu'un travail seulement indirect ne pèse pas autant qu'une séance directe (précision validée) : vert = score inférieur à 1 (aucune séance, ou une seule séance indirecte : la mention « +1 indirect » reste affichée) ; orange = score d'au moins 1 et inférieur au seuil du rouge ; rouge = score au moins égal au seuil. Le seuil du rouge est réglable (2 par défaut, de 2 à 7).
 - Mention « aujourd'hui » ou « hier » si le groupe a été travaillé, directement ou indirectement, il y a moins de 48 heures, même la semaine précédente. La mention suit le jour du calendrier : une séance d'avant-hier, même à moins de 48 heures, n'a pas de mention.
 - Tri (précision validée) : couleur d'abord, vert en haut, puis orange, puis rouge en bas ; à couleur égale, les groupes non travaillés depuis moins de 48 heures avant ceux travaillés « hier » ou « aujourd'hui » ; puis score croissant (un vert avec de l'indirect passe après un vert sans rien) ; puis l'ordre de la liste des groupes.
@@ -1534,6 +1547,7 @@ But : un coup d'œil de 2 secondes avant la séance pour savoir quels groupes tr
 - Semaine du lundi 0 h 00 au dimanche 23 h 59 inclus, heure locale du téléphone (Paris). Une séance compte dans la semaine de sa date de début, même si elle se termine après minuit ; une séance importée sans heure compte selon sa date.
 - Groupes affichés par défaut : pectoraux, dos, épaules, biceps, triceps, jambes. Abdominaux exclus du récapitulatif mais gardés dans la bibliothèque. Liste modifiable dans les réglages ; elle est incluse dans l'export.
 - Groupes principal et secondaires (précision validée) : pour chaque groupe affiché et chaque séance de la semaine, la séance compte **1** si le groupe est le groupe principal d'au moins un exercice de la séance (shrugs et lombaires au banc dans « Dos », oiseau et face pull dans « Épaules ») ; sinon **½** s'il n'est que groupe secondaire d'au moins un exercice (travail indirect : biceps des tractions assistées et des tirages, pectoraux des dips assistés, triceps et épaules des développés). Une séance ne compte jamais plus de 1 pour un groupe : principal dans un exercice et secondaire dans un autre, il compte 1 ; deux exercices où il est secondaire comptent ½. Le score de la semaine est la somme : tractions seules → biceps ½ (vert, « +1 indirect ») ; deux séances indirectes seulement → 1 (orange, « +2 indirect ») ; curl le lundi et tractions le jeudi → biceps 1,5 (orange, « 1× · +1 indirect »). Les exercices de jambes de la bibliothèque (presse, leg extension, leg curl, curl ischios, mollets, abducteurs, adducteurs) comptent dans « Jambes ». Un exercice personnalisé dont le groupe principal est un sous-groupe des jambes (quadriceps, ischio-jambiers, mollets, fessiers, adducteurs) compte pour « jambes » quand ce sous-groupe n'est pas affiché lui-même.
+- Activités habituelles confirmées (§19.8) : travail **indirect**, ½ pour chacun de leurs groupes, dans la semaine de leur date, avec la mention « hier » / « aujourd'hui » (heure de fin). Au plus 1 par jour et par groupe (choix d’implémentation signalé à l’utilisateur) : le jour d'une séance où le groupe est principal, l'activité n'ajoute rien ; le jour d'une séance où il n'est que secondaire, elle ajoute ½ (« +2 indirect »).
 - Le récapitulatif n'est jamais stocké : il est recalculé à partir des séances enregistrées à chaque affichage de l'accueil. Il est donc à jour immédiatement après la fin d'une séance, un import, une suppression ou une modification de date.
 - Seules les séances terminées comptent ; une séance en cours n'est prise en compte qu'une fois terminée.
 - En début de semaine, sans séance, tous les groupes sont verts et l'en-tête indique « 0 séance ».
@@ -1548,14 +1562,14 @@ L'application n'a pas de serveur : aucun envoi automatique. Elle prépare le bil
 - Deux onglets, Semaine et Mois. Semaine = lundi 0 h 00 au dimanche, mois = mois calendaire, heure locale ; une séance compte dans la période de son début (même règle que le §19.6). Boutons ‹ et › vers la période précédente ou suivante ; pas de période suivante après la période en cours, pas de période précédente avant la première séance.
 - Période ouverte par défaut : la période en cours si elle contient une séance, sinon la précédente. Une période en cours l'indique (« Semaine en cours, arrêtée au jeu. 22 oct. »).
 - Contenu, court et factuel, en sections :
-  - **Séances** : nombre de séances et comparaison avec la période précédente (« 3 séances, +1 par rapport à la semaine précédente », « autant que… ») ; durée totale des séances à heures connues, comparée de même (« durée inconnue pour 1 séance importée » si besoin) ; minutes de cardio par machine.
-  - **Groupes travaillés** : même calcul que le récapitulatif (§19.6, direct + indirect, groupes affichés seulement), en nombre de séances (« Biceps : 1× · +2 indirect ») ; puis « Non travaillés : … ».
+  - **Séances** : nombre de séances et comparaison avec la période précédente (« 3 séances, +1 par rapport à la semaine précédente », « autant que… ») ; durée totale des séances à heures connues, comparée de même (« durée inconnue pour 1 séance importée » si besoin) ; minutes de cardio par machine ; activités habituelles confirmées par nom (« Activités : Badminton ×4, 6 h 00 », §19.8), qui ne sont pas des séances (ni dans le nombre de séances, ni dans la durée).
+  - **Groupes travaillés** : même calcul que le récapitulatif (§19.6, direct + indirect, activités habituelles comprises, groupes affichés seulement), en nombre de séances (« Biceps : 1× · +2 indirect ») ; puis « Non travaillés : … ».
   - **Progressions** : paliers validés pendant la période d'après les évaluations du moteur (2ᵉ validation verte consécutive) : « Curl biceps haltères : 3×8 → 3×9 à 12 kg (21 oct.) », « Leg extension : 3×12 à 40 kg validé → poids supérieur, 3×8 », « Tractions assistées : 3×12 avec 30 kg d'aide validé → moins d'aide, 3×8 » ; sinon « Aucun palier validé. ».
   - **En difficulté** : une ligne par exercice ayant eu au moins une séance rouge pendant la période ; sinon « Aucun exercice en difficulté. ». Formulation selon le cas (précision validée) :
     - passage en « poids inférieur » pendant la période : « Presse à cuisses : 4ᵉ séance rouge de suite à 100 kg → poids inférieur recommandé (21 oct.) » (« avec 30 kg d'aide → plus d'aide recommandée » pour un exercice assisté) ;
     - sinon : « Presse à cuisses : 2 séances rouges cette semaine (3 de suite à 100 kg) » (« ce mois-ci » pour le mois). La parenthèse donne la série de rouges en cours à la fin de la période quand elle a commencé avant la période ; sans série en cours plus longue (série commencée dans la période, ou interrompue), pas de parenthèse.
   - **Poids** : première et dernière pesée de la période, si elles existent (« 80,2 kg le 19 oct. → 79,6 kg le 25 oct. »).
-  - Une période sans séance n'affiche que le nombre de séances, la comparaison et les pesées.
+  - Une période sans séance n'affiche que le nombre de séances, la comparaison, les activités habituelles et leurs groupes, et les pesées.
 - Mise en évidence (précision validée) : les phrases gardent leur rédaction, mais l'essentiel se repère d'un coup d'œil : en gras et en blanc, le reste de la ligne en gris clair. Sont mis en évidence : les comparaisons avec la période précédente (« +1 par rapport à la semaine précédente », « autant que… »), la ligne « Non travaillés : … », le changement de cible d'une progression (« 3×8 → 3×9 à 12 kg », « poids supérieur, 3×8 », « moins d'aide, 3×8 »), le nombre de séances rouges de la période (« 2 séances rouges cette semaine ») et « poids inférieur recommandé » / « plus d'aide recommandée », les deux valeurs de poids. Restent en texte simple : nombres de séances, durée, cardio, noms d'exercices et de groupes travaillés, dates. Le mail reste en texte brut, sans marque.
 - Pas de score, pas de conseil. Écran neutre (cadres `--frame-neutral`) : pas de vert, d'orange ni de rouge, y compris dans les messages. Aucun effet sur le moteur de progression ; rien n'est stocké, tout est recalculé à l'affichage.
 
@@ -1573,6 +1587,32 @@ L'application n'a pas de serveur : aucun envoi automatique. Elle prépare le bil
 - Il disparaît définitivement pour cette période une fois le bilan ouvert (donc aussi une fois envoyé). Ouvrir la période en cours ou une période plus ancienne ne compte pas.
 - « Plus tard » le masque jusqu'à la prochaine ouverture de l'appli (rechargement ou relance).
 - Réglages (§14) : bandeau hebdomadaire et bandeau mensuel désactivables séparément ; adresse e-mail facultative, contrôlée, préremplie dans le `mailto:`. Ces réglages sont inclus dans l'export et restaurés par un remplacement global ; les bilans déjà ouverts sont mémorisés sur l'appareil seulement.
+
+### 19.8. Activités habituelles hors salle (précision validée)
+
+But : compter, sans rien saisir, une activité régulière faite hors de la salle (badminton…).
+
+**Habitudes (réglages, « Activités habituelles »)**
+
+- Liste d'habitudes : nom, jour de la semaine, heure de début, heure de fin (même jour, après le début), groupes sollicités (pectoraux, dos, épaules, biceps, triceps, jambes, abdominaux), et « Activée » pour la suspendre (vacances). Ajout, modification, suppression ; enregistrées avec « Enregistrer les activités » (erreurs affichées : nom vide ou en double, fin avant le début).
+- Préremplie à l'installation, et sur une base existante qui n'a pas encore de liste, avec une seule habitude : Badminton, le lundi de 21 h à 22 h 30, jambes et épaules. Une liste enregistrée, même vide, n'est jamais complétée (une habitude supprimée n'est pas recréée).
+- Modifier ou supprimer une habitude ne change pas les activités déjà enregistrées (nom, heures et groupes y sont copiés).
+
+**Confirmation (accueil)**
+
+- Pour chaque habitude active, une question sur l'accueil une fois l'heure de fin passée, pour le jour de l'habitude de la semaine en cours : « Badminton lundi soir (21 h – 22 h 30) ? » (matin avant midi, après-midi avant 18 h, soir ensuite), avec « Oui » et « Non ». Aucune saisie, aucune notification système.
+- « Oui » enregistre l'activité à la date du jour de l'habitude. « Non » n'enregistre rien ; la question ne revient plus pour ce jour.
+- Sans réponse, la question reste proposée jusqu'au dimanche de cette semaine, puis disparaît sans rien enregistrer.
+- Habitude désactivée : aucune question.
+- Une seule réponse par habitude et par jour (identifiant `act-<habitude>-<date>`).
+
+**Affichage**
+
+- Historique : l'activité confirmée figure parmi les séances, à sa date (« Badminton · 1 h 30 », « 19 octobre 2026 · 21 h – 22 h 30 », étiquette « activité ») ; « Supprimer » puis « Confirmer la suppression » la retire (la réponse devient « Non » : la question ne revient pas).
+- Récapitulatif hebdomadaire (§19.6) : travail indirect et « · 1 activité » dans l'en-tête. Bilans (§19.7) : « Activités : Badminton ×4, 6 h 00 » dans « Séances », groupes indirects, texte du mail compris.
+- Pas de vert, d'orange ni de rouge en dehors des statuts (messages neutres).
+
+**Données** : réponses dans la méta `activities` et habitudes dans la méta `habits` de la base principale (aucune migration de structure) ; une activité n'est jamais une séance et n'a aucun effet sur le moteur de progression. Export (format `schemaVersion` 4 : `activities` et `settings.habits`) ; import en fusion (la réponse de l'appareil est gardée, pas de doublon même nom même jour) ou en remplacement global (habitudes comprises).
 
 ## 20. Suivi corporel simplifié : « Mon poids »
 

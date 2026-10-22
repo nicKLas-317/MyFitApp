@@ -6,6 +6,7 @@ import { buildEngineSettings, indexVariants, type VariantRef } from '../library/
 import { exerciseHasHistory } from '../library/edit';
 import { DEFAULT_RECAP_SETTINGS, sanitizeRecapSettings, type WeeklyRecapSettings } from '../analysis/weekly';
 import { DEFAULT_REPORT_SETTINGS, markSeen, sanitizeReportSeen, sanitizeReportSettings, type ReportPeriod, type ReportSeen, type ReportSettings } from '../analysis/report';
+import { answer, sanitizeActivities, sanitizeHabits, type ActivityRecord, type Habit, type Occurrence } from '../activities/model';
 import type { RemovedPerformance, VariantContext } from '../session/ops';
 import { openAppDb, Repository, requestPersistence, type PersistState } from '../storage/db';
 import { PendingWrites } from '../storage/pending';
@@ -46,6 +47,15 @@ interface AppValue {
   /** Dernières périodes terminées dont le bilan a été ouvert : leur bandeau n'est plus affiché. */
   reportSeen: ReportSeen;
   markReportSeen(period: ReportPeriod): Promise<void>;
+  /** Activités habituelles hors salle (badminton…), modifiables dans les réglages. */
+  habits: Habit[];
+  setHabits(next: Habit[]): Promise<boolean>;
+  /** Réponses aux questions des habitudes : activités confirmées (« Oui ») ou refusées (« Non »). */
+  activities: ActivityRecord[];
+  /** Répond à la question d'une habitude ; rien d'autre à saisir. */
+  answerActivity(occurrence: Occurrence, yes: boolean): Promise<boolean>;
+  /** Supprime une activité confirmée (historique) : la question ne revient pas pour ce jour. */
+  removeActivity(id: string): Promise<boolean>;
   /** Machines de cardio proposées à la saisie, modifiables dans les réglages. */
   cardioMachines: CardioMachine[];
   setCardioMachines(next: CardioMachine[]): Promise<boolean>;
@@ -72,6 +82,8 @@ interface AppValue {
 export interface ImportData {
   sessions: readonly Session[];
   exercises: readonly Exercise[];
+  /** Liste complète des activités habituelles après l'import (fusion déjà faite par l'appelant). */
+  activities?: readonly ActivityRecord[];
   /** Remplacement global, après confirmation explicite uniquement. */
   replace?: boolean;
 }
@@ -119,6 +131,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [reportSettings, setReportState] = useState<ReportSettings>(DEFAULT_REPORT_SETTINGS);
   const [reportSeen, setReportSeen] = useState<ReportSeen>({});
   const reportSeenRef = useRef<ReportSeen>({});
+  const [habits, setHabitsState] = useState<Habit[]>(() => sanitizeHabits(undefined));
+  const [activities, setActivitiesState] = useState<ActivityRecord[]>([]);
+  const activitiesRef = useRef<ActivityRecord[]>([]);
 
   const sessionsRef = useRef<Session[]>([]);
   const pending = useRef(new PendingWrites<Session>());
@@ -139,7 +154,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           // Sans gravité : la correction sera refaite au prochain lancement.
           console.error('[MyFitApp] correction des ressentis « += » non appliquée', error);
         }
-        const [loadedSessions, loadedExercises, exportedAt, recap, machines, machinesVersion, reports, seen] = await Promise.all([
+        const [loadedSessions, loadedExercises, exportedAt, recap, machines, machinesVersion, reports, seen, loadedHabits, loadedActivities] = await Promise.all([
           repo.loadSessions(),
           repo.loadExercises(),
           repo.getMeta<number>('lastExportAt'),
@@ -148,6 +163,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           repo.getMeta<number>('cardioMachinesVersion'),
           repo.getMeta<unknown>('reports'),
           repo.getMeta<unknown>('reportsSeen'),
+          repo.getMeta<unknown>('habits'),
+          repo.getMeta<unknown>('activities'),
         ]);
         // Installation antérieure au cardio : aucune liste enregistrée, la liste par défaut s'applique.
         // Liste enregistrée par une version antérieure : les nouvelles machines sont ajoutées une seule fois.
@@ -172,6 +189,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setReportState(sanitizeReportSettings(reports));
         reportSeenRef.current = sanitizeReportSeen(seen);
         setReportSeen(reportSeenRef.current);
+        setHabitsState(sanitizeHabits(loadedHabits));
+        activitiesRef.current = sanitizeActivities(loadedActivities);
+        setActivitiesState(activitiesRef.current);
         setLoad({ kind: 'ready', repo });
 
         // §12 : stockage persistant demandé au premier lancement, état affiché ensuite.
@@ -209,8 +229,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const startedAt = localChanges.current;
     let loadedSessions: Session[];
     let loadedExercises: Exercise[];
+    let loadedActivities: unknown;
     try {
-      [loadedSessions, loadedExercises] = await Promise.all([repo.loadSessions(), repo.loadExercises()]);
+      [loadedSessions, loadedExercises, loadedActivities] = await Promise.all([repo.loadSessions(), repo.loadExercises(), repo.getMeta<unknown>('activities')]);
     } catch (error) {
       console.error('[MyFitApp] relecture de la base impossible', error);
       return;
@@ -227,6 +248,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setUndo(null);
     }
     setExercises((current) => (JSON.stringify(current) === JSON.stringify(loadedExercises) ? current : loadedExercises));
+    const nextActivities = sanitizeActivities(loadedActivities);
+    if (JSON.stringify(nextActivities) !== JSON.stringify(activitiesRef.current)) {
+      activitiesRef.current = nextActivities;
+      setActivitiesState(nextActivities);
+    }
   }, [repo]);
 
   useEffect(() => {
@@ -336,6 +362,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error('[MyFitApp] échec de l’import', error);
         return false;
+      }
+      if (data.activities) {
+        activitiesRef.current = [...data.activities];
+        setActivitiesState(activitiesRef.current);
       }
       const list = data.replace ? [...data.sessions] : upsert(sessionsRef.current, data.sessions);
       if (data.replace) pending.current.clear();
@@ -453,6 +483,53 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [repo],
   );
 
+  const setHabits = useCallback(
+    async (next: Habit[]): Promise<boolean> => {
+      if (!repo) return false;
+      try {
+        await repo.setMeta('habits', next);
+      } catch {
+        return false;
+      }
+      setHabitsState(next);
+      return true;
+    },
+    [repo],
+  );
+
+  /** Enregistre la liste complète des activités ; l'état n'est mis à jour qu'en cas de succès. */
+  const writeActivities = useCallback(
+    async (next: ActivityRecord[]): Promise<boolean> => {
+      if (!repo) return false;
+      try {
+        await repo.setMeta('activities', next);
+      } catch (error) {
+        console.error('[MyFitApp] activité non enregistrée', error);
+        return false;
+      }
+      activitiesRef.current = next;
+      setActivitiesState(next);
+      localChanges.current++;
+      announce();
+      return true;
+    },
+    [repo, announce],
+  );
+
+  const answerActivity = useCallback(
+    (occurrence: Occurrence, yes: boolean) => {
+      const record = answer(occurrence, yes, Date.now());
+      return writeActivities([...activitiesRef.current.filter((a) => a.id !== record.id), record]);
+    },
+    [writeActivities],
+  );
+
+  const removeActivity = useCallback(
+    (id: string) =>
+      writeActivities(activitiesRef.current.map((a) => (a.id === id ? { ...a, status: 'declined' as const, answeredAt: Date.now() } : a))),
+    [writeActivities],
+  );
+
   const markReportSeen = useCallback(
     async (period: ReportPeriod): Promise<void> => {
       const next = markSeen(reportSeenRef.current, period, Date.now());
@@ -470,8 +547,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const generalSettings = useMemo(
-    () => ({ weeklyRecap: recapSettings, cardioMachines, cardioMachinesVersion: CARDIO_MACHINES_VERSION, reports: reportSettings }),
-    [recapSettings, cardioMachines, reportSettings],
+    () => ({ weeklyRecap: recapSettings, cardioMachines, cardioMachinesVersion: CARDIO_MACHINES_VERSION, reports: reportSettings, habits }),
+    [recapSettings, cardioMachines, reportSettings, habits],
   );
 
   const markExported = useCallback(
@@ -519,6 +596,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setReportSettings,
     reportSeen,
     markReportSeen,
+    habits,
+    setHabits,
+    activities,
+    answerActivity,
+    removeActivity,
     cardioMachines,
     setCardioMachines,
     generalSettings,
