@@ -2,6 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 
 // Heure de Paris aussi pour le lanceur (§1) : les dates écrites dans les tests (`new Date('2026-10-19T22:00:00')`)
 // sont lues à l'heure de Paris, quelle que soit la machine (les serveurs d'intégration sont en UTC).
+// Les types de Node ne sont pas chargés (`types: ['vite/client']`) : seule `process.env` est déclarée ici.
+declare const process: { env: Record<string, string | undefined> };
 process.env.TZ = 'Europe/Paris';
 
 export default defineConfig({
