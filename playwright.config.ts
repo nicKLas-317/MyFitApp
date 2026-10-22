@@ -1,5 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
+// Heure de Paris aussi pour le lanceur (§1) : les dates écrites dans les tests (`new Date('2026-10-19T22:00:00')`)
+// sont lues à l'heure de Paris, quelle que soit la machine (les serveurs d'intégration sont en UTC).
+process.env.TZ = 'Europe/Paris';
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
