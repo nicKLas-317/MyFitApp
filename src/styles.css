@@ -1448,11 +1448,15 @@ fieldset {
   font-weight: 600;
   font-size: 0.95rem;
   line-height: 1.25;
-  overflow-wrap: anywhere;
+  /* Coupure entre les mots seulement : « indirect » n'est jamais coupé en deux. */
+  overflow-wrap: break-word;
 }
 
+/* Nombre de séances et mention « hier », plus discrets que le nom du groupe : « (1× · +1 indirect) » tient à 320 px. */
+.recap-count,
 .recap-when {
   font-weight: 400;
+  font-size: 0.9em;
 }
 
 /* Contraste du texte ≥ 6:1 sur chaque fond. */

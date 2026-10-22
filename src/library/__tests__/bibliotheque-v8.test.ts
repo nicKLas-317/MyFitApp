@@ -62,7 +62,7 @@ describe('Bibliothèque version 8 (§4.0)', () => {
     expect(groups).toEqual({
       'developpe-incline': ['pectoraux', ['epaules', 'triceps'], 'barre'],
       'developpe-couche-halteres': ['pectoraux', ['triceps', 'epaules'], 'haltères'],
-      'ecarte-poulie': ['pectoraux', ['epaules'], 'poulie'],
+      'ecarte-poulie': ['pectoraux', [], 'poulie'], // épaules retirées en version 10
       'tractions-assistees': ['dos', ['biceps'], 'machine'],
       'rowing-barre': ['dos', ['biceps'], 'barre'],
       'pull-over-poulie': ['dos', [], 'poulie'],

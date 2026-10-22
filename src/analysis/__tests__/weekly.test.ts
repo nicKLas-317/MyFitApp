@@ -44,11 +44,11 @@ describe('Récapitulatif hebdomadaire (§19.6)', () => {
     expect(cell(weeklyRecap([monday, sunday], LIB, at(18, 23, 50)), 'dos').count).toBe(1);
   });
 
-  it('91. Seul le groupe principal compte, une fois par séance ; les abdominaux sont absents', () => {
+  it('91. Le groupe principal compte une fois par séance ; un groupe secondaire n’est qu’indirect ; les abdominaux sont absents', () => {
     // Tirage vertical : dos (biceps en secondaire). Deux exercices de dos dans la même séance : 1 séance.
     const r = weeklyRecap([session(at(13), ['tirage-vertical', 'tirage-horizontal', 'crunch-machine'])], LIB, at(16));
     expect(cell(r, 'dos').count).toBe(1);
-    expect(cell(r, 'biceps').count).toBe(0);
+    expect(cell(r, 'biceps')).toMatchObject({ count: 0, indirect: 1, score: 0.5 });
     expect(r.cells.map((c) => c.group).sort()).toEqual(['biceps', 'dos', 'epaules', 'jambes', 'pectoraux', 'triceps']);
   });
 
@@ -82,14 +82,16 @@ describe('Récapitulatif hebdomadaire (§19.6)', () => {
       LIB,
       now,
     );
+    // Biceps : deux tirages (secondaire) → score 1, orange. Épaules et triceps : 2 directes + chest press indirect.
     expect(view(r)).toEqual([
-      ['biceps', 'vert', 0, null],
       ['jambes', 'vert', 0, null],
+      ['biceps', 'orange', 0, 'yesterday'],
       ['pectoraux', 'rouge', 2, null],
       ['dos', 'rouge', 2, 'yesterday'],
       ['epaules', 'rouge', 2, 'yesterday'],
       ['triceps', 'rouge', 2, 'yesterday'],
     ]);
+    expect(r.cells.map((c) => c.score)).toEqual([0, 1, 2, 2, 2.5, 2.5]);
   });
 
   it('95. Semaine vide : tous les groupes verts, « 0 séance »', () => {

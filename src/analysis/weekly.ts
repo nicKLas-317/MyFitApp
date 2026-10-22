@@ -2,6 +2,7 @@
  * Récapitulatif hebdomadaire de l'accueil (§19.6) : quels groupes ont été travaillés cette semaine.
  * Calcul pur, jamais stocké : il est refait à partir des séances enregistrées à chaque affichage.
  * Aucun effet sur le moteur de progression. Le cardio n'entre dans aucun groupe : seul son total figure dans l'en-tête.
+ * Une séance compte 1 pour un groupe travaillé en groupe principal, ½ pour un groupe seulement secondaire (travail indirect).
  */
 import type { Exercise, MuscleGroup, Session } from '../domain/types';
 import { cardioMinutes, formatMinutes } from '../cardio/model';
@@ -32,10 +33,14 @@ const PARENT_GROUP: Partial<Record<MuscleGroup, MuscleGroup>> = {
 
 export interface RecapCell {
   group: MuscleGroup;
-  /** Séances terminées de la semaine où le groupe a été travaillé (groupe principal uniquement). */
+  /** Séances terminées de la semaine où le groupe a été travaillé en groupe principal (travail direct). */
   count: number;
+  /** Séances de la semaine où le groupe n'a été travaillé qu'en groupe secondaire (travail indirect). */
+  indirect: number;
+  /** Score de la semaine : 1 par séance directe, ½ par séance indirecte. Il détermine la couleur. */
+  score: number;
   color: RecapColor;
-  /** Travaillé aujourd'hui ou hier (moins de 48 heures). */
+  /** Travaillé aujourd'hui ou hier (moins de 48 heures), directement ou indirectement. */
   recency: Recency;
 }
 
@@ -98,8 +103,8 @@ export function weeklyRecap(
   const end = new Date(next);
   end.setDate(end.getDate() - 1);
 
-  const groupOfVariant = new Map<string, MuscleGroup>();
-  for (const e of exercises) for (const v of e.variants) groupOfVariant.set(v.id, e.primaryGroup);
+  const exerciseOfVariant = new Map<string, Exercise>();
+  for (const e of exercises) for (const v of e.variants) exerciseOfVariant.set(v.id, e);
   const shown = new Set(settings.groups);
   const recapGroup = (g: MuscleGroup | undefined): MuscleGroup | null => {
     if (!g) return null;
@@ -109,6 +114,7 @@ export function weeklyRecap(
   };
 
   const counts = new Map<MuscleGroup, number>();
+  const indirects = new Map<MuscleGroup, number>();
   const last = new Map<MuscleGroup, number>();
   let sessionCount = 0;
   let cardio = 0;
@@ -120,19 +126,36 @@ export function weeklyRecap(
       sessionCount++;
       cardio += cardioMinutes(s);
     }
-    // Un groupe travaillé deux fois dans la même séance compte pour une.
-    const groups = new Set(s.performances.map((p) => recapGroup(groupOfVariant.get(p.variantId))).filter((g): g is MuscleGroup => g !== null));
-    for (const g of groups) {
-      if (inWeek) counts.set(g, (counts.get(g) ?? 0) + 1);
-      last.set(g, Math.max(last.get(g) ?? 0, sessionLastTime(s)));
+    // Un groupe travaillé deux fois dans la même séance compte pour une ; principal dans un exercice et
+    // secondaire dans un autre, il compte comme principal (jamais plus de 1 par séance).
+    const direct = new Set<MuscleGroup>();
+    const secondary = new Set<MuscleGroup>();
+    for (const p of s.performances) {
+      const e = exerciseOfVariant.get(p.variantId);
+      if (!e) continue;
+      const g = recapGroup(e.primaryGroup);
+      if (g) direct.add(g);
+      for (const sg of e.secondaryGroups) {
+        const r = recapGroup(sg);
+        if (r) secondary.add(r);
+      }
+    }
+    for (const g of direct) secondary.delete(g);
+    for (const [groups, tally] of [[direct, counts], [secondary, indirects]] as const) {
+      for (const g of groups) {
+        if (inWeek) tally.set(g, (tally.get(g) ?? 0) + 1);
+        last.set(g, Math.max(last.get(g) ?? 0, sessionLastTime(s)));
+      }
     }
   }
 
   const cells: RecapCell[] = settings.groups.map((group) => {
     const count = counts.get(group) ?? 0;
-    const color: RecapColor = count === 0 ? 'vert' : count >= settings.redThreshold ? 'rouge' : 'orange';
+    const indirect = indirects.get(group) ?? 0;
+    const score = count + indirect / 2;
+    const color: RecapColor = score === 0 ? 'vert' : score >= settings.redThreshold ? 'rouge' : 'orange';
     const time = last.get(group);
-    return { group, count, color, recency: time === undefined ? null : recencyOf(time, now) };
+    return { group, count, indirect, score, color, recency: time === undefined ? null : recencyOf(time, now) };
   });
   // Vert en haut, puis orange, puis rouge ; à couleur égale, les groupes travaillés hier ou aujourd'hui en dernier.
   const order = new Map(settings.groups.map((g, i) => [g, i]));
@@ -143,6 +166,15 @@ export function weeklyRecap(
       order.get(a.group)! - order.get(b.group)!,
   );
   return { start, end, sessionCount, cardioMinutes: cardio, cells };
+}
+
+/**
+ * Nombre de séances d'une case, sans fraction : « 1× », « 1× · +1 indirect », « +2 indirect ».
+ * Vide pour une case verte (aucun travail cette semaine).
+ */
+export function recapCountLabel(cell: RecapCell): string {
+  const parts = [...(cell.count > 0 ? [`${cell.count}×`] : []), ...(cell.indirect > 0 ? [`+${cell.indirect}\u00a0indirect`] : [])];
+  return parts.join(' · ');
 }
 
 /** Réglage lu en base ou importé : valeurs inconnues écartées, défaut si invalide. */

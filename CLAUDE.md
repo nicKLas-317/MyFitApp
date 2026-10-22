@@ -227,6 +227,8 @@ Bibliothèque version 9 (précision validée) : le « Tirage horizontal » de l'
 - **Tirage horizontal poulie basse** (`tirage-horizontal-poulie-basse`), nouvel exercice distinct, sans historique. Dos ; biceps ; poulie. Synonymes : tirage poulie basse, rowing poulie basse, seated cable row, cable row, low row, tirage horizontal poulie. Il reprend le dessin du tirage à la poulie (« Seated cable rows ») ; trois prises.
 - Sur une base existante, une seule fois : le tirage horizontal est renommé et ses synonymes d'origine remplacés, même s'il a été personnalisé (un nom personnalisé et les synonymes ajoutés à la main sont gardés) ; la poulie basse est ajoutée (jamais recréée si elle est supprimée ensuite). Les séances passées restent rattachées à la machine. Une sauvegarde antérieure reçoit la même correction : elle ne réintroduit ni l'ancien nom ni « Tirage poulie basse » sur la machine.
 
+Bibliothèque version 10 (précision validée) : un groupe secondaire doit être réellement sollicité, pas anecdotique, puisqu'il compte pour ½ séance dans le récapitulatif hebdomadaire (§19.6). Les trois écartés (pec deck, écarté couché haltères, écarté à la poulie) perdent les épaules : ce sont des mouvements d'isolation des pectoraux. Les mouvements composés gardent leur second groupe : tirages, rowings et tractions assistées → biceps ; développés → triceps et épaules ; dips assistés → pectoraux ; oiseau et face pull → dos. Sur une base existante, la correction est appliquée une seule fois, seulement si les groupes n'ont pas été personnalisés ; une sauvegarde antérieure, fusionnée, ne remet pas les épaules.
+
 Volontairement non ajoutés (choix de l'utilisateur) : abdominaux (crunch à la poulie, relevés de jambes), squat à la barre, hip thrust, soulevé de terre jambes tendues, fentes. Les exercices au poids du corps (pompes, tractions et dips sans aide) et le gainage ne sont pas intégrés : l'utilisateur les fait hors application.
 
 Chaque version de la bibliothèque est installée une seule fois sur une base existante, sans perte de données et sans recréer un exercice supprimé ensuite. Une variante ajoutée à un exercice existant (mollets assis, extension poulie à la barre) l'est aussi une seule fois, sauf si une variante du même nom existe déjà ; la variante standard prend son nom (« Debout », « Corde ») si elle s'appelle encore « Standard », et ses synonymes appris sont conservés.
@@ -1220,7 +1222,7 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 
 89. (§19.6) La semaine commence le lundi 0 h 00 ; l'en-tête donne les dates exactes du lundi et du dimanche et le nombre de séances.
 90. (§19.6) Une séance du lundi 0 h 00 compte dans la nouvelle semaine ; une séance du dimanche 23 h 30 compte dans l'ancienne, même si elle se termine après minuit.
-91. (§19.6) Seul le groupe principal compte, une fois par séance ; un groupe secondaire n'est pas compté ; les abdominaux sont absents.
+91. (§19.6) Le groupe principal compte une fois par séance ; un groupe secondaire ne compte qu'en indirect (½, tests 179 à 184) ; les abdominaux sont absents.
 92. (§19.6) Couleurs selon le nombre de séances : vert = 0, orange = 1, rouge à partir du seuil (2 par défaut, réglable).
 93. (§19.6) Mention « aujourd'hui » ou « hier » correcte (moins de 48 heures, jour du calendrier), y compris pour la semaine précédente.
 94. (§19.6) Ordre de tri : vert, orange, rouge ; à couleur égale, « hier » et « aujourd'hui » en dernier.
@@ -1354,6 +1356,18 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 177. Une sauvegarde antérieure, en fusion comme en remplacement, ne réintroduit ni l'ancien nom ni « Tirage poulie basse » sur la machine ; ses séances restent sur la machine.
 178. (bout en bout) Une base en version 8 est migrée au lancement : fiche de la machine renommée avec son historique et un pictogramme, fiche de la poulie basse avec le dessin et sans historique ; « seated row » → la machine, « poulie basse » et « cable row » → la poulie basse seule.
 
+### Récapitulatif hebdomadaire : groupes secondaires (§19.6) et bibliothèque version 10
+
+179. Tractions assistées : dos 1 (« 1× »), biceps ½ (orange, « +1 indirect ») ; un groupe non travaillé reste vert, sans nombre.
+180. Curl le lundi et tractions le jeudi : biceps 1,5 → orange, « 1× · +1 indirect » ; avec un tirage en plus, 2 → rouge.
+181. Deux séances indirectes seulement : score 1 → orange, « +2 indirect » ; quatre → rouge ; seuil réglable.
+182. Groupe principal et secondaire dans la même séance : 1 ; plusieurs exercices indirects dans la même séance : ½.
+183. « hier » et « aujourd'hui » s'appliquent au travail indirect, même la semaine précédente (vert, mention « hier »).
+184. Tri inchangé (selon le score) ; seuls les groupes affichés comptent (sous-groupe secondaire des jambes dans « Jambes », abdominaux jamais) ; moteur et bilan identiques avec ou sans groupes secondaires.
+185. Bibliothèque version 10 : les trois écartés n'ont plus les épaules en secondaire ; les mouvements composés gardent leur second groupe ; aucun secondaire n'est le groupe principal ni les abdominaux ; la recherche « épaules » ne trouve plus les écartés.
+186. Base existante en version 9 : correction appliquée une seule fois, groupes personnalisés gardés ; une sauvegarde antérieure fusionnée ne remet pas les épaules.
+187. (bout en bout) Accueil au format smartphone : « Biceps (1× · +1 indirect) · hier » orange, « Triceps (+1 indirect) », « Dos (1×) · hier », jambes vertes en tête ; récapitulatif visible sans défilement ; cases dans le cadre, sans défilement horizontal, à 412, 360 et 320 px.
+
 Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
 
 ## 16. Vérification avant livraison
@@ -1485,19 +1499,19 @@ But : un coup d'œil de 2 secondes avant la séance pour savoir quels groupes tr
 **Affichage**
 
 - En haut de l'accueil, au-dessus du bouton de démarrage, visible sans clic ni défilement sur smartphone.
-- Une grille compacte de cases colorées, une par groupe, nom en entier, avec le nombre de séances de la semaine entre parenthèses (sauf pour les cases vertes) :
+- Une grille compacte de cases colorées, une par groupe, nom en entier, avec le nombre de séances de la semaine entre parenthèses (sauf pour les cases vertes) : séances directes, puis indirectes s'il y en a, sans fraction (« Biceps (1× · +1 indirect) », « Biceps (+2 indirect) »). Le nombre et la mention « hier » sont plus discrets que le nom du groupe, et un mot n'est jamais coupé en deux (vérifié à 412, 360 et 320 px).
 
   ```
   Semaine du lun. 12 au dim. 18 oct. : 2 séances
-  [vert] Jambes            [vert] Biceps
-  [orange] Pectoraux (1×)  [orange] Dos (1×) · hier
-  [rouge] Épaules (2×)     [rouge] Triceps (2×) · hier
+  [vert] Jambes                 [orange] Biceps (+1 indirect)
+  [orange] Pectoraux (1×)       [orange] Dos (1×) · hier
+  [rouge] Épaules (2×)          [rouge] Triceps (2×) · hier
   ```
 
 - L'en-tête affiche les dates exactes de la semaine en cours (lundi et dimanche, mois répété si la semaine change de mois) et le nombre de séances (« 0 séance », « 1 séance », « 2 séances »), suivi du total de cardio de la semaine quand il y en a (« 3 séances · 45 min de cardio », §5.7). Une séance ne contenant que du cardio compte comme une séance ; le cardio n'entre dans aucun groupe.
-- Couleur selon le nombre de séances de la semaine où le groupe a été travaillé : vert = 0, orange = 1, rouge = 2 ou plus. Le seuil du rouge est réglable (2 par défaut, de 2 à 7).
-- Mention « aujourd'hui » ou « hier » si le groupe a été travaillé il y a moins de 48 heures, même la semaine précédente. La mention suit le jour du calendrier : une séance d'avant-hier, même à moins de 48 heures, n'a pas de mention.
-- Tri : vert en haut, puis orange, puis rouge en bas. À couleur égale, les groupes « hier » ou « aujourd'hui » passent en dernier, puis l'ordre de la liste des groupes.
+- Couleur selon le score de la semaine (voir Calcul) : vert = 0 ; orange = score supérieur à 0 et inférieur au seuil du rouge ; rouge = score au moins égal au seuil. Le seuil du rouge est réglable (2 par défaut, de 2 à 7). Un groupe travaillé seulement en indirect n'est donc plus vert.
+- Mention « aujourd'hui » ou « hier » si le groupe a été travaillé, directement ou indirectement, il y a moins de 48 heures, même la semaine précédente. La mention suit le jour du calendrier : une séance d'avant-hier, même à moins de 48 heures, n'a pas de mention.
+- Tri (selon la couleur, donc le score) : vert en haut, puis orange, puis rouge en bas. À couleur égale, les groupes « hier » ou « aujourd'hui » passent en dernier, puis l'ordre de la liste des groupes.
 - Cases pleines, visuellement différentes des pastilles de progression des exercices ; texte lisible en mode sombre.
 - Rien d'autre : pas de légende, de graphique ni de texte explicatif.
 
@@ -1505,11 +1519,11 @@ But : un coup d'œil de 2 secondes avant la séance pour savoir quels groupes tr
 
 - Semaine du lundi 0 h 00 au dimanche 23 h 59 inclus, heure locale du téléphone (Paris). Une séance compte dans la semaine de sa date de début, même si elle se termine après minuit ; une séance importée sans heure compte selon sa date.
 - Groupes affichés par défaut : pectoraux, dos, épaules, biceps, triceps, jambes. Abdominaux exclus du récapitulatif mais gardés dans la bibliothèque. Liste modifiable dans les réglages ; elle est incluse dans l'export.
-- Seul le groupe principal d'un exercice compte (shrugs et lombaires au banc dans « Dos », oiseau et face pull dans « Épaules ») ; un groupe travaillé deux fois dans la même séance compte pour une. Les exercices de jambes de la bibliothèque (presse, leg extension, leg curl, curl ischios, mollets, abducteurs, adducteurs) comptent dans « Jambes ». Un exercice personnalisé dont le groupe principal est un sous-groupe des jambes (quadriceps, ischio-jambiers, mollets, fessiers, adducteurs) compte pour « jambes » quand ce sous-groupe n'est pas affiché lui-même.
+- Groupes principal et secondaires (précision validée) : pour chaque groupe affiché et chaque séance de la semaine, la séance compte **1** si le groupe est le groupe principal d'au moins un exercice de la séance (shrugs et lombaires au banc dans « Dos », oiseau et face pull dans « Épaules ») ; sinon **½** s'il n'est que groupe secondaire d'au moins un exercice (travail indirect : biceps des tractions assistées et des tirages, pectoraux des dips assistés, triceps et épaules des développés). Une séance ne compte jamais plus de 1 pour un groupe : principal dans un exercice et secondaire dans un autre, il compte 1 ; deux exercices où il est secondaire comptent ½. Le score de la semaine est la somme : curl le lundi et tractions le jeudi → biceps 1,5 (orange, « 1× · +1 indirect ») ; deux séances indirectes seulement → 1 (orange, « +2 indirect »). Les exercices de jambes de la bibliothèque (presse, leg extension, leg curl, curl ischios, mollets, abducteurs, adducteurs) comptent dans « Jambes ». Un exercice personnalisé dont le groupe principal est un sous-groupe des jambes (quadriceps, ischio-jambiers, mollets, fessiers, adducteurs) compte pour « jambes » quand ce sous-groupe n'est pas affiché lui-même.
 - Le récapitulatif n'est jamais stocké : il est recalculé à partir des séances enregistrées à chaque affichage de l'accueil. Il est donc à jour immédiatement après la fin d'une séance, un import, une suppression ou une modification de date.
 - Seules les séances terminées comptent ; une séance en cours n'est prise en compte qu'une fois terminée.
 - En début de semaine, sans séance, tous les groupes sont verts et l'en-tête indique « 0 séance ».
-- Aucun effet sur le moteur de progression.
+- Aucun effet sur le moteur de progression ni sur le bilan (§19.3).
 
 ## 20. Suivi corporel simplifié : « Mon poids »
 

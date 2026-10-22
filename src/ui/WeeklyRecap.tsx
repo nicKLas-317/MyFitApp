@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useApp } from '../app/store';
 import { useNow } from '../app/hooks';
-import { recapTitle, weeklyRecap } from '../analysis/weekly';
+import { recapCountLabel, recapTitle, weeklyRecap } from '../analysis/weekly';
 import { MUSCLE_GROUP_LABELS } from '../library/seed';
 
 const RECENCY_LABELS = { today: 'aujourd’hui', yesterday: 'hier' } as const;
@@ -23,12 +23,12 @@ export function WeeklyRecapBlock() {
       <ul className="recap-grid">
         {recap.cells.map((c) => {
           const label = MUSCLE_GROUP_LABELS[c.group];
-          const count = c.color === 'vert' ? '' : ` (${c.count}×)`;
+          const count = c.color === 'vert' ? '' : ` (${recapCountLabel(c)})`;
           const when = c.recency ? ` · ${RECENCY_LABELS[c.recency]}` : '';
           return (
             <li key={c.group} className={`recap-cell recap-${c.color}`} data-group={c.group} data-color={c.color}>
               {label}
-              {count}
+              {count && <span className="recap-count">{count}</span>}
               {when && <span className="recap-when">{when}</span>}
             </li>
           );

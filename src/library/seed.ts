@@ -91,7 +91,7 @@ export const SEED_EXERCISES: readonly Exercise[] = [
   withGrips(exercise('tirage-vertical', 'Tirage vertical', ['Lat pulldown', 'Tirage poitrine'], 'dos', ['biceps'], 'poulie')),
   exercise('rowing-haltere', 'Rowing haltère', ['Dumbbell row', 'Rowing un bras'], 'dos', ['biceps'], 'haltère'),
   exercise('chest-press', 'Chest press', ['Développé assis machine', 'Développé pectoraux machine'], 'pectoraux', ['triceps', 'epaules'], 'machine'),
-  exercise('pec-deck', 'Pec deck', ['Butterfly', 'Pec fly', 'Écarté machine'], 'pectoraux', ['epaules'], 'machine'),
+  exercise('pec-deck', 'Pec deck', ['Butterfly', 'Pec fly', 'Écarté machine'], 'pectoraux', [], 'machine'),
   exercise('developpe-couche', 'Développé couché', ['Bench press', 'DC'], 'pectoraux', ['triceps', 'epaules'], 'barre'),
   exercise('developpe-epaules-machine', 'Développé épaules machine', ['Shoulder press', 'Développé militaire machine'], 'epaules', ['triceps'], 'machine'),
   // Version haltères ; la version machine est un exercice distinct (historiques séparés, charges non comparables).
@@ -116,7 +116,7 @@ export const SEED_EXERCISES: readonly Exercise[] = [
   exercise('dips-assistes', 'Dips assistés', ['Assisted dips', 'Dips machine assistée', 'Dips à la machine'], 'triceps', ['pectoraux'], 'machine', {
     assisted: true,
   }),
-  exercise('ecarte-couche-halteres', 'Écarté couché haltères', ['Dumbbell fly', 'Écarté haltères', 'Écarté à plat haltères'], 'pectoraux', ['epaules'], 'haltères'),
+  exercise('ecarte-couche-halteres', 'Écarté couché haltères', ['Dumbbell fly', 'Écarté haltères', 'Écarté à plat haltères'], 'pectoraux', [], 'haltères'),
   // Version 3.
   exercise('curl-ischios', 'Curl ischios', ['Curl ischio allongé', 'Leg curl allongé', 'Lying leg curl'], 'jambes', ['ischio-jambiers'], 'machine'),
   // Version 4.
@@ -139,7 +139,7 @@ export const SEED_EXERCISES: readonly Exercise[] = [
     [{ suffix: 'halteres', name: 'Haltères', synonyms: ['Développé incliné haltères', 'Incline dumbbell press'] }],
   ),
   exercise('developpe-couche-halteres', 'Développé couché haltères', ['Dumbbell bench press', 'DC haltères', 'Développé couché aux haltères'], 'pectoraux', ['triceps', 'epaules'], 'haltères'),
-  exercise('ecarte-poulie', 'Écarté à la poulie', ['Écarté poulie', 'Vis-à-vis', 'Écarté vis-à-vis', 'Cable crossover', 'Cable fly'], 'pectoraux', ['epaules'], 'poulie'),
+  exercise('ecarte-poulie', 'Écarté à la poulie', ['Écarté poulie', 'Vis-à-vis', 'Écarté vis-à-vis', 'Cable crossover', 'Cable fly'], 'pectoraux', [], 'poulie'),
   // Dos. Tractions assistées : la charge saisie est une aide (§7.12), comme les dips assistés.
   exercise('tractions-assistees', 'Tractions assistées', ['Traction assistée', 'Assisted pull-up', 'Tractions machine assistée', 'Assisted chin-up'], 'dos', ['biceps'], 'machine', {
     assisted: true,
@@ -173,7 +173,7 @@ export const SEED_EXERCISES: readonly Exercise[] = [
 ];
 
 /** Version de la bibliothèque initiale ; chaque version ajoute des exercices (jamais de suppression). */
-export const SEED_VERSION = 9;
+export const SEED_VERSION = 10;
 
 /**
  * Exercices devenus « à prise » à une version donnée : sur une base existante, leur variante standard prend le nom
@@ -291,6 +291,13 @@ export function redefineSeedExercises(exercises: readonly Exercise[]): Exercise[
 export const SEED_GROUP_UPDATES: Readonly<Record<number, Readonly<Record<string, { from: readonly MuscleGroup[]; to: readonly MuscleGroup[] }>>>> = {
   5: {
     'presse-a-cuisses': { from: ['quadriceps', 'ischio-jambiers'], to: ['quadriceps'] },
+  },
+  // Version 10 : un groupe secondaire doit être réellement sollicité (il compte ½ dans le récapitulatif, §19.6).
+  // Les écartés isolent les pectoraux : l'avant de l'épaule n'y travaille que peu.
+  10: {
+    'pec-deck': { from: ['epaules'], to: [] },
+    'ecarte-couche-halteres': { from: ['epaules'], to: [] },
+    'ecarte-poulie': { from: ['epaules'], to: [] },
   },
 };
 

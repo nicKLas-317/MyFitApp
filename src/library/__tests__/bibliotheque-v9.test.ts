@@ -48,7 +48,7 @@ function done(variantId: string, date: string, weightKg: number, feeling: Sessio
 
 describe('Bibliothèque version 9 : tirage horizontal machine (appui pectoral) et poulie basse (§4.0)', () => {
   it('174. Le tirage horizontal garde son identifiant et devient la machine à appui pectoral ; la poulie basse est un exercice distinct', () => {
-    expect(SEED_VERSION).toBe(9);
+    expect(SEED_VERSION).toBeGreaterThanOrEqual(9);
     expect(SEED_ADDITIONS[9]).toEqual([POULIE]);
     const machine = byId(MACHINE);
     expect(machine).toMatchObject({ name: 'Tirage horizontal machine (appui pectoral)', primaryGroup: 'dos', secondaryGroups: ['biceps'], equipment: 'machine' });
