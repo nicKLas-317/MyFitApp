@@ -183,7 +183,7 @@ Chaque exercice doit comporter, dans la mesure du possible :
 
 Pré-charger au minimum les exercices suivants, avec leurs synonymes et groupes musculaires :
 
-- Tirage horizontal / Seated row (dos), avec ses trois prises (§4.3.1).
+- Tirage horizontal machine (appui pectoral) / Seated row (dos), avec ses trois prises (§4.3.1) : voir la version 9 ci-dessous.
 - Tirage vertical / Lat pulldown (dos). « Tirage nuque » n'en est pas un synonyme : c'est un mouvement différent.
 - Rowing haltère / Dumbbell row (dos).
 - Chest press / Développé assis machine (pectoraux).
@@ -220,6 +220,12 @@ Ajouts de la bibliothèque version 8 (groupe principal, groupes secondaires, mat
 - Biceps : Curl marteau (haltères) ; Curl pupitre / Larry Scott (barre) ; Curl biceps barre EZ (barre), exercice distinct du curl à la barre droite.
 - Triceps : Barre au front / skull crusher (barre) ; Kickback (haltère) ; Extension triceps poulie à la barre (variante « Barre » de l'extension triceps poulie, ci-dessus).
 - Jambes : Hack squat (jambes ; quadriceps ; machine) ; Squat kettlebell, goblet squat : kettlebell tenu à deux mains contre la poitrine, sans machine (jambes ; quadriceps ; kettlebell). « squat » seul désigne le squat kettlebell.
+
+Bibliothèque version 9 (précision validée) : le « Tirage horizontal » de l'utilisateur n'est pas le tirage à la poulie basse, mais une machine de rowing assis avec appui pectoral (assis, poitrine contre un coussin, poignées sur bras articulés, pile de poids, machine courante chez Basic-Fit). Toutes ses séances de « Tirage horizontal » ont été faites sur cette machine.
+
+- **Tirage horizontal machine (appui pectoral)** : même identifiant que l'ancien « Tirage horizontal » (`tirage-horizontal`), donc même historique, mêmes prises et mêmes compteurs. Dos ; biceps ; machine. Synonymes : tirage horizontal, tirage horizontal machine, rowing machine, rowing assis machine, seated row, seated row machine, chest supported row, machine row ; les synonymes appris des notes (« Seated row horizontal ») sont gardés. Pictogramme : aucun dessin de cette machine sous licence vérifiable.
+- **Tirage horizontal poulie basse** (`tirage-horizontal-poulie-basse`), nouvel exercice distinct, sans historique. Dos ; biceps ; poulie. Synonymes : tirage poulie basse, rowing poulie basse, seated cable row, cable row, low row, tirage horizontal poulie. Il reprend le dessin du tirage à la poulie (« Seated cable rows ») ; trois prises.
+- Sur une base existante, une seule fois : le tirage horizontal est renommé et ses synonymes d'origine remplacés, même s'il a été personnalisé (un nom personnalisé et les synonymes ajoutés à la main sont gardés) ; la poulie basse est ajoutée (jamais recréée si elle est supprimée ensuite). Les séances passées restent rattachées à la machine. Une sauvegarde antérieure reçoit la même correction : elle ne réintroduit ni l'ancien nom ni « Tirage poulie basse » sur la machine.
 
 Volontairement non ajoutés (choix de l'utilisateur) : abdominaux (crunch à la poulie, relevés de jambes), squat à la barre, hip thrust, soulevé de terre jambes tendues, fentes. Les exercices au poids du corps (pompes, tractions et dips sans aide) et le gainage ne sont pas intégrés : l'utilisateur les fait hors application.
 
@@ -312,7 +318,8 @@ Les notes mélangent le français, l'anglais et l'argot de salle : « latéral r
 - Matériel d'une variante : une variante dont le nom désigne un matériel (« Haltères », « Barre ») a ce matériel, et non celui de son exercice : « développé incliné barre » ne trouve pas la variante haltères. À égalité, la recherche présente la variante standard d'abord (« mollets » : debout, puis assis).
 - Import : un mot inconnu est écarté du rapprochement quand au moins deux autres mots sont reconnus et plus nombreux (« shoulder press xyz » propose le développé épaules machine, à confirmer) ; un nom identique à un exercice une fois sa prise ou son angle retirés (« Développé couché prise serrée ») désigne cet exercice et sa variante, même si un exercice voisin partage des mots (« Développé couché haltères »).
 - Fautes de frappe : la recherche tolère une lettre de différence dans un mot inconnu (« extenzion »), mais un mot connu de la bibliothèque n'est jamais lu comme une faute de frappe d'un autre : « abducteurs » ne trouve jamais les adducteurs, ni « abduction » l'adduction.
-- « seated row », « row assis » et « tirage horizontal » trouvent le Tirage horizontal, pas le Rowing haltère, malgré l'équivalence row → rowing (l'expression la plus longue l'emporte, et « assis » doit correspondre).
+- « seated row », « row assis » et « tirage horizontal » trouvent le Tirage horizontal machine (appui pectoral) en premier, pas le Rowing haltère, malgré l'équivalence row → rowing (l'expression la plus longue l'emporte, et « assis » doit correspondre).
+- Version 9 : « tirage horizontal » et « seated row » seuls désignent la machine à appui pectoral, en recherche comme à l'import ; « poulie basse », « cable row », « câble » (« tirage horizontal câble ») désignent le tirage à la poulie basse. « row assis » convient aux deux : l'import demande de choisir. « appui pectoral » et « chest supported » sont des expressions protégées : la machine n'est jamais un résultat de « pec », « chest » ou « pectoraux ».
 
 ### 4.3. Gestion des variantes
 
@@ -331,7 +338,7 @@ Ne jamais mélanger automatiquement les performances de variantes distinctes.
 
 - Trois prises seulement, chacune une variante distincte avec son propre historique : **prise très large**, **prise moyenne**, **prise serrée**. Pas de supination, de pronation ni de prise neutre (ces mots ne créent aucune variante).
 - Sans précision de prise, un exercice est en prise moyenne : pour un exercice à prise, la variante standard s'appelle « Prise moyenne » (identifiant et historique inchangés) et s'affiche « Tirage vertical — Prise moyenne ». Un exercice sans prise (pec deck, crunch…) garde sa variante standard sans nom affiché.
-- Exercices à prise : le tirage vertical et le tirage horizontal, avec leurs trois prises créées d'avance (bibliothèque version 6 ; sur une base existante, la variante standard est renommée si elle s'appelle encore « Standard » et les prises manquantes sont ajoutées une seule fois, sans doublon d'une prise déjà créée par un import), puis tout exercice qui reçoit une prise très large ou serrée (import, création d'une variante).
+- Exercices à prise : le tirage vertical, le tirage horizontal machine et le tirage horizontal poulie basse (version 9), avec leurs trois prises créées d'avance (bibliothèque version 6 ; sur une base existante, la variante standard est renommée si elle s'appelle encore « Standard » et les prises manquantes sont ajoutées une seule fois, sans doublon d'une prise déjà créée par un import), puis tout exercice qui reçoit une prise très large ou serrée (import, création d'une variante).
 - Équivalences d'écriture du lexique (§4.2.1), sans jamais fusionner deux prises différentes : prise très large, très large, prise large, large, wide, wide grip, extra wide → prise très large ; prise moyenne, moyenne, normale, classique, standard → prise moyenne ; prise serrée, serrée, serré, très serrée, close, close grip, narrow → prise serrée. Une variante créée prend le nom de référence de sa prise ; deux écritures d'une même prise ne créent jamais deux variantes.
 - Le récapitulatif hebdomadaire ne change pas : toutes les prises d'un exercice de dos comptent comme « Dos » (groupe principal de l'exercice).
 
@@ -941,7 +948,7 @@ Utiliser la bibliothèque et ses synonymes pour associer les noms importés aux 
 
 Exemples de correspondances candidates :
 
-- `Seated row horizontal` → Tirage horizontal.
+- `Seated row horizontal` → Tirage horizontal machine (appui pectoral).
 - `Lat pulldown vertical` → Tirage vertical.
 - `Biceps poulie corde` → Curl biceps poulie corde, distinct du curl aux haltères.
 - `Biceps curl banc incliné 70°` → Curl biceps banc incliné, en conservant la variante 70°.
@@ -1267,7 +1274,7 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 130. (bout en bout) Recherche et import des saisies du point 125, mot ignoré affiché, import bloqué jusqu'à « J'ai vérifié ».
 131. « ischio », « ischios », « ischio-jambiers », « hamstrings » → leg curl et curl ischios ; « quadri », « quadriceps », « quads » → leg extension et presse ; « jambe », « jambes », « legs » → les quatre ; à l'import, un sous-groupe seul propose ses exercices et demande de choisir ; le récapitulatif compte tout dans « Jambes ».
 132. Bibliothèque version 5 : la presse perd les ischio-jambiers une seule fois, sauf groupes personnalisés ; une sauvegarde antérieure ne les réintroduit pas.
-133. « seated row », « row assis », « tirage horizontal » → Tirage horizontal, jamais le Rowing haltère ; « rowing haltère », « dumbbell row » → Rowing haltère.
+133. « seated row », « row assis », « tirage horizontal » → Tirage horizontal (machine) en premier, jamais le Rowing haltère ; « rowing haltère », « dumbbell row » → Rowing haltère.
 
 ### Prises (§4.3.1)
 
@@ -1338,6 +1345,14 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 171. La correction de la base est appliquée une seule fois, en une transaction.
 172. Une sauvegarde contenant un « += » enregistré avec Bien est restaurée corrigée.
 173. (bout en bout) Une base d'une version antérieure est corrigée au lancement : chest press orange, cible 3 × 8, historique « Moyen (+=) ».
+
+### Bibliothèque version 9 : tirage horizontal machine et poulie basse (§4.0)
+
+174. Le tirage horizontal garde son identifiant et devient « Tirage horizontal machine (appui pectoral) » (machine, dos, biceps, nouveaux synonymes, trois prises, pictogramme) ; « Tirage horizontal poulie basse » est un exercice distinct (poulie, dos, biceps, trois prises, dessin du tirage à la poulie).
+175. « tirage horizontal », « seated row », « Seated row horizontal » et les synonymes de la machine → la machine ; « tirage poulie basse », « cable row », « seated cable row », « low row », « tirage horizontal câble » → la poulie basse, jamais la machine ; « pec », « chest », « pectoraux » ne trouvent pas la machine ; historiques séparés, les deux comptent dans « Dos ».
+176. Base existante en version 8 : renommage une seule fois, synonymes d'origine remplacés, synonyme appris et synonyme ajouté à la main gardés, nom personnalisé gardé ; poulie basse ajoutée une seule fois, jamais recréée ; séances et profil inchangés, rattachés à la machine.
+177. Une sauvegarde antérieure, en fusion comme en remplacement, ne réintroduit ni l'ancien nom ni « Tirage poulie basse » sur la machine ; ses séances restent sur la machine.
+178. (bout en bout) Une base en version 8 est migrée au lancement : fiche de la machine renommée avec son historique et un pictogramme, fiche de la poulie basse avec le dessin et sans historique ; « seated row » → la machine, « poulie basse » et « cable row » → la poulie basse seule.
 
 Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
 

@@ -8,7 +8,7 @@
  */
 import type { CardioMachine, Exercise, Feeling, Incline, MuscleGroup, Session, Variant } from '../domain/types';
 import { DEFAULT_CARDIO_MACHINES, INCLINES, isValidDistance, isValidMinutes } from '../cardio/model';
-import { MUSCLE_GROUP_LABELS, SEED_EXERCISES, sameGroups, sameNaming, seedNamings, seedSecondaryGroups } from '../library/seed';
+import { MUSCLE_GROUP_LABELS, SEED_EXERCISES, redefineSeedExercises, sameGroups, sameNaming, seedNamings, seedSecondaryGroups } from '../library/seed';
 import { EMPTY_BODY, isValidHeight, isValidWeighIn, type BodyTracking } from '../body/model';
 
 export { EMPTY_BODY, type BodyTracking };
@@ -93,7 +93,13 @@ const MUSCLE_GROUPS = Object.keys(MUSCLE_GROUP_LABELS) as MuscleGroup[];
 export function migrateBackup(data: Obj): Backup {
   const backup = data as unknown as Backup;
   const fixed = new Map(fixPlusEqualFeelings(backup.sessions).map((s) => [s.id, s]));
-  return { ...backup, sessions: backup.sessions.map((s) => fixed.get(s.id) ?? s), schemaVersion: SCHEMA_VERSION };
+  return {
+    ...backup,
+    // Une sauvegarde antérieure à la bibliothèque version 9 reçoit le tirage horizontal machine (appui pectoral).
+    exercises: redefineSeedExercises(backup.exercises),
+    sessions: backup.sessions.map((s) => fixed.get(s.id) ?? s),
+    schemaVersion: SCHEMA_VERSION,
+  };
 }
 
 /**

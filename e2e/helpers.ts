@@ -59,7 +59,8 @@ export async function addExercise(page: Page, query: string, name: string, start
   await page.getByRole('link', { name: '+ Ajouter un exercice' }).click();
   await page.getByRole('searchbox', { name: 'Rechercher un exercice' }).fill(query);
   // Le bouton de résultat affiche la variante sans tiret : « Tirage vertical Prise moyenne ».
-  await page.getByRole('button', { name: new RegExp(`^${name.replace(' — ', ' ')}`) }).first().click();
+  const escaped = name.replace(' — ', ' ').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  await page.getByRole('button', { name: new RegExp(`^${escaped}`) }).first().click();
   if (startWeight !== undefined) {
     await page.getByLabel('Poids de départ (kg)').fill(startWeight);
     await page.getByRole('button', { name: 'Ajouter', exact: true }).click();

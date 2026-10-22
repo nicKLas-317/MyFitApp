@@ -9,6 +9,7 @@ import {
   SEED_UPDATES,
   SEED_VARIANT_UPDATES,
   SEED_VERSION,
+  redefineSeedExercise,
   sameGroups,
   sameNaming,
 } from '../library/seed';
@@ -151,9 +152,13 @@ export class Repository {
     if (version > 0) {
       for (const [v, changes] of Object.entries(SEED_UPDATES)) {
         if (Number(v) <= version) continue;
-        for (const [id, { from, to }] of Object.entries(changes)) {
+        for (const [id, change] of Object.entries(changes)) {
+          const { from, to } = change;
           const current = updates.get(id) ?? (await store.get(id));
-          if (current && sameNaming(current, from)) updates.set(id, { ...current, name: to.name, synonyms: [...to.synonyms] });
+          if (!current) continue;
+          // Exercice redéfini (version 9) : toujours corrigé, synonymes ajoutés par l'utilisateur et nom personnalisé gardés.
+          if (change.redefine) updates.set(id, redefineSeedExercise(current, change));
+          else if (sameNaming(current, from)) updates.set(id, { ...current, name: to.name, synonyms: [...to.synonyms] });
         }
       }
       // Groupes secondaires corrigés, seulement s'ils n'ont pas été personnalisés.

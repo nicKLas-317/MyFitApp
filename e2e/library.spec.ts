@@ -49,8 +49,11 @@ test.describe('Bibliothèque et recherche', () => {
   test('48. Recherche par groupe musculaire : dos', async ({ page }) => {
     await openLibrary(page);
     await search(page, 'dos');
-    // Les deux tirages ont trois prises, chacune un résultat (§4.3.1).
-    const primary = ['Lombaires au banc', 'Pull-over à la poulie', 'Rowing barre', 'Rowing haltère', 'Shrugs', ...Array(3).fill('Tirage horizontal'), ...Array(3).fill('Tirage vertical'), 'Tractions assistées'];
+    // Les trois tirages ont trois prises, chacune un résultat (§4.3.1).
+    const primary = [
+      'Lombaires au banc', 'Pull-over à la poulie', 'Rowing barre', 'Rowing haltère', 'Shrugs', ...Array(3).fill('Tirage horizontal machine (appui pectoral)'),
+      ...Array(3).fill('Tirage horizontal poulie basse'), ...Array(3).fill('Tirage vertical'), 'Tractions assistées',
+    ];
     // Groupe principal d'abord, puis l'oiseau (deux variantes) et le face pull, qui ont le dos en groupe secondaire.
     const found = await resultNames(page);
     expect(found.slice(0, primary.length).sort()).toEqual(primary);
@@ -64,7 +67,7 @@ test.describe('Bibliothèque et recherche', () => {
   test('49. Synonymes français et anglais, saisie partielle et sans accents', async ({ page }) => {
     await openLibrary(page);
     const cases: [string, string][] = [
-      ['seated row', 'Tirage horizontal'],
+      ['seated row', 'Tirage horizontal machine (appui pectoral)'],
       ['lat pull', 'Tirage vertical'],
       ['butterfly', 'Pec deck'],
       ['developpe assis machine', 'Chest press'],
@@ -122,7 +125,7 @@ test.describe('Bibliothèque et recherche', () => {
   test('100. Attribution CC BY-SA affichée sur chaque fiche illustrée, absente des autres', async ({ page }) => {
     // Dessins Everkinetic : Wikimedia Commons (CC BY-SA 3.0) ou dépôt everkinetic/data (CC BY-SA 4.0).
     const commons = [
-      'tirage-horizontal', 'tirage-vertical', 'chest-press', 'pec-deck', 'developpe-couche', 'developpe-epaules-machine',
+      'tirage-horizontal-poulie-basse', 'tirage-vertical', 'chest-press', 'pec-deck', 'developpe-couche', 'developpe-epaules-machine',
       'elevations-laterales', 'curl-biceps-poulie-corde', 'curl-biceps-halteres', 'curl-biceps-banc-incline',
       'extension-triceps-poulie--barre', 'extension-triceps-haltere-assis', 'presse-a-cuisses', 'leg-extension', 'leg-curl',
       'ecarte-couche-halteres', 'curl-ischios', 'curl-biceps-barre-droite', 'mollets-machine', 'mollets-machine--assis', 'kickback',

@@ -174,8 +174,11 @@ describe('Lexique d’équivalences (§4.2.1)', () => {
     for (const q of ['seated row', 'row assis', 'tirage horizontal']) {
       expect(ids(q)[0], q).toBe('tirage-horizontal');
       expect(ids(q), q).not.toContain('rowing-haltere');
-      expect(choiceOf(q), q).toBe('tirage-horizontal');
     }
+    for (const q of ['seated row', 'tirage horizontal']) expect(choiceOf(q), q).toBe('tirage-horizontal');
+    // Version 9 : « row assis » convient aussi au tirage à la poulie basse (assis) ; l'import demande de choisir.
+    expect(imported('row assis').match).toMatchObject({ confidence: 'ambiguous' });
+    expect(imported('row assis').match.candidates.slice(0, 2).map((c) => c.variantId)).toEqual(['tirage-horizontal', 'tirage-horizontal-poulie-basse']);
     for (const q of ['rowing haltère', 'dumbbell row']) {
       expect(ids(q), q).toEqual(['rowing-haltere']);
       expect(choiceOf(q), q).toBe('rowing-haltere');

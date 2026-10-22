@@ -53,7 +53,8 @@ function drawn(key: string, title: string, source: typeof EVERKINETIC | typeof E
  * son exercice.
  */
 export const ILLUSTRATIONS: Readonly<Record<string, Illustration>> = {
-  'tirage-horizontal': drawn('tirage-horizontal', 'Seated cable rows', EVERKINETIC, [`${COMMONS}Seated_cable_rows_1.svg`, `${COMMONS}Seated_cable_rows_2.svg`]),
+  // Tirage horizontal machine (appui pectoral) : aucun dessin sous licence vérifiable de cette machine → pictogramme.
+  'tirage-horizontal-poulie-basse': drawn('tirage-horizontal-poulie-basse', 'Seated cable rows', EVERKINETIC, [`${COMMONS}Seated_cable_rows_1.svg`, `${COMMONS}Seated_cable_rows_2.svg`]),
   'tirage-vertical': drawn('tirage-vertical', 'Wide grip lat pull down', EVERKINETIC, [`${COMMONS}Wide_grip_lat_pull_down_1.svg`, `${COMMONS}Wide_grip_lat_pull_down_2.svg`]),
   'chest-press': drawn('chest-press', 'Machine bench press', EVERKINETIC, [`${COMMONS}Machine_bench_press_1.svg`, `${COMMONS}Machine_bench_press_2.svg`]),
   'pec-deck': drawn('pec-deck', 'Butterfly machine', EVERKINETIC, [`${COMMONS}Butterfly_machine_1.svg`, `${COMMONS}Butterfly_machine_2.svg`]),

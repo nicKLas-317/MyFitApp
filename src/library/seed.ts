@@ -1,4 +1,5 @@
 import type { Exercise, MuscleGroup, Variant, VariantConfig } from '../domain/types';
+import { normalizeName } from './text';
 
 /**
  * Bibliothèque initiale (§4.0). Les identifiants sont stables et ne doivent jamais changer :
@@ -73,8 +74,20 @@ const TRICEPS_POULIE_VARIANTS = {
   others: [{ suffix: 'barre', name: 'Barre', synonyms: ['Extension triceps poulie barre', 'Triceps pushdown barre', 'Bar pushdown', 'Pushdown barre'] }],
 };
 
+/**
+ * Version 9 : le « Tirage horizontal » est la machine de rowing assis avec appui pectoral (pile de poids, poignées sur
+ * bras articulés) ; le tirage à la poulie basse devient un exercice distinct.
+ */
+const TIRAGE_HORIZONTAL_MACHINE: SeedNaming = {
+  name: 'Tirage horizontal machine (appui pectoral)',
+  synonyms: [
+    'Tirage horizontal', 'Tirage horizontal machine', 'Rowing machine', 'Rowing assis machine',
+    'Seated row', 'Seated row machine', 'Chest supported row', 'Machine row',
+  ],
+};
+
 export const SEED_EXERCISES: readonly Exercise[] = [
-  withGrips(exercise('tirage-horizontal', 'Tirage horizontal', ['Seated row', 'Rowing assis', 'Tirage poulie basse'], 'dos', ['biceps'], 'machine')),
+  withGrips(exercise('tirage-horizontal', TIRAGE_HORIZONTAL_MACHINE.name, [...TIRAGE_HORIZONTAL_MACHINE.synonyms], 'dos', ['biceps'], 'machine')),
   withGrips(exercise('tirage-vertical', 'Tirage vertical', ['Lat pulldown', 'Tirage poitrine'], 'dos', ['biceps'], 'poulie')),
   exercise('rowing-haltere', 'Rowing haltère', ['Dumbbell row', 'Rowing un bras'], 'dos', ['biceps'], 'haltère'),
   exercise('chest-press', 'Chest press', ['Développé assis machine', 'Développé pectoraux machine'], 'pectoraux', ['triceps', 'epaules'], 'machine'),
@@ -154,10 +167,13 @@ export const SEED_EXERCISES: readonly Exercise[] = [
   // Jambes : sous-groupe quadriceps. « squat » seul désigne le squat kettlebell (goblet squat).
   exercise('hack-squat', 'Hack squat', ['Hack', 'Hack squat machine'], 'jambes', ['quadriceps'], 'machine'),
   exercise('squat-kettlebell', 'Squat kettlebell', ['Squat', 'Goblet squat', 'Squat KB', 'Squat gobelet', 'Kettlebell squat'], 'jambes', ['quadriceps'], 'kettlebell'),
+  withGrips(
+    exercise('tirage-horizontal-poulie-basse', 'Tirage horizontal poulie basse', ['Tirage poulie basse', 'Rowing poulie basse', 'Seated cable row', 'Cable row', 'Low row', 'Tirage horizontal poulie'], 'dos', ['biceps'], 'poulie'),
+  ),
 ];
 
 /** Version de la bibliothèque initiale ; chaque version ajoute des exercices (jamais de suppression). */
-export const SEED_VERSION = 8;
+export const SEED_VERSION = 9;
 
 /**
  * Exercices devenus « à prise » à une version donnée : sur une base existante, leur variante standard prend le nom
@@ -181,6 +197,7 @@ export const SEED_ADDITIONS: Readonly<Record<number, readonly string[]>> = {
     'barre-au-front', 'kickback',
     'hack-squat', 'squat-kettlebell',
   ],
+  9: ['tirage-horizontal-poulie-basse'],
 };
 
 /**
@@ -207,8 +224,9 @@ export interface SeedNaming {
  * Corrections de nom et de synonymes apportées par une version : appliquées à une base existante
  * seulement si l'exercice a encore exactement le nom et les synonymes d'origine (une personnalisation
  * de l'utilisateur n'est jamais écrasée). L'identifiant, et donc l'historique, ne change jamais.
+ * Avec `redefine`, l'exercice change de nature : la correction s'applique toujours (voir `redefineSeedExercise`).
  */
-export const SEED_UPDATES: Readonly<Record<number, Readonly<Record<string, { from: SeedNaming; to: SeedNaming }>>>> = {
+export const SEED_UPDATES: Readonly<Record<number, Readonly<Record<string, SeedUpdate>>>> = {
   3: {
     'leg-curl': {
       from: { name: 'Leg curl', synonyms: ['Flexion des jambes', 'Curl ischios'] },
@@ -225,7 +243,46 @@ export const SEED_UPDATES: Readonly<Record<number, Readonly<Record<string, { fro
       to: { name: 'Tirage vertical', synonyms: ['Lat pulldown', 'Tirage poitrine'] },
     },
   },
+  9: {
+    'tirage-horizontal': {
+      from: { name: 'Tirage horizontal', synonyms: ['Seated row', 'Rowing assis', 'Tirage poulie basse'] },
+      to: TIRAGE_HORIZONTAL_MACHINE,
+      redefine: true,
+    },
+  },
 };
+
+export interface SeedUpdate {
+  from: SeedNaming;
+  to: SeedNaming;
+  /** L'exercice change de nature (version 9) : corrigé même s'il a été personnalisé. */
+  redefine?: boolean;
+}
+
+/**
+ * Exercice redéfini par une version (version 9 : tirage horizontal → machine à appui pectoral). Les synonymes
+ * d'origine sont remplacés par les nouveaux, ceux ajoutés par l'utilisateur sont gardés ; le nom n'est remplacé que
+ * s'il est encore l'ancien nom de la bibliothèque. Variantes, synonymes appris et identifiants ne changent pas.
+ */
+export function redefineSeedExercise(exercise: Exercise, { from, to }: SeedUpdate): Exercise {
+  const key = normalizeName;
+  const replaced = new Set([...from.synonyms, ...to.synonyms, to.name].map(key));
+  const added = exercise.synonyms.filter((s) => !replaced.has(key(s)));
+  const name = exercise.name === from.name ? to.name : exercise.name;
+  return { ...exercise, name, synonyms: [...to.synonyms.filter((s) => key(s) !== key(name)), ...added] };
+}
+
+/** Applique les redéfinitions de la bibliothèque (version 9) aux exercices concernés ; les autres sont inchangés. */
+export function redefineSeedExercises(exercises: readonly Exercise[]): Exercise[] {
+  return exercises.map((e) => {
+    let next = e;
+    for (const changes of Object.values(SEED_UPDATES)) {
+      const change = changes[e.id];
+      if (change?.redefine) next = redefineSeedExercise(next, change);
+    }
+    return next;
+  });
+}
 
 /**
  * Corrections de groupes secondaires apportées par une version : appliquées à une base existante seulement

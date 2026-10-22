@@ -48,10 +48,11 @@ describe('Recherche par nom d’exercice ou de machine (§4.1 A)', () => {
 
 describe('Recherche par groupe musculaire (§4.1 B)', () => {
   it('48. « dos » propose les exercices du dos, même sans « dos » dans leur nom', () => {
-    // Les deux tirages ont trois prises, chacune une variante (§4.3.1).
+    // Les trois tirages ont trois prises, chacune une variante (§4.3.1).
     const dos = [
       'lombaires-banc', 'pull-over-poulie', 'rowing-barre', 'rowing-haltere', 'shrugs', 'tirage-horizontal', 'tirage-horizontal--prise-serree',
-      'tirage-horizontal--prise-tres-large', 'tirage-vertical', 'tirage-vertical--prise-serree', 'tirage-vertical--prise-tres-large', 'tractions-assistees',
+      'tirage-horizontal--prise-tres-large', 'tirage-horizontal-poulie-basse', 'tirage-horizontal-poulie-basse--prise-serree',
+      'tirage-horizontal-poulie-basse--prise-tres-large', 'tirage-vertical', 'tirage-vertical--prise-serree', 'tirage-vertical--prise-tres-large', 'tractions-assistees',
     ];
     // Groupe principal d'abord ; l'oiseau et le face pull (dos en groupe secondaire) suivent.
     const secondary = ['face-pull', 'oiseau', 'oiseau--halteres'];

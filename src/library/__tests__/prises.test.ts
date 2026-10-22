@@ -54,9 +54,11 @@ describe('Prises (§4.3.1)', () => {
     expect(ids('tirage vertical close grip')).toEqual([SERREE]);
     expect(choiceOf('tirage vertical très serrée')).toBe(SERREE);
     // « prise très large » et « prise serrée » : deux variantes distinctes, sur chaque tirage.
-    expect(ids('prise très large').sort()).toEqual(['tirage-horizontal--prise-tres-large', LARGE]);
-    expect(ids('prise serrée').sort()).toEqual(['tirage-horizontal--prise-serree', SERREE]);
-    expect(ids('seated row wide')).toEqual(['tirage-horizontal--prise-tres-large']);
+    expect(ids('prise très large').sort()).toEqual(['tirage-horizontal--prise-tres-large', 'tirage-horizontal-poulie-basse--prise-tres-large', LARGE]);
+    expect(ids('prise serrée').sort()).toEqual(['tirage-horizontal--prise-serree', 'tirage-horizontal-poulie-basse--prise-serree', SERREE]);
+    // « seated row » désigne la machine (version 9) : sa prise très large d'abord, puis celle de la poulie basse.
+    expect(ids('seated row wide')).toEqual(['tirage-horizontal--prise-tres-large', 'tirage-horizontal-poulie-basse--prise-tres-large']);
+    expect(choiceOf('seated row wide')).toBe('tirage-horizontal--prise-tres-large');
     // Exercice sans prise : une prise demandée à l'import crée la variante et fait de la standard la prise moyenne.
     const draft = draftFromNotes('Développé couché prise serrée\n3x8x40kg +', LIB, '2026-10-16');
     expect(draft.exercises[0]!.choice).toEqual({ kind: 'new_variant', exerciseId: 'developpe-couche', name: 'Prise serrée' });

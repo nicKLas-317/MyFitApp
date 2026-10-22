@@ -1,8 +1,8 @@
 # Inventaire de la bibliothèque d’exercices
 
-Bibliothèque initiale de l’application (version 8), telle qu’installée sur un nouvel appareil. Les exercices et variantes créés ou modifiés ensuite dans l’application n’y figurent pas.
+Bibliothèque initiale de l’application (version 9), telle qu’installée sur un nouvel appareil. Les exercices et variantes créés ou modifiés ensuite dans l’application n’y figurent pas.
 
-**44 exercices, 52 variantes** : une variante standard par exercice ; trois prises pour chacun des deux tirages (la variante standard y est la prise moyenne, §4.3.1 de CLAUDE.md) ; et une variante distincte, avec son propre historique, quand deux versions ne sont pas comparables en charge : mollets machine debout / assis, extension triceps poulie corde / barre, développé incliné barre / haltères, oiseau machine / haltères.
+**45 exercices, 55 variantes** : une variante standard par exercice ; trois prises pour chacun des trois tirages (la variante standard y est la prise moyenne, §4.3.1 de CLAUDE.md) ; et une variante distincte, avec son propre historique, quand deux versions ne sont pas comparables en charge : mollets machine debout / assis, extension triceps poulie corde / barre, développé incliné barre / haltères, oiseau machine / haltères.
 
 - Séries et répétitions : « standard » = 3 séries de 8 à 12 répétitions.
 - Matériel « kettlebell » : comme haltères, barre, poulie ou machine, ce mot de matériel départage les résultats de la recherche (« squat KB »).
@@ -12,9 +12,9 @@ Bibliothèque initiale de l’application (version 8), telle qu’installée sur
 
 | Exercice | Variante | Synonymes (FR et EN) | Groupe principal | Groupes secondaires | Matériel | Assisté | Séries et répétitions | Illustration |
 |---|---|---|---|---|---|---|---|---|
-| Tirage horizontal | Prise moyenne | Seated row, Rowing assis, Tirage poulie basse | Dos | Biceps | machine | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Seated_cable_rows_1.svg), [2](https://commons.wikimedia.org/wiki/File:Seated_cable_rows_2.svg)) |
-| Tirage horizontal | Prise très large | — | Dos | Biceps | machine | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Seated_cable_rows_1.svg), [2](https://commons.wikimedia.org/wiki/File:Seated_cable_rows_2.svg)) |
-| Tirage horizontal | Prise serrée | — | Dos | Biceps | machine | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Seated_cable_rows_1.svg), [2](https://commons.wikimedia.org/wiki/File:Seated_cable_rows_2.svg)) |
+| Tirage horizontal machine (appui pectoral) | Prise moyenne | Tirage horizontal, Tirage horizontal machine, Rowing machine, Rowing assis machine, Seated row, Seated row machine, Chest supported row, Machine row | Dos | Biceps | machine | non | standard | pictogramme |
+| Tirage horizontal machine (appui pectoral) | Prise très large | — | Dos | Biceps | machine | non | standard | pictogramme |
+| Tirage horizontal machine (appui pectoral) | Prise serrée | — | Dos | Biceps | machine | non | standard | pictogramme |
 | Tirage vertical | Prise moyenne | Lat pulldown, Tirage poitrine | Dos | Biceps | poulie | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Wide_grip_lat_pull_down_1.svg), [2](https://commons.wikimedia.org/wiki/File:Wide_grip_lat_pull_down_2.svg)) |
 | Tirage vertical | Prise très large | — | Dos | Biceps | poulie | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Wide_grip_lat_pull_down_1.svg), [2](https://commons.wikimedia.org/wiki/File:Wide_grip_lat_pull_down_2.svg)) |
 | Tirage vertical | Prise serrée | — | Dos | Biceps | poulie | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Wide_grip_lat_pull_down_1.svg), [2](https://commons.wikimedia.org/wiki/File:Wide_grip_lat_pull_down_2.svg)) |
@@ -64,11 +64,15 @@ Bibliothèque initiale de l’application (version 8), telle qu’installée sur
 | Kickback | Standard | Kickback haltère, Triceps kickback, Kick back triceps, Extension triceps buste penché | Triceps | — | haltère | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Triceps_kickback_with_dumbbell_1.svg), [2](https://commons.wikimedia.org/wiki/File:Triceps_kickback_with_dumbbell_2.svg)) |
 | Hack squat | Standard | Hack, Hack squat machine | Jambes | Quadriceps | machine | non | standard | dessin — Everkinetic, CC BY-SA 4.0, everkinetic/data ([1](https://github.com/everkinetic/data/blob/main/src/images-web/hack-squat-machine-1.png), [2](https://github.com/everkinetic/data/blob/main/src/images-web/hack-squat-machine-2.png)) |
 | Squat kettlebell | Standard | Squat, Goblet squat, Squat KB, Squat gobelet, Kettlebell squat | Jambes | Quadriceps | kettlebell | non | standard | pictogramme |
+| Tirage horizontal poulie basse | Prise moyenne | Tirage poulie basse, Rowing poulie basse, Seated cable row, Cable row, Low row, Tirage horizontal poulie | Dos | Biceps | poulie | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Seated_cable_rows_1.svg), [2](https://commons.wikimedia.org/wiki/File:Seated_cable_rows_2.svg)) |
+| Tirage horizontal poulie basse | Prise très large | — | Dos | Biceps | poulie | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Seated_cable_rows_1.svg), [2](https://commons.wikimedia.org/wiki/File:Seated_cable_rows_2.svg)) |
+| Tirage horizontal poulie basse | Prise serrée | — | Dos | Biceps | poulie | non | standard | dessin — Everkinetic, CC BY-SA 3.0, Wikimedia Commons ([1](https://commons.wikimedia.org/wiki/File:Seated_cable_rows_1.svg), [2](https://commons.wikimedia.org/wiki/File:Seated_cable_rows_2.svg)) |
 
-## Exercices et variantes avec un pictogramme seulement (10)
+## Exercices et variantes avec un pictogramme seulement (11)
 
 Aucun dessin sous licence vérifiable et fidèle n’a été trouvé pour ces exercices (voir docs/illustrations.md) :
 
+- **Tirage horizontal machine (appui pectoral)** (Dos, machine) : rowing assis, poitrine contre un coussin, poignées sur bras articulés, pile de poids ; aucun dessin libre de cette machine (everkinetic/data et Wikimedia Commons n’ont que le tirage à la poulie basse)
 - **Rowing haltère** (Dos, haltère)
 - **Crunch machine** (Abdominaux, machine)
 - **Dips assistés** (Triceps, machine)

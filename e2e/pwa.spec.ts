@@ -49,7 +49,8 @@ test.describe('Application installable et hors ligne (§2, §16.13, §17, §21)'
     await search.fill('chest press');
     await expect(page.getByRole('list', { name: 'Résultats' }).locator('strong').first()).toHaveText('Chest press');
     await search.fill('dos');
-    await expect(page.getByRole('list', { name: 'Résultats' }).locator('strong')).toHaveCount(15);
+    // Exercices du dos (les trois tirages avec leurs trois prises), puis l'oiseau et le face pull.
+    await expect(page.getByRole('list', { name: 'Résultats' }).locator('strong')).toHaveCount(18);
 
     await page.goto('./#/exercice/curl-ischios');
     const img = page.locator('figure.illustration img');
