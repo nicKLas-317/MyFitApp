@@ -49,8 +49,8 @@ function writeWeighIns(page: Page, list: { date: string; weightKg: number }[]): 
   );
 }
 
-/** Adresse fictive, assemblée pour qu'aucune adresse n'apparaisse en clair dans le dépôt (contrôle avant publication). */
-const ADDRESS = ['moi', 'example.org'].join('@');
+/** Adresse fictive, d'un domaine réservé aux exemples (RFC 2606). */
+const ADDRESS = 'moi@example.org';
 
 /** Couleurs de statut (vert, orange, rouge) : jamais utilisées sur l'écran du bilan. */
 const STATUS_COLORS = ['rgb(74, 222, 128)', 'rgb(253, 186, 116)', 'rgb(252, 165, 165)'];

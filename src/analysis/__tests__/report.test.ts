@@ -25,8 +25,8 @@ import {
 import { DEFAULT_RECAP_SETTINGS } from '../weekly';
 
 const LIB: Exercise[] = [...SEED_EXERCISES];
-/** Adresse fictive, assemblée pour qu'aucune adresse n'apparaisse en clair dans le dépôt (contrôle avant publication). */
-const ADDRESS = ['moi', 'example.org'].join('@');
+/** Adresse fictive, d'un domaine réservé aux exemples (RFC 2606). */
+const ADDRESS = 'moi@example.org';
 const SETTINGS = buildEngineSettings(LIB);
 const VARIANTS = indexVariants(LIB);
 const name = (id: string) => displayName(VARIANTS.get(id));
