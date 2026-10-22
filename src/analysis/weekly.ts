@@ -37,7 +37,10 @@ export interface RecapCell {
   count: number;
   /** Séances de la semaine où le groupe n'a été travaillé qu'en groupe secondaire (travail indirect). */
   indirect: number;
-  /** Score de la semaine : 1 par séance directe, ½ par séance indirecte. Il détermine la couleur. */
+  /**
+   * Score de la semaine : 1 par séance directe, ½ par séance indirecte. Il détermine la couleur et le tri :
+   * sous 1 (une seule séance indirecte), le groupe reste vert.
+   */
   score: number;
   color: RecapColor;
   /** Travaillé aujourd'hui ou hier (moins de 48 heures), directement ou indirectement. */
@@ -153,15 +156,17 @@ export function weeklyRecap(
     const count = counts.get(group) ?? 0;
     const indirect = indirects.get(group) ?? 0;
     const score = count + indirect / 2;
-    const color: RecapColor = score === 0 ? 'vert' : score >= settings.redThreshold ? 'rouge' : 'orange';
+    const color: RecapColor = score < 1 ? 'vert' : score >= settings.redThreshold ? 'rouge' : 'orange';
     const time = last.get(group);
     return { group, count, indirect, score, color, recency: time === undefined ? null : recencyOf(time, now) };
   });
-  // Vert en haut, puis orange, puis rouge ; à couleur égale, les groupes travaillés hier ou aujourd'hui en dernier.
+  // Vert en haut, puis orange, puis rouge ; à couleur égale, score croissant (un vert avec de l'indirect après un vert
+  // sans rien), puis les groupes travaillés hier ou aujourd'hui en dernier.
   const order = new Map(settings.groups.map((g, i) => [g, i]));
   cells.sort(
     (a, b) =>
       COLOR_RANK[a.color] - COLOR_RANK[b.color] ||
+      a.score - b.score ||
       Number(a.recency !== null) - Number(b.recency !== null) ||
       order.get(a.group)! - order.get(b.group)!,
   );
@@ -170,7 +175,7 @@ export function weeklyRecap(
 
 /**
  * Nombre de séances d'une case, sans fraction : « 1× », « 1× · +1 indirect », « +2 indirect ».
- * Vide pour une case verte (aucun travail cette semaine).
+ * Vide sans aucun travail cette semaine ; une case verte peut afficher « +1 indirect ».
  */
 export function recapCountLabel(cell: RecapCell): string {
   const parts = [...(cell.count > 0 ? [`${cell.count}×`] : []), ...(cell.indirect > 0 ? [`+${cell.indirect}\u00a0indirect`] : [])];

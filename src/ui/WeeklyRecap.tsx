@@ -23,7 +23,8 @@ export function WeeklyRecapBlock() {
       <ul className="recap-grid">
         {recap.cells.map((c) => {
           const label = MUSCLE_GROUP_LABELS[c.group];
-          const count = c.color === 'vert' ? '' : ` (${recapCountLabel(c)})`;
+          const counted = recapCountLabel(c);
+          const count = counted ? ` (${counted})` : '';
           const when = c.recency ? ` · ${RECENCY_LABELS[c.recency]}` : '';
           return (
             <li key={c.group} className={`recap-cell recap-${c.color}`} data-group={c.group} data-color={c.color}>

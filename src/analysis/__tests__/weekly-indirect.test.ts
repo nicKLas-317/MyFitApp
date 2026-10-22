@@ -26,10 +26,10 @@ const cell = (r: WeeklyRecap, g: string) => r.cells.find((c) => c.group === g)!;
 const label = (r: WeeklyRecap, g: string) => recapCountLabel(cell(r, g)).replace(/ /g, ' ');
 
 describe('Récapitulatif hebdomadaire : groupes secondaires (§19.6)', () => {
-  it('179. Tractions assistées : dos 1 (direct), biceps ½ (indirect) ; affichage sans fraction', () => {
+  it('179. Tractions assistées : dos 1 (direct, orange), biceps ½ (une seule séance indirecte : vert, avec la mention) ; affichage sans fraction', () => {
     const r = weeklyRecap([session(at(13), ['tractions-assistees'])], LIB, at(16));
     expect(cell(r, 'dos')).toMatchObject({ count: 1, indirect: 0, score: 1, color: 'orange' });
-    expect(cell(r, 'biceps')).toMatchObject({ count: 0, indirect: 1, score: 0.5, color: 'orange' });
+    expect(cell(r, 'biceps')).toMatchObject({ count: 0, indirect: 1, score: 0.5, color: 'vert' });
     expect(label(r, 'dos')).toBe('1×');
     expect(label(r, 'biceps')).toBe('+1 indirect');
     expect(cell(r, 'pectoraux')).toMatchObject({ score: 0, color: 'vert' });
@@ -70,7 +70,7 @@ describe('Récapitulatif hebdomadaire : groupes secondaires (§19.6)', () => {
 
   it('183. « hier » et « aujourd’hui » s’appliquent au travail indirect, même la semaine précédente', () => {
     const r = weeklyRecap([session(at(15, 18), ['tractions-assistees'])], LIB, at(16, 9));
-    expect(cell(r, 'biceps')).toMatchObject({ color: 'orange', recency: 'yesterday' });
+    expect(cell(r, 'biceps')).toMatchObject({ score: 0.5, color: 'vert', recency: 'yesterday' });
     const today = weeklyRecap([session(at(16, 7), ['developpe-couche'])], LIB, at(16, 9));
     expect(cell(today, 'triceps').recency).toBe('today');
     expect(cell(today, 'epaules').recency).toBe('today');
@@ -79,16 +79,28 @@ describe('Récapitulatif hebdomadaire : groupes secondaires (§19.6)', () => {
     expect(cell(monday, 'biceps')).toMatchObject({ score: 0, color: 'vert', recency: 'yesterday' });
   });
 
-  it('184. Tri inchangé sur le score ; seuls les groupes affichés comptent ; aucun effet sur le moteur ni sur le bilan', () => {
+  it('184. Tri selon le score (un vert avec de l’indirect après un vert sans rien) ; seuls les groupes affichés comptent ; aucun effet sur le moteur ni sur le bilan', () => {
     const r = weeklyRecap([session(at(12), ['tractions-assistees']), session(at(13), ['developpe-couche', 'crunch-machine'])], LIB, at(16, 9));
     expect(r.cells.map((c) => [c.group, c.color, c.score])).toEqual([
       ['jambes', 'vert', 0],
+      ['epaules', 'vert', 0.5],
+      ['biceps', 'vert', 0.5],
+      ['triceps', 'vert', 0.5],
       ['pectoraux', 'orange', 1],
       ['dos', 'orange', 1],
-      ['epaules', 'orange', 0.5],
-      ['biceps', 'orange', 0.5],
-      ['triceps', 'orange', 0.5],
     ]);
+    // À couleur égale, le score passe avant la mention « hier » : un orange 1,5 d'il y a trois jours après un orange 1 d'hier.
+    const sorted = weeklyRecap(
+      [session(at(12), ['curl-biceps-halteres']), session(at(13), ['tractions-assistees']), session(at(15, 18), ['developpe-couche'])],
+      LIB,
+      at(16, 9),
+    );
+    expect(sorted.cells.filter((c) => c.color === 'orange').map((c) => [c.group, c.score, c.recency])).toEqual([
+      ['dos', 1, null],
+      ['pectoraux', 1, 'yesterday'],
+      ['biceps', 1.5, null],
+    ]);
+    expect(sorted.cells.filter((c) => c.color === 'vert').map((c) => c.group)).toEqual(['jambes', 'epaules', 'triceps']);
     // Sous-groupe secondaire des jambes : compté dans « Jambes » ; abdominaux jamais comptés.
     const custom: Exercise = {
       ...LIB[0]!, id: 'perso-rameur', name: 'Rameur lesté', primaryGroup: 'dos', secondaryGroups: ['quadriceps', 'abdominaux'],
