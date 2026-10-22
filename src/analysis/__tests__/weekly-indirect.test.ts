@@ -79,7 +79,7 @@ describe('Récapitulatif hebdomadaire : groupes secondaires (§19.6)', () => {
     expect(cell(monday, 'biceps')).toMatchObject({ score: 0, color: 'vert', recency: 'yesterday' });
   });
 
-  it('184. Tri selon le score (un vert avec de l’indirect après un vert sans rien) ; seuls les groupes affichés comptent ; aucun effet sur le moteur ni sur le bilan', () => {
+  it('184. Tri : couleur, puis « hier » / « aujourd’hui » en dernier, puis score croissant (un vert avec de l’indirect après un vert sans rien) ; seuls les groupes affichés comptent ; aucun effet sur le moteur ni sur le bilan', () => {
     const r = weeklyRecap([session(at(12), ['tractions-assistees']), session(at(13), ['developpe-couche', 'crunch-machine'])], LIB, at(16, 9));
     expect(r.cells.map((c) => [c.group, c.color, c.score])).toEqual([
       ['jambes', 'vert', 0],
@@ -89,18 +89,38 @@ describe('Récapitulatif hebdomadaire : groupes secondaires (§19.6)', () => {
       ['pectoraux', 'orange', 1],
       ['dos', 'orange', 1],
     ]);
-    // À couleur égale, le score passe avant la mention « hier » : un orange 1,5 d'il y a trois jours après un orange 1 d'hier.
+    // À couleur égale, la mention « hier » passe avant le score : un orange 1,5 sans mention avant un orange 1 d'hier ;
+    // puis score croissant, parmi les groupes sans mention comme parmi ceux travaillés hier.
     const sorted = weeklyRecap(
-      [session(at(12), ['curl-biceps-halteres']), session(at(13), ['tractions-assistees']), session(at(15, 18), ['developpe-couche'])],
+      [
+        session(at(12), ['curl-biceps-halteres']),
+        session(at(13), ['tractions-assistees']),
+        session(at(15, 18), ['developpe-couche']),
+        session(at(15, 19), ['extension-triceps-poulie']),
+      ],
       LIB,
       at(16, 9),
     );
-    expect(sorted.cells.filter((c) => c.color === 'orange').map((c) => [c.group, c.score, c.recency])).toEqual([
-      ['dos', 1, null],
-      ['pectoraux', 1, 'yesterday'],
-      ['biceps', 1.5, null],
+    expect(sorted.cells.map((c) => [c.group, c.color, c.score, c.recency])).toEqual([
+      ['jambes', 'vert', 0, null],
+      ['epaules', 'vert', 0.5, 'yesterday'],
+      ['dos', 'orange', 1, null],
+      ['biceps', 'orange', 1.5, null],
+      ['pectoraux', 'orange', 1, 'yesterday'],
+      ['triceps', 'orange', 1.5, 'yesterday'],
     ]);
-    expect(sorted.cells.filter((c) => c.color === 'vert').map((c) => c.group)).toEqual(['jambes', 'epaules', 'triceps']);
+    // Vert : score croissant parmi les groupes sans mention, le groupe travaillé hier en dernier.
+    const greens = weeklyRecap([session(at(12), ['tractions-assistees']), session(at(15, 18), ['shrugs', 'pull-over-poulie'])], LIB, at(16, 9));
+    expect(greens.cells.filter((c) => c.color === 'vert').map((c) => [c.group, c.score, c.recency])).toEqual([
+      ['pectoraux', 0, null],
+      ['epaules', 0, null],
+      ['triceps', 0, null],
+      ['jambes', 0, null],
+      ['biceps', 0.5, null],
+    ]);
+    const lastWeek = weeklyRecap([session(at(18, 17), ['pec-deck']), session(at(12), ['tractions-assistees'])], LIB, at(19, 9));
+    expect(lastWeek.cells.map((c) => [c.group, c.score, c.recency]).slice(-1)).toEqual([['pectoraux', 0, 'yesterday']]);
+
     // Sous-groupe secondaire des jambes : compté dans « Jambes » ; abdominaux jamais comptés.
     const custom: Exercise = {
       ...LIB[0]!, id: 'perso-rameur', name: 'Rameur lesté', primaryGroup: 'dos', secondaryGroups: ['quadriceps', 'abdominaux'],

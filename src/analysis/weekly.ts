@@ -160,14 +160,14 @@ export function weeklyRecap(
     const time = last.get(group);
     return { group, count, indirect, score, color, recency: time === undefined ? null : recencyOf(time, now) };
   });
-  // Vert en haut, puis orange, puis rouge ; à couleur égale, score croissant (un vert avec de l'indirect après un vert
-  // sans rien), puis les groupes travaillés hier ou aujourd'hui en dernier.
+  // Vert en haut, puis orange, puis rouge ; à couleur égale, les groupes travaillés hier ou aujourd'hui en dernier,
+  // puis score croissant (un vert avec de l'indirect après un vert sans rien).
   const order = new Map(settings.groups.map((g, i) => [g, i]));
   cells.sort(
     (a, b) =>
       COLOR_RANK[a.color] - COLOR_RANK[b.color] ||
-      a.score - b.score ||
       Number(a.recency !== null) - Number(b.recency !== null) ||
+      a.score - b.score ||
       order.get(a.group)! - order.get(b.group)!,
   );
   return { start, end, sessionCount, cardioMinutes: cardio, cells };
