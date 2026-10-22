@@ -105,7 +105,7 @@ L'écran principal doit donner accès directement à :
 - Des réglages simples.
 - La rubrique « Mon poids ».
 - Le bilan de progression (§19.3), par un bouton du même style que les autres boutons de l'accueil, placé avec eux sous le récapitulatif hebdomadaire (juste après « Historique »).
-- Le bandeau discret « Ton bilan de la semaine est prêt » / « Ton bilan du mois est prêt » (§19.7), sous le bouton de démarrage, quand un bilan est à voir.
+- Le bandeau discret « Ton bilan de la semaine est prêt » / « Ton bilan du mois est prêt » (§19.7), tout en haut, sous le titre et au-dessus du récapitulatif hebdomadaire, quand un bilan est à voir.
 
 Éviter les menus profonds, les écrans superflus, les animations inutiles et les longs textes explicatifs.
 
@@ -1375,11 +1375,12 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 
 188. Bornes : semaine du lundi 0 h 00 au dimanche (une séance commencée dimanche 23 h 30 reste dans sa semaine), mois calendaire (31 à 23 h 30 dans le mois, 1er à 0 h 00 dans le suivant) ; titres « Semaine du 19 au 25 oct. 2026 », « du 28 sept. au 4 oct. 2026 », « du 29 déc. 2025 au 4 janv. 2026 », « Octobre 2026 » ; objets du mail ; décalage d'une période (changement d'année compris) ; clé invalide refusée ; période ouverte par défaut.
 189. Période sans séance : « 0 séance », comparaison et durée seulement, pesées si elles existent, rien d'inventé ; une seule pesée : une seule valeur.
-190. Paliers validés de la période (+1 répétition, poids supérieur, moins d'aide et +1 répétition d'un exercice assisté) avec ancienne → nouvelle cible et date ; une seule verte ou la première verte d'une période antérieure ne sont pas listées ; rouges et passage en « poids inférieur » (« plus d'aide ») sur une ligne par exercice ; séances et moteur inchangés.
+190. Paliers validés de la période (+1 répétition, poids supérieur, moins d'aide et +1 répétition d'un exercice assisté) avec ancienne → nouvelle cible et date ; une seule verte ou la première verte d'une période antérieure ne sont pas listées ; rouges et passage en « poids inférieur » (« plus d'aide ») sur une ligne par exercice (« 4ᵉ séance rouge de suite à 100 kg → poids inférieur recommandé », sinon « 2 séances rouges cette semaine (3 de suite à 100 kg) » quand la série a commencé avant, sans parenthèse sinon, « ce mois-ci » pour le mois) ; séances et moteur inchangés.
 191. Comparaison avec la période précédente (+1, −1, « autant que »), durée (y compris une séance importée sans heure), cardio par machine, groupes directs et indirects, semaine et mois (« par rapport au mois précédent »).
 192. Texte du mail complet, en texte brut (titres en capitales, listes « - », sans HTML), mention d'une période en cours ; lien mailto avec adresse, objet et corps encodés (retours à la ligne CRLF).
 193. Bandeau : semaine écoulée à partir du lundi, mois écoulé à partir du 1er, une seule fois par période (plus affiché une fois le bilan ouvert ; ouvrir la période en cours ou une plus ancienne ne compte pas), seulement si la période contient une séance, désactivable séparément ; réglages lus ou importés contrôlés (adresse invalide écartée).
-194. (bout en bout, format smartphone) Lundi : bandeau de la semaine seul ; « Plus tard » le masque jusqu'à la prochaine ouverture ; « Voir » ouvre la semaine écoulée avec toutes ses sections ; aucune couleur de statut, rien ne dépasse à 412, 360 et 320 px ; « Envoyer par mail » transmet l'objet et le texte au partage natif ; « Copier le texte » ; navigation précédente / suivante jusqu'à la période en cours ; onglet Mois ; bandeau disparu après ouverture, même après relance ; accès depuis le bilan de progression ; adresse invalide refusée, adresse et bandeaux conservés ; bouton « Mail à … » quand une adresse est renseignée.
+194. (bout en bout, format smartphone) Lundi : bandeau de la semaine seul, au-dessus du récapitulatif resté visible sans défilement ; « Plus tard » le masque jusqu'à la prochaine ouverture ; « Voir » ouvre la semaine écoulée avec toutes ses sections ; aucune couleur de statut, rien ne dépasse à 412, 360 et 320 px ; « Envoyer par mail » transmet l'objet et le texte au partage natif ; « Copier le texte » ; navigation précédente / suivante jusqu'à la période en cours ; onglet Mois ; bandeau disparu après ouverture, même après relance ; accès depuis le bilan de progression ; adresse invalide refusée, adresse et bandeaux conservés ; bouton « Mail à … » quand une adresse est renseignée ; éléments importants en gras.
+195. Mise en évidence : comparaisons (y compris « autant que »), « Non travaillés », changement de cible des progressions, séances rouges de la période et « poids inférieur recommandé », valeurs des pesées ; noms, nombres de séances et dates en texte simple ; le mail sans aucune marque.
 
 Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
 
@@ -1550,9 +1551,12 @@ L'application n'a pas de serveur : aucun envoi automatique. Elle prépare le bil
   - **Séances** : nombre de séances et comparaison avec la période précédente (« 3 séances, +1 par rapport à la semaine précédente », « autant que… ») ; durée totale des séances à heures connues, comparée de même (« durée inconnue pour 1 séance importée » si besoin) ; minutes de cardio par machine.
   - **Groupes travaillés** : même calcul que le récapitulatif (§19.6, direct + indirect, groupes affichés seulement), en nombre de séances (« Biceps : 1× · +2 indirect ») ; puis « Non travaillés : … ».
   - **Progressions** : paliers validés pendant la période d'après les évaluations du moteur (2ᵉ validation verte consécutive) : « Curl biceps haltères : 3×8 → 3×9 à 12 kg (21 oct.) », « Leg extension : 3×12 à 40 kg validé → poids supérieur, 3×8 », « Tractions assistées : 3×12 avec 30 kg d'aide validé → moins d'aide, 3×8 » ; sinon « Aucun palier validé. ».
-  - **En difficulté** : une ligne par exercice ayant eu au moins une séance rouge (« 2 séances rouges »), complétée par le passage en « poids inférieur » (« plus d'aide » pour un exercice assisté) s'il a eu lieu pendant la période ; sinon « Aucun exercice en difficulté. ».
+  - **En difficulté** : une ligne par exercice ayant eu au moins une séance rouge pendant la période ; sinon « Aucun exercice en difficulté. ». Formulation selon le cas (précision validée) :
+    - passage en « poids inférieur » pendant la période : « Presse à cuisses : 4ᵉ séance rouge de suite à 100 kg → poids inférieur recommandé (21 oct.) » (« avec 30 kg d'aide → plus d'aide recommandée » pour un exercice assisté) ;
+    - sinon : « Presse à cuisses : 2 séances rouges cette semaine (3 de suite à 100 kg) » (« ce mois-ci » pour le mois). La parenthèse donne la série de rouges en cours à la fin de la période quand elle a commencé avant la période ; sans série en cours plus longue (série commencée dans la période, ou interrompue), pas de parenthèse.
   - **Poids** : première et dernière pesée de la période, si elles existent (« 80,2 kg le 19 oct. → 79,6 kg le 25 oct. »).
   - Une période sans séance n'affiche que le nombre de séances, la comparaison et les pesées.
+- Mise en évidence (précision validée) : les phrases gardent leur rédaction, mais l'essentiel se repère d'un coup d'œil : en gras et en blanc, le reste de la ligne en gris clair. Sont mis en évidence : les comparaisons avec la période précédente (« +1 par rapport à la semaine précédente », « autant que… »), la ligne « Non travaillés : … », le changement de cible d'une progression (« 3×8 → 3×9 à 12 kg », « poids supérieur, 3×8 », « moins d'aide, 3×8 »), le nombre de séances rouges de la période (« 2 séances rouges cette semaine ») et « poids inférieur recommandé » / « plus d'aide recommandée », les deux valeurs de poids. Restent en texte simple : nombres de séances, durée, cardio, noms d'exercices et de groupes travaillés, dates. Le mail reste en texte brut, sans marque.
 - Pas de score, pas de conseil. Écran neutre (cadres `--frame-neutral`) : pas de vert, d'orange ni de rouge, y compris dans les messages. Aucun effet sur le moteur de progression ; rien n'est stocké, tout est recalculé à l'affichage.
 
 **Envoi**
@@ -1564,7 +1568,7 @@ L'application n'a pas de serveur : aucun envoi automatique. Elle prépare le bil
 
 **Signalement**
 
-- À l'ouverture de l'appli à partir du lundi (semaine écoulée) et à partir du 1er (mois écoulé), un bandeau discret sur l'accueil, sous le bouton de démarrage : « Ton bilan de la semaine est prêt » / « Ton bilan du mois est prêt », avec « Voir » et « Plus tard ». Pas de notification système.
+- À l'ouverture de l'appli à partir du lundi (semaine écoulée) et à partir du 1er (mois écoulé), un bandeau discret tout en haut de l'accueil, au-dessus du récapitulatif hebdomadaire (qui reste visible sans défilement) : « Ton bilan de la semaine est prêt » / « Ton bilan du mois est prêt », avec « Voir » et « Plus tard ». Pas de notification système.
 - Seulement si la période écoulée contient au moins une séance terminée. Seule la dernière période écoulée est signalée.
 - Il disparaît définitivement pour cette période une fois le bilan ouvert (donc aussi une fois envoyé). Ouvrir la période en cours ou une période plus ancienne ne compte pas.
 - « Plus tard » le masque jusqu'à la prochaine ouverture de l'appli (rechargement ou relance).

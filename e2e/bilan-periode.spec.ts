@@ -88,6 +88,11 @@ test.describe('Bilans de la semaine et du mois (§19.7)', () => {
     await expect(banner).toHaveCount(0);
     await page.reload();
     await expect(banner).toHaveCount(1);
+    // Tout en haut de l'accueil, au-dessus du récapitulatif, qui reste visible sans défilement.
+    const recap = page.getByTestId('weekly-recap');
+    const [bannerBox, recapBox] = [(await banner.boundingBox())!, (await recap.boundingBox())!];
+    expect(bannerBox.y).toBeLessThan(recapBox.y);
+    expect(recapBox.y + recapBox.height).toBeLessThanOrEqual(page.viewportSize()!.height);
     await test.info().attach('accueil-bandeau', { body: await page.screenshot(), contentType: 'image/png' });
 
     await banner.getByRole('button', { name: 'Voir' }).click();
@@ -98,8 +103,12 @@ test.describe('Bilans de la semaine et du mois (§19.7)', () => {
     await expect(section('Séances')).toContainText('Cardio : 40 min (Tapis de marche 30 min, Rameur 10 min)');
     await expect(section('Groupes travaillés')).toContainText('Biceps : 1× · +2 indirect');
     await expect(section('Progressions')).toContainText('Tractions assistées : 3×12 avec 30 kg d’aide validé → moins d’aide, 3×8 (24 oct.)');
-    await expect(section('En difficulté')).toContainText('Presse à cuisses : 1 séance rouge ; poids inférieur recommandé');
+    await expect(section('En difficulté')).toContainText('Presse à cuisses : 4ᵉ séance rouge de suite à 100\u00a0kg → poids inférieur recommandé (21\u00a0oct.)');
     await expect(section('Poids')).toContainText('80,2 kg le 19 oct. → 79,6 kg le 25 oct.');
+    // Éléments importants mis en évidence (gras), le reste en texte simple.
+    await expect(section('Progressions').locator('.report-em').first()).toHaveText('3×8 → 3×9 à 12\u00a0kg');
+    await expect(section('Groupes travaillés').locator('.report-em')).toHaveText(['Non travaillés : Épaules, Triceps']);
+    expect(await section('Séances').locator('.report-em').first().evaluate((e) => getComputedStyle(e).fontWeight)).toBe('700');
     await test.info().attach('bilan-semaine', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
 
     // Aucune couleur de statut sur l'écran ; rien ne dépasse à 412, 360 et 320 px.
@@ -130,7 +139,7 @@ test.describe('Bilans de la semaine et du mois (§19.7)', () => {
     // Navigation : semaine précédente, puis suivante jusqu'à la semaine en cours (sans bouton « suivante »).
     await page.getByRole('button', { name: 'Semaine précédente' }).click();
     await expect(page.getByTestId('report-title')).toHaveText('Semaine du 12 au 18 oct. 2026');
-    await expect(section('En difficulté')).toContainText('Presse à cuisses : 3 séances rouges');
+    await expect(section('En difficulté')).toContainText('Presse à cuisses : 3\u00a0séances rouges cette semaine');
     await page.getByRole('button', { name: 'Semaine suivante' }).click();
     await page.getByRole('button', { name: 'Semaine suivante' }).click();
     await expect(page.getByTestId('report-title')).toHaveText('Semaine du 26 oct. au 1 nov. 2026');

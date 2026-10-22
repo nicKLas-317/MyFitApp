@@ -1806,6 +1806,16 @@ fieldset.frame > legend + * {
   overflow-wrap: break-word;
 }
 
+.report-lines li {
+  color: var(--muted);
+}
+
+/* Éléments importants (comparaisons, nouvelles cibles, non travaillés…) : repérables d'un coup d'œil. */
+.report-em {
+  color: var(--text);
+  font-weight: 700;
+}
+
 .report-actions {
   display: grid;
   gap: 8px;

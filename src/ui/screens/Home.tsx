@@ -28,6 +28,7 @@ export function Home() {
   return (
     <main className="screen home">
       <h1 className="brand">MyFitApp</h1>
+      <ReportBanner />
       <WeeklyRecapBlock />
       {active ? (
         <button type="button" className="btn primary huge" onClick={() => navigate('seance')}>
@@ -39,7 +40,6 @@ export function Home() {
           Démarrer une séance
         </button>
       )}
-      <ReportBanner />
       {remind && (
         <div className="banner info reminder" role="status">
           <span>{lastExportAt ? 'Aucune sauvegarde depuis plus de 14 jours.' : 'Pensez à sauvegarder vos séances.'}</span>

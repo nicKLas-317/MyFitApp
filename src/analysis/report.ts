@@ -125,6 +125,16 @@ export interface ReportDecrease {
   assisted: boolean;
 }
 
+export interface ReportReds {
+  variantId: string;
+  /** Séances rouges pendant la période. */
+  count: number;
+  /** Séances rouges de suite au même poids après la dernière séance de la période (série en cours, éventuellement commencée avant). */
+  streak: number;
+  weightKg: number;
+  assisted: boolean;
+}
+
 export interface PeriodReport {
   period: ReportPeriod;
   /** La période n'est pas terminée. */
@@ -138,8 +148,8 @@ export interface PeriodReport {
   /** Groupes affichés au récapitulatif, dans leur ordre : séances directes et indirectes. */
   groups: { group: MuscleGroup; count: number; indirect: number }[];
   progressions: ReportProgression[];
-  /** Exercices avec au moins une séance rouge, et leur nombre. */
-  reds: { variantId: string; count: number }[];
+  /** Exercices avec au moins une séance rouge pendant la période. */
+  reds: ReportReds[];
   /** Exercices passés en « poids inférieur » (ou « plus d'aide ») pendant la période. */
   decreases: ReportDecrease[];
   /** Première et dernière pesées de la période (une seule si une seule pesée, aucune sinon). */
@@ -184,7 +194,7 @@ export function buildReport(period: ReportPeriod, input: ReportInput): PeriodRep
   // Évaluations du moteur, dans l'ordre du rejeu : paliers validés, rouges et passages en « poids inférieur ».
   const dateOf = new Map(list.map((s) => [s.id, s.date]));
   const progressions: ReportProgression[] = [];
-  const reds = new Map<string, number>();
+  const reds = new Map<string, ReportReds>();
   const decreases: ReportDecrease[] = [];
   const decreasing = new Set<string>();
   for (const ev of evaluations) {
@@ -205,7 +215,17 @@ export function buildReport(period: ReportPeriod, input: ReportInput): PeriodRep
         assisted,
       });
     }
-    if (ev.status === 'rouge') reds.set(ev.variantId, (reds.get(ev.variantId) ?? 0) + 1);
+    const red = reds.get(ev.variantId);
+    if (ev.status === 'rouge' || red) {
+      // Série de rouges en cours à la dernière séance de la période.
+      reds.set(ev.variantId, {
+        variantId: ev.variantId,
+        count: (red?.count ?? 0) + (ev.status === 'rouge' ? 1 : 0),
+        streak: ev.redStreak,
+        weightKg: ev.palier.weightKg,
+        assisted,
+      });
+    }
     if (ev.recommendation.kind === 'weight_down' && !wasDecreasing) {
       decreases.push({ variantId: ev.variantId, date, weightKg: ev.palier.weightKg, reds: ev.redStreak, assisted });
     }
@@ -224,15 +244,26 @@ export function buildReport(period: ReportPeriod, input: ReportInput): PeriodRep
     cardio: [...cardio].map(([machine, minutes]) => ({ machine, minutes })).sort((a, b) => b.minutes - a.minutes),
     groups,
     progressions,
-    reds: [...reds].map(([variantId, count]) => ({ variantId, count })),
+    reds: [...reds.values()],
     decreases,
     weighIns: weighed.length > 1 ? [weighed[0]!, weighed[weighed.length - 1]!] : weighed,
   };
 }
 
+/** Morceau d'une ligne : texte simple, ou élément important mis en évidence à l'écran (le mail reste en texte brut). */
+export type ReportPart = string | { em: string };
+export type ReportLine = ReportPart[];
+
 export interface ReportSection {
   title: string;
-  lines: string[];
+  lines: ReportLine[];
+}
+
+const em = (text: string): ReportPart => ({ em: text });
+
+/** Texte d'une ligne, sans mise en évidence. */
+export function lineText(line: ReportLine): string {
+  return line.map((p) => (typeof p === 'string' ? p : p.em)).join('');
 }
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n > 1 ? many : one}`;
@@ -255,15 +286,19 @@ export function reportSections(report: PeriodReport, name: (variantId: string) =
   const compare = (diff: string | null) =>
     diff ? `${diff} par rapport ${week ? 'à la semaine précédente' : 'au mois précédent'}` : `autant que ${week ? 'la semaine précédente' : 'le mois précédent'}`;
 
-  const sessionsLines = [`${plural(totals.sessionCount, 'séance')}, ${compare(signed(totals.sessionCount - previous.sessionCount, String))}`];
+  const sessionsLines: ReportLine[] = [[`${plural(totals.sessionCount, 'séance')}, `, em(compare(signed(totals.sessionCount - previous.sessionCount, String)))]];
   if (totals.sessionCount > 0 || previous.sessionCount > 0) {
     const unknown = totals.unknownDuration > 0 ? ` (durée inconnue pour ${plural(totals.unknownDuration, 'séance importée', 'séances importées')})` : '';
-    sessionsLines.push(`Durée totale : ${formatDurationLong(totals.durationMs)}, ${compare(signed(Math.round((totals.durationMs - previous.durationMs) / 60_000), formatMinutes))}${unknown}`);
+    sessionsLines.push([
+      `Durée totale : ${formatDurationLong(totals.durationMs)}, `,
+      em(compare(signed(Math.round((totals.durationMs - previous.durationMs) / 60_000), formatMinutes))),
+      unknown,
+    ]);
   }
   if (totals.sessionCount > 0) {
     const minutes = report.cardio.reduce((n, c) => n + c.minutes, 0);
     sessionsLines.push(
-      minutes > 0 ? `Cardio : ${formatMinutes(minutes)} (${report.cardio.map((c) => `${c.machine} ${formatMinutes(c.minutes)}`).join(', ')})` : 'Cardio : aucun',
+      minutes > 0 ? [`Cardio : ${formatMinutes(minutes)} (${report.cardio.map((c) => `${c.machine} ${formatMinutes(c.minutes)}`).join(', ')})`] : ['Cardio : aucun'],
     );
   }
   const sections: ReportSection[] = [{ title: 'Séances', lines: sessionsLines }];
@@ -271,45 +306,54 @@ export function reportSections(report: PeriodReport, name: (variantId: string) =
   if (totals.sessionCount > 0) {
     const worked = report.groups.filter((g) => g.count > 0 || g.indirect > 0);
     const idle = report.groups.filter((g) => g.count === 0 && g.indirect === 0);
-    const lines = worked.map((g) => {
+    const lines: ReportLine[] = worked.map((g) => {
       const parts = [...(g.count > 0 ? [`${g.count}×`] : []), ...(g.indirect > 0 ? [`+${g.indirect} indirect`] : [])];
-      return `${MUSCLE_GROUP_LABELS[g.group]} : ${parts.join(' · ')}`;
+      return [`${MUSCLE_GROUP_LABELS[g.group]} : ${parts.join(' · ')}`];
     });
-    if (idle.length > 0) lines.push(`Non travaillés : ${idle.map((g) => MUSCLE_GROUP_LABELS[g.group]).join(', ')}`);
+    if (idle.length > 0) lines.push([em(`Non travaillés : ${idle.map((g) => MUSCLE_GROUP_LABELS[g.group]).join(', ')}`)]);
     sections.push({ title: 'Groupes travaillés', lines });
 
     sections.push({
       title: 'Progressions',
       lines:
         report.progressions.length > 0
-          ? report.progressions.map((p) => {
+          ? report.progressions.map((p): ReportLine => {
               const from = `${p.sets}×${p.from.targetReps}`;
-              const change =
+              const change: ReportPart[] =
                 p.kind === 'reps_up'
-                  ? `${from} → ${p.sets}×${p.toReps} ${load(p.from.weightKg, p.assisted)}`
-                  : `${from} ${load(p.from.weightKg, p.assisted)} validé → ${p.assisted ? 'moins d’aide' : 'poids supérieur'}, ${p.sets}×${p.toReps}`;
-              return `${name(p.variantId)} : ${change} (${shortDay(p.date)})`;
+                  ? [em(`${from} → ${p.sets}×${p.toReps} ${load(p.from.weightKg, p.assisted)}`)]
+                  : [`${from} ${load(p.from.weightKg, p.assisted)} validé → `, em(`${p.assisted ? 'moins d’aide' : 'poids supérieur'}, ${p.sets}×${p.toReps}`)];
+              return [`${name(p.variantId)} : `, ...change, ` (${shortDay(p.date)})`];
             })
-          : ['Aucun palier validé.'],
+          : [['Aucun palier validé.']],
     });
 
-    // Une ligne par exercice : ses séances rouges, et son passage en « poids inférieur » s'il a eu lieu.
-    const difficulty = report.reds.map((r) => {
-      const parts = [plural(r.count, 'séance rouge', 'séances rouges')];
-      for (const d of report.decreases.filter((x) => x.variantId === r.variantId)) {
-        parts.push(
-          `${d.assisted ? 'plus d’aide recommandée' : 'poids inférieur recommandé'} après ${d.reds} séances rouges de suite ${load(d.weightKg, d.assisted)} (${shortDay(d.date)})`,
-        );
+    // Une ligne par exercice : son passage en « poids inférieur » s'il a eu lieu pendant la période, sinon ses séances
+    // rouges de la période, avec la série en cours quand elle a commencé avant.
+    const inThisPeriod = week ? 'cette semaine' : 'ce mois-ci';
+    const difficulty = report.reds.map((r): ReportLine => {
+      const decreases = report.decreases.filter((x) => x.variantId === r.variantId);
+      if (decreases.length > 0) {
+        return [
+          `${name(r.variantId)} : `,
+          ...decreases.flatMap((d, i): ReportPart[] => [
+            ...(i > 0 ? [' ; '] : []),
+            `${d.reds}ᵉ séance rouge de suite ${load(d.weightKg, d.assisted)} → `,
+            em(d.assisted ? 'plus d’aide recommandée' : 'poids inférieur recommandé'),
+            ` (${shortDay(d.date)})`,
+          ]),
+        ];
       }
-      return `${name(r.variantId)} : ${parts.join(' ; ')}`;
+      const ongoing = r.streak > r.count ? ` (${r.streak} de suite ${load(r.weightKg, r.assisted)})` : '';
+      return [`${name(r.variantId)} : `, em(`${plural(r.count, 'séance rouge', 'séances rouges')} ${inThisPeriod}`), ongoing];
     });
-    sections.push({ title: 'En difficulté', lines: difficulty.length > 0 ? difficulty : ['Aucun exercice en difficulté.'] });
+    sections.push({ title: 'En difficulté', lines: difficulty.length > 0 ? difficulty : [['Aucun exercice en difficulté.']] });
   }
 
   if (report.weighIns.length > 0) {
     const [a, b] = report.weighIns;
-    const at = (w: WeighIn) => `${formatKg(w.weightKg)} le ${shortDay(w.date)}`;
-    sections.push({ title: 'Poids', lines: [b ? `${at(a!)} → ${at(b)}` : at(a!)] });
+    const at = (w: WeighIn): ReportPart[] => [em(formatKg(w.weightKg)), ` le ${shortDay(w.date)}`];
+    sections.push({ title: 'Poids', lines: [b ? [...at(a!), ' → ', ...at(b)] : at(a!)] });
   }
   return sections;
 }
@@ -325,7 +369,7 @@ export function reportText(report: PeriodReport, name: (variantId: string) => st
   const head = [mailSubject(report.period)];
   const note = inProgressNote(report);
   if (note) head.push(`(${note})`);
-  const body = reportSections(report, name).map((s) => [s.title.toUpperCase(), ...s.lines.map((l) => `- ${l}`)].join('\n'));
+  const body = reportSections(report, name).map((s) => [s.title.toUpperCase(), ...s.lines.map((l) => `- ${lineText(l)}`)].join('\n'));
   return [head.join('\n'), ...body].join('\n\n') + '\n';
 }
 

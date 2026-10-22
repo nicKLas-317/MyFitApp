@@ -17,6 +17,7 @@ import {
   periodKey,
   periodTitle,
   reportSections,
+  lineText,
   reportText,
   sanitizeReportSettings,
   shiftPeriod,
@@ -61,7 +62,8 @@ function report(period: ReportPeriod, sessions: Session[], now: number, weighIns
   const replay = rebuildProfile(sessions, SETTINGS);
   return buildReport(period, { sessions, exercises: LIB, evaluations: replay.evaluations, settings: SETTINGS, groups: DEFAULT_RECAP_SETTINGS.groups, weighIns, now });
 }
-const linesOf = (r: ReturnType<typeof report>, title: string) => reportSections(r, name).find((s) => s.title === title)?.lines;
+const linesOf = (r: ReturnType<typeof report>, title: string) => reportSections(r, name).find((s) => s.title === title)?.lines.map(lineText);
+const textSections = (r: ReturnType<typeof report>) => reportSections(r, name).map((s) => ({ title: s.title, lines: s.lines.map(lineText) }));
 
 /** Semaine précédente (12–18 oct.) : 3 séances ; semaine du bilan (19–25 oct.) : 4 séances. */
 function octoberHistory(): Session[] {
@@ -121,7 +123,7 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
   it('189. Période sans séance : rien d’inventé, comparaison et pesées seulement', () => {
     const r = report(WEEK, octoberHistory().filter((s) => s.date < '2026-10-19'), oct(26, 9), WEIGH_INS);
     expect(r.totals).toEqual({ sessionCount: 0, durationMs: 0, unknownDuration: 0 });
-    expect(reportSections(r, name)).toEqual([
+    expect(textSections(r)).toEqual([
       {
         title: 'Séances',
         lines: ['0 séance, −3 par rapport à la semaine précédente', 'Durée totale : 0 min, −3 h 00 par rapport à la semaine précédente'],
@@ -129,7 +131,7 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
       { title: 'Poids', lines: ['80,2 kg le 19 oct. → 79,6 kg le 25 oct.'] },
     ]);
     const empty = report(WEEK, [], oct(26, 9));
-    expect(reportSections(empty, name)).toEqual([{ title: 'Séances', lines: ['0 séance, autant que la semaine précédente'] }]);
+    expect(textSections(empty)).toEqual([{ title: 'Séances', lines: ['0 séance, autant que la semaine précédente'] }]);
     // Une seule pesée : une seule valeur.
     expect(linesOf(report(WEEK, [], oct(26, 9), [{ date: '2026-10-22', weightKg: 80 }]), 'Poids')).toEqual(['80 kg le 22 oct.']);
   });
@@ -151,10 +153,11 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
     ]);
     // Une seule verte (pec deck) ne valide rien ; la première verte du curl, la semaine précédente, n'est pas listée.
     expect(r.progressions.map((p) => p.variantId)).not.toContain('pec-deck');
-    expect(linesOf(r, 'En difficulté')).toEqual(['Presse à cuisses : 1 séance rouge ; poids inférieur recommandé après 4 séances rouges de suite à 100 kg (21 oct.)']);
+    expect(linesOf(r, 'En difficulté')).toEqual(['Presse à cuisses : 4ᵉ séance rouge de suite à 100 kg → poids inférieur recommandé (21 oct.)']);
     // La semaine précédente : trois rouges, pas encore de baisse ; la première verte du curl ne valide rien.
     const previous = report(shiftPeriod(WEEK, -1), sessions, oct(26, 9));
-    expect(linesOf(previous, 'En difficulté')).toEqual(['Presse à cuisses : 3 séances rouges']);
+    // Série commencée dans la période : pas de parenthèse.
+    expect(linesOf(previous, 'En difficulté')).toEqual(['Presse à cuisses : 3 séances rouges cette semaine']);
     expect(linesOf(previous, 'Progressions')).toEqual(['Aucun palier validé.']);
 
     // Exercice assisté : +1 répétition avec l'aide, puis « plus d'aide » après quatre rouges.
@@ -165,7 +168,25 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
     ];
     const assisted = report(WEEK, dips, oct(26, 9));
     expect(linesOf(assisted, 'Progressions')).toEqual(['Dips assistés : 3×8 → 3×9 avec 25 kg d’aide (19 oct.)']);
-    expect(linesOf(assisted, 'En difficulté')).toEqual(['Dips assistés : 4 séances rouges ; plus d’aide recommandée après 4 séances rouges de suite avec 25 kg d’aide (23 oct.)']);
+    expect(linesOf(assisted, 'En difficulté')).toEqual(['Dips assistés : 4ᵉ séance rouge de suite avec 25 kg d’aide → plus d’aide recommandée (23 oct.)']);
+
+    // Sans baisse : rouges de la période, et série en cours quand elle a commencé avant (semaine comme mois).
+    const ongoing = [
+      session(oct(16), [red('presse-a-cuisses', 100)]),
+      session(oct(20), [red('presse-a-cuisses', 100), red('leg-curl', 30)]),
+      session(oct(22), [red('presse-a-cuisses', 100), green('leg-curl', 30)]),
+    ];
+    expect(linesOf(report(WEEK, ongoing, oct(26, 9)), 'En difficulté')).toEqual([
+      'Presse à cuisses : 2 séances rouges cette semaine (3 de suite à 100 kg)',
+      // Série interrompue par une verte : rien de plus.
+      'Leg curl : 1 séance rouge cette semaine',
+    ]);
+    expect(linesOf(report(periodContaining('month', oct(20)), ongoing, oct(26, 9)), 'En difficulté')).toEqual([
+      'Presse à cuisses : 3 séances rouges ce mois-ci',
+      'Leg curl : 1 séance rouge ce mois-ci',
+    ]);
+    const pastSeries = [session(oct(14), [red('tractions-assistees', 30, 12)]), session(oct(19), [red('tractions-assistees', 30, 12)])];
+    expect(linesOf(report(WEEK, pastSeries, oct(26, 9)), 'En difficulté')).toEqual(['Tractions assistées : 1 séance rouge cette semaine (2 de suite avec 30 kg d’aide)']);
 
     // Calcul pur : séances et moteur inchangés.
     expect(sessions).toEqual(snapshot);
@@ -224,7 +245,7 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
         '- Tractions assistées : 3×12 avec 30 kg d’aide validé → moins d’aide, 3×8 (24 oct.)',
         '',
         'EN DIFFICULTÉ',
-        '- Presse à cuisses : 1 séance rouge ; poids inférieur recommandé après 4 séances rouges de suite à 100 kg (21 oct.)',
+        '- Presse à cuisses : 4ᵉ séance rouge de suite à 100 kg → poids inférieur recommandé (21 oct.)',
         '',
         'POIDS',
         '- 80,2 kg le 19 oct. → 79,6 kg le 25 oct.',
@@ -238,6 +259,25 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
     const url = mailtoUrl(ADDRESS, mailSubject(WEEK), 'Ligne 1\nLigne 2');
     expect(url).toBe(`mailto:${ADDRESS}?subject=MyFitApp%20%E2%80%94%20Bilan%20semaine%20du%2019%20au%2025%20oct.%202026&body=Ligne%201%0D%0ALigne%202`);
     expect(mailtoUrl('', 'Objet', 'x')).toBe('mailto:?subject=Objet&body=x');
+  });
+
+  it('195. Éléments importants mis en évidence à l’écran : comparaisons, nouvelles cibles, non travaillés, rouges, baisses, pesées ; noms et nombres en texte simple', () => {
+    const r = report(WEEK, octoberHistory(), oct(26, 9), WEIGH_INS);
+    const emphasized = Object.fromEntries(
+      reportSections(r, name).map((s) => [s.title, s.lines.flatMap((l) => l.flatMap((p) => (typeof p === 'string' ? [] : [p.em])))]),
+    );
+    expect(emphasized).toEqual({
+      Séances: ['+1 par rapport à la semaine précédente', '+1 h 00 par rapport à la semaine précédente'],
+      'Groupes travaillés': ['Non travaillés : Épaules, Triceps'],
+      Progressions: ['3×8 → 3×9 à 12 kg', 'poids supérieur, 3×8', 'moins d’aide, 3×8'],
+      'En difficulté': ['poids inférieur recommandé'],
+      Poids: ['80,2 kg', '79,6 kg'],
+    });
+    // Le mail reste en texte brut : aucune marque de mise en évidence.
+    expect(reportText(r, name)).not.toMatch(/[*_<]/);
+    // « Autant que » est aussi mis en évidence.
+    const same = report(WEEK, [], oct(26, 9));
+    expect(reportSections(same, name)[0]!.lines[0]).toEqual(['0 séance, ', { em: 'autant que la semaine précédente' }]);
   });
 
   it('193. Bandeau : à partir du lundi ou du 1er, une seule fois par période, seulement avec des séances, désactivable', () => {

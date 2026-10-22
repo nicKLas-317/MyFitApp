@@ -7,6 +7,7 @@ import {
   defaultPeriod,
   firstPeriod,
   inProgressNote,
+  lineText,
   mailSubject,
   parsePeriodKey,
   periodKey,
@@ -117,7 +118,17 @@ export function PeriodReport({ kind, periodParam }: { kind: ReportKind; periodPa
           <h3 className="section-title">{s.title}</h3>
           <ul className="report-lines">
             {s.lines.map((line) => (
-              <li key={line}>{keepUnits(line)}</li>
+              <li key={lineText(line)}>
+                {line.map((part, i) =>
+                  typeof part === 'string' ? (
+                    keepUnits(part)
+                  ) : (
+                    <strong key={i} className="report-em">
+                      {keepUnits(part.em)}
+                    </strong>
+                  ),
+                )}
+              </li>
             ))}
           </ul>
         </section>
