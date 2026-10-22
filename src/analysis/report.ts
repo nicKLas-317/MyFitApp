@@ -1,0 +1,411 @@
+/**
+ * Bilans de la semaine et du mois (§19.7) : calcul pur, refait à chaque affichage à partir des séances, des
+ * évaluations du moteur (seule source de vérité) et des pesées. Aucun score ni conseil inventé ; aucun effet
+ * sur le moteur de progression. Le texte du mail est du texte brut, sans HTML.
+ */
+import type { WeighIn } from '../body/model';
+import { cardioOf, formatMinutes } from '../cardio/model';
+import type { Exercise, MuscleGroup, Session } from '../domain/types';
+import { resolveConfig, type EngineSettings, type Evaluation, type Palier } from '../engine';
+import { MUSCLE_GROUP_LABELS } from '../library/seed';
+import { formatDurationLong, formatKg, localDate } from '../session/format';
+import { isPalierValidated } from './progress';
+import { groupWork, sessionStartTime, weekStart } from './weekly';
+
+export type ReportKind = 'week' | 'month';
+
+/** Période d'un bilan : semaine du lundi 0 h 00 au dimanche, ou mois calendaire, heure locale. */
+export interface ReportPeriod {
+  kind: ReportKind;
+  /** Premier jour, 0 h 00. */
+  start: Date;
+  /** Premier jour de la période suivante, 0 h 00 (borne exclue). */
+  next: Date;
+}
+
+function makePeriod(kind: ReportKind, start: Date): ReportPeriod {
+  const next = new Date(start);
+  if (kind === 'week') next.setDate(next.getDate() + 7);
+  else next.setMonth(next.getMonth() + 1);
+  return { kind, start, next };
+}
+
+/** Période contenant l'instant `ts`. */
+export function periodContaining(kind: ReportKind, ts: number): ReportPeriod {
+  const d = new Date(ts);
+  return makePeriod(kind, kind === 'week' ? weekStart(d) : new Date(d.getFullYear(), d.getMonth(), 1));
+}
+
+/** Période décalée de `delta` semaines ou mois. */
+export function shiftPeriod(period: ReportPeriod, delta: number): ReportPeriod {
+  const start = new Date(period.start);
+  if (period.kind === 'week') start.setDate(start.getDate() + 7 * delta);
+  else start.setMonth(start.getMonth() + delta, 1);
+  return makePeriod(period.kind, start);
+}
+
+/** Clé stable et triable : lundi « 2026-10-19 » pour une semaine, « 2026-10 » pour un mois. */
+export function periodKey(period: ReportPeriod): string {
+  const day = localDate(period.start.getTime());
+  return period.kind === 'week' ? day : day.slice(0, 7);
+}
+
+export function parsePeriodKey(kind: ReportKind, key: string): ReportPeriod | null {
+  const m = kind === 'week' ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(key) : /^(\d{4})-(\d{2})$/.exec(key);
+  if (!m) return null;
+  const start = new Date(Number(m[1]), Number(m[2]) - 1, kind === 'week' ? Number(m[3]) : 1);
+  const period = periodContaining(kind, start.getTime());
+  return periodKey(period) === key ? period : null;
+}
+
+/** Dernier jour de la période. */
+export function periodLastDay(period: ReportPeriod): Date {
+  const d = new Date(period.next);
+  d.setDate(d.getDate() - 1);
+  return d;
+}
+
+export function containsTime(period: ReportPeriod, ts: number): boolean {
+  return ts >= period.start.getTime() && ts < period.next.getTime();
+}
+
+const DAY = new Intl.DateTimeFormat('fr-FR', { day: 'numeric' });
+const DAY_MONTH = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' });
+const DAY_MONTH_YEAR = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+const MONTH_YEAR = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' });
+const WEEKDAY_DAY_MONTH = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+
+/** « du 19 au 25 oct. 2026 », « du 28 sept. au 4 oct. 2026 », « du 29 déc. 2025 au 4 janv. 2026 ». */
+function weekRange(period: ReportPeriod): string {
+  const { start } = period;
+  const end = periodLastDay(period);
+  const from =
+    start.getFullYear() !== end.getFullYear() ? DAY_MONTH_YEAR.format(start) : start.getMonth() !== end.getMonth() ? DAY_MONTH.format(start) : DAY.format(start);
+  return `du ${from} au ${DAY_MONTH_YEAR.format(end)}`;
+}
+
+/** « Semaine du 19 au 25 oct. 2026 », « Octobre 2026 ». */
+export function periodTitle(period: ReportPeriod): string {
+  if (period.kind === 'week') return `Semaine ${weekRange(period)}`;
+  const month = MONTH_YEAR.format(period.start);
+  return month.charAt(0).toUpperCase() + month.slice(1);
+}
+
+/** Objet du mail : « MyFitApp — Bilan semaine du 19 au 25 oct. 2026 », « MyFitApp — Bilan octobre 2026 ». */
+export function mailSubject(period: ReportPeriod): string {
+  return `MyFitApp — Bilan ${period.kind === 'week' ? `semaine ${weekRange(period)}` : MONTH_YEAR.format(period.start)}`;
+}
+
+export interface PeriodTotals {
+  sessionCount: number;
+  /** Durée totale des séances dont le début et la fin sont connus. */
+  durationMs: number;
+  /** Séances sans heure de début ou de fin (import) : durée inconnue. */
+  unknownDuration: number;
+}
+
+export interface ReportProgression {
+  variantId: string;
+  date: string;
+  /** +1 répétition, ou poids supérieur (moins d'aide pour un exercice assisté). */
+  kind: 'reps_up' | 'weight_up';
+  sets: number;
+  /** Palier validé. */
+  from: Palier;
+  /** Nouvelle cible de répétitions. */
+  toReps: number;
+  assisted: boolean;
+}
+
+export interface ReportDecrease {
+  variantId: string;
+  date: string;
+  weightKg: number;
+  reds: number;
+  assisted: boolean;
+}
+
+export interface PeriodReport {
+  period: ReportPeriod;
+  /** La période n'est pas terminée. */
+  inProgress: boolean;
+  /** Jour de calcul du bilan (période en cours). */
+  asOf: Date;
+  totals: PeriodTotals;
+  previous: PeriodTotals;
+  /** Minutes de cardio par machine, de la plus longue à la plus courte. */
+  cardio: { machine: string; minutes: number }[];
+  /** Groupes affichés au récapitulatif, dans leur ordre : séances directes et indirectes. */
+  groups: { group: MuscleGroup; count: number; indirect: number }[];
+  progressions: ReportProgression[];
+  /** Exercices avec au moins une séance rouge, et leur nombre. */
+  reds: { variantId: string; count: number }[];
+  /** Exercices passés en « poids inférieur » (ou « plus d'aide ») pendant la période. */
+  decreases: ReportDecrease[];
+  /** Première et dernière pesées de la période (une seule si une seule pesée, aucune sinon). */
+  weighIns: WeighIn[];
+}
+
+export interface ReportInput {
+  sessions: readonly Session[];
+  exercises: readonly Exercise[];
+  evaluations: readonly Evaluation[];
+  settings: EngineSettings;
+  /** Groupes affichés au récapitulatif hebdomadaire (§19.6). */
+  groups: readonly MuscleGroup[];
+  weighIns: readonly WeighIn[];
+  now: number;
+}
+
+const inPeriod = (period: ReportPeriod) => (s: Session) => s.state === 'done' && containsTime(period, sessionStartTime(s));
+
+function totalsOf(sessions: readonly Session[], period: ReportPeriod): PeriodTotals {
+  const list = sessions.filter(inPeriod(period));
+  let durationMs = 0;
+  let unknownDuration = 0;
+  for (const s of list) {
+    if (s.startedAt !== null && s.endedAt !== null) durationMs += Math.max(0, s.endedAt - s.startedAt);
+    else unknownDuration++;
+  }
+  return { sessionCount: list.length, durationMs, unknownDuration };
+}
+
+export function buildReport(period: ReportPeriod, input: ReportInput): PeriodReport {
+  const { sessions, exercises, evaluations, settings, weighIns, now } = input;
+  const belongs = inPeriod(period);
+  const list = sessions.filter(belongs);
+
+  const cardio = new Map<string, number>();
+  for (const s of list) for (const b of cardioOf(s)) cardio.set(b.machine, (cardio.get(b.machine) ?? 0) + b.minutes);
+
+  const work = groupWork(sessions, exercises, input.groups, belongs);
+  const groups = input.groups.map((group) => ({ group, count: work.counts.get(group) ?? 0, indirect: work.indirects.get(group) ?? 0 }));
+
+  // Évaluations du moteur, dans l'ordre du rejeu : paliers validés, rouges et passages en « poids inférieur ».
+  const dateOf = new Map(list.map((s) => [s.id, s.date]));
+  const progressions: ReportProgression[] = [];
+  const reds = new Map<string, number>();
+  const decreases: ReportDecrease[] = [];
+  const decreasing = new Set<string>();
+  for (const ev of evaluations) {
+    const wasDecreasing = decreasing.has(ev.variantId);
+    if (ev.recommendation.kind === 'weight_down') decreasing.add(ev.variantId);
+    else decreasing.delete(ev.variantId);
+    const date = dateOf.get(ev.sessionId);
+    if (date === undefined) continue;
+    const assisted = resolveConfig(settings, ev.variantId).assisted;
+    if (isPalierValidated(ev) && (ev.recommendation.kind === 'reps_up' || ev.recommendation.kind === 'weight_up')) {
+      progressions.push({
+        variantId: ev.variantId,
+        date,
+        kind: ev.recommendation.kind,
+        sets: ev.recommendation.plannedSets,
+        from: ev.palier,
+        toReps: ev.recommendation.targetReps,
+        assisted,
+      });
+    }
+    if (ev.status === 'rouge') reds.set(ev.variantId, (reds.get(ev.variantId) ?? 0) + 1);
+    if (ev.recommendation.kind === 'weight_down' && !wasDecreasing) {
+      decreases.push({ variantId: ev.variantId, date, weightKg: ev.palier.weightKg, reds: ev.redStreak, assisted });
+    }
+  }
+
+  const first = localDate(period.start.getTime());
+  const last = localDate(periodLastDay(period).getTime());
+  const weighed = [...weighIns].filter((w) => w.date >= first && w.date <= last).sort((a, b) => (a.date < b.date ? -1 : 1));
+
+  return {
+    period,
+    inProgress: now < period.next.getTime(),
+    asOf: new Date(Math.min(now, period.next.getTime() - 1)),
+    totals: totalsOf(sessions, period),
+    previous: totalsOf(sessions, shiftPeriod(period, -1)),
+    cardio: [...cardio].map(([machine, minutes]) => ({ machine, minutes })).sort((a, b) => b.minutes - a.minutes),
+    groups,
+    progressions,
+    reds: [...reds].map(([variantId, count]) => ({ variantId, count })),
+    decreases,
+    weighIns: weighed.length > 1 ? [weighed[0]!, weighed[weighed.length - 1]!] : weighed,
+  };
+}
+
+export interface ReportSection {
+  title: string;
+  lines: string[];
+}
+
+const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n > 1 ? many : one}`;
+const shortDay = (date: string) => {
+  const [y, m, d] = date.split('-').map(Number);
+  return DAY_MONTH.format(new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1));
+};
+const load = (kg: number, assisted: boolean) => (assisted ? `avec ${formatKg(kg)} d’aide` : `à ${formatKg(kg)}`);
+
+/** « +1 », « −2 », ou null à égalité. */
+function signed(diff: number, format: (n: number) => string): string | null {
+  if (diff === 0) return null;
+  return `${diff > 0 ? '+' : '−'}${format(Math.abs(diff))}`;
+}
+
+/** Sections du bilan, communes à l'écran et au texte du mail. `name` donne le nom affiché d'un exercice-variante. */
+export function reportSections(report: PeriodReport, name: (variantId: string) => string): ReportSection[] {
+  const { totals, previous } = report;
+  const week = report.period.kind === 'week';
+  const compare = (diff: string | null) =>
+    diff ? `${diff} par rapport ${week ? 'à la semaine précédente' : 'au mois précédent'}` : `autant que ${week ? 'la semaine précédente' : 'le mois précédent'}`;
+
+  const sessionsLines = [`${plural(totals.sessionCount, 'séance')}, ${compare(signed(totals.sessionCount - previous.sessionCount, String))}`];
+  if (totals.sessionCount > 0 || previous.sessionCount > 0) {
+    const unknown = totals.unknownDuration > 0 ? ` (durée inconnue pour ${plural(totals.unknownDuration, 'séance importée', 'séances importées')})` : '';
+    sessionsLines.push(`Durée totale : ${formatDurationLong(totals.durationMs)}, ${compare(signed(Math.round((totals.durationMs - previous.durationMs) / 60_000), formatMinutes))}${unknown}`);
+  }
+  if (totals.sessionCount > 0) {
+    const minutes = report.cardio.reduce((n, c) => n + c.minutes, 0);
+    sessionsLines.push(
+      minutes > 0 ? `Cardio : ${formatMinutes(minutes)} (${report.cardio.map((c) => `${c.machine} ${formatMinutes(c.minutes)}`).join(', ')})` : 'Cardio : aucun',
+    );
+  }
+  const sections: ReportSection[] = [{ title: 'Séances', lines: sessionsLines }];
+
+  if (totals.sessionCount > 0) {
+    const worked = report.groups.filter((g) => g.count > 0 || g.indirect > 0);
+    const idle = report.groups.filter((g) => g.count === 0 && g.indirect === 0);
+    const lines = worked.map((g) => {
+      const parts = [...(g.count > 0 ? [`${g.count}×`] : []), ...(g.indirect > 0 ? [`+${g.indirect} indirect`] : [])];
+      return `${MUSCLE_GROUP_LABELS[g.group]} : ${parts.join(' · ')}`;
+    });
+    if (idle.length > 0) lines.push(`Non travaillés : ${idle.map((g) => MUSCLE_GROUP_LABELS[g.group]).join(', ')}`);
+    sections.push({ title: 'Groupes travaillés', lines });
+
+    sections.push({
+      title: 'Progressions',
+      lines:
+        report.progressions.length > 0
+          ? report.progressions.map((p) => {
+              const from = `${p.sets}×${p.from.targetReps}`;
+              const change =
+                p.kind === 'reps_up'
+                  ? `${from} → ${p.sets}×${p.toReps} ${load(p.from.weightKg, p.assisted)}`
+                  : `${from} ${load(p.from.weightKg, p.assisted)} validé → ${p.assisted ? 'moins d’aide' : 'poids supérieur'}, ${p.sets}×${p.toReps}`;
+              return `${name(p.variantId)} : ${change} (${shortDay(p.date)})`;
+            })
+          : ['Aucun palier validé.'],
+    });
+
+    // Une ligne par exercice : ses séances rouges, et son passage en « poids inférieur » s'il a eu lieu.
+    const difficulty = report.reds.map((r) => {
+      const parts = [plural(r.count, 'séance rouge', 'séances rouges')];
+      for (const d of report.decreases.filter((x) => x.variantId === r.variantId)) {
+        parts.push(
+          `${d.assisted ? 'plus d’aide recommandée' : 'poids inférieur recommandé'} après ${d.reds} séances rouges de suite ${load(d.weightKg, d.assisted)} (${shortDay(d.date)})`,
+        );
+      }
+      return `${name(r.variantId)} : ${parts.join(' ; ')}`;
+    });
+    sections.push({ title: 'En difficulté', lines: difficulty.length > 0 ? difficulty : ['Aucun exercice en difficulté.'] });
+  }
+
+  if (report.weighIns.length > 0) {
+    const [a, b] = report.weighIns;
+    const at = (w: WeighIn) => `${formatKg(w.weightKg)} le ${shortDay(w.date)}`;
+    sections.push({ title: 'Poids', lines: [b ? `${at(a!)} → ${at(b)}` : at(a!)] });
+  }
+  return sections;
+}
+
+/** Mention d'une période en cours : « Semaine en cours, arrêtée au jeu. 22 oct. ». */
+export function inProgressNote(report: PeriodReport): string | null {
+  if (!report.inProgress) return null;
+  return `${report.period.kind === 'week' ? 'Semaine en cours' : 'Mois en cours'}, arrêté${report.period.kind === 'week' ? 'e' : ''} au ${WEEKDAY_DAY_MONTH.format(report.asOf)}`;
+}
+
+/** Texte brut du mail : titres en capitales, listes simples, sans HTML. */
+export function reportText(report: PeriodReport, name: (variantId: string) => string): string {
+  const head = [mailSubject(report.period)];
+  const note = inProgressNote(report);
+  if (note) head.push(`(${note})`);
+  const body = reportSections(report, name).map((s) => [s.title.toUpperCase(), ...s.lines.map((l) => `- ${l}`)].join('\n'));
+  return [head.join('\n'), ...body].join('\n\n') + '\n';
+}
+
+/** Lien mailto prérempli : destinataire facultatif, objet et corps. */
+export function mailtoUrl(to: string, subject: string, body: string): string {
+  const address = encodeURIComponent(to.trim()).replace(/%40/g, '@');
+  return `mailto:${address}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body.replace(/\r?\n/g, '\r\n'))}`;
+}
+
+/** Réglages des bilans (§14), inclus dans l'export. */
+export interface ReportSettings {
+  /** Bandeau « Ton bilan de la semaine est prêt » sur l'accueil. */
+  weekBanner: boolean;
+  monthBanner: boolean;
+  /** Adresse préremplie dans le lien mailto, facultative. */
+  email: string;
+}
+
+export const DEFAULT_REPORT_SETTINGS: ReportSettings = { weekBanner: true, monthBanner: true, email: '' };
+
+export function isValidEmail(email: string): boolean {
+  return email === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+export function sanitizeReportSettings(value: unknown): ReportSettings {
+  if (typeof value !== 'object' || value === null) return DEFAULT_REPORT_SETTINGS;
+  const v = value as Record<string, unknown>;
+  const email = typeof v.email === 'string' && isValidEmail(v.email.trim()) ? v.email.trim() : '';
+  return {
+    weekBanner: typeof v.weekBanner === 'boolean' ? v.weekBanner : true,
+    monthBanner: typeof v.monthBanner === 'boolean' ? v.monthBanner : true,
+    email,
+  };
+}
+
+/** Dernière période terminée déjà ouverte, par type de bilan (clés de `periodKey`). */
+export type ReportSeen = Partial<Record<ReportKind, string>>;
+
+export function sanitizeReportSeen(value: unknown): ReportSeen {
+  if (typeof value !== 'object' || value === null) return {};
+  const v = value as Record<string, unknown>;
+  const seen: ReportSeen = {};
+  if (typeof v.week === 'string' && parsePeriodKey('week', v.week)) seen.week = v.week;
+  if (typeof v.month === 'string' && parsePeriodKey('month', v.month)) seen.month = v.month;
+  return seen;
+}
+
+/**
+ * Bilans à signaler sur l'accueil : la semaine écoulée à partir du lundi, le mois écoulé à partir du 1er,
+ * s'ils contiennent au moins une séance, que leur bandeau est activé et qu'ils n'ont pas encore été ouverts.
+ */
+export function pendingReports(sessions: readonly Session[], now: number, settings: ReportSettings, seen: ReportSeen): ReportPeriod[] {
+  const out: ReportPeriod[] = [];
+  for (const kind of ['week', 'month'] as const) {
+    if (!(kind === 'week' ? settings.weekBanner : settings.monthBanner)) continue;
+    const period = shiftPeriod(periodContaining(kind, now), -1);
+    const key = periodKey(period);
+    const last = seen[kind];
+    if (last !== undefined && last >= key) continue;
+    if (sessions.some(inPeriod(period))) out.push(period);
+  }
+  return out;
+}
+
+/** Bilan ouvert : une période terminée ne sera plus signalée ; une période en cours ne compte pas. */
+export function markSeen(seen: ReportSeen, period: ReportPeriod, now: number): ReportSeen {
+  if (now < period.next.getTime()) return seen;
+  const key = periodKey(period);
+  const last = seen[period.kind];
+  return last !== undefined && last >= key ? seen : { ...seen, [period.kind]: key };
+}
+
+/** Période ouverte par défaut : la période en cours si elle contient une séance, sinon la précédente. */
+export function defaultPeriod(kind: ReportKind, sessions: readonly Session[], now: number): ReportPeriod {
+  const current = periodContaining(kind, now);
+  return sessions.some(inPeriod(current)) ? current : shiftPeriod(current, -1);
+}
+
+/** Première période contenant une séance terminée : on ne remonte pas plus loin. */
+export function firstPeriod(kind: ReportKind, sessions: readonly Session[]): ReportPeriod | null {
+  const times = sessions.filter((s) => s.state === 'done').map(sessionStartTime);
+  return times.length > 0 ? periodContaining(kind, Math.min(...times)) : null;
+}

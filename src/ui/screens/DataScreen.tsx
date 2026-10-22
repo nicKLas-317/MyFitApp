@@ -12,6 +12,7 @@ import {
 } from '../../transfer/draft';
 import { EMPTY_BODY, planBodyImport } from '../../body/model';
 import { sanitizeRecapSettings } from '../../analysis/weekly';
+import { sanitizeReportSettings } from '../../analysis/report';
 import { sanitizeCardioMachines, upgradeCardioMachines } from '../../cardio/model';
 import { useBody } from '../../body/store';
 import { downloadBackup } from '../download';
@@ -256,7 +257,7 @@ function DraftsPreview({ initial, notes, onDone }: { initial: DraftSession[]; no
 
 /** Aperçu d'une sauvegarde MyFitApp : fusion par défaut, remplacement sur confirmation explicite. */
 function BackupPreview({ backup, onDone }: { backup: Backup; onDone(outcome: Outcome): void }) {
-  const { sessions, exercises, importData, markExported, generalSettings, setRecapSettings, setCardioMachines } = useApp();
+  const { sessions, exercises, importData, markExported, generalSettings, setRecapSettings, setCardioMachines, setReportSettings } = useApp();
   const body = useBody();
   const [includeDuplicates, setIncludeDuplicates] = useState(false);
   const [replaceConfirmed, setReplaceConfirmed] = useState(false);
@@ -297,6 +298,7 @@ function BackupPreview({ backup, onDone }: { backup: Backup; onDone(outcome: Out
     const ok = await importData({ sessions: backup.sessions, exercises: backup.exercises, replace: true });
     // Remplacement global : les réglages de la sauvegarde remplacent aussi ceux de l'appareil.
     if (ok && backup.settings.weeklyRecap !== undefined) await setRecapSettings(sanitizeRecapSettings(backup.settings.weeklyRecap));
+    if (ok && backup.settings.reports !== undefined) await setReportSettings(sanitizeReportSettings(backup.settings.reports));
     if (ok && backup.settings.cardioMachines !== undefined) {
       const version = backup.settings.cardioMachinesVersion;
       const from = typeof version === 'number' ? version : 1;

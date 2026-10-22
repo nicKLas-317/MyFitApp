@@ -5,6 +5,7 @@ import { rebuildProfile, resolveConfig, type EngineSettings, type ReplayResult }
 import { buildEngineSettings, indexVariants, type VariantRef } from '../library/catalog';
 import { exerciseHasHistory } from '../library/edit';
 import { DEFAULT_RECAP_SETTINGS, sanitizeRecapSettings, type WeeklyRecapSettings } from '../analysis/weekly';
+import { DEFAULT_REPORT_SETTINGS, markSeen, sanitizeReportSeen, sanitizeReportSettings, type ReportPeriod, type ReportSeen, type ReportSettings } from '../analysis/report';
 import type { RemovedPerformance, VariantContext } from '../session/ops';
 import { openAppDb, Repository, requestPersistence, type PersistState } from '../storage/db';
 import { PendingWrites } from '../storage/pending';
@@ -39,6 +40,12 @@ interface AppValue {
   /** Réglages du récapitulatif hebdomadaire de l'accueil (§19.6). */
   recapSettings: WeeklyRecapSettings;
   setRecapSettings(next: WeeklyRecapSettings): Promise<boolean>;
+  /** Bilans de la semaine et du mois (§19.7) : bandeaux de l'accueil et adresse du mail. */
+  reportSettings: ReportSettings;
+  setReportSettings(next: ReportSettings): Promise<boolean>;
+  /** Dernières périodes terminées dont le bilan a été ouvert : leur bandeau n'est plus affiché. */
+  reportSeen: ReportSeen;
+  markReportSeen(period: ReportPeriod): Promise<void>;
   /** Machines de cardio proposées à la saisie, modifiables dans les réglages. */
   cardioMachines: CardioMachine[];
   setCardioMachines(next: CardioMachine[]): Promise<boolean>;
@@ -109,6 +116,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [lastExportAt, setLastExportAt] = useState<number | null>(null);
   const [recapSettings, setRecapState] = useState<WeeklyRecapSettings>(DEFAULT_RECAP_SETTINGS);
   const [cardioMachines, setMachinesState] = useState<CardioMachine[]>(() => sanitizeCardioMachines(undefined));
+  const [reportSettings, setReportState] = useState<ReportSettings>(DEFAULT_REPORT_SETTINGS);
+  const [reportSeen, setReportSeen] = useState<ReportSeen>({});
+  const reportSeenRef = useRef<ReportSeen>({});
 
   const sessionsRef = useRef<Session[]>([]);
   const pending = useRef(new PendingWrites<Session>());
@@ -129,13 +139,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
           // Sans gravité : la correction sera refaite au prochain lancement.
           console.error('[MyFitApp] correction des ressentis « += » non appliquée', error);
         }
-        const [loadedSessions, loadedExercises, exportedAt, recap, machines, machinesVersion] = await Promise.all([
+        const [loadedSessions, loadedExercises, exportedAt, recap, machines, machinesVersion, reports, seen] = await Promise.all([
           repo.loadSessions(),
           repo.loadExercises(),
           repo.getMeta<number>('lastExportAt'),
           repo.getMeta<unknown>('weeklyRecap'),
           repo.getMeta<unknown>('cardioMachines'),
           repo.getMeta<number>('cardioMachinesVersion'),
+          repo.getMeta<unknown>('reports'),
+          repo.getMeta<unknown>('reportsSeen'),
         ]);
         // Installation antérieure au cardio : aucune liste enregistrée, la liste par défaut s'applique.
         // Liste enregistrée par une version antérieure : les nouvelles machines sont ajoutées une seule fois.
@@ -157,6 +169,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setLastExportAt(exportedAt ?? null);
         setRecapState(sanitizeRecapSettings(recap));
         setMachinesState(machineList);
+        setReportState(sanitizeReportSettings(reports));
+        reportSeenRef.current = sanitizeReportSeen(seen);
+        setReportSeen(reportSeenRef.current);
         setLoad({ kind: 'ready', repo });
 
         // §12 : stockage persistant demandé au premier lancement, état affiché ensuite.
@@ -424,9 +439,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [repo],
   );
 
+  const setReportSettings = useCallback(
+    async (next: ReportSettings): Promise<boolean> => {
+      if (!repo) return false;
+      try {
+        await repo.setMeta('reports', next);
+      } catch {
+        return false;
+      }
+      setReportState(next);
+      return true;
+    },
+    [repo],
+  );
+
+  const markReportSeen = useCallback(
+    async (period: ReportPeriod): Promise<void> => {
+      const next = markSeen(reportSeenRef.current, period, Date.now());
+      if (next === reportSeenRef.current) return;
+      reportSeenRef.current = next;
+      setReportSeen(next);
+      try {
+        await repo?.setMeta('reportsSeen', next);
+      } catch (error) {
+        // Sans gravité : le bandeau réapparaîtra à la prochaine ouverture.
+        console.error('[MyFitApp] bilan ouvert non mémorisé', error);
+      }
+    },
+    [repo],
+  );
+
   const generalSettings = useMemo(
-    () => ({ weeklyRecap: recapSettings, cardioMachines, cardioMachinesVersion: CARDIO_MACHINES_VERSION }),
-    [recapSettings, cardioMachines],
+    () => ({ weeklyRecap: recapSettings, cardioMachines, cardioMachinesVersion: CARDIO_MACHINES_VERSION, reports: reportSettings }),
+    [recapSettings, cardioMachines, reportSettings],
   );
 
   const markExported = useCallback(
@@ -470,6 +515,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     lastExportAt,
     recapSettings,
     setRecapSettings,
+    reportSettings,
+    setReportSettings,
+    reportSeen,
+    markReportSeen,
     cardioMachines,
     setCardioMachines,
     generalSettings,

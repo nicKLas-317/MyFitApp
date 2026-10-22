@@ -4,6 +4,7 @@ import { parseHeight } from '../../body/model';
 import { useBody } from '../../body/store';
 import type { CardioMachine, MuscleGroup } from '../../domain/types';
 import { machineListErrors, newMachine, type MachineListError } from '../../cardio/model';
+import { isValidEmail } from '../../analysis/report';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
 import { Stepper } from '../ExerciseCard';
 
@@ -25,6 +26,7 @@ export function Settings() {
       </header>
       <HeightField />
       <RecapSettingsField />
+      <ReportSettingsField />
       <CardioMachinesField />
       <dl className="settings-list frame">
         <dt>Stockage persistant</dt>
@@ -127,6 +129,60 @@ function RecapSettingsField() {
         </p>
       )}
     </fieldset>
+  );
+}
+
+/** Bilans de la semaine et du mois (§19.7) : bandeaux de l'accueil et adresse préremplie dans le mail. */
+function ReportSettingsField() {
+  const { reportSettings, setReportSettings } = useApp();
+  const [email, setEmail] = useState(reportSettings.email);
+  // Cases cochées aussitôt, puis enregistrées ; rétablies si l'enregistrement échoue.
+  const [shown, setShown] = useState(reportSettings);
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  useEffect(() => setEmail(reportSettings.email), [reportSettings.email]);
+  useEffect(() => setShown(reportSettings), [reportSettings]);
+  const save = async (next: typeof reportSettings, done?: string) => {
+    setShown(next);
+    const ok = await setReportSettings(next);
+    if (!ok) setShown(reportSettings);
+    setMessage(ok ? (done ? { ok: true, text: done } : null) : { ok: false, text: 'Enregistrement impossible : réessayez.' });
+  };
+
+  return (
+    <form
+      className="name-form report-settings frame"
+      // Contrôle de l'adresse par l'appli, avec un message en français, plutôt que la bulle du navigateur.
+      noValidate
+      onSubmit={(e) => {
+        e.preventDefault();
+        const trimmed = email.trim();
+        if (!isValidEmail(trimmed)) return setMessage({ ok: false, text: 'Adresse e-mail invalide.' });
+        void save({ ...reportSettings, email: trimmed }, trimmed ? 'Adresse enregistrée.' : 'Adresse retirée.');
+      }}
+    >
+      <h2 className="section-title">Bilans de la semaine et du mois</h2>
+      <label className="check-line">
+        <input type="checkbox" checked={shown.weekBanner} onChange={(e) => void save({ ...shown, weekBanner: e.target.checked })} />
+        <span>Signaler le bilan de la semaine sur l’accueil</span>
+      </label>
+      <label className="check-line">
+        <input type="checkbox" checked={shown.monthBanner} onChange={(e) => void save({ ...shown, monthBanner: e.target.checked })} />
+        <span>Signaler le bilan du mois sur l’accueil</span>
+      </label>
+      <label htmlFor="report-email">Adresse e-mail (facultative, préremplie dans le mail)</label>
+      <div className="row">
+        <input id="report-email" type="email" inputMode="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <button type="submit" className="btn">
+          Enregistrer l’adresse
+        </button>
+      </div>
+      {/* Message neutre : pas de vert, d'orange ni de rouge hors des statuts (§19.7). */}
+      {message && (
+        <p className="report-message small" role={message.ok ? 'status' : 'alert'}>
+          {message.text}
+        </p>
+      )}
+    </form>
   );
 }
 

@@ -64,6 +64,9 @@ export function Bilan() {
         </a>
         <h1>Bilan de progression</h1>
       </header>
+      <a className="btn big report-link" href="#/bilan-periode">
+        Bilan de la semaine / du mois
+      </a>
       {progress.length === 0 ? (
         <p className="empty muted">Pas encore de séance évaluée.</p>
       ) : (

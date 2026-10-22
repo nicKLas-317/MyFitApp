@@ -1739,3 +1739,106 @@ fieldset.frame > legend + * {
   height: 26px;
   font-size: 0.9rem;
 }
+
+/* Bilans de la semaine et du mois (§19.7) : écran neutre, aucune couleur de statut. */
+.report-link {
+  margin: 4px 0 8px;
+}
+
+.report-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.report-tab {
+  border: var(--frame-width) solid var(--frame-neutral);
+}
+
+.report-tab[aria-pressed='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.report-nav {
+  display: grid;
+  grid-template-columns: var(--tap) minmax(0, 1fr) var(--tap);
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.report-nav .btn {
+  padding: 0;
+  font-size: 1.4rem;
+}
+
+.report-heading {
+  text-align: center;
+}
+
+.report-heading h2 {
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.report-heading p {
+  margin: 2px 0 0;
+}
+
+.report-section {
+  padding: 4px 14px 10px;
+  margin: 10px 0;
+}
+
+.report-section .section-title {
+  margin: 10px 0 6px;
+}
+
+.report-lines {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  line-height: 1.35;
+  overflow-wrap: break-word;
+}
+
+.report-actions {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 8px;
+}
+
+.report-message {
+  color: var(--text);
+  margin: 0;
+}
+
+.report-text summary {
+  cursor: pointer;
+  color: var(--muted);
+  min-height: var(--tap);
+  display: flex;
+  align-items: center;
+}
+
+.report-text pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.85rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.report-banner {
+  flex-wrap: wrap;
+}
+
+.report-settings .section-title {
+  margin-top: 0;
+}

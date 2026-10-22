@@ -18,6 +18,7 @@ import { ExerciseSheet } from './ui/screens/ExerciseSheet';
 import { Library } from './ui/screens/Library';
 import { ExercisePicker } from './ui/screens/ExercisePicker';
 import { Home } from './ui/screens/Home';
+import { kindOfSegment, PeriodReport } from './ui/screens/PeriodReport';
 import { Recap } from './ui/screens/Recap';
 import { SessionScreen } from './ui/screens/SessionScreen';
 import { Settings } from './ui/screens/Settings';
@@ -52,6 +53,8 @@ function Router() {
       return param ? <SessionDetail key={param} sessionId={param} /> : <History />;
     case 'bilan':
       return <Bilan />;
+    case 'bilan-periode':
+      return <PeriodReport key={`${param ?? ''}/${extra ?? ''}`} kind={kindOfSegment(param)} periodParam={extra} />;
     case 'poids':
       return (
         <ErrorBoundary

@@ -139,7 +139,7 @@ test.describe('Historique, analyse et Mon poids', () => {
 
     await page.goto('./#/reglages');
     await page.getByLabel('Taille (cm)').fill('178');
-    await page.getByRole('button', { name: 'Enregistrer' }).click();
+    await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
     await expect(page.getByText('Taille enregistrée.')).toBeVisible();
     expect((await readBody(page)).height).toBe(178);
     expect(await readSessions(page)).toEqual(SESSIONS);
@@ -173,7 +173,7 @@ test.describe('Historique, analyse et Mon poids', () => {
     await seed(page, SESSIONS);
     await page.goto('./#/reglages');
     await page.getByLabel('Taille (cm)').fill('178');
-    await page.getByRole('button', { name: 'Enregistrer' }).click();
+    await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
     await expect(page.getByText('Taille enregistrée.')).toBeVisible();
     await page.goto('./#/poids');
     await page.getByLabel('Date').fill('2026-10-01');

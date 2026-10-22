@@ -94,21 +94,29 @@ function recencyOf(time: number, now: number): Recency {
 
 const COLOR_RANK: Record<RecapColor, number> = { vert: 0, orange: 1, rouge: 2 };
 
-export function weeklyRecap(
+export interface GroupWork {
+  /** Séances de la période où le groupe est groupe principal d'au moins un exercice. */
+  counts: Map<MuscleGroup, number>;
+  /** Séances de la période où le groupe n'est que groupe secondaire. */
+  indirects: Map<MuscleGroup, number>;
+  /** Dernier moment où le groupe a été travaillé, directement ou non, toutes séances terminées confondues. */
+  last: Map<MuscleGroup, number>;
+}
+
+/**
+ * Travail de chaque groupe affiché (§19.6), commun au récapitulatif et aux bilans de la semaine et du mois :
+ * une séance compte 1 pour un groupe principal, ½ pour un groupe seulement secondaire, jamais plus de 1.
+ * Les sous-groupes des jambes comptent pour « jambes » quand ils ne sont pas affichés eux-mêmes.
+ */
+export function groupWork(
   sessions: readonly Session[],
   exercises: readonly Exercise[],
-  now: number,
-  settings: WeeklyRecapSettings = DEFAULT_RECAP_SETTINGS,
-): WeeklyRecap {
-  const start = weekStart(new Date(now));
-  const next = new Date(start);
-  next.setDate(next.getDate() + 7);
-  const end = new Date(next);
-  end.setDate(end.getDate() - 1);
-
+  groups: readonly MuscleGroup[],
+  inPeriod: (s: Session) => boolean,
+): GroupWork {
   const exerciseOfVariant = new Map<string, Exercise>();
   for (const e of exercises) for (const v of e.variants) exerciseOfVariant.set(v.id, e);
-  const shown = new Set(settings.groups);
+  const shown = new Set(groups);
   const recapGroup = (g: MuscleGroup | undefined): MuscleGroup | null => {
     if (!g) return null;
     if (shown.has(g)) return g;
@@ -119,16 +127,9 @@ export function weeklyRecap(
   const counts = new Map<MuscleGroup, number>();
   const indirects = new Map<MuscleGroup, number>();
   const last = new Map<MuscleGroup, number>();
-  let sessionCount = 0;
-  let cardio = 0;
   for (const s of sessions) {
     if (s.state !== 'done') continue;
-    const startTime = sessionStartTime(s);
-    const inWeek = startTime >= start.getTime() && startTime < next.getTime();
-    if (inWeek) {
-      sessionCount++;
-      cardio += cardioMinutes(s);
-    }
+    const counted = inPeriod(s);
     // Un groupe travaillé deux fois dans la même séance compte pour une ; principal dans un exercice et
     // secondaire dans un autre, il compte comme principal (jamais plus de 1 par séance).
     const direct = new Set<MuscleGroup>();
@@ -144,13 +145,40 @@ export function weeklyRecap(
       }
     }
     for (const g of direct) secondary.delete(g);
-    for (const [groups, tally] of [[direct, counts], [secondary, indirects]] as const) {
-      for (const g of groups) {
-        if (inWeek) tally.set(g, (tally.get(g) ?? 0) + 1);
+    for (const [found, tally] of [[direct, counts], [secondary, indirects]] as const) {
+      for (const g of found) {
+        if (counted) tally.set(g, (tally.get(g) ?? 0) + 1);
         last.set(g, Math.max(last.get(g) ?? 0, sessionLastTime(s)));
       }
     }
   }
+  return { counts, indirects, last };
+}
+
+export function weeklyRecap(
+  sessions: readonly Session[],
+  exercises: readonly Exercise[],
+  now: number,
+  settings: WeeklyRecapSettings = DEFAULT_RECAP_SETTINGS,
+): WeeklyRecap {
+  const start = weekStart(new Date(now));
+  const next = new Date(start);
+  next.setDate(next.getDate() + 7);
+  const end = new Date(next);
+  end.setDate(end.getDate() - 1);
+
+  const inWeek = (s: Session) => {
+    const t = sessionStartTime(s);
+    return t >= start.getTime() && t < next.getTime();
+  };
+  let sessionCount = 0;
+  let cardio = 0;
+  for (const s of sessions) {
+    if (s.state !== 'done' || !inWeek(s)) continue;
+    sessionCount++;
+    cardio += cardioMinutes(s);
+  }
+  const { counts, indirects, last } = groupWork(sessions, exercises, settings.groups, inWeek);
 
   const cells: RecapCell[] = settings.groups.map((group) => {
     const count = counts.get(group) ?? 0;
