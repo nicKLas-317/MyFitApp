@@ -1405,6 +1405,18 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 207. Bilan : section « Records » (« 👑 Curl biceps barre droite : 3 × 9 à 20 kg », en évidence), dernier record de chaque exercice de la période, premières fois exclues (« Aucun nouveau record. »), texte du mail.
 208. (bout en bout, format smartphone) Fiche : ligne du record avec la couronne dorée, couronne dans l'historique de la fiche ; séance : « Nouveau record ! » une fois les trois séries faites, rien pour une première fois ; fin de séance : « Record battu » et couronne ; détail de la séance : couronne ; bilan et texte du mail ; rien ne dépasse à 412, 360 et 320 px.
 
+### Bilan par groupe musculaire (§19.10)
+
+209. Indice : Epley sur la moins bonne série (9-9-8 vaut 8), base 100 à la première séance de l'exercice.
+210. Indice du groupe : moyenne des derniers indices connus de ses exercices, un point par date (deux séances le même jour : un seul point) ; charges brutes jamais mélangées entre exercices.
+211. Exercice assisté : 30 → 25 kg d'aide = 116,7, 30 → 35 kg = 83,3 ; répétitions comptées ; jamais sous 0.
+212. Changement de palier de charge : 3×12 puis 3×8 au poids supérieur, l'indice continue de monter (100 → 110,53 → 112,5).
+213. Groupe principal seulement (dips assistés hors pectoraux, chest press hors triceps), sous-groupes des jambes dans « jambes », ni historique partiel, ni séance en cours, ni cardio.
+214. Séries par semaine : lundi 0 h 00 – dimanche (dimanche 23 h 30 dans la semaine précédente), 12 semaines, séries réellement enregistrées, indirectes pour moitié.
+215. Seuils et messages (séances, semaines, les deux, singulier) ; séries : 3 semaines ; données simulées : pectoraux en progression continue, dos à 100, épaules en baisse, triceps en hausse, semaines vides ; moteur inchangé ; fixture jamais chargée par l'application.
+216. (bout en bout, format smartphone) Données simulées : accès depuis le bilan, pectoraux par défaut (123,6, 17 points, 12 barres avec les semaines vides), courbe et barres cyan, indirectes plus claires, aucune couleur de statut ; épaules en jaune (82,9) ; dos 100 ; triceps 115,6 avec les dips assistés ; rien ne dépasse à 412, 360 et 320 px.
+217. (bout en bout) Historique court : « 3 séances sur 6 nécessaires. » à la place de l'indice, barres affichées ; biceps : séances et semaines manquantes, message des séries ; le graphique apparaît dès six séances.
+
 Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
 
 ## 16. Vérification avant livraison
@@ -1519,7 +1531,7 @@ Ne jamais déclarer un exercice en stagnation sur la base d'une seule séance di
 - Libellé de « Trop tôt pour conclure » : « Une seule séance sur cet exercice. »
 - Présentation : un résumé en tête donne le nombre d'exercices de chaque catégorie ; chaque catégorie a un titre de section bien visible, un pictogramme (↗ en progression, → stables, ↘ en difficulté, … trop tôt pour conclure), un cadre neutre et son nombre d'exercices ; chaque exercice listé est encadré à la couleur de son groupe (§3.2). Pas de vert, d'orange ni de rouge (réservés aux statuts, §8).
 - Filtres : le résumé du haut est une rangée de vrais boutons rectangulaires arrondis, au style des boutons de l'accueil, un par catégorie (pictogramme, titre, nombre d'exercices) et un bouton « Tous ». Les boutons sont neutres (les couleurs désignent les groupes, §3.2). Un appui n'affiche que la catégorie choisie et remplit le bouton, comme un bouton principal ; un nouvel appui sur le bouton actif, ou « Tous », réaffiche tout. Une catégorie sans exercice reste visible mais n'est pas sélectionnable. Par défaut tout est affiché ; le dernier filtre est mémorisé sur l'appareil (s'il ne contient plus d'exercice, tout est affiché). « Dernières évolutions » n'apparaît que sans filtre.
-- Un appui sur un exercice ouvre sa fiche directement sur son graphique d'évolution (§19.2) ; le retour ramène au bilan. Le bilan est accessible depuis l'accueil (§3) et depuis l'historique.
+- Un appui sur un exercice ouvre sa fiche directement sur son graphique d'évolution (§19.2) ; le retour ramène au bilan. Le bilan est accessible depuis l'accueil (§3) et depuis l'historique. Il mène aux bilans de la semaine et du mois (§19.7) et à la vue « Par groupe musculaire » (§19.10).
 
 ### 19.4. Séparation entre historique réel et recommandation
 
@@ -1644,6 +1656,27 @@ But : compter, sans rien saisir, une activité régulière faite hors de la sall
 - Historique : petite couronne (« Record battu ») à côté des performances qui ont battu un record, dans le détail d'une séance et dans l'historique de la fiche.
 - Bilan de la période (§19.7) : section « Records » après « Progressions », le dernier record battu de chaque exercice pendant la période (« 👑 Curl biceps barre droite : 3 × 9 à 20 kg », la performance en évidence), sinon « Aucun nouveau record. » ; même section dans le texte du mail.
 - La couronne est discrète et ne remplace aucune pastille de statut ni couleur de groupe. Pas de vert, d'orange ni de rouge.
+
+### 19.10. Bilan par groupe musculaire (précision validée)
+
+Vue secondaire (`#/bilan-groupes/<groupe>`), accessible depuis le bilan de progression (bouton « Par groupe musculaire »), jamais depuis l'accueil. Sélecteur de groupe : pectoraux, dos, épaules, biceps, triceps, jambes (pectoraux par défaut ; les sous-groupes des jambes comptent dans « jambes »). Calcul pur (`src/analysis/groups.ts`), refait à l'affichage à partir des séances terminées ; ni cardio ni activités habituelles ; aucun effet sur le moteur.
+
+**Indice de progression (base 100)**
+
+- Pour chaque exercice-variante dont le groupe est le groupe **principal** (un groupe secondaire est ignoré) : force estimée à chaque séance par la formule d'Epley, charge × (1 + répétitions / 30), sur la **moins bonne série** ; exprimée en pourcentage de sa première séance (= 100). Historique partiel ignoré.
+- Exercice assisté (§7.12), sans poids du corps connu (choix signalé) : la variation relative de l'aide est inversée, indice = 100 × (2 − aide ÷ aide de la première séance) × l'effet des répétitions (Epley) ; 30 → 25 kg d'aide donne 116,7, comme 30 → 35 kg pour un exercice classique. Jamais sous 0.
+- Indice du groupe à une date = moyenne des indices de ses exercices, chacun avec sa dernière valeur connue ; un point par date de séance. Les charges brutes de deux exercices différents ne sont jamais additionnées ni moyennées.
+- Affichage : dernière valeur (« Pectoraux : 123,6 »), courbe dans le temps avec une ligne pointillée à 100, liste des exercices pris en compte.
+
+**Séries par semaine**
+
+- Barres des 12 dernières semaines (lundi 0 h 00 – dimanche, heure locale, semaine en cours comprise) : séries enregistrées des exercices dont le groupe est principal, en plein ; séries des exercices où il n'est que secondaire, comptées pour moitié et empilées en plus clair. Total au-dessus de chaque barre (« 7,5 »).
+
+**Seuils** (pour le groupe choisi) : indice = au moins 6 séances sur au moins 3 semaines différentes ; séries = au moins 3 semaines avec des séries sur le groupe parmi les 12. En dessous, à la place du graphique : « Pas encore assez de données pour analyser ta progression : 3 séances sur 6 nécessaires. » (chiffres réels ; « 2 semaines sur 3 », ou les deux : « 1 séance sur 6 et 1 semaine sur 3 nécessaires. »). Le graphique apparaît dès que le seuil est atteint.
+
+**Couleurs** : cadres, courbe et barres dans la couleur du groupe choisi (`GROUP_COLORS`, §3.2), le reste neutre. Pas de vert, d'orange ni de rouge.
+
+**Données de test** : `src/analysis/__tests__/simulation.ts` (fixture, jamais chargée par l'application, vérifié par le test 215) : du 1er juin au 22 octobre 2026, pectoraux en progression (retour à 3×8 au poids supérieur), dos en stagnation, épaules en régression, dips assistés (aide en baisse), semaines sans séance.
 
 ## 20. Suivi corporel simplifié : « Mon poids »
 

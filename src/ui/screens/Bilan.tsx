@@ -67,6 +67,9 @@ export function Bilan() {
       <a className="btn big report-link" href="#/bilan-periode">
         Bilan de la semaine / du mois
       </a>
+      <a className="btn big report-link" href="#/bilan-groupes">
+        Par groupe musculaire
+      </a>
       {progress.length === 0 ? (
         <p className="empty muted">Pas encore de séance évaluée.</p>
       ) : (

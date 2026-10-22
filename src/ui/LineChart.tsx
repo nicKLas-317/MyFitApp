@@ -14,6 +14,8 @@ interface Props {
   label: string;
   unit: string;
   testId?: string;
+  /** Ligne de référence horizontale (ex. 100 pour un indice en base 100). */
+  baseline?: number;
 }
 
 const W = 320;
@@ -24,12 +26,12 @@ const toTime = (date: string) => Date.parse(`${date}T00:00:00Z`);
 const fmt = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 });
 const shortDate = (date: string) => new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(toTime(date));
 
-export function LineChart({ data, label, unit, testId }: Props) {
+export function LineChart({ data, label, unit, testId, baseline }: Props) {
   if (data.length === 0) return null;
   const xs = data.map((d) => toTime(d.date));
   const ys = data.map((d) => d.value);
   const [xMin, xMax] = [Math.min(...xs), Math.max(...xs)];
-  let [yMin, yMax] = [Math.min(...ys), Math.max(...ys)];
+  let [yMin, yMax] = [Math.min(...ys, ...(baseline === undefined ? [] : [baseline])), Math.max(...ys, ...(baseline === undefined ? [] : [baseline]))];
   if (yMin === yMax) {
     yMin -= 1;
     yMax += 1;
@@ -47,6 +49,16 @@ export function LineChart({ data, label, unit, testId }: Props) {
   return (
     <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={summary} data-testid={testId} data-points={data.length}>
       <line className="chart-axis" x1={M.left} y1={H - M.bottom} x2={W - M.right} y2={H - M.bottom} />
+      {baseline !== undefined && (
+        <>
+          <line className="chart-baseline" x1={M.left} y1={y(baseline)} x2={W - M.right} y2={y(baseline)} />
+          {baseline !== Math.max(...ys) && baseline !== Math.min(...ys) && (
+            <text className="chart-label" x={M.left - 6} y={y(baseline) + 4} textAnchor="end">
+              {fmt(baseline)}
+            </text>
+          )}
+        </>
+      )}
       <text className="chart-label" x={M.left - 6} y={y(Math.max(...ys)) + 4} textAnchor="end">
         {fmt(Math.max(...ys))}
       </text>

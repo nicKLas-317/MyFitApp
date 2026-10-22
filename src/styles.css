@@ -1920,3 +1920,45 @@ fieldset.frame > legend + * {
 .records-list .record-line + .record-line {
   margin-top: 6px;
 }
+
+/* Bilan par groupe musculaire (§19.10) : courbe et barres dans la couleur du groupe choisi. */
+.group-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 4px;
+}
+
+.group-chart .chart-line {
+  stroke: var(--group-color);
+}
+
+.group-chart .chart-dot,
+.bar-main {
+  fill: var(--group-color);
+}
+
+.bar-extra {
+  fill: var(--group-color);
+  opacity: 0.4;
+}
+
+.chart-baseline {
+  stroke: var(--muted);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+
+.group-figure {
+  margin: 4px 0 0;
+}
+
+.group-figure strong {
+  color: var(--group-color);
+  font-size: 1.3em;
+}
+
+.group-not-enough {
+  color: var(--text);
+  margin: 8px 0 4px;
+}
