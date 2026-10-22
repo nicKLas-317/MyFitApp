@@ -11,6 +11,7 @@ import { resolveConfig, type EngineSettings, type Evaluation, type Palier } from
 import { MUSCLE_GROUP_LABELS } from '../library/seed';
 import { formatDurationLong, formatKg, localDate } from '../session/format';
 import { isPalierValidated } from './progress';
+import { computeRecords, formatRecord, type RecordBreak } from './records';
 import { groupWork, sessionStartTime, weekStart } from './weekly';
 
 export type ReportKind = 'week' | 'month';
@@ -151,6 +152,8 @@ export interface PeriodReport {
   /** Groupes affichés au récapitulatif, dans leur ordre : séances directes et indirectes. */
   groups: { group: MuscleGroup; count: number; indirect: number }[];
   progressions: ReportProgression[];
+  /** Records battus pendant la période : le dernier de chaque exercice-variante, dans l'ordre chronologique. */
+  records: RecordBreak[];
   /** Exercices avec au moins une séance rouge pendant la période. */
   reds: ReportReds[];
   /** Exercices passés en « poids inférieur » (ou « plus d'aide ») pendant la période. */
@@ -242,6 +245,14 @@ export function buildReport(period: ReportPeriod, input: ReportInput): PeriodRep
     }
   }
 
+  // Records battus pendant la période (jamais une toute première performance) : le dernier par exercice.
+  const lastBreak = new Map<string, RecordBreak>();
+  for (const b of computeRecords(sessions, settings).breaks) {
+    if (!dateOf.has(b.sessionId)) continue;
+    lastBreak.delete(b.variantId);
+    lastBreak.set(b.variantId, b);
+  }
+
   const first = localDate(period.start.getTime());
   const last = localDate(periodLastDay(period).getTime());
   const weighed = [...weighIns].filter((w) => w.date >= first && w.date <= last).sort((a, b) => (a.date < b.date ? -1 : 1));
@@ -256,6 +267,7 @@ export function buildReport(period: ReportPeriod, input: ReportInput): PeriodRep
     activities: [...activities.values()],
     groups,
     progressions,
+    records: [...lastBreak.values()],
     reds: [...reds.values()],
     decreases,
     weighIns: weighed.length > 1 ? [weighed[0]!, weighed[weighed.length - 1]!] : weighed,
@@ -344,6 +356,11 @@ export function reportSections(report: PeriodReport, name: (variantId: string) =
               return [`${name(p.variantId)} : `, ...change, ` (${shortDay(p.date)})`];
             })
           : [['Aucun palier validé.']],
+    });
+
+    sections.push({
+      title: 'Records',
+      lines: report.records.length > 0 ? report.records.map((r): ReportLine => [`👑 ${name(r.variantId)} : `, em(formatRecord(r))]) : [['Aucun nouveau record.']],
     });
 
     // Une ligne par exercice : son passage en « poids inférieur » s'il a eu lieu pendant la période, sinon ses séances

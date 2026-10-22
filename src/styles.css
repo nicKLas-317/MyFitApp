@@ -24,6 +24,8 @@
   --frame-grey: #b4bcc8; /* gris clair */
   /* Cadre neutre : écrans liés à plusieurs groupes, pour ce qui ne concerne pas un exercice précis (§3.2). */
   --frame-neutral: #4a5163;
+  /* Couronne des records personnels : dorée, distincte des statuts et des couleurs de groupe. */
+  --gold: #e8b631;
   --frame-width: 2px;
   --tap: 48px;
   color-scheme: dark;
@@ -1888,4 +1890,33 @@ fieldset.frame > legend + * {
 .habit-when select,
 .habit-when input {
   min-height: var(--tap);
+}
+
+/* Records personnels : couronne dorée, discrète. */
+.crown {
+  color: var(--gold);
+  flex: none;
+  vertical-align: -0.12em;
+}
+
+.record-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.9em;
+  color: var(--text);
+}
+
+.record-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85em;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.records-list .record-line + .record-line {
+  margin-top: 6px;
 }

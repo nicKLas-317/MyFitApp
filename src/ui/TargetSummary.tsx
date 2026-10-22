@@ -1,4 +1,6 @@
 import type { ProgressMarker, ProgressState } from '../engine';
+import { formatRecordWithDate, type PersonalRecord } from '../analysis/records';
+import { Crown } from './Crown';
 import { formatKg, formatShortDay } from '../session/format';
 import { formatRecommendation } from './labels';
 import { ProgressMarkerBanner } from './ProgressMarker';
@@ -18,6 +20,8 @@ interface Props {
   start: { sets: number; reps: number };
   /** Identifiant de test de la cible. */
   targetTestId?: string;
+  /** Record personnel, affiché sur la fiche (couronne dorée). */
+  record?: PersonalRecord | null;
 }
 
 /**
@@ -25,7 +29,7 @@ interface Props {
  * ligne ; la prochaine cible, principale, en grand et dans la couleur du groupe, suivie d'une indication (repère de
  * progression, ou « = Même cible : consolide »). Aucune couleur de statut hors de la pastille.
  */
-export function TargetSummary({ state, assisted, lastDate, marker, deviated = false, start, targetTestId }: Props) {
+export function TargetSummary({ state, assisted, lastDate, marker, deviated = false, start, targetTestId, record }: Props) {
   const last = state?.lastPerformance;
   const rec = state?.recommendation;
   const atWeight = state && rec && (rec.kind === 'keep' || rec.kind === 'reps_up') ? ` à ${formatKg(state.palier.weightKg)}` : '';
@@ -46,6 +50,12 @@ export function TargetSummary({ state, assisted, lastDate, marker, deviated = fa
           <span className="last-values">jamais réalisé</span>
         )}
       </p>
+      {record && (
+        <p className="record-line" data-testid="record">
+          <Crown />
+          <span>Record : {formatRecordWithDate(record)}</span>
+        </p>
+      )}
       <div className="next-zone">
         <p className="zone-label">Prochaine cible</p>
         <p className="next-target" data-testid="next-target">

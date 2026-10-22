@@ -19,6 +19,8 @@ import { FeelingPicker } from './FeelingPicker';
 import { groupColorProps } from './groupColors';
 import { ExercisePicto } from './Pictogram';
 import { TargetSummary } from './TargetSummary';
+import { Crown } from './Crown';
+import { beatsRecord } from '../analysis/records';
 import { WeightField } from './WeightField';
 
 interface Props {
@@ -29,7 +31,7 @@ interface Props {
 }
 
 export function ExerciseCard({ session, performance: p, open, onToggle }: Props) {
-  const { variants, ctxFor, commit, sessions } = useApp();
+  const { variants, ctxFor, commit, sessions, records } = useApp();
   const ref = variants.get(p.variantId);
   const ctx = ctxFor(p.variantId);
   const { state } = ctx;
@@ -56,6 +58,8 @@ export function ExerciseCard({ session, performance: p, open, onToggle }: Props)
       : null;
 
   const name = displayName(ref);
+  // Toutes les séries faites à la cible et mieux que le record des séances précédentes (jamais pour une première fois).
+  const newRecord = beatsRecord(p, records.current.get(p.variantId), ctx.cfg.assisted);
   const nextValue = Math.min(draft ?? target, target);
 
   return (
@@ -70,6 +74,11 @@ export function ExerciseCard({ session, performance: p, open, onToggle }: Props)
         <span className="card-title">
           <strong>{name}</strong>
           {ref && <span className="muted small">{MUSCLE_GROUP_LABELS[ref.exercise.primaryGroup]}</span>}
+          {newRecord && (
+            <span className="record-new" data-testid="new-record">
+              <Crown /> Nouveau record !
+            </span>
+          )}
         </span>
         <span className="card-summary">
           <span>{formatKg(p.weightKg)}</span>

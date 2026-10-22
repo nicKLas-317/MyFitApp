@@ -12,6 +12,8 @@ import { StatusBadge } from '../StatusBadge';
 import { addCardio, cardioOf, removeCardio, updateCardio } from '../../cardio/model';
 import { CardioForm, CardioList } from '../CardioForm';
 import { NEUTRAL_FRAMES, exerciseColorProps } from '../groupColors';
+import { Crown } from '../Crown';
+import { recordKeys } from '../../analysis/records';
 
 const FEELING_ORDER: Feeling[] = ['tres_bien', 'bien', 'moyen', 'mal', 'tres_mal', 'inconnu'];
 
@@ -28,7 +30,7 @@ const ERROR_LABELS: Record<CorrectionError, string> = {
 
 /** Détail d'une séance passée : consultation, renommage, correction, suppression, réutilisation (§10). */
 export function SessionDetail({ sessionId }: { sessionId: string }) {
-  const { sessions, variants, replay, settings, active, commit, deleteSession, ctxFor, cardioMachines } = useApp();
+  const { sessions, variants, replay, settings, active, commit, deleteSession, ctxFor, cardioMachines, records } = useApp();
   const session = sessions.find((s) => s.id === sessionId);
   const [name, setName] = useState(session?.name ?? '');
   const [editing, setEditing] = useState<string | null>(null);
@@ -49,6 +51,7 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
   }
 
   const evaluation = (variantId: string) => replay.evaluations.find((e) => e.sessionId === session.id && e.variantId === variantId);
+  const broke = recordKeys(records);
 
   async function save(next: Session) {
     setFailed(!(await commit(next)));
@@ -98,6 +101,12 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
             <div className="recap-head">
               <a href={`#/exercice/${encodeURIComponent(p.variantId)}`}>
                 <strong>{displayName(variants.get(p.variantId))}</strong>
+                {broke.has(`${session.id}|${p.variantId}`) && (
+                  <>
+                    {' '}
+                    <Crown label="Record battu" />
+                  </>
+                )}
               </a>
               <StatusBadge status={evaluation(p.variantId)?.status} />
             </div>

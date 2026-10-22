@@ -6,6 +6,7 @@ import { buildEngineSettings, indexVariants, type VariantRef } from '../library/
 import { exerciseHasHistory } from '../library/edit';
 import { DEFAULT_RECAP_SETTINGS, sanitizeRecapSettings, type WeeklyRecapSettings } from '../analysis/weekly';
 import { DEFAULT_REPORT_SETTINGS, markSeen, sanitizeReportSeen, sanitizeReportSettings, type ReportPeriod, type ReportSeen, type ReportSettings } from '../analysis/report';
+import { computeRecords, type Records } from '../analysis/records';
 import { answer, sanitizeActivities, sanitizeHabits, type ActivityRecord, type Habit, type Occurrence } from '../activities/model';
 import type { RemovedPerformance, VariantContext } from '../session/ops';
 import { openAppDb, Repository, requestPersistence, type PersistState } from '../storage/db';
@@ -31,6 +32,8 @@ interface AppValue {
   settings: EngineSettings;
   /** Profil recalculé à partir de l'historique (§7.9) et évaluations de chaque performance. */
   replay: ReplayResult;
+  /** Records personnels, recalculés à partir de tout l'historique (séances terminées). */
+  records: Records;
   active: Session | undefined;
   save: SaveStatus;
   persist: PersistState | null;
@@ -568,6 +571,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const settings = useMemo(() => buildEngineSettings(exercises), [exercises]);
   const variants = useMemo(() => indexVariants(exercises), [exercises]);
   const replay = useMemo(() => rebuildProfile(sessions, settings), [sessions, settings]);
+  const records = useMemo(() => computeRecords(sessions, settings), [sessions, settings]);
   const active = useMemo(() => sessions.find((s) => s.state === 'active'), [sessions]);
 
   const ctxFor = useCallback(
@@ -584,6 +588,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     variants,
     settings,
     replay,
+    records,
     active,
     save,
     persist,

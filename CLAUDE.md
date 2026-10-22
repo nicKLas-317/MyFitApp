@@ -420,6 +420,7 @@ Pas de repère quand la cible ne change pas (palier conservé, exercice jamais r
 Sur la fiche d'un exercice et en haut de sa carte dans l'écran de séance (au-dessus du champ de poids), le bloc est séparé en deux zones, avec un fin séparateur entre elles :
 
 - **Dernière fois** : zone secondaire. Libellé et texte gris clair, en plus petit, sur une seule ligne : poids · répétitions · date courte (« 15 oct. ») · pastille de statut. Sur un très petit écran (moins de 340 px), la ligne peut passer à la ligne plutôt que d'être tronquée. Pour un exercice jamais réalisé : « jamais réalisé ».
+- **Record** (fiche seulement, §19.9) : sous « Dernière fois », une ligne « 👑 Record : 3 × 9 à 20 kg (16 oct.) », couronne dorée.
 - **Prochaine cible** : zone principale. Libellé visible, puis la cible en grand et en gras, dans la couleur du groupe de l'exercice (§3.2) : « 3 × 9 à 12 kg », « Poids supérieur · 3 × 8 ». Sous la cible, toujours une indication :
   - quand la cible change : le repère de progression (§5.3.1) ;
   - quand la cible est identique à la dernière fois : une mention discrète « = Même cible : consolide » ;
@@ -1395,6 +1396,15 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 201. Export / import : activités et habitudes dans la sauvegarde (format 4), format 3 migré sans perte, activité invalide refusée, fusion sans doublon, écriture avec les séances dans une seule transaction.
 202. (bout en bout, format smartphone) Question absente à 22 h, présente à 22 h 31 au-dessus du récapitulatif ; « Oui » ; mardi : jambes et épaules « (+1 indirect) · hier » vertes ; historique « Badminton · 1 h 30 » ; bilan de la semaine et texte du mail ; export ; suppression confirmée ; « Non » ; sans réponse jusqu'au dimanche ; réglages (désactivation, nouvelle activité, erreur d'heures) ; rien ne dépasse à 412, 360 et 320 px.
 
+### Records personnels (§19.9)
+
+203. Charge plus élevée → record ; même charge, plus de répétitions → record ; une série sous la cible, une séance incomplète, une égalité ou plus de répétitions à une charge plus basse → pas de record ; « 3 × 9 à 20 kg (9 oct.) ».
+204. Exercice assisté : aide plus basse → record, puis les répétitions ; plus d'aide ne bat jamais le record (« 3 × 9 avec 25 kg d’aide »).
+205. La première performance qui compte devient le record sans être célébrée ; une séance en cours est comparée au record des séances terminées ; pas de « Nouveau record » pour une première fois ni avant la dernière série.
+206. Rétroactif : import d'une séance plus ancienne rejoué à sa place ; correction ou suppression d'une séance passée → recalcul ; moteur inchangé ; pas de record pour le cardio.
+207. Bilan : section « Records » (« 👑 Curl biceps barre droite : 3 × 9 à 20 kg », en évidence), dernier record de chaque exercice de la période, premières fois exclues (« Aucun nouveau record. »), texte du mail.
+208. (bout en bout, format smartphone) Fiche : ligne du record avec la couronne dorée, couronne dans l'historique de la fiche ; séance : « Nouveau record ! » une fois les trois séries faites, rien pour une première fois ; fin de séance : « Record battu » et couronne ; détail de la séance : couronne ; bilan et texte du mail ; rien ne dépasse à 412, 360 et 320 px.
+
 Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
 
 ## 16. Vérification avant livraison
@@ -1565,6 +1575,7 @@ L'application n'a pas de serveur : aucun envoi automatique. Elle prépare le bil
   - **Séances** : nombre de séances et comparaison avec la période précédente (« 3 séances, +1 par rapport à la semaine précédente », « autant que… ») ; durée totale des séances à heures connues, comparée de même (« durée inconnue pour 1 séance importée » si besoin) ; minutes de cardio par machine ; activités habituelles confirmées par nom (« Activités : Badminton ×4, 6 h 00 », §19.8), qui ne sont pas des séances (ni dans le nombre de séances, ni dans la durée).
   - **Groupes travaillés** : même calcul que le récapitulatif (§19.6, direct + indirect, activités habituelles comprises, groupes affichés seulement), en nombre de séances (« Biceps : 1× · +2 indirect ») ; puis « Non travaillés : … ».
   - **Progressions** : paliers validés pendant la période d'après les évaluations du moteur (2ᵉ validation verte consécutive) : « Curl biceps haltères : 3×8 → 3×9 à 12 kg (21 oct.) », « Leg extension : 3×12 à 40 kg validé → poids supérieur, 3×8 », « Tractions assistées : 3×12 avec 30 kg d'aide validé → moins d'aide, 3×8 » ; sinon « Aucun palier validé. ».
+  - **Records** : records battus pendant la période (§19.9) ; sinon « Aucun nouveau record. ».
   - **En difficulté** : une ligne par exercice ayant eu au moins une séance rouge pendant la période ; sinon « Aucun exercice en difficulté. ». Formulation selon le cas (précision validée) :
     - passage en « poids inférieur » pendant la période : « Presse à cuisses : 4ᵉ séance rouge de suite à 100 kg → poids inférieur recommandé (21 oct.) » (« avec 30 kg d'aide → plus d'aide recommandée » pour un exercice assisté) ;
     - sinon : « Presse à cuisses : 2 séances rouges cette semaine (3 de suite à 100 kg) » (« ce mois-ci » pour le mois). La parenthèse donne la série de rouges en cours à la fin de la période quand elle a commencé avant la période ; sans série en cours plus longue (série commencée dans la période, ou interrompue), pas de parenthèse.
@@ -1613,6 +1624,26 @@ But : compter, sans rien saisir, une activité régulière faite hors de la sall
 - Pas de vert, d'orange ni de rouge en dehors des statuts (messages neutres).
 
 **Données** : réponses dans la méta `activities` et habitudes dans la méta `habits` de la base principale (aucune migration de structure) ; une activité n'est jamais une séance et n'a aucun effet sur le moteur de progression. Export (format `schemaVersion` 4 : `activities` et `settings.habits`) ; import en fusion (la réponse de l'appareil est gardée, pas de doublon même nom même jour) ou en remplacement global (habitudes comprises).
+
+### 19.9. Records personnels (précision validée)
+
+**Définition**, par exercice-variante (`src/analysis/records.ts`, calcul pur) :
+
+- Une performance compte si toutes les séries prévues ont été faites, toutes à la cible (ni historique partiel, ni séance incomplète, ni série sous la cible).
+- La meilleure : charge la plus élevée, puis à charge égale le plus de répétitions par série, puis le plus de séries (choix signalé). Exercice assisté (§7.12) : aide la plus **basse**, puis les répétitions.
+- Un record n'est battu que par une performance strictement meilleure : une égalité ne le remplace pas.
+- Calculé à partir de tout l'historique (séances terminées, saisies ou importées), dans l'ordre chronologique du moteur (§7.9) : rétroactif, et recalculé à chaque affichage, donc à jour après la correction, le changement de date ou la suppression d'une séance passée. Jamais stocké.
+- La toute première performance qui compte devient le record **sans être célébrée** : ni « Nouveau record ! », ni couronne dans l'historique, ni ligne dans les bilans. Seuls les records **battus** sont célébrés.
+- Le cardio et les activités habituelles (§19.8) n'ont pas de record. Aucun effet sur le moteur de progression.
+
+**Affichage** (couronne dorée `--gold`, pictogramme SVG `Crown` ; « 👑 » dans le texte du bilan et du mail) :
+
+- Fiche d'exercice : ligne « Record : 3 × 9 à 20 kg (16 oct.) » sous « Dernière fois » (§5.3.2).
+- Séance : quand toutes les séries prévues d'un exercice sont faites à la cible et battent le record des séances précédentes, couronne et « Nouveau record ! » sur sa carte, sous le nom (visible carte repliée).
+- Récapitulatif de fin de séance : cadre « Record battu » / « Records battus » (« Curl biceps barre droite : 3 × 8 à 22 kg ») et couronne à côté du nom de l'exercice.
+- Historique : petite couronne (« Record battu ») à côté des performances qui ont battu un record, dans le détail d'une séance et dans l'historique de la fiche.
+- Bilan de la période (§19.7) : section « Records » après « Progressions », le dernier record battu de chaque exercice pendant la période (« 👑 Curl biceps barre droite : 3 × 9 à 20 kg », la performance en évidence), sinon « Aucun nouveau record. » ; même section dans le texte du mail.
+- La couronne est discrète et ne remplace aucune pastille de statut ni couleur de groupe. Pas de vert, d'orange ni de rouge.
 
 ## 20. Suivi corporel simplifié : « Mon poids »
 

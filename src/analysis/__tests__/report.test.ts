@@ -244,6 +244,9 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
         '- Leg extension : 3×12 à 40 kg validé → poids supérieur, 3×8 (23 oct.)',
         '- Tractions assistées : 3×12 avec 30 kg d’aide validé → moins d’aide, 3×8 (24 oct.)',
         '',
+        'RECORDS',
+        '- Aucun nouveau record.',
+        '',
         'EN DIFFICULTÉ',
         '- Presse à cuisses : 4ᵉ séance rouge de suite à 100 kg → poids inférieur recommandé (21 oct.)',
         '',
@@ -270,6 +273,7 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
       Séances: ['+1 par rapport à la semaine précédente', '+1 h 00 par rapport à la semaine précédente'],
       'Groupes travaillés': ['Non travaillés : Épaules, Triceps'],
       Progressions: ['3×8 → 3×9 à 12 kg', 'poids supérieur, 3×8', 'moins d’aide, 3×8'],
+      Records: [],
       'En difficulté': ['poids inférieur recommandé'],
       Poids: ['80,2 kg', '79,6 kg'],
     });

@@ -16,11 +16,13 @@ import { groupColorProps } from '../groupColors';
 import { equipmentLabel, ExercisePicto } from '../Pictogram';
 import { StatusBadge } from '../StatusBadge';
 import { TargetSummary } from '../TargetSummary';
+import { Crown } from '../Crown';
+import { recordKeys } from '../../analysis/records';
 
 /** Fiche d'un exercice-variante (§4) : dernière performance, prochaine cible, statut, variantes et historique. */
 /** Fiche d'un exercice-variante. `fromBilan` : ouverte depuis le bilan, directement sur le graphique d'évolution. */
 export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: string; fromBilan?: boolean }) {
-  const { variants, exercises, sessions, replay, active, ctxFor, saveExercises } = useApp();
+  const { variants, exercises, sessions, replay, records, active, ctxFor, saveExercises } = useApp();
   const ref = variants.get(variantId);
   const [variantName, setVariantName] = useState<string | null>(null);
   const [variantError, setVariantError] = useState<string | null>(null);
@@ -50,6 +52,7 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
   // Graphique secondaire (§19.2) : une seule variante, jamais mélangée avec une autre.
   const series = chartSeries(variantId, sessions, replay.evaluations);
   const reps = series.flatMap((p) => (p.avgReps === null ? [] : [{ date: p.date, value: p.avgReps }]));
+  const broke = recordKeys(records);
 
   // Historique de l'exercice-variante, du plus récent au plus ancien (§4, §19.1).
   const history = sortSessions(sessions.filter((s) => s.state === 'done'))
@@ -147,6 +150,7 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
           marker={progressMarker(state)}
           start={{ sets: ctx.cfg.sets, reps: ctx.cfg.minReps }}
           targetTestId="sheet-next"
+          record={records.current.get(variantId) ?? null}
         />
       </section>
 
@@ -260,7 +264,15 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
           <ul className="history" aria-label="Historique de l’exercice">
             {history.map(({ session, performance: p, evaluation }) => (
               <li key={session.id} className="history-item">
-                <span className="history-date">{formatIsoDay(session.date)}</span>
+                <span className="history-date">
+                  {formatIsoDay(session.date)}
+                  {broke.has(`${session.id}|${variantId}`) && (
+                    <>
+                      {' '}
+                      <Crown label="Record battu" />
+                    </>
+                  )}
+                </span>
                 <span>
                   {formatKg(p.weightKg)}
                   {p.partial ? (

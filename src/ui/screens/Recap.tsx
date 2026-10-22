@@ -9,10 +9,12 @@ import { StatusBadge } from '../StatusBadge';
 import { cardioOf } from '../../cardio/model';
 import { CardioLine } from '../CardioForm';
 import { NEUTRAL_FRAMES, exerciseColorProps } from '../groupColors';
+import { Crown } from '../Crown';
+import { formatRecord } from '../../analysis/records';
 
 /** Récapitulatif de fin de séance (§5.6) : la séance est déjà enregistrée, le nom est facultatif. */
 export function Recap({ sessionId }: { sessionId: string }) {
-  const { sessions, variants, replay, commit, lastFinish, setLastFinish, ctxFor } = useApp();
+  const { sessions, variants, replay, records, commit, lastFinish, setLastFinish, ctxFor } = useApp();
   const session = sessions.find((s) => s.id === sessionId);
   const [name, setName] = useState(session?.name ?? '');
 
@@ -28,6 +30,9 @@ export function Recap({ sessionId }: { sessionId: string }) {
   }
 
   const removed = lastFinish?.sessionId === session.id ? lastFinish.removed : [];
+  // Records battus pendant cette séance (une toute première performance n'en fait pas partie).
+  const broken = records.breaks.filter((b) => b.sessionId === session.id);
+  const brokenIds = new Set(broken.map((b) => b.variantId));
   const evaluation = (variantId: string) =>
     replay.evaluations.find((e) => e.sessionId === session.id && e.variantId === variantId);
 
@@ -85,6 +90,20 @@ export function Recap({ sessionId }: { sessionId: string }) {
         </div>
       </form>
 
+      {broken.length > 0 && (
+        <section className="frame records-list" aria-label="Records battus">
+          <h2 className="section-title">{broken.length > 1 ? 'Records battus' : 'Record battu'}</h2>
+          {broken.map((b) => (
+            <p key={b.variantId} className="record-line">
+              <Crown />
+              <span>
+                {displayName(variants.get(b.variantId))} : <strong>{formatRecord(b)}</strong>
+              </span>
+            </p>
+          ))}
+        </section>
+      )}
+
       <ul className="recap-list">
         {session.performances.map((p) => {
           const ev = evaluation(p.variantId);
@@ -92,7 +111,15 @@ export function Recap({ sessionId }: { sessionId: string }) {
           return (
             <li key={p.variantId} className="card recap-item" data-variant={p.variantId} {...exerciseColorProps(variants.get(p.variantId)?.exercise)}>
               <div className="recap-head">
-                <strong>{displayName(variants.get(p.variantId))}</strong>
+                <strong>
+                  {displayName(variants.get(p.variantId))}
+                  {brokenIds.has(p.variantId) && (
+                    <>
+                      {' '}
+                      <Crown label="Nouveau record" />
+                    </>
+                  )}
+                </strong>
                 <StatusBadge status={ev?.status} />
               </div>
               <div>
