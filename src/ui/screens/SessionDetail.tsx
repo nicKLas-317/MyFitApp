@@ -92,7 +92,7 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
       </p>
       {failed && (
         <p className="field-error" role="alert">
-          Enregistrement impossible : réessayez.
+          Enregistrement impossible : réessaie.
         </p>
       )}
 
@@ -209,7 +209,7 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
       <div className="sheet-actions">
         {active ? (
           <p className="muted small">
-            Une séance est en cours : terminez-la pour en démarrer une nouvelle à partir de celle-ci.{' '}
+            Une séance est en cours : termine-la pour en démarrer une nouvelle à partir de celle-ci.{' '}
             <a href="#/seance">Reprendre la séance</a>
           </p>
         ) : (

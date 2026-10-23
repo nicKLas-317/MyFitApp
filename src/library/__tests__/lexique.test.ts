@@ -100,7 +100,7 @@ describe('Lexique d’équivalences (§4.2.1)', () => {
     const ctx = { exercises: LIB, sessions: [], profile: rebuildProfile([], buildEngineSettings(LIB)).profile };
     const draft = setDraftDate(draftFromNotes('élévation latérale haltères xyz\n3x8x10kg +', LIB, '2026-10-16'), '2026-10-14');
     const blocking = draftProblems(draft, ctx).filter((p) => p.level === 'error');
-    expect(blocking.map((p) => p.message)).toEqual(['À confirmer : Mot non reconnu : « xyz ». Vérifiez l’exercice proposé.']);
+    expect(blocking.map((p) => p.message)).toEqual(['À confirmer : Mot non reconnu : « xyz ». Vérifie l’exercice proposé.']);
     const confirmed = updateDraftExercise(draft, draft.exercises[0]!.key, { checksConfirmed: true });
     expect(draftProblems(confirmed, ctx).filter((p) => p.level === 'error')).toEqual([]);
     // « Tirage nuque » n'est pas un tirage vertical : choix obligatoire.

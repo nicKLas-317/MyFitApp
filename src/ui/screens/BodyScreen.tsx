@@ -34,7 +34,7 @@ export function BodyScreen() {
       {status === 'loading' && <p className="muted">Chargement…</p>}
       {status === 'error' && (
         <p className="banner error-inline" role="alert">
-          Le suivi du poids est indisponible sur cet appareil. Vos séances ne sont pas concernées.
+          Le suivi du poids est indisponible sur cet appareil. Tes séances ne sont pas concernées.
         </p>
       )}
       {status === 'ready' && (
@@ -52,7 +52,7 @@ export function BodyScreen() {
             />
             {failed && (
               <p className="field-error" role="alert">
-                Enregistrement impossible : réessayez.
+                Enregistrement impossible : réessaie.
               </p>
             )}
             <p className="muted small height-line">

@@ -28,7 +28,7 @@ test.describe('Lexique d’équivalences (§4.2.1)', () => {
     await expect(lateral.getByLabel('Exercice', { exact: true })).toHaveValue('elevations-laterales');
     const shoulder = preview.getByRole('article', { name: 'shoulder press xyz' });
     await expect(shoulder.getByLabel('Exercice', { exact: true })).toHaveValue('developpe-epaules-machine');
-    await expect(shoulder.getByText('À confirmer : Mot non reconnu : « xyz ». Vérifiez l’exercice proposé.')).toBeVisible();
+    await expect(shoulder.getByText('À confirmer : Mot non reconnu : « xyz ». Vérifie l’exercice proposé.')).toBeVisible();
     await preview.getByRole('button', { name: 'Importer la séance (2 exercices)' }).click();
     expect(await readSessions(page)).toEqual([]);
     await shoulder.getByRole('button', { name: 'J’ai vérifié' }).click();

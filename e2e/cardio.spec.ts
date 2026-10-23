@@ -108,7 +108,7 @@ test.describe('Cardio', () => {
     await preview.getByLabel('Date de la séance').fill('2026-10-14');
 
     const tapis = preview.getByRole('article', { name: 'Cardio : Tapis incliné' });
-    await expect(tapis.getByText('Inclinaison non précisée : choisissez Moyenne ou Haute.')).toBeVisible();
+    await expect(tapis.getByText('Inclinaison non précisée : choisis Moyenne ou Haute.')).toBeVisible();
     await expect(preview.getByRole('article', { name: 'Cardio : Marche' }).getByRole('button', { name: 'Neutre' })).toHaveAttribute('aria-pressed', 'true');
     await preview.getByRole('button', { name: 'Importer la séance (0 exercice, 3 blocs de cardio)' }).click();
     expect(await readSessions(page)).toEqual([]);
@@ -203,7 +203,7 @@ test.describe('Cardio', () => {
     // Durée invalide : la fin est bloquée avec un message, sans bouton inactif.
     await page.getByRole('button', { name: 'Terminer la séance' }).click();
     const confirm = finishSheet(page);
-    await expect(confirm.getByRole('alert')).toHaveText('Cardio non validé : Durée invalide : un nombre entier de minutes. Corrigez-le ou annulez-le.');
+    await expect(confirm.getByRole('alert')).toHaveText('Cardio non validé : Durée invalide : un nombre entier de minutes. Corrige-le ou annule-le.');
     await expect(confirm.getByRole('button', { name: /terminer/i })).toHaveCount(0);
 
     // « Non, continuer la séance » referme le volet ; la durée corrigée, le cardio est proposé à l'enregistrement.

@@ -88,7 +88,7 @@ function Screen({ page, param, extra }: { page: string; param: string | undefine
           fallback={
             <main className="screen">
               <p className="banner error-inline" role="alert">
-                Le suivi du poids a rencontré une erreur. Vos séances ne sont pas concernées.
+                Le suivi du poids a rencontré une erreur. Tes séances ne sont pas concernées.
               </p>
               <a className="btn primary big" href="#/">
                 Accueil

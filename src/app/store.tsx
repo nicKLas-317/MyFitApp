@@ -635,7 +635,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return (
       <div className="splash error-screen" role="alert">
         <h1>Stockage local indisponible</h1>
-        <p>Impossible d’ouvrir la base de données de l’appareil. Vérifiez que le navigateur n’est pas en navigation privée.</p>
+        <p>Impossible d’ouvrir la base de données de l’appareil. Vérifie que le navigateur n’est pas en navigation privée.</p>
         <p className="muted">{load.message}</p>
       </div>
     );

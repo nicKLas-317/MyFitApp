@@ -197,7 +197,7 @@ export function draftExercise(input: DraftExerciseInput, exercises: readonly Exe
   // Mot inconnu de la bibliothèque et du lexique : l'exercice est proposé, l'import attend la confirmation (§4.2.1).
   if (choice && match.confidence !== 'learned' && match.unknownWords.length > 0) {
     const many = match.unknownWords.length > 1;
-    toConfirm.push(`Mot${many ? 's' : ''} non reconnu${many ? 's' : ''} : « ${match.unknownWords.join(' ')} ». Vérifiez l’exercice proposé.`);
+    toConfirm.push(`Mot${many ? 's' : ''} non reconnu${many ? 's' : ''} : « ${match.unknownWords.join(' ')} ». Vérifie l’exercice proposé.`);
   }
   if (!choice && match.confidence === 'none' && input.primaryGroup) {
     choice = { kind: 'new_exercise', name: input.sourceName, primaryGroup: input.primaryGroup };
@@ -493,27 +493,27 @@ function exerciseProblems(e: DraftExercise, ctx: ProblemContext): DraftProblem[]
 
   const choice = e.choice;
   if (!choice) {
-    if (e.match.confidence === 'ambiguous') err('choose_exercise', 'Plusieurs exercices possibles : choisissez le bon.');
-    else err('choose_exercise', 'Exercice non reconnu : choisissez-en un ou créez-le.');
+    if (e.match.confidence === 'ambiguous') err('choose_exercise', 'Plusieurs exercices possibles : choisis le bon.');
+    else err('choose_exercise', 'Exercice non reconnu : choisis-en un ou crée-le.');
   } else if (choice.kind === 'variant') {
     if (!ctx.exercises.some((x) => x.variants.some((v) => v.id === choice.variantId))) err('unknown_variant', 'Exercice introuvable.');
     else if (e.match.confidence === 'probable' && choice.variantId === e.match.suggestion) {
-      warn('probable_match', 'Correspondance probable : vérifiez l’exercice.');
+      warn('probable_match', 'Correspondance probable : vérifie l’exercice.');
     }
   } else if (choice.kind === 'new_exercise') {
     const name = normalizeName(choice.name);
     if (!name) err('new_exercise_name', 'Nom du nouvel exercice manquant.');
     else if (ctx.exercises.some((x) => normalizeName(x.name) === name)) {
-      err('new_exercise_exists', 'Un exercice porte déjà ce nom : sélectionnez-le.');
+      err('new_exercise_exists', 'Un exercice porte déjà ce nom : sélectionne-le.');
     }
-    if (!choice.primaryGroup) err('new_exercise_group', 'Choisissez le groupe musculaire du nouvel exercice.');
+    if (!choice.primaryGroup) err('new_exercise_group', 'Choisis le groupe musculaire du nouvel exercice.');
   } else {
     const exercise = ctx.exercises.find((x) => x.id === choice.exerciseId);
     const name = normalizeName(choice.name);
     if (!exercise) err('unknown_variant', 'Exercice introuvable.');
     else if (!name) err('new_variant_name', 'Nom de la nouvelle variante manquant.');
     else if (validateVariantName(exercise, choice.name) === 'name_taken') {
-      err('new_variant_exists', 'Cette variante existe déjà : sélectionnez-la.');
+      err('new_variant_exists', 'Cette variante existe déjà : sélectionne-la.');
     } else {
       warn('new_variant', `Nouvelle variante « ${choice.name.trim()} » de « ${exercise.name} », avec son propre historique.`);
     }
@@ -521,7 +521,7 @@ function exerciseProblems(e: DraftExercise, ctx: ProblemContext): DraftProblem[]
 
   if (e.weightKg === null) {
     if (e.reps === null && e.targetReps === null) {
-      err('no_data', e.issues.includes('ambiguous_format') ? 'Ligne non comprise : saisissez les valeurs ou excluez l’exercice.' : 'Aucune performance trouvée : complétez ou excluez l’exercice.');
+      err('no_data', e.issues.includes('ambiguous_format') ? 'Ligne non comprise : saisis les valeurs ou exclus l’exercice.' : 'Aucune performance trouvée : complète ou exclus l’exercice.');
     } else err('missing_weight', 'Poids manquant.');
   } else if (!Number.isFinite(e.weightKg) || e.weightKg <= 0) {
     err('invalid_weight', 'Poids invalide.');
@@ -549,11 +549,11 @@ function exerciseProblems(e: DraftExercise, ctx: ProblemContext): DraftProblem[]
   // Exercice assisté (§7.12) : la charge saisie est une aide.
   const assisted = choice?.kind === 'variant' && resolveConfig(buildEngineSettings(ctx.exercises), choice.variantId).assisted;
   if (assisted) warn('assisted', 'Exercice assisté : la charge est une aide (moins d’aide = plus dur).');
-  else if (e.assistedHint) warn('assisted_mismatch', 'La source indique une charge d’aide, mais cet exercice n’est pas réglé comme assisté : vérifiez.');
+  else if (e.assistedHint) warn('assisted_mismatch', 'La source indique une charge d’aide, mais cet exercice n’est pas réglé comme assisté : vérifie.');
 
   if (!e.feelingConfirmed) {
-    if (e.issues.includes('feeling_conflict')) err('feeling_conflict', 'Ressenti et symbole contradictoires : choisissez le ressenti.');
-    else err('unknown_symbol', `Symbole « ${e.feelingSymbol ?? ''} » non reconnu : choisissez le ressenti.`);
+    if (e.issues.includes('feeling_conflict')) err('feeling_conflict', 'Ressenti et symbole contradictoires : choisis le ressenti.');
+    else err('unknown_symbol', `Symbole « ${e.feelingSymbol ?? ''} » non reconnu : choisis le ressenti.`);
   } else if (e.feeling === 'inconnu' && e.reps !== null) {
     warn('no_feeling', 'Ressenti absent : la performance sera orange et ne validera pas.');
   }
@@ -561,7 +561,7 @@ function exerciseProblems(e: DraftExercise, ctx: ProblemContext): DraftProblem[]
   if (choice?.kind === 'variant' && e.weightKg !== null && e.weightKg > 0) {
     const previous = ctx.profile.variants[choice.variantId]?.palier.weightKg;
     if (previous !== undefined && Math.abs(e.weightKg - previous) / previous > WEIGHT_CONFIRM_RATIO) {
-      warn('weight_gap', `Poids très différent du dernier utilisé (${fmt(previous)} kg) : vérifiez.`);
+      warn('weight_gap', `Poids très différent du dernier utilisé (${fmt(previous)} kg) : vérifie.`);
     }
   }
   return list;
@@ -571,8 +571,8 @@ function exerciseProblems(e: DraftExercise, ctx: ProblemContext): DraftProblem[]
 export function draftProblems(draft: DraftSession, ctx: ProblemContext): DraftProblem[] {
   const list: DraftProblem[] = [];
   if (!isIsoDate(draft.date)) list.push({ level: 'error', code: 'date_invalid', message: 'Date invalide.' });
-  else if (!draft.dateConfirmed) list.push({ level: 'error', code: 'date_unconfirmed', message: 'Confirmez la date de la séance.' });
-  if (draft.dateYearAssumed) list.push({ level: 'warning', code: 'date_year_assumed', message: 'Année absente des notes : vérifiez-la.' });
+  else if (!draft.dateConfirmed) list.push({ level: 'error', code: 'date_unconfirmed', message: 'Confirme la date de la séance.' });
+  if (draft.dateYearAssumed) list.push({ level: 'warning', code: 'date_year_assumed', message: 'Année absente des notes : vérifie-la.' });
 
   const included = draft.exercises.filter((e) => e.include);
   const cardio = draft.cardio.filter((c) => c.include);
@@ -584,7 +584,7 @@ export function draftProblems(draft: DraftSession, ctx: ProblemContext): DraftPr
     list.push(...exerciseProblems(e, ctx));
     const id = e.choice?.kind === 'variant' ? e.choice.variantId : e.choice?.kind === 'new_variant' ? `${e.choice.exerciseId}:${normalizeName(gripOf(e.choice.name) ?? e.choice.name)}` : e.choice ? `new:${normalizeName(e.choice.name)}` : null;
     if (id !== null) {
-      if (seen.has(id)) list.push({ level: 'error', code: 'duplicate_exercise', exerciseKey: e.key, message: 'Exercice déjà présent dans cette séance : excluez-en un.' });
+      if (seen.has(id)) list.push({ level: 'error', code: 'duplicate_exercise', exerciseKey: e.key, message: 'Exercice déjà présent dans cette séance : exclus-en un.' });
       seen.add(id);
     }
   }
@@ -602,8 +602,8 @@ export function draftProblems(draft: DraftSession, ctx: ProblemContext): DraftPr
 function cardioProblems(c: DraftCardio): DraftProblem[] {
   const list: DraftProblem[] = [];
   const err = (code: string, message: string) => list.push({ level: 'error', code, exerciseKey: c.key, message });
-  if (!c.machine) err('cardio_machine', 'Machine de cardio non reconnue : choisissez-la.');
-  else if (c.machine.incline && c.incline === null) err('cardio_incline', 'Inclinaison non précisée : choisissez Moyenne ou Haute.');
+  if (!c.machine) err('cardio_machine', 'Machine de cardio non reconnue : choisis-la.');
+  else if (c.machine.incline && c.incline === null) err('cardio_incline', 'Inclinaison non précisée : choisis Moyenne ou Haute.');
   if (!isValidMinutes(c.minutes)) err('cardio_minutes', 'Durée manquante ou invalide (en minutes entières).');
   if (c.distanceKm !== null && !isValidDistance(c.distanceKm)) err('cardio_distance', 'Distance invalide.');
   return list;

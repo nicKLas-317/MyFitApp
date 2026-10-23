@@ -48,7 +48,7 @@ export function Progress() {
         )}
         {failed && (
           <p className="field-error" role="alert">
-            Enregistrement impossible : réessayez.
+            Enregistrement impossible : réessaie.
           </p>
         )}
         <a className="btn big" href="#/poids">

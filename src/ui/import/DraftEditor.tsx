@@ -81,7 +81,7 @@ export function DraftSessionEditor({ draft, problems, evaluations, exercises, ma
         </div>
         <p className="muted small">
           {DATE_HINTS[draft.dateSource]}
-          {draft.dateYearAssumed && ' Année absente des notes : vérifiez-la.'}
+          {draft.dateYearAssumed && ' Année absente des notes : vérifie-la.'}
         </p>
       </div>
 

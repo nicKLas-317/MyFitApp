@@ -38,7 +38,7 @@ export function ActivityBanner() {
             </span>
             {failed === key && (
               <p className="report-message small" role="alert">
-                Réponse non enregistrée : réessayez.
+                Réponse non enregistrée : réessaie.
               </p>
             )}
           </div>

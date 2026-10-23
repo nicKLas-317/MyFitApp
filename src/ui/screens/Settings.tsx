@@ -87,7 +87,7 @@ function HeightField() {
     const parsed = parseHeight(text);
     if ('error' in parsed) return setMessage({ ok: false, text: 'Taille invalide : entre 80 et 250 cm.' });
     const ok = await setHeight(parsed.value);
-    setMessage(ok ? { ok: true, text: 'Taille enregistrée.' } : { ok: false, text: 'Enregistrement impossible : réessayez.' });
+    setMessage(ok ? { ok: true, text: 'Taille enregistrée.' } : { ok: false, text: 'Enregistrement impossible : réessaie.' });
   }
 
   return (
@@ -153,7 +153,7 @@ function RecapSettingsField() {
       />
       {failed && (
         <p className="field-error" role="alert">
-          Enregistrement impossible : réessayez.
+          Enregistrement impossible : réessaie.
         </p>
       )}
     </div>
@@ -173,7 +173,7 @@ function ReportSettingsField() {
     setShown(next);
     const ok = await setReportSettings(next);
     if (!ok) setShown(reportSettings);
-    setMessage(ok ? (done ? { ok: true, text: done } : null) : { ok: false, text: 'Enregistrement impossible : réessayez.' });
+    setMessage(ok ? (done ? { ok: true, text: done } : null) : { ok: false, text: 'Enregistrement impossible : réessaie.' });
   };
 
   return (
@@ -216,7 +216,7 @@ function ReportSettingsField() {
 const MACHINE_ERRORS: Record<MachineListError, string> = {
   empty_name: 'Chaque machine doit avoir un nom.',
   duplicate_name: 'Deux machines portent le même nom.',
-  empty_list: 'Gardez au moins une machine.',
+  empty_list: 'Garde au moins une machine.',
 };
 
 /**
@@ -240,7 +240,7 @@ function CardioMachinesField() {
   async function save() {
     if (errors.length > 0) return;
     const ok = await setCardioMachines(list.map((m) => ({ ...m, name: m.name.trim() })));
-    setMessage(ok ? { ok: true, text: 'Machines enregistrées.' } : { ok: false, text: 'Enregistrement impossible : réessayez.' });
+    setMessage(ok ? { ok: true, text: 'Machines enregistrées.' } : { ok: false, text: 'Enregistrement impossible : réessaie.' });
   }
 
   return (
@@ -315,7 +315,7 @@ function CardioMachinesField() {
 }
 
 const HABIT_ERRORS: Record<HabitError, string> = {
-  empty_name: 'Donnez un nom à l’activité.',
+  empty_name: 'Donne un nom à l’activité.',
   duplicate_name: 'Deux activités portent le même nom.',
   bad_time: 'Heures de début et de fin à indiquer.',
   end_before_start: 'L’heure de fin doit suivre l’heure de début (même jour).',
@@ -347,7 +347,7 @@ function HabitsField() {
   async function save() {
     if (invalid) return;
     const ok = await setHabits(list.map((h) => ({ ...h, name: h.name.trim() })));
-    setMessage(ok ? { ok: true, text: 'Activités enregistrées.' } : { ok: false, text: 'Enregistrement impossible : réessayez.' });
+    setMessage(ok ? { ok: true, text: 'Activités enregistrées.' } : { ok: false, text: 'Enregistrement impossible : réessaie.' });
   }
 
   return (

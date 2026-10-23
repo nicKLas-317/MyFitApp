@@ -44,7 +44,7 @@ export function Home() {
       <ActivityEntry />
       {remind && (
         <div className="banner info reminder" role="status">
-          <span>{lastExportAt ? 'Aucune sauvegarde depuis plus de 14 jours.' : 'Pensez à sauvegarder vos séances.'}</span>
+          <span>{lastExportAt ? 'Aucune sauvegarde depuis plus de 14 jours.' : 'Pense à sauvegarder tes séances.'}</span>
           <button type="button" className="btn" onClick={() => void exportNow()}>
             Exporter
           </button>

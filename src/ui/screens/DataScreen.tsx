@@ -49,7 +49,7 @@ export function DataScreen() {
     const id = counter + 1;
     setCounter(id);
     if (!trimmed) {
-      setAnalysis({ kind: 'error', id, message: 'Collez des notes de séance ou du JSON, ou choisissez un fichier.', details: [] });
+      setAnalysis({ kind: 'error', id, message: 'Colle des notes de séance ou du JSON, ou choisis un fichier.', details: [] });
       return;
     }
     const today = localDate(Date.now());
@@ -146,7 +146,7 @@ export function DataScreen() {
             />
           </label>
         </div>
-        <p className="muted small">Un bloc de notes correspond à une séance : pour plusieurs séances, importez les blocs l’un après l’autre.</p>
+        <p className="muted small">Un bloc de notes correspond à une séance : pour plusieurs séances, importe les blocs l’un après l’autre.</p>
       </section>
 
       {analysis?.kind === 'error' && (
@@ -220,7 +220,7 @@ function DraftsPreview({ initial, notes, onDone }: { initial: DraftSession[]; no
                       : ''
                   }.`,
           }
-        : { kind: 'error', text: 'L’import a échoué : aucune donnée n’a été modifiée. Réessayez.' },
+        : { kind: 'error', text: 'L’import a échoué : aucune donnée n’a été modifiée. Réessaie.' },
     );
   }
 
@@ -276,7 +276,7 @@ function BackupPreview({ backup, onDone }: { backup: Backup; onDone(outcome: Out
   const newActivities = doneActivities(mergedActivities).length - doneActivities(activities).length;
   const activityChanges = mergedActivities.length !== activities.length;
   const exportedAt = Date.parse(backup.exportedAt);
-  const failed: Outcome = { kind: 'error', text: 'L’import a échoué : aucune donnée n’a été modifiée. Réessayez.' };
+  const failed: Outcome = { kind: 'error', text: 'L’import a échoué : aucune donnée n’a été modifiée. Réessaie.' };
 
   async function merge() {
     setBusy(true);

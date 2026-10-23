@@ -84,7 +84,7 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
     const name = variantName ?? '';
     const error = validateVariantName(exercise, name);
     if (error) {
-      setVariantError(error === 'name_missing' ? 'Saisissez un nom de variante.' : 'Cette variante existe déjà.');
+      setVariantError(error === 'name_missing' ? 'Saisis un nom de variante.' : 'Cette variante existe déjà.');
       return;
     }
     const { exercise: next, variantId: id } = addVariant(exercise, name, exercises);

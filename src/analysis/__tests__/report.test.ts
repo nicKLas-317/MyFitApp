@@ -24,6 +24,7 @@ import {
   type ReportPeriod,
 } from '../report';
 import { DEFAULT_RECAP_SETTINGS } from '../weekly';
+import { formalForms } from '../../ui/__tests__/vouvoiement';
 
 const LIB: Exercise[] = [...SEED_EXERCISES];
 /** Adresse fictive, d'un domaine réservé aux exemples (RFC 2606). */
@@ -303,6 +304,8 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
       ].join('\n'),
     );
     expect(text).not.toMatch(/<[a-z]/i);
+    // Tutoiement (§3.6) : le mail ne vouvoie pas.
+    expect(formalForms(text)).toEqual([]);
     // Période en cours : mention en tête.
     const current = reportText(report(WEEK, octoberHistory(), oct(22, 9)), name);
     expect(current.split('\n').slice(0, 2)).toEqual(['MyFitApp — Bilan semaine du 19 au 25 oct. 2026', '(Semaine en cours, arrêtée au jeu. 22 oct.)']);

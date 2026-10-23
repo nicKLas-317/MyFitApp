@@ -144,7 +144,7 @@ export function parseJsonImport(
     if (version > SCHEMA_VERSION) {
       return {
         kind: 'error',
-        message: `Ce fichier vient d’une version plus récente de MyFitApp (format ${version}). Mettez l’application à jour avant de l’importer.`,
+        message: `Ce fichier vient d’une version plus récente de MyFitApp (format ${version}). Mets l’application à jour avant de l’importer.`,
         details: [],
       };
     }
@@ -182,7 +182,7 @@ export function parseJsonImport(
   notes.unshift(
     simple
       ? `Format simple (version 1) : ${drafts.length} séance${drafts.length > 1 ? 's' : ''} à vérifier avant l’import.`
-      : `Format inconnu : ${drafts.length} séance${drafts.length > 1 ? 's' : ''} détectée${drafts.length > 1 ? 's' : ''} automatiquement. Vérifiez l’interprétation.`,
+      : `Format inconnu : ${drafts.length} séance${drafts.length > 1 ? 's' : ''} détectée${drafts.length > 1 ? 's' : ''} automatiquement. Vérifie l’interprétation.`,
   );
   return { kind: 'drafts', drafts, format: simple ? 'simple' : 'detected', notes };
 }

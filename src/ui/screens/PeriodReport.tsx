@@ -74,7 +74,7 @@ export function PeriodReport({ kind, periodParam }: { kind: ReportKind; periodPa
   }
 
   async function copy() {
-    setMessage((await copyText(text)) ? 'Texte copié.' : 'Copie impossible : sélectionnez le texte ci-dessous.');
+    setMessage((await copyText(text)) ? 'Texte copié.' : 'Copie impossible : sélectionne le texte ci-dessous.');
   }
 
   return (

@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { formalForms } from '../src/ui/__tests__/vouvoiement';
 import type { Session } from '../src/domain/types';
 import { simulatedHistory } from '../src/analysis/__tests__/simulation';
 import { activeSession, addExercise, cardAction, doExercise, finishSheet, openSettingsSection, readSessions, startSession, validateSets, writeSessions } from './helpers';
@@ -147,6 +148,8 @@ async function expectClean(page: Page, screen: string, scale = 1): Promise<void>
   expect(r.titles.length, `${screen} : un seul style de titre de section`).toBeLessThanOrEqual(1);
   expect(r.minChartLabel, `${screen} : étiquettes des graphiques`).toBeGreaterThanOrEqual(12);
   expect(r.overflow, `${screen} : débordement`).toBeLessThanOrEqual(0);
+  // Tutoiement (§3.6) : aucun texte affiché ne vouvoie.
+  expect(formalForms(await page.locator('body').innerText()), `${screen} : vouvoiement`).toEqual([]);
 }
 
 test.describe('Ergonomie de la saisie et harmonisation du style', () => {

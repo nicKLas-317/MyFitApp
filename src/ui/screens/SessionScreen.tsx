@@ -106,7 +106,7 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
         <SaveIndicator />
       </header>
 
-      {active.performances.length === 0 && cardioOf(active).length === 0 && <p className="empty muted">Ajoutez un premier exercice.</p>}
+      {active.performances.length === 0 && cardioOf(active).length === 0 && <p className="empty muted">Ajoute un premier exercice.</p>}
 
       <div className="cards">
         {active.performances.map((p) => (
@@ -168,7 +168,7 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
           )}
           {unsavedCardio?.kind === 'error' && (
             <p className="field-error" role="alert">
-              Cardio non validé : {unsavedCardio.message} Corrigez-le ou annulez-le.
+              Cardio non validé : {unsavedCardio.message} Corrige-le ou annule-le.
             </p>
           )}
           <div className="sheet-buttons">

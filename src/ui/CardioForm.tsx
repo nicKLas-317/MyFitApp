@@ -54,7 +54,7 @@ export function CardioForm({ machines, initial, newId, onSave, onCancel, onDraft
 
   function read(): CardioDraft {
     if (!initial && !minutes.trim() && !distance.trim()) return { kind: 'empty' };
-    if (!machine) return { kind: 'error', message: 'Choisissez une machine.' };
+    if (!machine) return { kind: 'error', message: 'Choisis une machine.' };
     const value = parseMinutes(minutes);
     const km = parseDistance(distance);
     if (value === null) return { kind: 'error', message: 'Durée invalide : un nombre entier de minutes.' };

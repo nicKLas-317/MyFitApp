@@ -185,7 +185,7 @@ export function ActivityDetail({ activity: a }: { activity: ActivityRecord }) {
       {a.groups.length > 0 && <p>Groupes sollicités (en indirect) : {a.groups.map((g) => MUSCLE_GROUP_LABELS[g]).join(', ')}</p>}
       {failed && (
         <p className="field-error" role="alert">
-          Suppression impossible : réessayez.
+          Suppression impossible : réessaie.
         </p>
       )}
       <div className="sheet-actions">

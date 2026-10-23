@@ -31,7 +31,7 @@ export function ActivityEntry() {
           onSave={async (input) => {
             const result = oneOffActivity(input, habits, activities, Date.now());
             if ('errors' in result) return result.errors.map((e) => ERRORS[e]);
-            if (!(await addActivity(result.record))) return ['Activité non enregistrée : réessayez.'];
+            if (!(await addActivity(result.record))) return ['Activité non enregistrée : réessaie.'];
             setOpen(false);
             setSaved(`Activité enregistrée : ${activityLabel(result.record)}, ${formatShortDate(result.record.date)}.`);
             return [];
@@ -88,7 +88,7 @@ function ActivityForm({ known, onCancel, onSave }: FormProps) {
   async function submit() {
     const text = minutes.trim();
     const value = /^\d+$/.test(text) ? Number(text) : NaN;
-    if (chosen === undefined) return setErrors(['Choisissez une activité.']);
+    if (chosen === undefined) return setErrors(['Choisis une activité.']);
     setErrors(await onSave({ name: chosen ?? name, date, minutes: value, groups }));
   }
 

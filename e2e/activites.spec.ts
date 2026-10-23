@@ -160,7 +160,7 @@ test.describe('Activités habituelles hors salle', () => {
     await expect(only.getByRole('group', { name: 'Activité' }).getByRole('button')).toHaveText(['Badminton', 'Autre']);
     await expect(only.getByRole('group', { name: 'Activité' }).getByRole('button', { pressed: true })).toHaveCount(0);
     await only.getByRole('button', { name: 'Enregistrer l’activité' }).click();
-    await expect(only.getByRole('alert')).toHaveText('Choisissez une activité.');
+    await expect(only.getByRole('alert')).toHaveText('Choisis une activité.');
 
     // Futsal : habitude désactivée (jambes), donc jamais de question.
     await page.goto('./#/reglages');

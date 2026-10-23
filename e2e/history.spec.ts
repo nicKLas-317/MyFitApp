@@ -161,7 +161,7 @@ test.describe('Historique, analyse et Mon poids', () => {
     await expect.poll(async () => (await activeSession(page)).performances[0]?.reps).toEqual([8]);
 
     await page.goto('./#/poids');
-    await expect(page.getByRole('alert')).toContainText('Vos séances ne sont pas concernées');
+    await expect(page.getByRole('alert')).toContainText('Tes séances ne sont pas concernées');
     await page.goto('./#/donnees');
     const downloading = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Exporter mes données' }).click();

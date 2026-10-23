@@ -224,7 +224,7 @@ test.describe('Bibliothèque et recherche', () => {
     await page.getByRole('link', { name: 'Créer l’exercice « Hip thrust »' }).click();
     await expect(page.getByLabel('Nom', { exact: true })).toHaveValue('Hip thrust');
     await page.getByRole('button', { name: 'Enregistrer' }).click();
-    await expect(page.getByRole('alert')).toContainText('Choisissez le groupe musculaire principal.');
+    await expect(page.getByRole('alert')).toContainText('Choisis le groupe musculaire principal.');
     await page.getByLabel('Groupe principal').selectOption('jambes');
     await page.getByLabel('Matériel').selectOption('barre');
     await page.getByRole('button', { name: 'Enregistrer' }).click();

@@ -96,7 +96,7 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false 
   function build(): { errors: string[]; exercise?: Exercise } {
     const list: string[] = [];
     for (const e of validateExerciseInput(input, exercises, original?.id)) {
-      list.push(e === 'name_missing' ? 'Saisissez un nom.' : e === 'name_taken' ? 'Un autre exercice porte déjà ce nom.' : 'Choisissez le groupe musculaire principal.');
+      list.push(e === 'name_missing' ? 'Saisis un nom.' : e === 'name_taken' ? 'Un autre exercice porte déjà ce nom.' : 'Choisis le groupe musculaire principal.');
     }
     if (list.length > 0 || !original) return { errors: list, exercise: list.length ? undefined : createExercise(input, exercises) };
 
@@ -276,7 +276,7 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false 
         )}
         {failed && (
           <p className="field-error" role="alert">
-            Enregistrement impossible : réessayez.
+            Enregistrement impossible : réessaie.
           </p>
         )}
         <button type="submit" className="btn primary big">

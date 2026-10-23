@@ -42,7 +42,7 @@ test.describe('Import et export', () => {
 
     // Élévations latérales sans matériel précisé : aucun rattachement par défaut, choix demandé.
     const lateral = preview(page).getByRole('article', { name: 'Epaules latéral raise' });
-    await expect(lateral.getByText('Plusieurs exercices possibles : choisissez le bon.')).toBeVisible();
+    await expect(lateral.getByText('Plusieurs exercices possibles : choisis le bon.')).toBeVisible();
     await lateral.getByLabel('Exercice', { exact: true }).selectOption('elevations-laterales-machine');
     await expect(lateral.locator('[data-status]')).toHaveAttribute('data-status', 'vert');
 
@@ -52,7 +52,7 @@ test.describe('Import et export', () => {
 
     // La date doit être confirmée explicitement (§11.2).
     await page.getByRole('button', { name: 'Importer la séance (6 exercices)' }).click();
-    await expect(page.getByRole('alert')).toContainText('Confirmez la date de la séance.');
+    await expect(page.getByRole('alert')).toContainText('Confirme la date de la séance.');
     expect(await readSessions(page)).toEqual([]);
 
     await preview(page).getByLabel('Date de la séance').fill('2026-03-09');
@@ -199,7 +199,7 @@ test.describe('Import et export', () => {
   test('§12. Rappel de sauvegarde discret sur l’accueil, avec export direct', async ({ page }) => {
     await page.goto('./');
     await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
-    await expect(page.getByText('Pensez à sauvegarder vos séances.')).toHaveCount(0);
+    await expect(page.getByText('Pense à sauvegarder tes séances.')).toHaveCount(0);
 
     const old = Date.now() - 20 * 24 * 60 * 60 * 1000;
     const session: Session = {
@@ -216,13 +216,13 @@ test.describe('Import et export', () => {
     };
     await writeSessions(page, [session]);
     await page.reload();
-    await expect(page.getByText('Pensez à sauvegarder vos séances.')).toBeVisible();
+    await expect(page.getByText('Pense à sauvegarder tes séances.')).toBeVisible();
     const downloading = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Exporter', exact: true }).click();
     await downloading;
-    await expect(page.getByText('Pensez à sauvegarder vos séances.')).toHaveCount(0);
+    await expect(page.getByText('Pense à sauvegarder tes séances.')).toHaveCount(0);
     await page.reload();
     await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
-    await expect(page.getByText('Pensez à sauvegarder vos séances.')).toHaveCount(0);
+    await expect(page.getByText('Pense à sauvegarder tes séances.')).toHaveCount(0);
   });
 });
