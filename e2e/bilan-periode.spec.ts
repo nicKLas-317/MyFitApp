@@ -158,11 +158,13 @@ test.describe('Bilans de la semaine et du mois (§19.7)', () => {
     await page.getByRole('button', { name: 'Semaine suivante' }).click();
     await expect(page.getByTestId('report-title')).toHaveText('Semaine du 26 oct. au 1 nov. 2026');
     await expect(page.locator('.report-heading')).toContainText('Semaine en cours, arrêtée au lun. 26 oct.');
+    // Semaine en cours : comparée à la même portion de la précédente (le lundi seul ; la séance du 20 n'y est pas).
+    await expect(section('Séances')).toContainText('0 séance, autant que lun. de la semaine dernière');
     await expect(page.getByRole('button', { name: 'Semaine suivante' })).toHaveCount(0);
     // Onglet Mois : mois en cours (il contient des séances), comparé au mois précédent.
     await page.getByRole('button', { name: 'Mois', exact: true }).click();
     await expect(page.getByTestId('report-title')).toHaveText('Octobre 2026');
-    await expect(section('Séances')).toContainText('7 séances, +7 par rapport au mois précédent');
+    await expect(section('Séances')).toContainText('7 séances, +7 par rapport au 1er–26 du mois dernier');
     await expect(page.getByRole('button', { name: 'Semaine', exact: true })).toHaveAttribute('aria-pressed', 'false');
 
     // Bilan ouvert : ni bandeau ni pastille pour cette semaine, même après relance.

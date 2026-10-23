@@ -156,7 +156,7 @@ describe('Activités habituelles hors salle', () => {
     // Semaine sans séance mais avec du badminton : ligne des activités et groupes, rien d'autre d'inventé.
     const empty = buildReport(periodContaining('week', at(28)), { ...input, groups: [...input.groups], activities: lundis });
     expect(reportSections(empty, name).map((s) => s.title)).toEqual(['Séances', 'Groupes travaillés']);
-    expect(reportSections(empty, name)[0]!.lines.map(lineText)).toEqual(['0 séance, −2 par rapport à la semaine précédente', 'Durée totale : 0 min, −2 h 00 par rapport à la semaine précédente', 'Activités : Badminton ×1, 1 h 30']);
+    expect(reportSections(empty, name)[0]!.lines.map(lineText)).toEqual(['0 séance, −2 par rapport à lun.–sam. de la semaine dernière', 'Durée en salle : 0 min, −2 h 00 par rapport à lun.–sam. de la semaine dernière', 'Activités : Badminton ×1, 1 h 30']);
     // Aucun effet sur le moteur : il ne reçoit jamais les activités.
     expect(rebuildProfile(sessions, SETTINGS)).toEqual(rebuildProfile(structuredClone(sessions), SETTINGS));
   });

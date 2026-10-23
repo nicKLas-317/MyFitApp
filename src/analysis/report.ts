@@ -67,7 +67,7 @@ export function periodLastDay(period: ReportPeriod): Date {
   return d;
 }
 
-export function containsTime(period: ReportPeriod, ts: number): boolean {
+export function containsTime(period: Pick<ReportPeriod, 'start' | 'next'>, ts: number): boolean {
   return ts >= period.start.getTime() && ts < period.next.getTime();
 }
 
@@ -75,6 +75,7 @@ const DAY = new Intl.DateTimeFormat('fr-FR', { day: 'numeric' });
 const DAY_MONTH = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' });
 const DAY_MONTH_YEAR = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
 const MONTH_YEAR = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' });
+const WEEKDAY = new Intl.DateTimeFormat('fr-FR', { weekday: 'short' });
 const WEEKDAY_DAY_MONTH = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
 
 /** « du 19 au 25 oct. 2026 », « du 28 sept. au 4 oct. 2026 », « du 29 déc. 2025 au 4 janv. 2026 ». */
@@ -102,8 +103,34 @@ export interface PeriodTotals {
   sessionCount: number;
   /** Durée totale des séances dont le début et la fin sont connus. */
   durationMs: number;
-  /** Séances sans heure de début ou de fin (import) : durée inconnue. */
+  /** Séances sans heure de début ou de fin (import) : durée inconnue, jamais comptée pour 0 min. */
   unknownDuration: number;
+}
+
+/**
+ * Intervalle de comparaison : la période précédente entière pour une période terminée ; pour une période en cours, la
+ * même portion de la précédente (du lundi au même jour de la semaine, du 1er au même jour du mois).
+ */
+export interface ComparedSpan {
+  start: Date;
+  /** Lendemain du dernier jour compris, 0 h 00 (borne exclue). */
+  next: Date;
+  /** Seulement une portion de la période précédente. */
+  partial: boolean;
+}
+
+/** Portion de la période précédente à comparer avec `period`, arrêtée au jour `asOf`. */
+export function comparedSpan(period: ReportPeriod, asOf: Date, inProgress: boolean): ComparedSpan {
+  const previous = shiftPeriod(period, -1);
+  if (!inProgress) return { start: previous.start, next: previous.next, partial: false };
+  // Jours entiers écoulés depuis le premier jour de la période, jour de `asOf` compris.
+  const day = new Date(asOf.getFullYear(), asOf.getMonth(), asOf.getDate());
+  const days = Math.max(1, Math.round((day.getTime() - period.start.getTime()) / 86_400_000) + 1);
+  const start = previous.start;
+  // Sans dépasser la fin de la période précédente : le 31 mars est comparé à tout février.
+  const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + days);
+  const next = end < previous.next ? end : previous.next;
+  return { start: previous.start, next, partial: next.getTime() < previous.next.getTime() };
 }
 
 export interface ReportProgression {
@@ -144,7 +171,9 @@ export interface PeriodReport {
   /** Jour de calcul du bilan (période en cours). */
   asOf: Date;
   totals: PeriodTotals;
+  /** Totaux de l'intervalle de comparaison (`compared`). */
   previous: PeriodTotals;
+  compared: ComparedSpan;
   /** Minutes de cardio par machine, de la plus longue à la plus courte. */
   cardio: { machine: string; minutes: number }[];
   /** Activités habituelles confirmées (hors salle) par nom : nombre et durée totale, dans l'ordre de la première. */
@@ -175,9 +204,9 @@ export interface ReportInput {
   now: number;
 }
 
-const inPeriod = (period: ReportPeriod) => (s: Session) => s.state === 'done' && containsTime(period, sessionStartTime(s));
+const inPeriod = (period: Pick<ReportPeriod, 'start' | 'next'>) => (s: Session) => s.state === 'done' && containsTime(period, sessionStartTime(s));
 
-function totalsOf(sessions: readonly Session[], period: ReportPeriod): PeriodTotals {
+function totalsOf(sessions: readonly Session[], period: Pick<ReportPeriod, 'start' | 'next'>): PeriodTotals {
   const list = sessions.filter(inPeriod(period));
   let durationMs = 0;
   let unknownDuration = 0;
@@ -257,12 +286,16 @@ export function buildReport(period: ReportPeriod, input: ReportInput): PeriodRep
   const last = localDate(periodLastDay(period).getTime());
   const weighed = [...weighIns].filter((w) => w.date >= first && w.date <= last).sort((a, b) => (a.date < b.date ? -1 : 1));
 
+  const inProgress = now < period.next.getTime();
+  const asOf = new Date(Math.min(now, period.next.getTime() - 1));
+  const compared = comparedSpan(period, asOf, inProgress);
   return {
     period,
-    inProgress: now < period.next.getTime(),
-    asOf: new Date(Math.min(now, period.next.getTime() - 1)),
+    inProgress,
+    asOf,
     totals: totalsOf(sessions, period),
-    previous: totalsOf(sessions, shiftPeriod(period, -1)),
+    previous: totalsOf(sessions, compared),
+    compared,
     cardio: [...cardio].map(([machine, minutes]) => ({ machine, minutes })).sort((a, b) => b.minutes - a.minutes),
     activities: [...activities.values()],
     groups,
@@ -297,6 +330,24 @@ const shortDay = (date: string) => {
 };
 const load = (kg: number, assisted: boolean) => (assisted ? `avec ${formatKg(kg)} d’aide` : `à ${formatKg(kg)}`);
 
+/**
+ * Ce à quoi la période est comparée : « à la semaine précédente », ou pour une période en cours la même portion de la
+ * précédente, « à lun.–ven. de la semaine dernière », « au 1er–23 du mois dernier ».
+ */
+function comparedTo(report: PeriodReport): { with: string; same: string } {
+  const { compared } = report;
+  const week = report.period.kind === 'week';
+  if (!compared.partial) return week ? { with: 'à la semaine précédente', same: 'la semaine précédente' } : { with: 'au mois précédent', same: 'le mois précédent' };
+  const last = new Date(compared.next);
+  last.setDate(last.getDate() - 1);
+  if (week) {
+    const days = last.getTime() === compared.start.getTime() ? WEEKDAY.format(last) : `${WEEKDAY.format(compared.start)}–${WEEKDAY.format(last)}`;
+    return { with: `à ${days} de la semaine dernière`, same: `${days} de la semaine dernière` };
+  }
+  const days = last.getDate() === 1 ? '1er' : `1er–${last.getDate()}`;
+  return { with: `au ${days} du mois dernier`, same: `le ${days} du mois dernier` };
+}
+
 /** « +1 », « −2 », ou null à égalité. */
 function signed(diff: number, format: (n: number) => string): string | null {
   if (diff === 0) return null;
@@ -307,17 +358,20 @@ function signed(diff: number, format: (n: number) => string): string | null {
 export function reportSections(report: PeriodReport, name: (variantId: string) => string): ReportSection[] {
   const { totals, previous } = report;
   const week = report.period.kind === 'week';
-  const compare = (diff: string | null) =>
-    diff ? `${diff} par rapport ${week ? 'à la semaine précédente' : 'au mois précédent'}` : `autant que ${week ? 'la semaine précédente' : 'le mois précédent'}`;
+  const target = comparedTo(report);
+  const compare = (diff: string | null) => (diff ? `${diff} par rapport ${target.with}` : `autant que ${target.same}`);
 
   const sessionsLines: ReportLine[] = [[`${plural(totals.sessionCount, 'séance')}, `, em(compare(signed(totals.sessionCount - previous.sessionCount, String)))]];
   if (totals.sessionCount > 0 || previous.sessionCount > 0) {
-    const unknown = totals.unknownDuration > 0 ? ` (durée inconnue pour ${plural(totals.unknownDuration, 'séance importée', 'séances importées')})` : '';
-    sessionsLines.push([
-      `Durée totale : ${formatDurationLong(totals.durationMs)}, `,
-      em(compare(signed(Math.round((totals.durationMs - previous.durationMs) / 60_000), formatMinutes))),
-      unknown,
-    ]);
+    // Durée en salle : séances à heures connues seulement ; une séance importée sans heure ne compte jamais pour 0 min.
+    const known = totals.sessionCount - totals.unknownDuration;
+    const unknown = totals.unknownDuration > 0 ? ` (${plural(totals.unknownDuration, 'séance sans durée', 'séances sans durée')})` : '';
+    const line: ReportLine = [`Durée en salle : ${known > 0 || totals.sessionCount === 0 ? formatDurationLong(totals.durationMs) : 'inconnue'}${unknown}`];
+    // Comparaison seulement si toutes les durées des deux périodes sont connues.
+    if (totals.unknownDuration === 0 && previous.unknownDuration === 0) {
+      line.push(', ', em(compare(signed(Math.round((totals.durationMs - previous.durationMs) / 60_000), formatMinutes))));
+    }
+    sessionsLines.push(line);
   }
   if (totals.sessionCount > 0) {
     const minutes = report.cardio.reduce((n, c) => n + c.minutes, 0);
