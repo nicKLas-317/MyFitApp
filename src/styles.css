@@ -1665,7 +1665,7 @@ fieldset {
 /* Mon poids : une simple liste dans un seul cadre, une ligne par pesée. */
 .weigh-list {
   list-style: none;
-  padding: 0 var(--space-2);
+  padding: var(--space-1) var(--space-2);
 }
 
 /* Date entière à gauche ; poids et « Corriger » ensemble à droite, ou dessous si la place manque. */
@@ -1675,7 +1675,7 @@ fieldset {
   align-items: center;
   justify-content: space-between;
   gap: 0 var(--space-2);
-  min-height: 56px;
+  min-height: var(--tap);
 }
 
 .weigh-in .history-date {
@@ -1695,8 +1695,14 @@ fieldset {
   grid-template-columns: repeat(auto-fit, minmax(9em, 1fr));
 }
 
+/*
+ * Lignes séparées d'un filet, avec 8 px de chaque côté : deux « Corriger » voisins restent à plus de 8 px l'un de
+ * l'autre, même quand une date longue fait passer le poids et « Corriger » sous la date (bouton en bas de sa ligne).
+ */
 .weigh-in + .weigh-in {
   border-top: 1px solid var(--border);
+  margin-top: var(--space-1);
+  padding-top: var(--space-1);
 }
 
 .weigh-in .weigh-in-form {

@@ -101,7 +101,8 @@ function auditScreen(page: Page, scale = 1) {
         const [x, y] = [r.left + r.width / 2, r.top + r.height / 2];
         if (y < 0 || y > innerHeight) return true;
         const hit = document.elementFromPoint(x, y);
-        return !hit || e.contains(hit) || hit.contains(e);
+        // Sous une barre fixe (onglets, mode salle), la cible reste atteignable en faisant défiler : elle est contrôlée.
+        return !hit || e.contains(hit) || hit.contains(e) || !!hit.closest('.tab-bar, .session-bar');
       });
     const small = targets.filter((e) => e.getBoundingClientRect().height < 47.5).map(name);
     const close: string[] = [];
@@ -131,6 +132,8 @@ function auditScreen(page: Page, scale = 1) {
       titles,
       minChartLabel: Math.min(99, ...chartLabels.filter((n): n is number => typeof n === 'number')),
       overflow: document.documentElement.scrollWidth - innerWidth,
+      /** Éléments tactiles effectivement contrôlés (pour vérifier qu'aucun n'échappe au contrôle). */
+      checked: targets.map(name),
     };
   }, scale);
 }
@@ -317,47 +320,88 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
   });
 
   test('225. Échelle typographique, espacements et éléments tactiles sur tous les écrans, à 412, 360 et 320 px', async ({ page }) => {
-    test.setTimeout(180_000);
+    test.setTimeout(300_000);
     await page.clock.setFixedTime(new Date('2026-10-22T19:30:00'));
     await seed(page, simulatedHistory('2026-10-19'));
-    // Une pesée : graphique de Mon poids.
-    await page.goto('./#/poids');
-    await page.getByLabel('Poids (kg)').fill('78,4');
-    await page.getByRole('button', { name: 'Enregistrer' }).click();
-    await page.getByLabel('Date').fill('2026-09-01');
-    await page.getByLabel('Poids (kg)').fill('79,2');
-    await page.getByRole('button', { name: 'Enregistrer' }).click();
+    // Données réalistes pour que chaque liste ait sa vraie forme : onze pesées (dates longues comme « 22 septembre
+    // 2026 », qui font passer le poids et « Corriger » sous la date), une activité confirmée (détail) et la question
+    // de la semaine en cours (accueil).
+    await page.evaluate(
+      ({ weights, activities }) =>
+        Promise.all([
+          new Promise<void>((resolve, reject) => {
+            const open = indexedDB.open('myfitapp-corps');
+            open.onsuccess = () => {
+              const tx = open.result.transaction(['weighIns', 'meta'], 'readwrite');
+              for (const w of weights) tx.objectStore('weighIns').put(w);
+              tx.objectStore('meta').put(178, 'heightCm');
+              tx.oncomplete = () => (open.result.close(), resolve());
+              tx.onerror = () => reject(tx.error);
+            };
+          }),
+          new Promise<void>((resolve, reject) => {
+            const open = indexedDB.open('myfitapp');
+            open.onsuccess = () => {
+              const tx = open.result.transaction('meta', 'readwrite');
+              tx.objectStore('meta').put(activities, 'activities');
+              tx.oncomplete = () => (open.result.close(), resolve());
+              tx.onerror = () => reject(tx.error);
+            };
+          }),
+        ]),
+      {
+        weights: ['06-02', '06-16', '06-30', '07-14', '07-28', '08-11', '08-25', '09-08', '09-22', '10-06', '10-20'].map((d, i) => ({ date: `2026-${d}`, weightKg: 80.4 - i * 0.3 })),
+        activities: [{ id: 'act-badminton-2026-10-12', habitId: 'badminton', date: '2026-10-12', name: 'Badminton', start: '21:00', end: '22:30', groups: ['epaules', 'jambes'], status: 'done', answeredAt: 0 }],
+      },
+    );
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
 
-    const screens: [string, string][] = [
-      ['Accueil', './'],
-      ['Progrès', './#/progres'],
-      ['Plus', './#/plus'],
-      ['Bibliothèque', './#/bibliotheque'],
-      ['Fiche', './#/exercice/chest-press'],
-      ['Modifier un exercice', './#/modifier/chest-press'],
-      ['Historique', './#/historique'],
-      ['Détail de séance', './#/historique/sim-2026-10-19'],
-      ['Bilan', './#/bilan'],
-      ['Bilan de la semaine', './#/bilan-periode/semaine/2026-10-12'],
-      ['Bilan du mois', './#/bilan-periode/mois/2026-09'],
-      ['Par groupe', './#/bilan-groupes/triceps'],
-      ['Mon poids', './#/poids'],
-      ['Réglages', './#/reglages'],
-      ['Données', './#/donnees'],
-    ];
-    for (const width of [412, 360, 320]) {
-      await page.setViewportSize({ width, height: 800 });
-      for (const [screen, url] of screens) {
-        await page.goto(url);
-        await expect(page.locator('main').first()).toBeVisible();
-        await page.waitForTimeout(200);
-        await expectClean(page, `${screen} à ${width} px`);
-      }
-    }
-    // Écrans au calme dépliés (version 1.21.0), à 360 px et avec le texte à 115 % : bibliothèque filtrée (prises en
-    // puces), fiche avec l'illustration agrandie et tout l'historique, réglages avec toutes les sections ouvertes.
-    await page.setViewportSize({ width: 360, height: 800 });
-    const unfolded: [string, () => Promise<void>][] = [
+    /** Écrans et états contrôlés : chaque route de l'appli, et les états dépliés des écrans. */
+    const screens: [string, () => Promise<void>][] = [
+      ...([
+        ['Accueil', './'],
+        ['Progrès', './#/progres'],
+        ['Plus', './#/plus'],
+        ['Bibliothèque', './#/bibliotheque'],
+        ['Fiche', './#/exercice/chest-press'],
+        ['Modifier un exercice', './#/modifier/chest-press'],
+        ['Nouvel exercice', './#/nouvel-exercice'],
+        ['Historique', './#/historique'],
+        ['Détail de séance', './#/historique/sim-2026-10-19'],
+        ['Détail d’une activité', './#/historique/act-badminton-2026-10-12'],
+        ['Bilan', './#/bilan'],
+        ['Bilan de la semaine', './#/bilan-periode/semaine/2026-10-12'],
+        ['Bilan du mois', './#/bilan-periode/mois/2026-09'],
+        ['Par groupe', './#/bilan-groupes/triceps'],
+        ['Mon poids', './#/poids'],
+        ['Réglages', './#/reglages'],
+        ['Données', './#/donnees'],
+      ] as const).map(([screen, url]) => [screen, () => page.goto(url).then(() => undefined)] as [string, () => Promise<void>]),
+      ['Mon poids, correction et suppression ouvertes', async () => {
+        await page.goto('./#/poids');
+        const list = page.getByRole('list', { name: 'Historique des pesées' });
+        await list.getByRole('button', { name: 'Corriger' }).nth(2).click();
+        await list.getByRole('button', { name: 'Supprimer' }).click();
+      }],
+      ['Détail de séance, correction et suppression ouvertes', async () => {
+        await page.goto('./#/historique/sim-2026-10-19');
+        await page.locator('li[data-variant]').first().getByRole('button', { name: 'Corriger' }).click();
+        await page.getByRole('button', { name: 'Supprimer la séance' }).click();
+      }],
+      ['Détail d’une activité, suppression ouverte', async () => {
+        await page.goto('./#/historique/act-badminton-2026-10-12');
+        await page.getByRole('button', { name: 'Supprimer l’activité' }).click();
+      }],
+      ['Exercice sans historique, suppression ouverte', async () => {
+        await page.goto('./#/modifier/crunch-machine');
+        await page.getByRole('button', { name: 'Supprimer l’exercice' }).click();
+      }],
+      ['Aperçu d’import', async () => {
+        await page.goto('./#/donnees');
+        await page.getByLabel('Notes de séance ou JSON').fill('Seated row horizontal\n3x8x48kg =\n\nEpaules latéral raise\n3x8x9kgs ++\n\nTapis incliné 20 min');
+        await page.getByRole('button', { name: 'Analyser' }).click();
+      }],
       ['Bibliothèque, dos', async () => {
         await page.goto('./#/bibliotheque');
         await page.getByRole('group', { name: 'Filtrer par groupe musculaire' }).getByRole('button', { name: 'Dos' }).click();
@@ -372,17 +416,27 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
         for (const name of ['Récapitulatif de la semaine', 'Bilans de la semaine et du mois', 'Activités habituelles', 'Machines de cardio']) await openSettingsSection(page, name);
       }],
     ];
-    for (const [screen, open] of unfolded) {
-      await open();
-      await page.evaluate(() => window.scrollTo(0, 0));
-      await page.waitForTimeout(200);
-      await expectClean(page, `${screen} à 360 px`);
-      const larger = await largeText(page);
-      await expectClean(page, `${screen}, texte agrandi`, 1.15);
-      await larger();
+    // À 412, 360 et 320 px, puis à 360 px avec le texte agrandi à 115 % : chaque écran, page entière.
+    for (const [width, scale] of [[412, 1], [360, 1], [320, 1], [360, 1.15]] as const) {
+      await page.setViewportSize({ width, height: 800 });
+      for (const [screen, open] of screens) {
+        await open();
+        await expect(page.locator('main').first()).toBeVisible();
+        const restore = scale > 1 ? await largeText(page) : null;
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await page.waitForTimeout(200);
+        await expectClean(page, `${screen} à ${width} px${scale > 1 ? ', texte à 115 %' : ''}`, scale);
+        await restore?.();
+      }
     }
+    // Contrôle du contrôle : dans Mon poids, chaque « Corriger » de la liste est bien vérifié (aucun écarté).
+    await page.setViewportSize({ width: 412, height: 800 });
+    await page.goto('./#/poids');
+    await expect(page.getByRole('list', { name: 'Historique des pesées' }).getByRole('button', { name: 'Corriger' })).toHaveCount(11);
+    expect((await auditScreen(page)).checked.filter((t) => t.includes('Corriger'))).toHaveLength(11);
 
     // Séance : carte ouverte, menu ouvert, cardio ; texte agrandi à 115 % à 360 px.
+    await page.setViewportSize({ width: 360, height: 800 });
     await startSession(page);
     const card = await addExercise(page, 'chest press', 'Chest press');
     await page.getByRole('button', { name: 'Ajouter du cardio' }).click();
@@ -392,12 +446,44 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
     await card.getByRole('button', { name: 'Actions : Chest press' }).click();
     await expectClean(page, 'Séance, menu ouvert');
     await page.keyboard.press('Escape');
+    // Panneau d'ajustement, confirmation du retrait, confirmation d'un poids très différent, menu du cardio.
+    await cardAction(card, 'Ajuster séries et répétitions');
+    await expectClean(page, 'Séance, ajustement ouvert');
+    await card.getByRole('button', { name: 'Terminé' }).click();
+    await cardAction(card, 'Retirer de la séance');
+    await expectClean(page, 'Séance, confirmation du retrait');
+    await card.getByRole('button', { name: 'Non' }).click();
+    await card.getByLabel('Poids (kg)').fill('500');
+    await card.getByLabel('Poids (kg)').press('Tab');
+    await expect(card.getByRole('alertdialog', { name: 'Confirmer le poids' })).toBeVisible();
+    await expectClean(page, 'Séance, confirmation du poids');
+    await card.getByRole('alertdialog', { name: 'Confirmer le poids' }).getByRole('button', { name: 'Corriger' }).click();
+    await page.locator('.cardio-item').getByRole('button', { name: /^Actions : / }).click();
+    await expectClean(page, 'Séance, menu du cardio');
+    await page.keyboard.press('Escape');
     const restore = await largeText(page);
     await expectClean(page, 'Séance, texte agrandi', 1.15);
     await restore();
     await page.getByRole('link', { name: 'Ajouter un exercice' }).click();
     await expect(page.getByRole('searchbox', { name: 'Rechercher un exercice' })).toBeVisible();
     await expectClean(page, 'Ajout d’un exercice');
+    // Fin de séance : récapitulatif.
+    await page.getByRole('link', { name: 'Retour à la séance' }).click();
+    await doExercise(card, 3, 'Bien');
+    await page.getByRole('button', { name: 'Terminer la séance' }).click();
+    await finishSheet(page).getByRole('button', { name: 'Oui, terminer' }).click();
+    await expect(page.getByRole('heading', { name: 'Séance terminée' })).toBeVisible();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expectClean(page, 'Récapitulatif de fin');
+    const larger = await largeText(page);
+    await expectClean(page, 'Récapitulatif de fin, texte agrandi', 1.15);
+    await larger();
+    // Séance oubliée (ouverte depuis plus de 4 heures) : fenêtre à la réouverture.
+    await startSession(page);
+    await page.clock.setFixedTime(new Date('2026-10-23T01:00:00'));
+    await page.reload();
+    await expect(page.getByRole('dialog', { name: 'Séance toujours en cours' })).toBeVisible();
+    await expectClean(page, 'Séance oubliée');
   });
 
   test('226. Couleurs des cadres : neutres partout, sauf ce qui concerne un groupe ; Mon poids en simple liste', async ({ page }) => {
