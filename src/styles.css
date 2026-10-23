@@ -1419,30 +1419,50 @@ input[aria-invalid='true'] {
   background: var(--surface-2);
 }
 
-.history {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  gap: var(--space-1);
-}
-
-.history-item {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0 var(--space-1);
-  padding: var(--space-1) var(--space-2);
-  background: var(--surface);
-}
-
-.history-item .status {
-  grid-row: 1 / span 3;
-  grid-column: 2;
-  align-self: center;
-}
-
 .history-date {
   font-weight: 600;
+}
+
+/* Historique de la fiche : lignes compactes dans un seul cadre, séparées d'un filet. */
+.sheet-history {
+  list-style: none;
+  margin: 0;
+  padding: 0 var(--space-2);
+}
+
+.sheet-history-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0 var(--space-1);
+  padding: var(--space-1) 0;
+}
+
+.sheet-history-row + .sheet-history-row {
+  border-top: 1px solid var(--border);
+}
+
+.sheet-history-sub {
+  grid-column: 1 / -1;
+}
+
+/* Illustration réduite (vignette) : agrandie au toucher, attribution sous l'image agrandie. */
+.illustration-thumb {
+  display: block;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 16px;
+  cursor: zoom-in;
+}
+
+.illustration-zoom {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: zoom-out;
 }
 
 .edit-form {
@@ -1810,10 +1830,15 @@ fieldset {
 }
 
 .machine-row {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   gap: var(--space-1);
   align-items: center;
+}
+
+.menu-placeholder {
+  width: var(--tap);
 }
 
 .cardio-machines form.row input {
@@ -1935,35 +1960,13 @@ fieldset.frame > legend + * {
 }
 
 /* Filtres du bilan : vrais boutons, au style des boutons de l'accueil, neutres (les couleurs désignent les groupes, §3.2). */
-.bilan-filters {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-1);
-  margin: var(--space-1) 0;
-}
-
 .bilan-filter {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
   gap: var(--space-1);
-  padding: var(--space-1);
+  padding: 0 var(--space-2);
   border: var(--frame-width) solid var(--frame-neutral);
-  text-align: left;
-  line-height: 1.2;
-}
-
-.bilan-filter.bilan-all {
-  grid-column: 1 / -1;
-  justify-content: center;
-}
-
-.bilan-filter-label {
-  flex: 1;
-}
-
-.bilan-filter.bilan-all .bilan-filter-label {
-  flex: none;
+  white-space: nowrap;
 }
 
 /* Filtre actif : fond plein, comme les boutons principaux. */
@@ -2087,11 +2090,6 @@ fieldset.frame > legend + * {
   flex-basis: 100%;
 }
 
-/* Activités habituelles hors salle dans l'historique : pas des séances, supprimables après confirmation. */
-.activity-actions {
-  padding: 0 var(--space-2) var(--space-2);
-}
-
 .habit-list {
   list-style: none;
   margin: 0;
@@ -2107,11 +2105,40 @@ fieldset.frame > legend + * {
   border-bottom: 1px solid var(--border);
 }
 
+/*
+ * Jour et horaires sur une ligne à 360 px ; le jour n'est jamais tronqué : si la place manque (texte agrandi),
+ * l'heure de fin passe dessous.
+ */
 .habit-when {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-1);
+}
+
+.habit-when > * {
+  flex: none;
+}
+
+/* Le tiret reste avec l'heure de fin quand elle passe dessous. */
+.habit-end {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* Jour à la largeur de sa valeur (« Lundi »), pas à celle de la plus longue option ; heure : cinq caractères. */
+.habit-when select {
+  field-sizing: content;
+}
+
+.habit-when input[type='time'] {
+  width: calc(5ch + 2 * var(--space-1) + 2px);
+}
+
+/* Sur Android, un appui sur le champ ouvre le sélecteur d'heure : l'icône n'est pas nécessaire. */
+.habit-when input[type='time']::-webkit-calendar-picker-indicator {
+  display: none;
 }
 
 .habit-when select,
@@ -2193,4 +2220,173 @@ fieldset.frame > legend + * {
 /* Mode salle : formulaire de cardio sous la liste, au-dessus de la barre du pouce. */
 .gym-mode > .cardio-form {
   margin: var(--space-2) 0;
+}
+
+/*
+ * Historique (§10) : regroupé par mois, un seul cadre par mois, une ligne compacte par séance ou activité (jour à
+ * gauche, titre sur une ligne au plus, contenu dessous). Lignes séparées d'un filet, à 8 px l'une de l'autre.
+ */
+.history-month .section-title {
+  margin-top: var(--space-2);
+}
+
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 var(--space-2);
+  background: var(--surface);
+}
+
+.history-row + .history-row {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-1);
+}
+
+.history-row:not(:last-child) {
+  padding-bottom: var(--space-1);
+}
+
+.history-line {
+  display: grid;
+  grid-template-columns: 2.5em minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 56px;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.history-day {
+  display: grid;
+  justify-items: center;
+  line-height: 1.2;
+}
+
+.history-text {
+  display: grid;
+  min-width: 0;
+}
+
+.history-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-chevron {
+  color: var(--muted);
+  font-size: var(--fs-4);
+}
+
+/*
+ * Rangée de puces sur une seule ligne (filtres par groupe de la bibliothèque, filtres du bilan) : elle défile
+ * horizontalement si elle ne tient pas, sans faire dépasser l'écran.
+ */
+.chip-row {
+  display: flex;
+  gap: var(--space-1);
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: var(--space-1) 0;
+}
+
+.chip-row > * {
+  flex: none;
+}
+
+/* Prises d'un même exercice regroupées (§4.3.1) : une puce par prise. */
+.grip-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2) 0;
+}
+
+.grip-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+}
+
+.grip-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-1);
+}
+
+/* Dernières évolutions du bilan : une ligne par évolution (date, exercice, changement). */
+.change-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.change-line {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+
+.change-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.change-what {
+  white-space: nowrap;
+}
+
+/* Réglages : sections repliables (fermées à l'ouverture, sauf la première), titre au style des titres de section. */
+.settings-section {
+  padding: 0 var(--space-2);
+}
+
+.settings-section > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1);
+  min-height: 56px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.settings-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+.settings-section > summary::after {
+  content: '›';
+  color: var(--muted);
+  font-size: var(--fs-4);
+  transition: transform 0.15s;
+}
+
+.settings-section[open] > summary::after {
+  transform: rotate(90deg);
+}
+
+.settings-section > summary .section-title {
+  margin: 0;
+}
+
+.settings-body {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-1) 0 var(--space-2);
+}
+
+.settings-body > .name-form {
+  margin: 0;
+}
+
+.settings-body .habits {
+  display: grid;
+  gap: var(--space-1);
 }

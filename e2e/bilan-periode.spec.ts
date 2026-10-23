@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Session } from '../src/domain/types';
-import { writeSessions } from './helpers';
+import { writeSessions, openSettingsSection } from './helpers';
 
 const t = (day: number, h = 18) => Date.parse(`2026-10-${String(day).padStart(2, '0')}T${String(h).padStart(2, '0')}:00:00`);
 let n = 0;
@@ -89,6 +89,7 @@ test.describe('Bilans de la semaine et du mois (§19.7)', () => {
     await expect(tabs.getByRole('link', { name: 'Progrès : bilan prêt' })).toBeVisible();
     // Le réglage « Signaler le bilan de la semaine » pilote la pastille.
     await page.goto('./#/reglages');
+    await openSettingsSection(page, 'Bilans de la semaine et du mois');
     await page.getByLabel('Signaler le bilan de la semaine (pastille sur Progrès)').uncheck();
     await expect(badge).toHaveCount(0);
     await page.getByLabel('Signaler le bilan de la semaine (pastille sur Progrès)').check();
@@ -181,6 +182,7 @@ test.describe('Bilans de la semaine et du mois (§19.7)', () => {
 
     // Réglages : adresse facultative (préremplie dans le mailto), bandeaux désactivables, conservés après relance.
     await page.goto('./#/reglages');
+    await openSettingsSection(page, 'Bilans de la semaine et du mois');
     const email = page.getByLabel('Adresse e-mail (facultative, préremplie dans le mail)');
     await email.fill('pas une adresse');
     await page.getByRole('button', { name: 'Enregistrer l’adresse' }).click();
@@ -190,6 +192,7 @@ test.describe('Bilans de la semaine et du mois (§19.7)', () => {
     await expect(page.getByText('Adresse enregistrée.')).toBeVisible();
     await page.getByLabel('Signaler le bilan de la semaine (pastille sur Progrès)').uncheck();
     await page.reload();
+    await openSettingsSection(page, 'Bilans de la semaine et du mois');
     await expect(page.getByLabel('Signaler le bilan de la semaine (pastille sur Progrès)')).not.toBeChecked();
     await expect(page.getByLabel('Signaler le bilan du mois (pastille sur Progrès)')).toBeChecked();
     await expect(email).toHaveValue(ADDRESS);

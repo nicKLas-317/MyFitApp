@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { addExercise, doExercise, finishSession, readExercises, readSessions, startSession } from './helpers';
+import { addExercise, doExercise, finishSession, readExercises, readSessions, startSession, openIllustration } from './helpers';
 
 async function resultNames(page: Page, query: string): Promise<string[]> {
   await page.getByRole('searchbox', { name: 'Rechercher un exercice' }).fill(query);
@@ -27,9 +27,9 @@ test.describe('Bibliothèque version 7 (§4.0)', () => {
     const sources: string[] = [];
     for (const id of ['abducteurs-machine', 'adducteurs-machine']) {
       await page.goto(`./#/exercice/${id}`);
-      const img = page.locator('figure.illustration img');
+      const img = await openIllustration(page);
       await expect(img).toBeVisible();
-      expect(await img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
+      await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
       sources.push((await img.getAttribute('src'))!);
     }
     expect(sources[0]).not.toBe(sources[1]);

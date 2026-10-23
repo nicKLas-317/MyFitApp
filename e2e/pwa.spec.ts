@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { activeSession, addExercise, validateSets, openScreen } from './helpers';
+import { activeSession, addExercise, validateSets, openScreen, openIllustration } from './helpers';
 
 test.describe('Application installable et hors ligne (§2, §16.13, §17, §21)', () => {
   test('manifeste et icônes compatibles avec GitHub Pages (/MyFitApp/)', async ({ page, request }) => {
@@ -49,11 +49,11 @@ test.describe('Application installable et hors ligne (§2, §16.13, §17, §21)'
     await search.fill('chest press');
     await expect(page.getByRole('list', { name: 'Résultats' }).locator('strong').first()).toHaveText('Chest press');
     await search.fill('dos');
-    // Exercices du dos (les trois tirages avec leurs trois prises), puis l'oiseau et le face pull.
-    await expect(page.getByRole('list', { name: 'Résultats' }).locator('strong')).toHaveCount(18);
+    // Exercices du dos (les trois tirages, leurs trois prises regroupées en une entrée), puis l'oiseau et le face pull.
+    await expect(page.getByRole('list', { name: 'Résultats' }).locator('strong')).toHaveCount(12);
 
     await page.goto('./#/exercice/curl-ischios');
-    const img = page.locator('figure.illustration img');
+    const img = await openIllustration(page);
     await expect(img).toBeVisible();
     await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
 

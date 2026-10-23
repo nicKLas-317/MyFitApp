@@ -10,7 +10,6 @@ export const FRAME_SELECTOR = [
   '.card',
   '.pick-item',
   '.bilan-item',
-  '.history-item',
   '.chart',
   '.banner.info',
   '.banner.error-inline',

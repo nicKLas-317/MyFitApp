@@ -1,8 +1,9 @@
-import { useMemo, type ReactNode } from 'react';
-import type { MuscleGroup } from '../../domain/types';
+import { Fragment, useMemo, useState, type ReactNode } from 'react';
+import type { Exercise, MuscleGroup } from '../../domain/types';
 import { useApp } from '../../app/store';
-import { displayName, variantLabel, type VariantRef } from '../../library/catalog';
+import { displayName, groupGrips, variantLabel, type VariantRef } from '../../library/catalog';
 import { buildSearchIndex, recentVariantIds, searchWithInfo, type MatchField } from '../../library/search';
+import { gripOf } from '../../library/text';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
 import { formatKg } from '../../session/format';
 import { groupColorProps } from '../groupColors';
@@ -25,15 +26,37 @@ interface Props {
   createHref(query: string): string;
 }
 
-/** Liste des exercices : résultats de recherche, ou favoris, récents et bibliothèque par groupe (§4.2). */
+/** Exercice-variante d'une liste, avec le champ qui l'a fait trouver. */
+interface Listed {
+  ref: VariantRef;
+  via?: MatchField;
+}
+
+/** Filtre par groupe gardé le temps de l'ouverture de l'appli (retour depuis une fiche). */
+const memory: { group: MuscleGroup | null } = { group: null };
+
+/**
+ * Liste des exercices : résultats de recherche, ou puces de filtre par groupe, récents, favoris et bibliothèque par
+ * groupe (§4.2). Les prises d'un même exercice sont regroupées en une entrée.
+ */
 export function ExerciseBrowser({ query, onPick, below, aside, note, createHref }: Props) {
   const { exercises, sessions, variants } = useApp();
   const index = useMemo(() => buildSearchIndex(exercises), [exercises]);
   const { results, ignored } = useMemo(() => searchWithInfo(index, query), [index, query]);
+  const [chosen, setChosen] = useState<MuscleGroup | null>(memory.group);
   const trimmed = query.trim();
+  const shared = { onPick, below, aside, note };
 
-  const item = (ref: VariantRef, via?: MatchField) => (
-    <ExerciseItem key={ref.variant.id} ref_={ref} via={via} onPick={onPick} below={below} aside={aside} note={note} />
+  const list = (items: Listed[], label?: string) => (
+    <ul className="pick-list" aria-label={label}>
+      {groupGrips(items).map((e) =>
+        e.kind === 'single' ? (
+          <ExerciseItem key={e.item.ref.variant.id} ref_={e.item.ref} via={e.item.via} {...shared} />
+        ) : (
+          <GripItem key={`grips-${e.exercise.id}`} exercise={e.exercise} items={e.items} {...shared} />
+        ),
+      )}
+    </ul>
   );
 
   if (trimmed) {
@@ -44,9 +67,7 @@ export function ExerciseBrowser({ query, onPick, below, aside, note, createHref 
             Mot{ignored.length > 1 ? 's' : ''} non reconnu{ignored.length > 1 ? 's' : ''}, ignoré{ignored.length > 1 ? 's' : ''} : {ignored.join(', ')}
           </p>
         )}
-        <ul className="pick-list" aria-label="Résultats">
-          {results.map((r) => item({ exercise: r.entry.exercise, variant: r.entry.variant }, r.via))}
-        </ul>
+        {list(results.map((r) => ({ ref: { exercise: r.entry.exercise, variant: r.entry.variant }, via: r.via })), 'Résultats')}
       </>
     ) : (
       <div className="no-result">
@@ -59,34 +80,50 @@ export function ExerciseBrowser({ query, onPick, below, aside, note, createHref 
   }
 
   const visible = index.map((e) => ({ exercise: e.exercise, variant: e.variant }));
-  const favorites = visible.filter((r) => r.variant.favorite);
+  const groups = GROUP_ORDER.filter((g) => visible.some((r) => r.exercise.primaryGroup === g));
+  const group = chosen && groups.includes(chosen) ? chosen : null;
+  const choose = (g: MuscleGroup | null) => {
+    memory.group = g;
+    setChosen(g);
+  };
+  const inGroup = (r: VariantRef) => !group || r.exercise.primaryGroup === group;
+  const favorites = visible.filter((r) => r.variant.favorite && inGroup(r));
   const recent = recentVariantIds(sessions)
     .map((id) => variants.get(id))
-    .filter((r): r is VariantRef => !!r && !r.exercise.archived && !r.variant.archived);
+    .filter((r): r is VariantRef => !!r && !r.exercise.archived && !r.variant.archived && inGroup(r));
 
   return (
     <>
-      {favorites.length > 0 && (
-        <section>
-          <h2 className="section-title">Favoris</h2>
-          <ul className="pick-list">{favorites.map((r) => item(r))}</ul>
-        </section>
-      )}
+      <div className="chip-row group-filters" role="group" aria-label="Filtrer par groupe musculaire">
+        <button type="button" className="chip" aria-pressed={!group} onClick={() => choose(null)}>
+          Tous
+        </button>
+        {groups.map((g) => (
+          <button key={g} type="button" className="chip" aria-pressed={group === g} onClick={() => choose(group === g ? null : g)}>
+            {MUSCLE_GROUP_LABELS[g]}
+          </button>
+        ))}
+      </div>
       {recent.length > 0 && (
         <section>
           <h2 className="section-title">Récents</h2>
-          <ul className="pick-list">{recent.map((r) => item(r))}</ul>
+          {list(recent.map((ref) => ({ ref })))}
         </section>
       )}
-      {GROUP_ORDER.map((g) => {
-        const list = visible
+      {favorites.length > 0 && (
+        <section>
+          <h2 className="section-title">Favoris</h2>
+          {list(favorites.map((ref) => ({ ref })))}
+        </section>
+      )}
+      {(group ? [group] : groups).map((g) => {
+        const items = visible
           .filter((r) => r.exercise.primaryGroup === g)
           .sort((a, b) => displayName(a).localeCompare(displayName(b), 'fr'));
-        if (list.length === 0) return null;
         return (
           <section key={g}>
             <h2 className="section-title">{MUSCLE_GROUP_LABELS[g]}</h2>
-            <ul className="pick-list">{list.map((r) => item(r))}</ul>
+            {list(items.map((ref) => ({ ref })))}
           </section>
         );
       })}
@@ -103,12 +140,15 @@ interface ItemProps {
   note?(ref: VariantRef): string | null;
 }
 
+const secondaryOf = (exercise: Exercise, via?: MatchField) =>
+  via === 'secondary' ? exercise.secondaryGroups.map((g) => MUSCLE_GROUP_LABELS[g]).join(', ') : null;
+
 /** Un exercice-variante : pictogramme, nom, variante, groupe principal, dernier poids et statut. */
 function ExerciseItem({ ref_: ref, via, onPick, below, aside, note }: ItemProps) {
   const { replay } = useApp();
   const state = replay.profile.variants[ref.variant.id];
   const extra = note?.(ref);
-  const secondary = via === 'secondary' ? ref.exercise.secondaryGroups.map((g) => MUSCLE_GROUP_LABELS[g]).join(', ') : null;
+  const secondary = secondaryOf(ref.exercise, via);
   return (
     <li className="pick-item" data-variant={ref.variant.id} {...groupColorProps(ref.exercise.primaryGroup)}>
       <div className="pick-row">
@@ -131,6 +171,60 @@ function ExerciseItem({ ref_: ref, via, onPick, below, aside, note }: ItemProps)
         {aside?.(ref)}
       </div>
       {below?.(ref)}
+    </li>
+  );
+}
+
+/** Nom court d'une prise, dans sa puce : « Très large », « Moyenne », « Serrée ». */
+function gripLabel(ref: VariantRef): string {
+  const grip = (gripOf(ref.variant.name) ?? ref.variant.name).replace(/^Prise /, '');
+  return grip.charAt(0).toUpperCase() + grip.slice(1);
+}
+
+/**
+ * Prises d'un même exercice, en une seule entrée (§4.3.1) : nom et groupe une fois, puis une puce par prise (dernier
+ * poids et statut de la variante). Un appui sur une puce agit sur cette variante (fiche, ou ajout à la séance).
+ */
+function GripItem({ exercise, items, onPick, below, note }: { exercise: Exercise; items: Listed[] } & Omit<ItemProps, 'ref_' | 'via'>) {
+  const { replay } = useApp();
+  const secondary = secondaryOf(exercise, items.find((i) => i.via === 'secondary')?.via);
+  return (
+    <li className="pick-item grip-item" data-exercise={exercise.id} {...groupColorProps(exercise.primaryGroup)}>
+      <div className="grip-head">
+        <ExercisePicto exercise={exercise} variantId={exercise.id} />
+        <span className="pick-name">
+          <strong>{exercise.name}</strong>
+          <span className="muted small">
+            {MUSCLE_GROUP_LABELS[exercise.primaryGroup]}
+            {secondary && ` · secondaire : ${secondary}`}
+          </span>
+        </span>
+      </div>
+      <div className="grip-chips" role="group" aria-label={`Prises : ${exercise.name}`}>
+        {items.map(({ ref }) => {
+          const state = replay.profile.variants[ref.variant.id];
+          const extra = note?.(ref);
+          return (
+            <button
+              key={ref.variant.id}
+              type="button"
+              className="chip grip-chip"
+              data-variant={ref.variant.id}
+              aria-label={`${exercise.name} ${ref.variant.name}${extra ? `, ${extra}` : ''}`}
+              onClick={() => onPick(ref)}
+            >
+              <span>{gripLabel(ref)}</span>
+              {state && <span className="muted">{formatKg(state.palier.weightKg)}</span>}
+              <StatusBadge status={state?.lastStatus} />
+              {extra && <span aria-hidden="true">✓</span>}
+            </button>
+          );
+        })}
+      </div>
+      {items.map(({ ref }) => {
+        const content = below?.(ref);
+        return content ? <Fragment key={ref.variant.id}>{content}</Fragment> : null;
+      })}
     </li>
   );
 }

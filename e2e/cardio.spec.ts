@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { activeSession, addExercise, doExercise, finishSession, readSessions, startSession, validateSets, cardAction, finishSheet, openScreen } from './helpers';
+import { activeSession, addExercise, doExercise, finishSession, readSessions, startSession, validateSets, cardAction, finishSheet, openScreen, openSettingsSection } from './helpers';
 
 const cardioForm = (page: Page) => page.getByRole('form', { name: 'Cardio' });
 
@@ -15,6 +15,12 @@ async function addCardio(page: Page, machine: string, minutes: string, incline?:
 }
 
 const recapTitle = (page: Page) => page.getByTestId('weekly-recap').getByRole('heading');
+
+/** Réglages : retire une machine de cardio par son menu « ⋯ ». */
+async function removeMachine(page: Page, name: string): Promise<void> {
+  await page.getByRole('button', { name: `Actions : ${name}`, exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Retirer' }).click();
+}
 
 test.describe('Cardio', () => {
   test('114. Séance avec un exercice et deux blocs de cardio : saisie, rechargement, récapitulatif, historique et accueil', async ({ page }) => {
@@ -58,7 +64,7 @@ test.describe('Cardio', () => {
     await expect(page.locator('.recap-cell:not([data-color="vert"])')).toHaveCount(1);
 
     await openScreen(page, 'Historique');
-    await expect(page.locator('.pick-meta')).toContainText('1 ex. · 35 min cardio');
+    await expect(page.locator('.session-link')).toContainText('1 ex. · 35 min cardio');
     await page.locator('.session-link').click();
     await expect(texts).toHaveText(['Tapis de marche · inclinaison haute · 20 min', 'Rameur · 15 min']);
     const done = (await readSessions(page)).filter((s) => s.state === 'done');
@@ -121,13 +127,17 @@ test.describe('Cardio', () => {
   test('117. Les machines se modifient dans les réglages et sont proposées pendant la séance', async ({ page }) => {
     await page.goto('./');
     await openScreen(page, 'Réglages');
-    await page.getByLabel('Nouvelle machine').fill('Vélo droit');
-    await page.getByRole('button', { name: 'Ajouter', exact: true }).click();
-    await page.getByRole('button', { name: 'Retirer Autre' }).click();
+    const machines = await openSettingsSection(page, 'Machines de cardio');
+    await machines.getByLabel('Nouvelle machine').fill('Vélo droit');
+    await machines.getByRole('button', { name: 'Ajouter', exact: true }).click();
+    // « Retirer » n'est plus affiché en permanence : il est dans le menu « ⋯ » de chaque machine.
+    await expect(machines.getByRole('button', { name: /Retirer/ })).toHaveCount(0);
+    await removeMachine(page, 'Autre');
     await page.getByRole('button', { name: 'Enregistrer les machines' }).click();
     await expect(page.getByText('Machines enregistrées.')).toBeVisible();
 
     await page.reload();
+    await openSettingsSection(page, 'Machines de cardio');
     await expect(page.getByLabel('Nom de la machine 5')).toHaveValue('Vélo droit');
     await startSession(page);
     await page.getByRole('button', { name: 'Ajouter du cardio' }).click();
@@ -250,7 +260,8 @@ test.describe('Cardio', () => {
     await expect.poll(names).toEqual(['Tapis', 'Rameur', 'Vélo elliptique', 'Vélo', 'Autre']);
 
     // Retirée par l'utilisateur, elle n'est jamais recréée.
-    await page.getByRole('button', { name: 'Retirer Vélo', exact: true }).click();
+    await openSettingsSection(page, 'Machines de cardio');
+    await removeMachine(page, 'Vélo');
     await page.getByRole('button', { name: 'Enregistrer les machines' }).click();
     await expect(page.getByText('Machines enregistrées.')).toBeVisible();
     await page.reload();

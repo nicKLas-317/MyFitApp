@@ -9,7 +9,7 @@ import { checkImportFile, MAX_IMPORT_BYTES } from '../../transfer/file';
 import { analyzeProgress, chartSeries } from '../progress';
 
 describe('Bilan après import des données de départ (§19.3)', () => {
-  it('140. Deux séances vertes au même palier (triceps haltère assis) : « En progression » ; une seule séance : « Trop tôt pour conclure » ; graphique dès un point', () => {
+  it('140. Deux séances vertes au même palier (triceps haltère assis) : « En progression » ; une seule séance : « Trop tôt » ; graphique dès un point', () => {
     const parsed = parseJsonImport(departJson, [...SEED_EXERCISES], '2026-10-16');
     if (parsed.kind !== 'backup') throw new Error(parsed.kind);
     const plan = planImport(parsed.backup, { sessions: [], exercises: [...SEED_EXERCISES] }, { mode: 'merge' });

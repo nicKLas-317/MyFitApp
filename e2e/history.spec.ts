@@ -44,10 +44,10 @@ test.describe('Historique, analyse et Mon poids', () => {
   test('§10. Historique chronologique et recherche par nom', async ({ page }) => {
     await seed(page, SESSIONS);
     await openScreen(page, 'Historique');
-    const list = page.getByRole('list', { name: 'Séances' });
-    await expect(list.locator('strong')).toHaveText(['Dos et biceps', 'Haut du corps']);
+    const list = page.getByRole('list', { name: 'Séances : Octobre 2026' });
+    await expect(list.locator('.history-title')).toHaveText(['Dos et biceps', 'Haut du corps']);
     await page.getByRole('searchbox', { name: 'Rechercher une séance' }).fill('haut');
-    await expect(list.locator('strong')).toHaveText(['Haut du corps']);
+    await expect(list.locator('.history-title')).toHaveText(['Haut du corps']);
   });
 
   test('§16.8 et 27. Corriger une séance passée recalcule couleurs et recommandations', async ({ page }) => {
@@ -99,7 +99,7 @@ test.describe('Historique, analyse et Mon poids', () => {
     await seed(page, [...SESSIONS, done('s3', 'Bras', '2026-10-04', [8, 7, 7], 'moyen', 'curl-biceps-halteres')]);
     await page.goto('./#/bilan');
     await expect(page.getByRole('region', { name: 'En progression' })).toContainText('Tirage vertical');
-    await expect(page.getByRole('region', { name: 'Trop tôt pour conclure' })).toContainText('Curl biceps haltères');
+    await expect(page.getByRole('region', { name: 'Trop tôt', exact: true })).toContainText('Curl biceps haltères');
     await expect(page.getByRole('region', { name: 'En difficulté' })).toHaveCount(0);
   });
 

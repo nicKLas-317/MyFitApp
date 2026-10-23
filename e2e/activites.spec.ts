@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { openSettingsSection } from './helpers';
 
 /** Heure locale (Paris), octobre-novembre 2026 : le lundi 19 octobre commence la semaine. */
 const at = (date: string, time: string) => new Date(`${date}T${time}:00`);
@@ -56,10 +57,15 @@ test.describe('Activités habituelles hors salle', () => {
 
     // Historique : « Badminton · 1 h 30 ».
     await page.goto('./#/historique');
-    const item = page.getByRole('listitem', { name: 'Badminton · 1 h 30' });
-    await expect(item).toContainText('19 octobre 2026 · 21 h – 22 h 30');
+    // Une ligne compacte (nom, durée), sans « Supprimer » ; le détail donne la date et les heures.
+    const item = page.getByRole('link', { name: /Badminton · 1 h 30/ });
+    await expect(item).toHaveAccessibleName(/^19 octobre 2026 : Badminton · 1 h 30 activité/);
+    await expect(page.getByRole('main').getByRole('button', { name: /Supprimer/ })).toHaveCount(0);
     await noOverflow(page);
     await test.info().attach('historique', { body: await page.screenshot(), contentType: 'image/png' });
+    await item.click();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Badminton · 1 h 30');
+    await expect(page.getByRole('main')).toContainText('19 octobre 2026 · 21 h – 22 h 30');
 
     // Bilan de la semaine : section Séances et texte du mail.
     await page.goto('./#/bilan-periode/semaine/2026-10-19');
@@ -81,10 +87,12 @@ test.describe('Activités habituelles hors salle', () => {
     });
     await expect(page.getByText('Rien de nouveau à importer.')).toBeVisible();
 
-    // Suppression depuis l'historique, après confirmation : plus comptée, et la question ne revient pas.
+    // Suppression depuis le détail, après confirmation : plus comptée, et la question ne revient pas.
     await page.goto('./#/historique');
-    await item.getByRole('button', { name: 'Supprimer' }).click();
-    await item.getByRole('button', { name: 'Confirmer la suppression' }).click();
+    await item.click();
+    await page.getByRole('button', { name: 'Supprimer l’activité' }).click();
+    await page.getByRole('button', { name: 'Confirmer la suppression' }).click();
+    await expect(page.getByRole('searchbox', { name: 'Rechercher une séance' })).toBeVisible();
     await expect(item).toHaveCount(0);
     await page.goto('./#/');
     await expect(banner(page)).toHaveCount(0);
@@ -110,7 +118,7 @@ test.describe('Activités habituelles hors salle', () => {
 
     // Réglages : désactivée → plus de question ; une nouvelle activité s'ajoute avec son jour, ses heures et ses groupes.
     await page.goto('./#/reglages');
-    const habits = page.getByRole('group', { name: 'Activités habituelles' });
+    const habits = await openSettingsSection(page, 'Activités habituelles');
     const row = habits.getByRole('listitem', { name: 'Badminton' });
     await expect(row.getByLabel('Jour : Badminton')).toHaveValue('1');
     await expect(row.getByLabel('Début : Badminton')).toHaveValue('21:00');
@@ -135,7 +143,7 @@ test.describe('Activités habituelles hors salle', () => {
     const clip = { ...box, y: box.y + (await page.evaluate(() => window.scrollY)) };
     await test.info().attach('reglages-activites', { body: await page.screenshot({ fullPage: true, clip }), contentType: 'image/png' });
     await page.reload();
-    await expect(page.getByRole('group', { name: 'Activités habituelles' }).getByRole('listitem', { name: 'Badminton' }).getByLabel('Activée')).not.toBeChecked();
+    await expect((await openSettingsSection(page, 'Activités habituelles')).getByRole('listitem', { name: 'Badminton' }).getByLabel('Activée')).not.toBeChecked();
 
     await openAt(page, '2026-11-09', '22:31');
     await expect(banner(page)).toHaveCount(0);

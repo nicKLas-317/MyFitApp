@@ -12,8 +12,7 @@ import { UpdatePrompt } from './ui/UpdatePrompt';
 import { Bilan } from './ui/screens/Bilan';
 import { BodyScreen } from './ui/screens/BodyScreen';
 import { DataScreen } from './ui/screens/DataScreen';
-import { History } from './ui/screens/History';
-import { SessionDetail } from './ui/screens/SessionDetail';
+import { History, HistoryDetail } from './ui/screens/History';
 import { ExerciseEdit } from './ui/screens/ExerciseEdit';
 import { ExerciseSheet } from './ui/screens/ExerciseSheet';
 import { Library } from './ui/screens/Library';
@@ -76,7 +75,7 @@ function Screen({ page, param, extra }: { page: string; param: string | undefine
     case 'donnees':
       return <DataScreen />;
     case 'historique':
-      return param ? <SessionDetail key={param} sessionId={param} /> : <History />;
+      return param ? <HistoryDetail key={param} id={param} /> : <History />;
     case 'bilan':
       return <Bilan />;
     case 'bilan-groupes':

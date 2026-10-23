@@ -59,7 +59,7 @@ test.describe('Barre d’onglets, mode salle et bouton retour (§3.4, §5.8)', (
     // Historique, Progrès, Plus : chacun devient actif.
     await tab(page, 'Historique').click();
     await expect(tab(page, 'Historique')).toHaveAttribute('aria-current', 'page');
-    await expect(page.getByRole('list', { name: 'Séances' })).toBeVisible();
+    await expect(page.getByRole('searchbox', { name: 'Rechercher une séance' })).toBeVisible();
     await tab(page, 'Progrès').click();
     await expectScreen(page, 'Progrès');
     await expect(page.getByRole('navigation', { name: 'Bilans' }).getByRole('link')).toHaveText([
@@ -169,7 +169,7 @@ test.describe('Barre d’onglets, mode salle et bouton retour (§3.4, §5.8)', (
     await page.locator('a.session-link').first().click();
     await expect(page.getByRole('list', { name: 'Exercices de la séance' })).toBeVisible();
     await page.goBack();
-    await expect(page.getByRole('list', { name: 'Séances' })).toBeVisible();
+    await expect(page.getByRole('searchbox', { name: 'Rechercher une séance' })).toBeVisible();
     await page.goBack();
     await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
     // Adresse ouverte directement : « retour » mène à la Séance, il ne ferme pas l'appli.

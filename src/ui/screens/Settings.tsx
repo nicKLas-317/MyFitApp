@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { ActionMenu } from '../ActionMenu';
 import { useApp } from '../../app/store';
 import { parseHeight } from '../../body/model';
 import { useBody } from '../../body/store';
@@ -25,11 +26,26 @@ export function Settings() {
         </a>
         <h1>Réglages</h1>
       </header>
-      <HeightField />
-      <RecapSettingsField />
-      <ReportSettingsField />
-      <HabitsField />
-      <CardioMachinesField />
+      <div className="settings-links">
+        <a className="btn big" href="#/bibliotheque">
+          Exercices, variantes et réglages par exercice
+        </a>
+      </div>
+      <SettingsSection title="Taille" open>
+        <HeightField />
+      </SettingsSection>
+      <SettingsSection title="Récapitulatif de la semaine">
+        <RecapSettingsField />
+      </SettingsSection>
+      <SettingsSection title="Bilans de la semaine et du mois">
+        <ReportSettingsField />
+      </SettingsSection>
+      <SettingsSection title="Activités habituelles">
+        <HabitsField />
+      </SettingsSection>
+      <SettingsSection title="Machines de cardio">
+        <CardioMachinesField />
+      </SettingsSection>
       <dl className="settings-list frame">
         <dt>Stockage persistant</dt>
         <dd data-testid="persist-state">{persist ? PERSIST_LABELS[persist] : '…'}</dd>
@@ -37,14 +53,25 @@ export function Settings() {
         <dd>{__APP_VERSION__}</dd>
       </dl>
       <div className="settings-links">
-        <a className="btn big" href="#/bibliotheque">
-          Exercices, variantes et réglages par exercice
-        </a>
         <a className="btn big" href="#/donnees">
           Importer / exporter
         </a>
       </div>
     </main>
+  );
+}
+
+/** Section repliable des réglages : fermée à l'ouverture de l'écran, sauf la première. */
+function SettingsSection({ title, open = false, children }: { title: string; open?: boolean; children: ReactNode }) {
+  return (
+    <details className="frame settings-section" open={open}>
+      <summary>
+        <span className="section-title">{title}</span>
+      </summary>
+      <div className="settings-body" role="group" aria-label={title}>
+        {children}
+      </div>
+    </details>
   );
 }
 
@@ -65,7 +92,7 @@ function HeightField() {
 
   return (
     <form
-      className="name-form frame"
+      className="name-form"
       onSubmit={(e) => {
         e.preventDefault();
         void save();
@@ -96,8 +123,7 @@ function RecapSettingsField() {
   const save = async (next: typeof recapSettings) => setFailed(!(await setRecapSettings(next)));
 
   return (
-    <fieldset className="chips-field recap-settings frame">
-      <legend>Récapitulatif de la semaine</legend>
+    <div className="recap-settings">
       <div className="feeling-options" role="group" aria-label="Groupes affichés">
         {RECAP_CHOICES.map((g) => {
           const on = recapSettings.groups.includes(g);
@@ -130,7 +156,7 @@ function RecapSettingsField() {
           Enregistrement impossible : réessayez.
         </p>
       )}
-    </fieldset>
+    </div>
   );
 }
 
@@ -152,7 +178,7 @@ function ReportSettingsField() {
 
   return (
     <form
-      className="name-form report-settings frame"
+      className="name-form report-settings"
       // Contrôle de l'adresse par l'appli, avec un message en français, plutôt que la bulle du navigateur.
       noValidate
       onSubmit={(e) => {
@@ -162,7 +188,6 @@ function ReportSettingsField() {
         void save({ ...reportSettings, email: trimmed }, trimmed ? 'Adresse enregistrée.' : 'Adresse retirée.');
       }}
     >
-      <h2 className="section-title">Bilans de la semaine et du mois</h2>
       <label className="check-line">
         <input type="checkbox" checked={shown.weekBanner} onChange={(e) => void save({ ...shown, weekBanner: e.target.checked })} />
         <span>Signaler le bilan de la semaine (pastille sur Progrès)</span>
@@ -219,8 +244,7 @@ function CardioMachinesField() {
   }
 
   return (
-    <fieldset className="chips-field cardio-machines frame">
-      <legend>Machines de cardio</legend>
+    <div className="cardio-machines">
       <ul className="machine-list">
         {list.map((m, i) => (
           <li key={m.id} className="machine-row">
@@ -239,15 +263,11 @@ function CardioMachinesField() {
             >
               Inclinaison
             </button>
-            <button
-              type="button"
-              className="link danger small"
-              aria-label={`Retirer ${m.name}`}
-              disabled={list.length === 1}
-              onClick={() => change(list.filter((x) => x.id !== m.id))}
-            >
-              Retirer
-            </button>
+            {list.length > 1 ? (
+              <ActionMenu label={m.name.trim() || `Machine ${i + 1}`} actions={[{ label: 'Retirer', danger: true, onSelect: () => change(list.filter((x) => x.id !== m.id)) }]} />
+            ) : (
+              <span className="menu-placeholder" />
+            )}
           </li>
         ))}
       </ul>
@@ -290,7 +310,7 @@ function CardioMachinesField() {
         </p>
       )}
       <p className="muted small">Les séances déjà enregistrées gardent le nom de leur machine.</p>
-    </fieldset>
+    </div>
   );
 }
 
@@ -331,8 +351,7 @@ function HabitsField() {
   }
 
   return (
-    <fieldset className="chips-field habits frame">
-      <legend>Activités habituelles</legend>
+    <div className="habits">
       <p className="muted small">Hors salle : après l’heure de fin, l’accueil demande si l’activité a eu lieu.</p>
       {list.length === 0 && <p className="muted small">Aucune activité habituelle.</p>}
       <ul className="habit-list">
@@ -350,8 +369,10 @@ function HabitsField() {
                   ))}
                 </select>
                 <input type="time" aria-label={`Début : ${name}`} value={h.start} onChange={(e) => update(h.id, { start: e.target.value })} />
-                <span aria-hidden="true">–</span>
-                <input type="time" aria-label={`Fin : ${name}`} value={h.end} onChange={(e) => update(h.id, { end: e.target.value })} />
+                <span className="habit-end">
+                  <span aria-hidden="true">–</span>
+                  <input type="time" aria-label={`Fin : ${name}`} value={h.end} onChange={(e) => update(h.id, { end: e.target.value })} />
+                </span>
               </div>
               <div className="feeling-options" role="group" aria-label={`Groupes sollicités : ${name}`}>
                 {HABIT_GROUPS.map((g) => {
@@ -421,6 +442,6 @@ function HabitsField() {
         </p>
       )}
       <p className="muted small">Les activités déjà enregistrées gardent leur nom, leurs heures et leurs groupes.</p>
-    </fieldset>
+    </div>
   );
 }

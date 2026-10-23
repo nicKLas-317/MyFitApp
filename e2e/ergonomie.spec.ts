@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import type { Session } from '../src/domain/types';
 import { simulatedHistory } from '../src/analysis/__tests__/simulation';
-import { activeSession, addExercise, cardAction, doExercise, finishSheet, readSessions, startSession, validateSets, writeSessions } from './helpers';
+import { activeSession, addExercise, cardAction, doExercise, finishSheet, openSettingsSection, readSessions, startSession, validateSets, writeSessions } from './helpers';
 
 /** Fond d'un bouton principal (bleu) et cadre neutre. */
 const ACCENT = 'rgb(91, 157, 255)';
@@ -69,7 +69,8 @@ function auditScreen(page: Page, scale = 1) {
     const visible = (e: Element) => {
       const r = e.getBoundingClientRect();
       const s = getComputedStyle(e);
-      return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none';
+      // Contenu d'une section repliée (réglages) : non affiché.
+      return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' && e.checkVisibility();
     };
     const name = (e: Element) => `${e.tagName.toLowerCase()}${e.classList.length ? '.' + [...e.classList].join('.') : ''} « ${(e.textContent ?? '').trim().slice(0, 30)} »`;
     const scope = [...document.querySelectorAll('main *, [role=dialog], [role=dialog] *')].filter(visible);
@@ -353,8 +354,35 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
         await expectClean(page, `${screen} à ${width} px`);
       }
     }
-    // Séance : carte ouverte, menu ouvert, cardio ; texte agrandi à 115 % à 360 px.
+    // Écrans au calme dépliés (version 1.21.0), à 360 px et avec le texte à 115 % : bibliothèque filtrée (prises en
+    // puces), fiche avec l'illustration agrandie et tout l'historique, réglages avec toutes les sections ouvertes.
     await page.setViewportSize({ width: 360, height: 800 });
+    const unfolded: [string, () => Promise<void>][] = [
+      ['Bibliothèque, dos', async () => {
+        await page.goto('./#/bibliotheque');
+        await page.getByRole('group', { name: 'Filtrer par groupe musculaire' }).getByRole('button', { name: 'Dos' }).click();
+      }],
+      ['Fiche dépliée', async () => {
+        await page.goto('./#/exercice/chest-press');
+        await page.getByRole('button', { name: 'Agrandir l’illustration' }).click();
+        await page.getByRole('button', { name: /^Voir tout/ }).click();
+      }],
+      ['Réglages dépliés', async () => {
+        await page.goto('./#/reglages');
+        for (const name of ['Récapitulatif de la semaine', 'Bilans de la semaine et du mois', 'Activités habituelles', 'Machines de cardio']) await openSettingsSection(page, name);
+      }],
+    ];
+    for (const [screen, open] of unfolded) {
+      await open();
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.waitForTimeout(200);
+      await expectClean(page, `${screen} à 360 px`);
+      const larger = await largeText(page);
+      await expectClean(page, `${screen}, texte agrandi`, 1.15);
+      await larger();
+    }
+
+    // Séance : carte ouverte, menu ouvert, cardio ; texte agrandi à 115 % à 360 px.
     await startSession(page);
     const card = await addExercise(page, 'chest press', 'Chest press');
     await page.getByRole('button', { name: 'Ajouter du cardio' }).click();

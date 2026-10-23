@@ -1,6 +1,7 @@
 import type { Feeling, Status } from '../domain/types';
-import type { ProgressMarker, Recommendation } from '../engine';
+import type { Palier, ProgressMarker, Recommendation } from '../engine';
 import type { RatedFeeling } from '../session/ops';
+import { formatKg } from '../session/format';
 
 export const FEELINGS: { value: RatedFeeling; label: string }[] = [
   { value: 'tres_mal', label: 'Très mal' },
@@ -46,4 +47,14 @@ export function markerArrow(marker: ProgressMarker): '↑' | '↓' {
 export function markerLabel(marker: ProgressMarker, assisted = false): string {
   if (marker.kind !== 'reps_up') return loadChangeLabel(marker.kind, assisted);
   return `+${marker.added} rép.`;
+}
+
+const kgNumber = (kg: number) => kg.toLocaleString('fr-FR', { maximumFractionDigits: 2 });
+
+/** Évolution d'un palier en quelques mots (bilan, §19.3) : « 8 → 9 rép. », « 40 → 45 kg, 12 → 8 rép. », « 30 → 27,5 kg ». */
+export function changeText(c: { from: Palier; to: Palier }): string {
+  const reps = `${c.from.targetReps} → ${c.to.targetReps} rép.`;
+  if (c.from.weightKg === c.to.weightKg) return reps;
+  const weight = `${kgNumber(c.from.weightKg)} → ${formatKg(c.to.weightKg)}`;
+  return c.from.targetReps === c.to.targetReps ? weight : `${weight}, ${reps}`;
 }

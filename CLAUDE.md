@@ -99,7 +99,7 @@ Créer une interface moderne, sobre, lisible et rapide.
 L'application est organisée en quatre onglets (§3.4, version 1.20.0), qui séparent l'usage « à la salle » (saisie rapide, écran épuré) de l'usage « au calme » (bilans, historique, réglages) :
 
 - **Séance** (onglet par défaut, l'accueil) : la question d'une activité habituelle en haut s'il y en a une (« Badminton lundi soir (21 h – 22 h 30) ? », §19.8), le récapitulatif de la semaine (§19.6), puis « Démarrer une séance » / « Reprendre la séance » (toujours 1 appui), et le rappel de sauvegarde éventuel (§12).
-- **Historique** : la liste des séances et des activités (§10).
+- **Historique** : la liste des séances et des activités, regroupée par mois (§10, §3.5).
 - **Progrès** : en haut, le bandeau « Ton bilan de la semaine / du mois est prêt » quand un bilan est à voir (§19.7) ; puis le bilan de progression (§19.3), les bilans de la semaine et du mois (§19.7), le bilan par groupe musculaire (§19.10) et « Mon poids » (§20), avec une pesée rapide.
 - **Plus** : la bibliothèque d'exercices et sa recherche (§4), les réglages (§14), « Importer / exporter » (§11 ; l'écran porte le même nom).
 
@@ -130,6 +130,17 @@ Ne pas ajouter de fonctionnalités sociales, de calories, de programmes complexe
   - Il ne ferme jamais l'appli en pleine séance : sur l'onglet Séance, une entrée de garde absorbe « retour » tant qu'une séance est en cours.
   - Il ne perd aucune saisie : un poids tapé sans quitter le champ est enregistré en quittant l'écran (même protection au-delà de 50 %, §5.3), les répétitions ajustées (− / +) de la série en cours, l'exercice ouvert et le cardio en cours de saisie sont retrouvés au retour dans la séance, et le nom saisi au récapitulatif est enregistré.
 - **Nombre d'appuis** : aucune action de saisie n'en demande plus qu'avant les onglets, et aucune ne demande de défiler (test 230) : démarrer ou reprendre une séance 1, ajouter un exercice récent 2, valider une série 1, ressenti 1, cardio 2 (+ la durée), terminer 2, pesée 2 (+ le poids), corriger une séance passée 3.
+
+### 3.5. Écrans au calme allégés (précision validée, version 1.21.0)
+
+Moins de défilement sur les écrans de consultation ; navigation, moteur de progression et données inchangés.
+
+- **Historique** (§10) : regroupé par mois, un intertitre par mois (« Octobre 2026 », style des titres de section) et un seul cadre neutre par mois. Une ligne compacte par séance : jour à gauche (« lun. 19 »), titre sur une ligne au plus (tronqué « … » si besoin), puis le contenu (« 5 ex. · 20 min cardio », « · importée ») ; par activité : « Badminton · 1 h 30 », « activité ». Heures et durée sont dans le détail. Aucun bouton dans la liste : « Supprimer » n'est proposé que dans le détail (séance ou activité), avec confirmation.
+- **Bibliothèque et ajout d'un exercice** (§4.2, §4.3.1) : sous la recherche, une rangée de puces de filtre (« Tous », puis chaque groupe qui a des exercices), sur une seule ligne qui défile horizontalement si besoin. Un appui n'affiche que ce groupe ; un nouvel appui, ou « Tous », réaffiche tout ; le filtre est gardé le temps de l'ouverture de l'appli (retour depuis une fiche). « Récents » reste en tête, puis « Favoris », puis les groupes ; avec un filtre, récents et favoris sont limités au groupe choisi. Pendant une recherche, les puces sont masquées et les résultats ne sont pas filtrés. Les prises d'un même exercice présentes dans une liste (au moins deux) sont regroupées en une seule entrée : nom et groupe une fois, puis une puce par prise, dans l'ordre très large · moyenne · serrée, avec le dernier poids et le statut de chaque prise. Un appui sur une puce agit sur cette variante : ajout à la séance (poids de départ demandé si besoin ; « dans la séance » rouvre l'exercice) ou fiche dans la bibliothèque. C'est un regroupement d'affichage (`groupGrips`, `src/library/catalog.ts`) : chaque prise reste un exercice-variante distinct (données, moteur, historique). Une seule prise dans une liste (récents, « tirage vertical wide grip ») reste une entrée simple ; les autres variantes (assis / debout, barre / haltères…) ne sont pas regroupées.
+- **Fiche d'un exercice** (§4, §19.1) : la prochaine cible et la dernière fois en premier, puis « Ajouter à la séance » / « Modifier », puis l'exercice (illustration réduite à une vignette, groupes, matériel, favori). Un appui sur la vignette agrandit l'illustration, avec l'attribution sous l'image agrandie ; un nouvel appui la réduit. Puis l'évolution, l'historique, les variantes et les autres noms. Historique : lignes compactes dans un seul cadre (« 19/10 · 45 kg · 11-11-11 », statut, puis « cible 3 × 11 · Bien passé (+=) · importée »), les 5 dernières séances, puis « Voir tout (17 séances) » (et « Voir les 5 dernières »).
+- **Bilan de progression** (§19.3) : les filtres sur une seule rangée (défilement horizontal si besoin) ; « Trop tôt pour conclure » devient « Trop tôt » ; « Dernières évolutions » : une ligne par évolution (« 19/10 Pec deck 10 → 11 rép. », « 30 → 27,5 kg », « 40 → 45 kg, 12 → 8 rép. »), le nom tronqué si besoin.
+- **Réglages** (§14) : « Exercices, variantes et réglages par exercice » en haut ; puis des sections repliables, toutes fermées à l'ouverture sauf la première : Taille, Récapitulatif de la semaine, Bilans de la semaine et du mois, Activités habituelles, Machines de cardio (titre au style des titres de section, chevron). Stockage persistant et version restent affichés en bas (information, pas un réglage), puis « Importer / exporter ». Activités habituelles : jour, début et fin sur une ligne à 360 px (le jour à la largeur de sa valeur, les heures à cinq caractères) ; le jour n'est jamais tronqué : avec le texte agrandi, l'heure de fin (avec son tiret) passe dessous. Machines de cardio : lignes espacées de 8 px, « Retirer » dans le menu « ⋯ » de chaque machine (effectif à « Enregistrer les machines », annulable) ; pas de menu quand il ne reste qu'une machine.
+- Hauteur en nombre d'écrans (412 px, données simulées) avant → après : historique 6 → 3,9 ; bibliothèque 6 → 5,7 (1,4 avec un filtre) ; fiche 3,7 → 2 ; bilan 2,8 → 2,4 ; réglages 3,2 → 1,1.
 
 ### 3.1. Cadres de section (précision validée)
 
@@ -264,6 +275,8 @@ N'utiliser que des ressources dont la licence autorise explicitement la réutili
 
 Si aucune illustration fiable n'est disponible, utiliser des pictogrammes SVG simples et cohérents par groupe musculaire et type de matériel, plutôt qu'une image trompeuse.
 
+Sur la fiche, l'illustration est réduite à une vignette, agrandie au toucher avec son attribution dessous (§3.5).
+
 ### 4.1. Recherche unique par exercice, machine ou groupe musculaire
 
 La bibliothèque doit comporter **une seule barre de recherche polyvalente**, accessible rapidement pendant une séance.
@@ -317,7 +330,7 @@ La recherche doit :
 - Fonctionner hors ligne.
 - Afficher une liste claire avec nom, illustration si disponible, groupe musculaire principal et variante éventuelle.
 - Permettre d'ajouter directement un résultat à la séance en cours.
-- Mettre en avant les exercices récents et favoris lorsque la recherche est vide.
+- Mettre en avant les exercices récents et favoris lorsque la recherche est vide, avec des puces de filtre par groupe musculaire et les prises d'un même exercice regroupées en une entrée (§3.5).
 
 La recherche doit reposer sur des métadonnées structurées, et non sur une simple recherche textuelle dans le nom affiché.
 
@@ -860,7 +873,7 @@ Permettre de rechercher une séance par son nom et de consulter ses détails.
 
 Permettre de renommer et de corriger une séance passée. **Précision validée :** la date d'une séance passée est modifiable ; la séance est alors rejouée à sa nouvelle place chronologique (§7.9).
 
-Permettre de supprimer une séance passée, après confirmation explicite. La suppression déclenche le recalcul du profil (§7.9).
+Permettre de supprimer une séance passée, après confirmation explicite, depuis son détail seulement (la liste, regroupée par mois, n'a aucun bouton, §3.5). La suppression déclenche le recalcul du profil (§7.9).
 
 Permettre de créer une nouvelle séance à partir d'une séance historique.
 
@@ -1113,7 +1126,7 @@ Une correction ne doit jamais détruire silencieusement les performances histori
 
 ## 14. Réglages
 
-Prévoir une page de réglages simple permettant notamment :
+Prévoir une page de réglages simple (sections repliables, toutes fermées à l'ouverture sauf la première, §3.5) permettant notamment :
 
 - De personnaliser les noms d'exercices.
 - De gérer les variantes.
@@ -1268,7 +1281,7 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 97. (§19.6) Les sous-groupes des jambes comptent pour « jambes » ; le récapitulatif ne modifie ni les séances ni le moteur.
 98. (§4.0) « leg curl », « leg curl assis », « seated leg curl » → Leg curl (assis) ; « curl ischios », « curl ischio allongé », « leg curl allongé », « lying leg curl » → Curl ischios (allongé) ; en cas de doute, l'aperçu demande de choisir ; historiques séparés.
 99. (§4.0) Une base existante reçoit « Curl ischios » une seule fois ; les synonymes du leg curl ne sont corrigés que s'ils n'ont pas été personnalisés.
-100. (§4.0.1) Chaque fiche illustrée affiche le dessin et l'attribution (auteur, licence CC BY-SA 3.0 ou 4.0 selon la source, deux sources), y compris le dessin propre à une variante ; les fiches sans illustration n'en affichent pas.
+100. (§4.0.1) Chaque fiche illustrée affiche, une fois la vignette agrandie, le dessin et l'attribution (auteur, licence CC BY-SA 3.0 ou 4.0 selon la source, deux sources), y compris le dessin propre à une variante ; les fiches sans illustration n'en affichent pas.
 101. (§1) Les tests s'exécutent à l'heure de Paris, quelle que soit la machine.
 
 ### Élévations latérales haltères / machine et corrections de la bibliothèque
@@ -1329,7 +1342,7 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 
 ### Bilan, graphiques et import de fichier (§19.2, §19.3, §11.1)
 
-140. Données de départ (exemple anonymisé) : l'extension triceps haltère assis (deux vertes, palier validé) est « En progression » ; les exercices à une seule séance sont « Trop tôt pour conclure » ; le graphique a un point dès la première séance.
+140. Données de départ (exemple anonymisé) : l'extension triceps haltère assis (deux vertes, palier validé) est « En progression » ; les exercices à une seule séance sont « Trop tôt » ; le graphique a un point dès la première séance.
 141. Fichier d'import : un .json, même sans type reconnu, du texte ou des notes sont acceptés ; un fichier vide, binaire, tronqué ou trop volumineux est refusé avec un message clair.
 142. (bout en bout) Champ fichier sans filtre de type ; fichier non valide refusé sans rien importer ; .json annoncé en `application/octet-stream` importé ; bouton « Bilan de progression » dans l'onglet Progrès, avec les autres bilans, de même taille et de même style ; résumé et titres avec le nombre d'exercices par catégorie, libellé « Une seule séance sur cet exercice. », aucune couleur de statut ; un exercice ouvre sa fiche sur son graphique (deux points), un exercice à une seule séance montre un point et le message.
 
@@ -1337,7 +1350,7 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 
 143. Une seule règle de bordure (quatre côtés), gris neutre par défaut, sans couleur par rang d'affichage ni bordure gauche seule ; les cinq couleurs vives (groupes) restent claires (contraste d'au moins 7:1), ni vert, ni orange, ni rouge.
 144. Les cadres sont tous marqués du même attribut ; la liste des éléments encadrés est unique (menus et volet de fin compris) et exclut pastilles de statut et cases du récapitulatif.
-145. (bout en bout) Bilan : un bouton par catégorie et « Tous » (actif par défaut) ; une catégorie vide est visible mais désactivée ; un appui n'affiche que la catégorie et remplit le bouton ; un nouvel appui ou « Tous » réaffiche tout ; le filtre est mémorisé après rechargement ; boutons et sections de catégorie neutres, chaque exercice à la couleur de son groupe.
+145. (bout en bout) Bilan : un bouton par catégorie et « Tous » (actif par défaut), « … Trop tôt » ; une catégorie vide est visible mais désactivée ; un appui n'affiche que la catégorie et remplit le bouton ; un nouvel appui ou « Tous » réaffiche tout ; le filtre est mémorisé après rechargement ; boutons et sections de catégorie neutres, chaque exercice à la couleur de son groupe.
 146. (bout en bout) Sur chaque écran (accueil, séance, fiche, bibliothèque, historique, détail de séance, bilan, Mon poids, réglages, import/export) : chaque cadre a une bordure de 2 px de la même couleur sur les quatre côtés et des coins arrondis ; fiche entièrement à la couleur du groupe ; ailleurs, ce qui concerne un groupe à sa couleur, tout le reste neutre ; pastilles et cases du récapitulatif sans cadre ; rien ne dépasse de l'écran, et la ligne de série reste dans sa carte à 360 et 320 px.
 
 ### Bibliothèque version 7 : curl à la barre, mollets, abducteurs, adducteurs (§4.0, §4.2.1)
@@ -1424,7 +1437,7 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 199. Récapitulatif : badminton lundi → jambes et épaules « +1 indirect · hier » le mardi, vertes ; « aujourd'hui » le lundi soir ; en-tête « 3 séances · 1 activité · 45 min de cardio » ; au plus 1 par jour et par groupe (rien de plus après une séance où le groupe est principal, ½ de plus après une séance où il est secondaire) ; « hier » aussi pour la semaine précédente.
 200. Bilan du mois : « Activités : Badminton ×4, 6 h 00 », groupes indirects, texte du mail ; nombre et durée des séances inchangés ; semaine sans séance avec du badminton ; moteur inchangé.
 201. Export / import : activités et habitudes dans la sauvegarde (format 4), format 3 migré sans perte, activité invalide refusée, fusion sans doublon, écriture avec les séances dans une seule transaction.
-202. (bout en bout, format smartphone) Question absente à 22 h, présente à 22 h 31 au-dessus du récapitulatif ; « Oui » ; mardi : jambes et épaules « (+1 indirect) · hier » vertes ; historique « Badminton · 1 h 30 » ; bilan de la semaine et texte du mail ; export ; suppression confirmée ; « Non » ; sans réponse jusqu'au dimanche ; réglages (désactivation, nouvelle activité, erreur d'heures) ; rien ne dépasse à 412, 360 et 320 px.
+202. (bout en bout, format smartphone) Question absente à 22 h, présente à 22 h 31 au-dessus du récapitulatif ; « Oui » ; mardi : jambes et épaules « (+1 indirect) · hier » vertes ; historique « Badminton · 1 h 30 » (ligne compacte sans « Supprimer », détail avec date et heures) ; bilan de la semaine et texte du mail ; export ; suppression confirmée depuis le détail ; « Non » ; sans réponse jusqu'au dimanche ; réglages (désactivation, nouvelle activité, erreur d'heures) ; rien ne dépasse à 412, 360 et 320 px.
 
 ### Records personnels (§19.9)
 
@@ -1456,7 +1469,7 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 222. (bout en bout) Menu « ⋯ » de la carte ouverte : « Ajuster séries et répétitions », « Voir la fiche de l'exercice », « Retirer de la séance », plus aucune de ces actions en permanence ; Échap le ferme ; ajustement de la cible puis « Terminé » ; fiche ouverte ; ligne de série à 360 px (et texte à 115 %) et 320 px : « Série 1 » sur une ligne, 8 px au moins entre « + » et « Valider », dans la carte. Retrait d'un exercice ou d'un cardio : confirmé, « Non » garde, « Annuler » rétablit (tests de séance et de cardio).
 223. (bout en bout) Fin de séance avec six exercices : volet entièrement visible sans défiler à 412 et 360 px, texte à 115 % compris ; ressentis de 48 px, à 8 px, sur une ligne, deux rangées à 360 px, en bleu tant qu'ils manquent ; « Terminer sans compléter » secondaire ; un niveau choisi : lui seul en bleu, « Oui, terminer » principal, ressenti enregistré.
 224. (bout en bout) Récapitulatif de fin : « Retour à l'accueil » mène à l'accueil et garde le nom saisi.
-225. (bout en bout) Sur chaque écran (accueil, onglets Progrès et Plus, bibliothèque, fiche, modification d'un exercice, historique, détail, bilans, par groupe, Mon poids, réglages, données, séance avec menu ouvert, ajout d'un exercice, volet de fin), à 412, 360 et 320 px, et à 360 px avec le texte à 115 % pour la séance : seulement les cinq tailles de police, espacements de 8, 16 et 24 px, éléments tactiles d'au moins 48 px et à 8 px au moins de leurs voisins, un seul style de titre de section, étiquettes des graphiques d'au moins 12 px, rien ne dépasse.
+225. (bout en bout) Sur chaque écran (accueil, onglets Progrès et Plus, bibliothèque, fiche, modification d'un exercice, historique, détail, bilans, par groupe, Mon poids, réglages, données, séance avec menu ouvert, ajout d'un exercice, volet de fin), à 412, 360 et 320 px, et à 360 px avec le texte à 115 % pour la séance ; bibliothèque filtrée, fiche dépliée (illustration agrandie, tout l'historique) et réglages dépliés à 360 px, texte à 115 % compris : seulement les cinq tailles de police, espacements de 8, 16 et 24 px, éléments tactiles d'au moins 48 px et à 8 px au moins de leurs voisins, un seul style de titre de section, étiquettes des graphiques d'au moins 12 px, rien ne dépasse.
 226. (bout en bout) Cadres neutres sur l'accueil (bandeaux, récapitulatif, cases du récapitulatif inchangées), les réglages, les données, le volet de fin ; Mon poids : un seul cadre pour la liste des pesées, aucune pesée encadrée ; par groupe : cadres à la couleur du groupe ; carte d'exercice à la couleur de son groupe.
 
 ### Barre d'onglets, mode salle et bouton retour (§3.4, §5.8, version 1.20.0)
@@ -1464,7 +1477,15 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 227. (bout en bout) Barre d'onglets Séance, Historique, Progrès, Plus : fixe en bas, 56 px, icône et libellé, onglet actif en couleur d'accent (`aria-current`), y compris sur les écrans de l'onglet ; onglet Séance : récapitulatif et « Démarrer une séance », aucun autre lien ni bandeau de bilan ; Progrès : trois bilans et Mon poids ; Plus : bibliothèque, réglages, « Importer / exporter » (écran du même nom) ; onglets d'au moins 48 px, rien ne dépasse à 412, 360 et 320 px.
 228. (bout en bout) Mode salle : barre d'onglets masquée, barre du pouce fixe en bas (« + Exercice », « + Cardio », « Terminer », 48 px), liste compacte (« 35 kg · 1/3 »), un seul exercice ouvert ; « + Cardio » amène le formulaire à l'écran, « Terminer » ouvre le volet ; la flèche ramène à l'onglet Séance, séance conservée, reprise en un appui sur le même exercice ; libellés sur une ligne à 360 px avec le texte à 115 %.
 229. (bout en bout) Bouton retour : Plus → Réglages → retour → Plus → retour → Séance ; Historique → détail → retour → Historique → retour → Séance ; adresse ouverte directement → retour → Séance ; fiche ouverte depuis la séance → retour → séance ; après l'ajout d'un exercice, retour → Séance (pas la recherche) ; en pleine séance, retour sur l'onglet Séance ne ferme pas l'appli (deux fois de suite) ; poids tapé sans quitter le champ enregistré, répétitions ajustées et cardio en cours retrouvés ; nom saisi au récapitulatif enregistré, retour → Séance (pas la séance terminée).
-230. (bout en bout) Nombre d'appuis, chaque élément déjà à l'écran (aucun défilement) : démarrer 1, ajouter un exercice récent 2, série 1, ressenti 1, cardio 2, terminer 2 (avec six exercices), garder le nom 1, pesée 2, corriger une séance passée 3, reprendre 1 ; aucun de plus qu'avant les onglets.
+230. (bout en bout) Nombre d'appuis, chaque élément déjà à l'écran (aucun défilement) : démarrer 1, ajouter un exercice récent 2, série 1, ressenti 1, cardio 2, terminer 2 (avec six exercices), garder le nom 1, pesée 2, corriger une séance passée 3, reprendre 1 ; aucun de plus qu'avant les onglets (inchangé par l'allègement des écrans au calme, §3.5).
+
+### Écrans au calme allégés (§3.5, version 1.21.0)
+
+231. (bout en bout) Historique regroupé par mois (« Octobre 2026 », « Septembre 2026 »…), un seul cadre par mois ; ligne de séance « lun. 19 », titre, « 5 ex. · 20 min cardio » ; ligne d'activité « Badminton · 1 h 30 », « activité » ; titres sur une ligne et lignes de 64 px au plus à 412 et 360 px, texte à 115 % compris ; aucun bouton dans la liste ; « Supprimer la séance » et « Supprimer l'activité » dans le détail, avec confirmation.
+232. (unitaire et bout en bout) Prises regroupées : très large · moyenne · serrée en une entrée à la place de la première, une seule prise ou d'autres variantes non regroupées, chaque prise reste un exercice-variante distinct. Bibliothèque : puces « Tous », Dos, Pectoraux, Épaules, Biceps, Triceps, Jambes, Abdominaux sur une ligne, « Récents » en tête ; « Dos » n'affiche que les récents et la section du dos, filtre gardé au retour d'une fiche ; une puce de prise ouvre la fiche de sa variante, puces de 48 px ; en séance, la puce « Serrée » ajoute « Tirage vertical — Prise serrée » (poids de départ), qui est rouvert ensuite au lieu d'être ajouté deux fois.
+233. (bout en bout) Fiche : cible et dernière fois à l'écran, avant l'exercice ; vignette de 80 px au plus, agrandie au toucher avec l'attribution sous l'image, réduite ensuite ; historique dans un seul cadre, 5 lignes compactes (« 45 kg · 11-11-11 », « cible 3 × 11 · Bien passé »), « Voir tout (N séances) » puis « Voir les 5 dernières » ; lignes de 72 px au plus, texte à 115 % compris.
+234. (unitaire et bout en bout) Bilan de progression : filtres sur une seule rangée, dernier « … Trop tôt », plus aucun « Trop tôt pour conclure » ; une ligne par évolution (« 8 → 9 rép. », « 40 → 45 kg, 12 → 8 rép. », « 30 → 27,5 kg »), à 412 et 360 px et avec le texte à 115 %.
+235. (bout en bout) Réglages : « Exercices, variantes et réglages par exercice » au-dessus des sections ; cinq sections repliables, seule « Taille » ouverte ; jour, début et fin de l'activité sur une ligne à 412 et 360 px, jour jamais tronqué (texte à 115 % compris) ; lignes de machines à 8 px au moins l'une de l'autre ; aucun bouton « Retirer » visible, « Retirer » dans le menu « ⋯ », annulable.
 
 Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
 
@@ -1551,7 +1572,7 @@ Chaque fiche d'exercice propose une vue historique accessible rapidement, affich
 - Le statut couleur calculé.
 - L'origine (saisie ou importée).
 
-L'historique est trié chronologiquement et permet de comprendre immédiatement où j'en suis sur cette machine.
+L'historique est trié chronologiquement et permet de comprendre immédiatement où j'en suis sur cette machine. Lignes compactes dans un seul cadre, les 5 dernières séances d'abord, puis « Voir tout » (§3.5).
 
 ### 19.2. Graphique d'évolution simple
 
@@ -1575,11 +1596,11 @@ Ne jamais déclarer un exercice en stagnation sur la base d'une seule séance di
 **Précisions validées :**
 
 - Un palier est « validé » quand il atteint sa 2ᵉ validation verte consécutive (§7.5).
-- Un exercice qui n'a qu'une seule séance évaluée est classé « Trop tôt pour conclure ».
+- Un exercice qui n'a qu'une seule séance évaluée est classé « Trop tôt » (« Trop tôt pour conclure » jusqu'à la version 1.20.0).
 - « En difficulté » (au moins 2 rouges consécutives en cours) l'emporte sur « En progression ».
-- Libellé de « Trop tôt pour conclure » : « Une seule séance sur cet exercice. »
-- Présentation : un résumé en tête donne le nombre d'exercices de chaque catégorie ; chaque catégorie a un titre de section bien visible, un pictogramme (↗ en progression, → stables, ↘ en difficulté, … trop tôt pour conclure), un cadre neutre et son nombre d'exercices ; chaque exercice listé est encadré à la couleur de son groupe (§3.2). Pas de vert, d'orange ni de rouge (réservés aux statuts, §8).
-- Filtres : le résumé du haut est une rangée de vrais boutons rectangulaires arrondis, au style des boutons de l'accueil, un par catégorie (pictogramme, titre, nombre d'exercices) et un bouton « Tous ». Les boutons sont neutres (les couleurs désignent les groupes, §3.2). Un appui n'affiche que la catégorie choisie et remplit le bouton, comme un bouton principal ; un nouvel appui sur le bouton actif, ou « Tous », réaffiche tout. Une catégorie sans exercice reste visible mais n'est pas sélectionnable. Par défaut tout est affiché ; le dernier filtre est mémorisé sur l'appareil (s'il ne contient plus d'exercice, tout est affiché). « Dernières évolutions » n'apparaît que sans filtre.
+- Libellé de « Trop tôt » : « Une seule séance sur cet exercice. »
+- Présentation : un résumé en tête donne le nombre d'exercices de chaque catégorie ; chaque catégorie a un titre de section bien visible, un pictogramme (↗ en progression, → stables, ↘ en difficulté, … trop tôt), un cadre neutre et son nombre d'exercices ; chaque exercice listé est encadré à la couleur de son groupe (§3.2). Pas de vert, d'orange ni de rouge (réservés aux statuts, §8).
+- Filtres : le résumé du haut est une seule rangée (défilement horizontal si elle ne tient pas, §3.5) de vrais boutons rectangulaires arrondis, au style des boutons de l'accueil, un par catégorie (pictogramme, titre, nombre d'exercices) et un bouton « Tous ». Les boutons sont neutres (les couleurs désignent les groupes, §3.2). Un appui n'affiche que la catégorie choisie et remplit le bouton, comme un bouton principal ; un nouvel appui sur le bouton actif, ou « Tous », réaffiche tout. Une catégorie sans exercice reste visible mais n'est pas sélectionnable. Par défaut tout est affiché ; le dernier filtre est mémorisé sur l'appareil (s'il ne contient plus d'exercice, tout est affiché). « Dernières évolutions » n'apparaît que sans filtre, une ligne par évolution (§3.5).
 - Un appui sur un exercice ouvre sa fiche directement sur son graphique d'évolution (§19.2) ; le retour ramène au bilan. Le bilan est accessible depuis l'onglet Progrès (§3). Il mène aux bilans de la semaine et du mois (§19.7) et à la vue « Par groupe musculaire » (§19.10).
 
 ### 19.4. Séparation entre historique réel et recommandation
@@ -1680,7 +1701,7 @@ But : compter, sans rien saisir, une activité régulière faite hors de la sall
 
 **Affichage**
 
-- Historique : l'activité confirmée figure parmi les séances, à sa date (« Badminton · 1 h 30 », « 19 octobre 2026 · 21 h – 22 h 30 », étiquette « activité ») ; « Supprimer » puis « Confirmer la suppression » la retire (la réponse devient « Non » : la question ne revient pas).
+- Historique : l'activité confirmée figure parmi les séances, à sa date (ligne « Badminton · 1 h 30 », « activité », §3.5) ; son détail donne « 19 octobre 2026 · 21 h – 22 h 30 » et les groupes ; « Supprimer l'activité » puis « Confirmer la suppression » la retire (la réponse devient « Non » : la question ne revient pas).
 - Récapitulatif hebdomadaire (§19.6) : travail indirect et « · 1 activité » dans l'en-tête. Bilans (§19.7) : « Activités : Badminton ×4, 6 h 00 » dans « Séances », groupes indirects, texte du mail compris.
 - Pas de vert, d'orange ni de rouge en dehors des statuts (messages neutres).
 

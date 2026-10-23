@@ -1,15 +1,16 @@
 import { useMemo, useState } from 'react';
 import { useApp } from '../../app/store';
 import { analyzeProgress, recentChanges, type ProgressCategory } from '../../analysis/progress';
+import { changeText } from '../labels';
 import { displayName } from '../../library/catalog';
-import { formatIsoDay, formatKg } from '../../session/format';
+import { formatIsoDay, formatNumericDay } from '../../session/format';
 import { exerciseColorProps } from '../groupColors';
 
 const SECTIONS: { category: ProgressCategory; title: string; icon: string; hint: string }[] = [
   { category: 'progressing', title: 'En progression', icon: '↗', hint: 'Au moins un palier validé sur les 6 dernières séances.' },
   { category: 'stable', title: 'Stables', icon: '→', hint: 'Aucun palier validé sur les 6 dernières séances, sans rouges répétées.' },
   { category: 'difficulty', title: 'En difficulté', icon: '↘', hint: 'Au moins 2 séances rouges consécutives en cours.' },
-  { category: 'new', title: 'Trop tôt pour conclure', icon: '…', hint: 'Une seule séance sur cet exercice.' },
+  { category: 'new', title: 'Trop tôt', icon: '…', hint: 'Une seule séance sur cet exercice.' },
 ];
 
 const count = (n: number) => `${n} exercice${n > 1 ? 's' : ''}`;
@@ -73,7 +74,7 @@ export function Bilan() {
       {progress.length === 0 ? (
         <p className="empty muted">Pas encore de séance évaluée.</p>
       ) : (
-        <div className="bilan-filters" role="group" aria-label="Filtrer par catégorie">
+        <div className="chip-row bilan-filters" role="group" aria-label="Filtrer par catégorie">
           <button type="button" className="btn bilan-filter bilan-all" aria-pressed={filter === 'all'} onClick={() => choose('all')}>
             <span className="bilan-filter-label">Tous</span>
             <strong>{progress.length}</strong>
@@ -135,14 +136,15 @@ export function Bilan() {
       {filter === 'all' && changes.length > 0 && (
         <section aria-label="Dernières évolutions" className="frame">
           <h2 className="section-title">Dernières évolutions</h2>
-          <ul className="plain-list">
+          <ul className="change-list">
             {changes.map((c) => (
-              <li key={`${c.sessionId}-${c.variantId}`}>
-                <span className="muted small">{formatIsoDay(c.date)} · </span>
-                {name(c.variantId)} :{' '}
-                <span className="small">
-                  {formatKg(c.from.weightKg)}, cible {c.from.targetReps} → {formatKg(c.to.weightKg)}, cible {c.to.targetReps}
+              <li key={`${c.sessionId}-${c.variantId}`} className="change-line">
+                <span className="muted small">
+                  <span aria-hidden="true">{formatNumericDay(c.date)}</span>
+                  <span className="visually-hidden">{formatIsoDay(c.date)} : </span>
                 </span>
+                <span className="change-name">{name(c.variantId)}</span>
+                <span className="small change-what">{changeText(c)}</span>
               </li>
             ))}
           </ul>

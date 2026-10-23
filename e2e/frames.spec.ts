@@ -89,10 +89,10 @@ test.describe('Filtres du bilan et cadres de section', () => {
     const filters = page.getByRole('group', { name: 'Filtrer par catégorie' });
     const all = filters.getByRole('button', { name: /^Tous/ });
     const progressing = filters.getByRole('button', { name: /^En progression/ });
-    const early = filters.getByRole('button', { name: /^Trop tôt pour conclure/ });
-    await expect(filters.getByRole('button')).toHaveText(['Tous11', '↗En progression1', '→Stables0', '↘En difficulté0', '…Trop tôt pour conclure10']);
+    const early = filters.getByRole('button', { name: /^Trop tôt/ });
+    await expect(filters.getByRole('button')).toHaveText(['Tous11', '↗En progression1', '→Stables0', '↘En difficulté0', '…Trop tôt10']);
     const progressingRegion = page.getByRole('region', { name: 'En progression' });
-    const earlyRegion = page.getByRole('region', { name: 'Trop tôt pour conclure' });
+    const earlyRegion = page.getByRole('region', { name: 'Trop tôt' });
 
     // Par défaut, tout est affiché ; une catégorie sans exercice reste visible mais n'est pas sélectionnable.
     await expect(all).toHaveAttribute('aria-pressed', 'true');
@@ -174,7 +174,7 @@ test.describe('Filtres du bilan et cadres de section', () => {
     await checkFrames(page, 'Fiche', 3, 'triceps');
 
     await page.goto('./#/historique');
-    await checkFrames(page, 'Historique', 2, 'neutre');
+    await checkFrames(page, 'Historique', 1, 'neutre');
     await page.locator('a.session-link').first().click();
     await expect(page.locator('.card').first()).toBeVisible();
     await checkFrames(page, 'Détail de séance', 2, 'neutre');
@@ -249,11 +249,11 @@ test.describe('Filtres du bilan et cadres de section', () => {
     await expect(page.locator('.pick-item').first()).toContainText('Squat kettlebell');
     expect((await look('.pick-item'))[0]!.picto).toBe(GROUP_RGB.jambes);
 
-    // Fiche : tous les cadres (cible, variantes, autres noms, graphiques, historique) ont la couleur du groupe.
+    // Fiche : tous les cadres (cible, variantes, autres noms, graphiques, historique en un seul cadre) ont la couleur du groupe.
     await page.goto('./#/exercice/extension-triceps-haltere-assis');
     await expect(page.getByTestId('chart-weight')).toBeVisible();
     const sheet = await page.locator('[data-frame]').evaluateAll((els) => els.map((el) => getComputedStyle(el).borderTopColor));
-    expect(sheet.length).toBeGreaterThanOrEqual(7);
+    expect(sheet.length).toBeGreaterThanOrEqual(6);
     expect([...new Set(sheet)]).toEqual([GROUP_RGB.triceps]);
     await page.goto('./#/exercice/curl-ischios');
     await expect(page.getByRole('heading', { name: 'Curl ischios' })).toBeVisible();

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Exercise, Session } from '../src/domain/types';
-import { readExercises, readSessions, writeSessions } from './helpers';
+import { readExercises, readSessions, writeSessions, openIllustration } from './helpers';
 
 /** Remet la base dans l'état d'une installation en bibliothèque version 8 : ancien tirage horizontal, sans poulie basse. */
 function asVersion8(page: Page): Promise<void> {
@@ -68,7 +68,7 @@ test.describe('Bibliothèque version 9 : tirage horizontal machine (appui pector
     // Fiche de la poulie basse : dessin du tirage à la poulie, aucun historique.
     await page.goto('./#/exercice/tirage-horizontal-poulie-basse');
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Tirage horizontal poulie basse');
-    await expect(page.locator('figure.illustration img')).toBeVisible();
+    await expect(await openIllustration(page)).toBeVisible();
     await expect(page.getByTestId('attribution')).toContainText('Everkinetic');
     await expect(page.getByRole('list', { name: 'Historique de l’exercice' })).toHaveCount(0);
 

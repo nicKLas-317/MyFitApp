@@ -9,7 +9,7 @@ import { chartSeries } from '../../analysis/progress';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { LineChart } from '../LineChart';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
-import { formatIsoDay, formatKg } from '../../session/format';
+import { formatIsoDay, formatKg, formatNumericDay } from '../../session/format';
 import { findPerformance } from '../../session/ops';
 import { FEELING_LABELS } from '../labels';
 import { groupColorProps } from '../groupColors';
@@ -19,13 +19,26 @@ import { recommendedTarget, TargetSummary } from '../TargetSummary';
 import { Crown } from '../Crown';
 import { recordKeys } from '../../analysis/records';
 
-/** Fiche d'un exercice-variante (§4) : dernière performance, prochaine cible, statut, variantes et historique. */
-/** Fiche d'un exercice-variante. `fromBilan` : ouverte depuis le bilan, directement sur le graphique d'évolution. */
+/** Séances affichées dans l'historique de la fiche avant « Voir tout ». */
+const HISTORY_LIMIT = 5;
+
+/** Jour d'une ligne d'historique : « 15/10 », année ajoutée hors de l'année en cours (« 15/10/25 »). */
+function historyDay(date: string): string {
+  return date.slice(0, 4) === String(new Date().getFullYear()) ? formatNumericDay(date) : `${formatNumericDay(date)}/${date.slice(2, 4)}`;
+}
+
+/**
+ * Fiche d'un exercice-variante (§4) : prochaine cible et dernière fois en premier, puis l'exercice (illustration
+ * réduite, agrandie au toucher), l'évolution, l'historique (5 dernières séances, « Voir tout »), les variantes.
+ * `fromBilan` : ouverte depuis le bilan, directement sur le graphique d'évolution.
+ */
 export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: string; fromBilan?: boolean }) {
   const { variants, exercises, sessions, replay, records, active, ctxFor, saveExercises } = useApp();
   const ref = variants.get(variantId);
   const [variantName, setVariantName] = useState<string | null>(null);
   const [variantError, setVariantError] = useState<string | null>(null);
+  const [zoomed, setZoomed] = useState(false);
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     // Après la remise en haut de page faite à chaque changement d'écran.
@@ -81,6 +94,8 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
     }
   }
 
+  const shown = showAll ? history : history.slice(0, HISTORY_LIMIT);
+
   return (
     <main className="screen sheet" {...groupColorProps(exercise.primaryGroup)}>
       <header className="simple-header">
@@ -89,59 +104,6 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
         </a>
         <h1>{exercise.name}</h1>
       </header>
-
-      <div className="sheet-head">
-        <ExercisePicto exercise={exercise} variantId={variant.id} large />
-        <div>
-          {variantLabel({ exercise, variant }) && <p className="variant-line">Variante : {variant.name}</p>}
-          <p>
-            {MUSCLE_GROUP_LABELS[exercise.primaryGroup]}
-            {exercise.secondaryGroups.length > 0 && (
-              <span className="muted"> · secondaire : {exercise.secondaryGroups.map((g) => MUSCLE_GROUP_LABELS[g]).join(', ')}</span>
-            )}
-          </p>
-          <p className="muted small">Matériel : {equipmentLabel(exercise)}</p>
-          {ctx.cfg.assisted && (
-            <p className="small assisted-note" data-testid="assisted">
-              Exercice assisté : la charge est une aide (moins d’aide = plus dur)
-            </p>
-          )}
-        </div>
-        <button
-          type="button"
-          className="favorite"
-          aria-pressed={!!variant.favorite}
-          aria-label="Favori"
-          title={variant.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-          onClick={() => void toggleFavorite()}
-        >
-          {variant.favorite ? '★' : '☆'}
-        </button>
-      </div>
-
-      {illustration && (
-        <figure className="illustration">
-          <img src={illustration.src} alt={`${exercise.name} : positions de début et de fin du mouvement`} decoding="async" />
-          <figcaption className="attribution" data-testid="attribution">
-            <span>
-              Illustration : {illustration.author} ({illustration.origin}) · recadrée et assemblée
-            </span>
-            <span className="attribution-links">
-              Licence
-              <a href={illustration.licenseUrl} target="_blank" rel="noopener noreferrer license">
-                {illustration.license}
-              </a>
-              · sources
-              <a href={illustration.sources[0]} target="_blank" rel="noopener noreferrer">
-                1
-              </a>
-              <a href={illustration.sources[1]} target="_blank" rel="noopener noreferrer">
-                2
-              </a>
-            </span>
-          </figcaption>
-        </figure>
-      )}
 
       {archived && <p className="banner info">Exercice archivé : masqué de la recherche, historique conservé.</p>}
 
@@ -173,6 +135,147 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
           Modifier
         </a>
       </div>
+
+      <div className="sheet-head">
+        {illustration ? (
+          <button
+            type="button"
+            className="illustration-thumb"
+            aria-expanded={zoomed}
+            aria-controls="illustration"
+            aria-label={zoomed ? 'Réduire l’illustration' : 'Agrandir l’illustration'}
+            onClick={() => setZoomed(!zoomed)}
+          >
+            <ExercisePicto exercise={exercise} variantId={variant.id} large />
+          </button>
+        ) : (
+          <ExercisePicto exercise={exercise} variantId={variant.id} large />
+        )}
+        <div>
+          {variantLabel({ exercise, variant }) && <p className="variant-line">Variante : {variant.name}</p>}
+          <p>
+            {MUSCLE_GROUP_LABELS[exercise.primaryGroup]}
+            {exercise.secondaryGroups.length > 0 && (
+              <span className="muted"> · secondaire : {exercise.secondaryGroups.map((g) => MUSCLE_GROUP_LABELS[g]).join(', ')}</span>
+            )}
+          </p>
+          <p className="muted small">Matériel : {equipmentLabel(exercise)}</p>
+          {ctx.cfg.assisted && (
+            <p className="small assisted-note" data-testid="assisted">
+              Exercice assisté : la charge est une aide (moins d’aide = plus dur)
+            </p>
+          )}
+        </div>
+        <button
+          type="button"
+          className="favorite"
+          aria-pressed={!!variant.favorite}
+          aria-label="Favori"
+          title={variant.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+          onClick={() => void toggleFavorite()}
+        >
+          {variant.favorite ? '★' : '☆'}
+        </button>
+      </div>
+
+      {illustration && zoomed && (
+        <figure className="illustration" id="illustration">
+          <button type="button" className="illustration-zoom" aria-label="Réduire l’illustration" onClick={() => setZoomed(false)}>
+            <img src={illustration.src} alt={`${exercise.name} : positions de début et de fin du mouvement`} decoding="async" />
+          </button>
+          <figcaption className="attribution" data-testid="attribution">
+            <span>
+              Illustration : {illustration.author} ({illustration.origin}) · recadrée et assemblée
+            </span>
+            <span className="attribution-links">
+              Licence
+              <a href={illustration.licenseUrl} target="_blank" rel="noopener noreferrer license">
+                {illustration.license}
+              </a>
+              · sources
+              <a href={illustration.sources[0]} target="_blank" rel="noopener noreferrer">
+                1
+              </a>
+              <a href={illustration.sources[1]} target="_blank" rel="noopener noreferrer">
+                2
+              </a>
+            </span>
+          </figcaption>
+        </figure>
+      )}
+
+      {series.length > 0 && (
+        <ErrorBoundary fallback={<p className="muted small">Graphique indisponible.</p>}>
+        <section aria-label="Évolution" id="evolution">
+          <h2 className="section-title">Évolution</h2>
+          {series.length < 2 && (
+            <p className="muted small" data-testid="chart-hint">
+              Le graphique se complètera au fil des séances.
+            </p>
+          )}
+          <p className="muted small">{ctx.cfg.assisted ? 'Aide (kg)' : 'Charge (kg)'}</p>
+          <LineChart data={series.map((p) => ({ date: p.date, value: p.weightKg }))} label={ctx.cfg.assisted ? 'Évolution de l’aide' : 'Évolution de la charge'} unit="kg" testId="chart-weight" />
+          {reps.length > 0 && (
+            <>
+              <p className="muted small">Répétitions par série (moyenne)</p>
+              <LineChart data={reps} label="Évolution des répétitions" unit="répétitions" testId="chart-reps" />
+            </>
+          )}
+        </section>
+        </ErrorBoundary>
+      )}
+
+      <section>
+        <h2 className="section-title">Historique</h2>
+        {history.length === 0 ? (
+          <p className="muted">Aucune séance pour l’instant.</p>
+        ) : (
+          <>
+            <ul className="frame sheet-history" aria-label="Historique de l’exercice">
+              {shown.map(({ session, performance: p, evaluation }) => (
+                <li key={session.id} className="sheet-history-row">
+                  <span className="history-date">
+                    <span aria-hidden="true">{historyDay(session.date)}</span>
+                    <span className="visually-hidden">{formatIsoDay(session.date)}</span>
+                  </span>
+                  <span className="sheet-history-main">
+                    {formatKg(p.weightKg)}
+                    {p.partial ? (
+                      <span className="muted"> · historique partiel</span>
+                    ) : (
+                      <>
+                        {' '}
+                        · {p.reps.join('-')}
+                      </>
+                    )}
+                    {broke.has(`${session.id}|${variantId}`) && (
+                      <>
+                        {' '}
+                        <Crown label="Record battu" />
+                      </>
+                    )}
+                  </span>
+                  <StatusBadge status={evaluation?.status} />
+                  <span className="muted small sheet-history-sub">
+                    {[
+                      p.partial ? null : `cible ${p.plannedSets} × ${p.targetReps}`,
+                      p.partial ? null : `${FEELING_LABELS[p.feeling]}${p.feelingSymbol ? ` (${p.feelingSymbol})` : ''}`,
+                      session.origin === 'import' ? 'importée' : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {history.length > HISTORY_LIMIT && (
+              <button type="button" className="link" aria-expanded={showAll} onClick={() => setShowAll(!showAll)}>
+                {showAll ? `Voir les ${HISTORY_LIMIT} dernières` : `Voir tout (${history.length} séances)`}
+              </button>
+            )}
+          </>
+        )}
+      </section>
 
       <section className="frame">
         <h2 className="section-title">Variantes</h2>
@@ -236,68 +339,6 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
           <p className="small">{[...exercise.synonyms, ...variant.synonyms].join(' · ')}</p>
         </section>
       )}
-
-      {/* Graphique dès la première séance (§19.2) : un seul point tant qu'il n'y en a pas d'autre. */}
-      {series.length > 0 && (
-        <ErrorBoundary fallback={<p className="muted small">Graphique indisponible.</p>}>
-        <section aria-label="Évolution" id="evolution">
-          <h2 className="section-title">Évolution</h2>
-          {series.length < 2 && (
-            <p className="muted small" data-testid="chart-hint">
-              Le graphique se complètera au fil des séances.
-            </p>
-          )}
-          <p className="muted small">{ctx.cfg.assisted ? 'Aide (kg)' : 'Charge (kg)'}</p>
-          <LineChart data={series.map((p) => ({ date: p.date, value: p.weightKg }))} label={ctx.cfg.assisted ? 'Évolution de l’aide' : 'Évolution de la charge'} unit="kg" testId="chart-weight" />
-          {reps.length > 0 && (
-            <>
-              <p className="muted small">Répétitions par série (moyenne)</p>
-              <LineChart data={reps} label="Évolution des répétitions" unit="répétitions" testId="chart-reps" />
-            </>
-          )}
-        </section>
-        </ErrorBoundary>
-      )}
-
-      <section>
-        <h2 className="section-title">Historique</h2>
-        {history.length === 0 ? (
-          <p className="muted">Aucune séance pour l’instant.</p>
-        ) : (
-          <ul className="history" aria-label="Historique de l’exercice">
-            {history.map(({ session, performance: p, evaluation }) => (
-              <li key={session.id} className="history-item">
-                <span className="history-date">
-                  {formatIsoDay(session.date)}
-                  {broke.has(`${session.id}|${variantId}`) && (
-                    <>
-                      {' '}
-                      <Crown label="Record battu" />
-                    </>
-                  )}
-                </span>
-                <span>
-                  {formatKg(p.weightKg)}
-                  {p.partial ? (
-                    <span className="muted"> · historique partiel</span>
-                  ) : (
-                    <>
-                      {' '}
-                      · {p.reps.join(' · ')} <span className="muted small">(cible {p.plannedSets} × {p.targetReps})</span>
-                    </>
-                  )}
-                </span>
-                <span className="muted small">
-                  {p.partial ? '' : FEELING_LABELS[p.feeling]}
-                  {p.feelingSymbol && ` (${p.feelingSymbol})`}
-                  {session.origin === 'import' && ' · importée'}
-                </span>
-                <StatusBadge status={evaluation?.status} />
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
     </main>
   );
 }

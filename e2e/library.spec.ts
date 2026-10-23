@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Session } from '../src/domain/types';
-import { activeSession, exerciseCard, readExercises, readSessions, startSession, writeSessions, openScreen } from './helpers';
+import { activeSession, exerciseCard, readExercises, readSessions, startSession, writeSessions, openScreen, openIllustration } from './helpers';
 
 /** Noms des résultats affichés, dans l'ordre. */
 async function resultNames(page: Page): Promise<string[]> {
@@ -49,10 +49,10 @@ test.describe('Bibliothèque et recherche', () => {
   test('48. Recherche par groupe musculaire : dos', async ({ page }) => {
     await openLibrary(page);
     await search(page, 'dos');
-    // Les trois tirages ont trois prises, chacune un résultat (§4.3.1).
+    // Les trois tirages ont trois prises, regroupées en une seule entrée chacun (§4.3.1).
     const primary = [
-      'Lombaires au banc', 'Pull-over à la poulie', 'Rowing barre', 'Rowing haltère', 'Shrugs', ...Array(3).fill('Tirage horizontal machine (appui pectoral)'),
-      ...Array(3).fill('Tirage horizontal poulie basse'), ...Array(3).fill('Tirage vertical'), 'Tractions assistées',
+      'Lombaires au banc', 'Pull-over à la poulie', 'Rowing barre', 'Rowing haltère', 'Shrugs', 'Tirage horizontal machine (appui pectoral)',
+      'Tirage horizontal poulie basse', 'Tirage vertical', 'Tractions assistées',
     ];
     // Groupe principal d'abord, puis l'oiseau (deux variantes) et le face pull, qui ont le dos en groupe secondaire.
     const found = await resultNames(page);
@@ -106,9 +106,10 @@ test.describe('Bibliothèque et recherche', () => {
 
   test('§4.0.1. Illustration embarquée et attribution discrète sur la fiche ; pictogramme sinon', async ({ page }) => {
     await page.goto('./#/exercice/curl-biceps-banc-incline');
-    const figure = page.locator('figure.illustration img');
+    await expect(page.locator('figure.illustration')).toHaveCount(0);
+    const figure = await openIllustration(page);
     await expect(figure).toBeVisible();
-    expect(await figure.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+    await expect.poll(() => figure.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
     await expect(page.getByTestId('attribution')).toContainText('Everkinetic');
     await expect(page.getByTestId('attribution').getByRole('link', { name: 'CC BY-SA 3.0' })).toHaveAttribute(
       'href',
@@ -141,9 +142,9 @@ test.describe('Bibliothèque et recherche', () => {
     ] as const) {
       for (const id of ids) {
         await page.goto(`./#/exercice/${id}`);
-        const img = page.locator('figure.illustration img');
+        const img = await openIllustration(page);
         await expect(img, id).toBeVisible();
-        expect(await img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0), id).toBe(true);
+        await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0), { message: id }).toBe(true);
         const attribution = page.getByTestId('attribution');
         await expect(attribution, id).toContainText('Illustration : Everkinetic');
         await expect(attribution, id).toContainText(`(${origin})`);

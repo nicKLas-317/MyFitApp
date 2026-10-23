@@ -58,7 +58,7 @@ describe('Cadres de section (§3.1)', () => {
     const root = { querySelectorAll: (selector: string) => (selector === FRAME_SELECTOR ? els : []) } as unknown as ParentNode;
     markFrames(root);
     expect(els.map((e) => e.dataset.frame)).toEqual(Array(7).fill(''));
-    for (const cls of ['.frame', '.card', '.pick-item', '.history-item', '.chart', '.confirm-box', '.menu-panel', '.bottom-sheet']) expect(FRAME_SELECTOR).toContain(cls);
+    for (const cls of ['.frame', '.card', '.pick-item', '.chart', '.confirm-box', '.menu-panel', '.bottom-sheet']) expect(FRAME_SELECTOR).toContain(cls);
     // Pastilles de statut et cases du récapitulatif hebdomadaire : jamais des cadres.
     expect(FRAME_SELECTOR).not.toMatch(/status|recap-cell/);
   });

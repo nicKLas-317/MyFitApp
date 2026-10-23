@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { addExercise, doExercise, exerciseCard, finishSession, readSessions, startSession } from './helpers';
+import { addExercise, doExercise, exerciseCard, finishSession, readSessions, startSession, openIllustration } from './helpers';
 
 async function resultNames(page: Page, query: string): Promise<string[]> {
   await page.getByRole('searchbox', { name: 'Rechercher un exercice' }).fill(query);
@@ -23,7 +23,7 @@ test.describe('Bibliothèque version 8 (§4.0)', () => {
     // Fiches : dessins distincts pour la machine debout et la machine assise, pour la corde et la barre.
     const src = async (id: string) => {
       await page.goto(`./#/exercice/${id}`);
-      const img = page.locator('figure.illustration img');
+      const img = await openIllustration(page);
       await expect(img, id).toBeVisible();
       return img.getAttribute('src');
     };

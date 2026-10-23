@@ -4,7 +4,7 @@ import departJson from '../../../docs/exemples/depart-exemple.json?raw';
 import type { Exercise, Session } from '../../domain/types';
 import { rebuildProfile } from '../../engine';
 import { weeklyRecap } from '../../analysis/weekly';
-import { buildEngineSettings, displayName, indexVariants } from '../catalog';
+import { buildEngineSettings, displayName, groupGrips, indexVariants, type GripEntry, type VariantRef } from '../catalog';
 import { SEED_EXERCISES, SEED_VERSION } from '../seed';
 import { buildSearchIndex, searchExercises } from '../search';
 import { GRIPS, gripOf, MEDIUM_GRIP } from '../text';
@@ -118,5 +118,23 @@ describe('Prises (§4.3.1)', () => {
     expect(byDate['2026-03-09']).toEqual([TV]);
     expect(byDate['2026-03-12']).toEqual([LARGE]);
     fresh.close();
+  });
+});
+
+describe('Regroupement d’affichage des prises (§4.3.1, version 1.21.0)', () => {
+  const refs = indexVariants(LIB);
+  const listed = (...ids: string[]) => ids.map((id) => ({ ref: refs.get(id)! }));
+  const shape = (entries: GripEntry<{ ref: VariantRef }>[]) =>
+    entries.map((e) => (e.kind === 'single' ? e.item.ref.variant.id : `${e.exercise.id}: ${e.items.map((i) => i.ref.variant.id).join(', ')}`));
+
+  it('232. Les prises d’un même exercice forment une seule entrée (très large, moyenne, serrée), à la place de la première ; les autres variantes restent séparées', () => {
+    const entries = groupGrips(listed('pec-deck', SERREE, 'mollets-machine', TV, 'mollets-machine--assis', LARGE));
+    expect(shape(entries)).toEqual(['pec-deck', `${TV}: ${LARGE}, ${TV}, ${SERREE}`, 'mollets-machine', 'mollets-machine--assis']);
+    // Une seule prise dans la liste (recherche « tirage vertical wide grip ») : entrée simple.
+    expect(shape(groupGrips(listed(LARGE, 'pec-deck')))).toEqual([LARGE, 'pec-deck']);
+    // Recherche : chaque prise reste un exercice-variante distinct, avec son propre identifiant.
+    const grouped = groupGrips(searchExercises(INDEX, 'tirage vertical').map((r) => ({ ref: { exercise: r.entry.exercise, variant: r.entry.variant } })));
+    expect(grouped[0]).toMatchObject({ kind: 'grips', exercise: { id: TV } });
+    expect(grouped[0]!.kind === 'grips' && grouped[0]!.items.map((i) => i.ref.variant.name)).toEqual(GRIPS);
   });
 });

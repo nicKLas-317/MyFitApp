@@ -1,5 +1,6 @@
 import type { Exercise, Variant, VariantConfig } from '../domain/types';
 import { DEFAULT_VARIANT_CONFIG, type EngineSettings } from '../engine';
+import { GRIPS, gripOf } from './text';
 
 export interface VariantRef {
   exercise: Exercise;
@@ -35,4 +36,25 @@ export function buildEngineSettings(exercises: readonly Exercise[]): EngineSetti
     for (const v of e.variants) if (v.config) overrides[v.id] = v.config;
   }
   return { defaults: DEFAULT_VARIANT_CONFIG, overrides };
+}
+
+/** Entrée d'une liste d'exercices : un exercice-variante, ou les prises d'un même exercice regroupées (§4.3.1). */
+export type GripEntry<T extends { ref: VariantRef }> = { kind: 'single'; item: T } | { kind: 'grips'; exercise: Exercise; items: T[] };
+
+/**
+ * Regroupement d'affichage des prises (§4.3.1) : les variantes de prise d'un même exercice (au moins deux dans la
+ * liste) forment une seule entrée, à la place de la première, prises dans l'ordre très large, moyenne, serrée.
+ * Chaque variante reste un exercice-variante distinct (données, moteur) ; les autres variantes ne sont pas regroupées.
+ */
+export function groupGrips<T extends { ref: VariantRef }>(list: readonly T[]): GripEntry<T>[] {
+  const grips = new Map<string, T[]>();
+  for (const l of list) if (gripOf(l.ref.variant.name)) grips.set(l.ref.exercise.id, [...(grips.get(l.ref.exercise.id) ?? []), l]);
+  const rank = (x: T) => GRIPS.indexOf(gripOf(x.ref.variant.name)!);
+  const out: GripEntry<T>[] = [];
+  for (const l of list) {
+    const group = grips.get(l.ref.exercise.id);
+    if (!group || group.length < 2 || !gripOf(l.ref.variant.name)) out.push({ kind: 'single', item: l });
+    else if (group[0] === l) out.push({ kind: 'grips', exercise: l.ref.exercise, items: [...group].sort((a, b) => rank(a) - rank(b)) });
+  }
+  return out;
 }

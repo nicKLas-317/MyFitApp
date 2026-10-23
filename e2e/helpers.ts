@@ -146,3 +146,16 @@ export function readExercises(page: Page): Promise<Exercise[]> {
       }),
   );
 }
+
+/** Fiche d'un exercice : agrandit l'illustration réduite (vignette) et renvoie l'image agrandie. */
+export async function openIllustration(page: Page): Promise<Locator> {
+  await page.getByRole('button', { name: 'Agrandir l’illustration' }).click();
+  return page.locator('figure.illustration img');
+}
+
+/** Réglages : déplie une section repliable (fermées à l'ouverture, sauf la première) et renvoie son contenu. */
+export async function openSettingsSection(page: Page, name: string): Promise<Locator> {
+  const section = page.locator('details.settings-section').filter({ has: page.locator('summary', { hasText: name }) });
+  if ((await section.getAttribute('open')) === null) await section.locator('summary').click();
+  return page.getByRole('group', { name, exact: true });
+}

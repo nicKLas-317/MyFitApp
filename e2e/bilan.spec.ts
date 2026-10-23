@@ -61,7 +61,7 @@ test.describe('Bilan, graphiques et import de fichier sur Android', () => {
     const progressing = page.getByRole('region', { name: 'En progression' });
     await expect(progressing.getByRole('heading')).toHaveText('↗En progression1 exercice');
     await expect(progressing).toContainText('Extension triceps haltère assis');
-    const early = page.getByRole('region', { name: 'Trop tôt pour conclure' });
+    const early = page.getByRole('region', { name: 'Trop tôt', exact: true });
     await expect(early.getByRole('heading')).toContainText('10 exercices');
     await expect(early.getByText('Une seule séance sur cet exercice.')).toBeVisible();
     // Aucune couleur de statut dans les catégories.
@@ -74,7 +74,7 @@ test.describe('Bilan, graphiques et import de fichier sur Android', () => {
     await expect(page.getByTestId('chart-reps')).toBeInViewport();
     await expect(page.getByTestId('chart-hint')).toHaveCount(0);
     await page.getByRole('link', { name: 'Bilan' }).click();
-    await page.getByRole('region', { name: 'Trop tôt pour conclure' }).getByRole('link', { name: /Chest press/ }).click();
+    await page.getByRole('region', { name: 'Trop tôt', exact: true }).getByRole('link', { name: /Chest press/ }).click();
     // Une seule séance : un point, et le message.
     await expect(page.getByTestId('chart-weight')).toHaveAttribute('data-points', '1');
     await expect(page.getByTestId('chart-hint')).toHaveText('Le graphique se complètera au fil des séances.');
