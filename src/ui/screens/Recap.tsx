@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useApp } from '../../app/store';
 import { navigate } from '../../app/hooks';
 import { displayName } from '../../library/catalog';
@@ -17,6 +17,16 @@ export function Recap({ sessionId }: { sessionId: string }) {
   const { sessions, variants, replay, records, commit, lastFinish, setLastFinish, ctxFor } = useApp();
   const session = sessions.find((s) => s.id === sessionId);
   const [name, setName] = useState(session?.name ?? '');
+  // Écran quitté sans enregistrer le nom (bouton retour, onglet) : le nom saisi est enregistré au passage.
+  const latest = useRef({ session, name, commit });
+  latest.current = { session, name, commit };
+  useEffect(
+    () => () => {
+      const { session: s, name: typed, commit: save } = latest.current;
+      if (s && typed.trim() && typed.trim() !== s.name) void save(renameSession(s, typed, Date.now()));
+    },
+    [],
+  );
 
   if (!session) {
     return (

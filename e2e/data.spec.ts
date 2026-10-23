@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Session } from '../src/domain/types';
 import { NOTES_11_3 } from '../src/transfer/__tests__/fixtures';
-import { readExercises, readSessions, writeSessions } from './helpers';
+import { readExercises, readSessions, writeSessions, openScreen } from './helpers';
 
 const preview = (page: Page) => page.getByRole('region', { name: 'Aperçu de l’import' });
 const cards = (page: Page) => preview(page).locator('article.draft-exercise');
@@ -14,8 +14,8 @@ async function analyzeNotes(page: Page, text: string): Promise<void> {
 
 async function openData(page: Page): Promise<void> {
   await page.goto('./');
-  await page.getByRole('link', { name: 'Importer / exporter' }).click();
-  await expect(page.getByRole('heading', { name: 'Données' })).toBeVisible();
+  await openScreen(page, 'Importer / exporter');
+  await expect(page.getByRole('heading', { name: 'Importer / exporter' })).toBeVisible();
 }
 
 test.describe('Import et export', () => {

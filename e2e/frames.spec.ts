@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import depart from '../docs/exemples/depart-exemple.json' with { type: 'json' };
 import { FRAME_SELECTOR } from '../src/ui/frames';
-import { addExercise } from './helpers';
+import { addExercise, openScreen } from './helpers';
 
 /** Palette des cadres (--frame-1 à --frame-5), telle que le navigateur la calcule. */
 const PALETTE = ['rgb(255, 228, 74)', 'rgb(62, 230, 238)', 'rgb(140, 200, 255)', 'rgb(199, 155, 255)', 'rgb(255, 122, 214)'];
@@ -154,7 +154,7 @@ test.describe('Filtres du bilan et cadres de section', () => {
     await expect(earlyRegion).toBeVisible();
     await expect(progressingRegion).toHaveCount(0);
     await page.goto('./');
-    await page.getByRole('link', { name: 'Bilan de progression' }).click();
+    await openScreen(page, 'Bilan de progression');
     await expect(early).toHaveAttribute('aria-pressed', 'true');
   });
 
@@ -283,7 +283,7 @@ test.describe('Filtres du bilan et cadres de section', () => {
       ['jambes', GROUP_RGB.jambes],
     ]);
     // Un cadre qui ne concerne aucun exercice (bloc de cardio) est neutre.
-    await page.getByRole('button', { name: '+ Ajouter du cardio' }).click();
+    await page.getByRole('button', { name: 'Ajouter du cardio' }).click();
     const cardio = page.getByRole('form', { name: 'Cardio' });
     await cardio.getByLabel('Durée (min)').fill('15');
     await cardio.getByRole('button', { name: 'Valider' }).click();

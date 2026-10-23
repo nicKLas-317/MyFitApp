@@ -17,7 +17,7 @@ export function Library() {
   return (
     <main className="screen picker library">
       <header className="picker-header">
-        <a href="#/" className="back" aria-label="Accueil">
+        <a href="#/plus" className="back" aria-label="Plus">
           ‹
         </a>
         <input

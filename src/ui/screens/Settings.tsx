@@ -20,7 +20,7 @@ export function Settings() {
   return (
     <main className="screen settings">
       <header className="simple-header">
-        <a href="#/" className="back" aria-label="Accueil">
+        <a href="#/plus" className="back" aria-label="Plus">
           ‹
         </a>
         <h1>Réglages</h1>
@@ -41,7 +41,7 @@ export function Settings() {
           Exercices, variantes et réglages par exercice
         </a>
         <a className="btn big" href="#/donnees">
-          Importer ou exporter mes données
+          Importer / exporter
         </a>
       </div>
     </main>
@@ -165,11 +165,11 @@ function ReportSettingsField() {
       <h2 className="section-title">Bilans de la semaine et du mois</h2>
       <label className="check-line">
         <input type="checkbox" checked={shown.weekBanner} onChange={(e) => void save({ ...shown, weekBanner: e.target.checked })} />
-        <span>Signaler le bilan de la semaine sur l’accueil</span>
+        <span>Signaler le bilan de la semaine (pastille sur Progrès)</span>
       </label>
       <label className="check-line">
         <input type="checkbox" checked={shown.monthBanner} onChange={(e) => void save({ ...shown, monthBanner: e.target.checked })} />
-        <span>Signaler le bilan du mois sur l’accueil</span>
+        <span>Signaler le bilan du mois (pastille sur Progrès)</span>
       </label>
       <label htmlFor="report-email">Adresse e-mail (facultative, préremplie dans le mail)</label>
       <div className="row">

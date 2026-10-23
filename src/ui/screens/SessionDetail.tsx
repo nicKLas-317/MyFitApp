@@ -1,7 +1,8 @@
 import { useId, useState } from 'react';
 import type { Feeling, Performance, Session } from '../../domain/types';
 import { useApp } from '../../app/store';
-import { navigate } from '../../app/hooks';
+import { navigateBack, routeHash } from '../../app/hooks';
+import { goTab } from '../../app/navigation';
 import { createSessionFromTemplate } from '../../engine';
 import { correctPerformance, removePastPerformance, setSessionDate, type CorrectionError } from '../../history/ops';
 import { displayName } from '../../library/catalog';
@@ -66,12 +67,12 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
       date: localDate(now),
       now,
     });
-    if (await commit(created)) navigate('seance');
+    if (await commit(created)) goTab(routeHash('seance'));
     else setFailed(true);
   }
 
   async function remove() {
-    if (await deleteSession(sessionId)) navigate('historique');
+    if (await deleteSession(sessionId)) navigateBack('historique');
     else setFailed(true);
   }
 

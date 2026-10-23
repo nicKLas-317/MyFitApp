@@ -6,7 +6,6 @@ import { needsBackupReminder } from '../../transfer/backup';
 import { useBody } from '../../body/store';
 import { downloadBackup } from '../download';
 import { ActivityBanner } from '../ActivityBanner';
-import { ReportBanner } from '../ReportBanner';
 import { WeeklyRecapBlock } from '../WeeklyRecap';
 
 export function Home() {
@@ -27,10 +26,9 @@ export function Home() {
   }
 
   return (
-    <main className="screen home">
+    <main className="screen tab-screen home">
       <h1 className="brand">MyFitApp</h1>
       <ActivityBanner />
-      <ReportBanner />
       <WeeklyRecapBlock />
       {active ? (
         <button type="button" className="btn primary huge" onClick={() => navigate('seance')}>
@@ -50,26 +48,6 @@ export function Home() {
           </button>
         </div>
       )}
-      <nav className="home-nav">
-        <a className="btn" href="#/historique">
-          Historique
-        </a>
-        <a className="btn" href="#/bilan">
-          Bilan de progression
-        </a>
-        <a className="btn" href="#/bibliotheque">
-          Bibliothèque d’exercices
-        </a>
-        <a className="btn" href="#/poids">
-          Mon poids
-        </a>
-        <a className="btn" href="#/donnees">
-          Importer / exporter
-        </a>
-        <a className="btn" href="#/reglages">
-          Réglages
-        </a>
-      </nav>
     </main>
   );
 }

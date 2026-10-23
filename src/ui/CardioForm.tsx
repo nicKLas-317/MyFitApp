@@ -6,6 +6,18 @@ import { cardioErrors, formatCardio, INCLINE_LABELS, INCLINES, makeCardioBlock, 
 /** Contenu du formulaire : rien de saisi, bloc prêt à enregistrer, ou saisie invalide. */
 export type CardioDraft = { kind: 'empty' } | { kind: 'block'; block: CardioBlock } | { kind: 'error'; message: string };
 
+/** Valeurs saisies du formulaire, gardées hors du composant pour survivre à un changement d'écran. */
+export interface CardioFormValues {
+  machineId: string;
+  incline: Incline;
+  minutes: string;
+  distance: string;
+}
+
+export interface CardioFormMemory {
+  current: CardioFormValues | null;
+}
+
 interface FormProps {
   machines: readonly CardioMachine[];
   /** Bloc corrigé ; absent pour un nouveau bloc. */
@@ -15,23 +27,27 @@ interface FormProps {
   onCancel(): void;
   /** Suit la saisie en cours, pour ne pas perdre un bloc rempli mais pas encore validé. */
   onDraft?(draft: CardioDraft): void;
+  /** Saisie gardée en mémoire : retrouvée si l'on quitte l'écran puis revient (bouton retour, fiche…). */
+  memory?: CardioFormMemory;
 }
 
 /**
  * Saisie d'un bloc de cardio en quelques secondes : machine, inclinaison (tapis seulement, Neutre par défaut),
  * durée, puis « Valider ». Distance facultative.
  */
-export function CardioForm({ machines, initial, newId, onSave, onCancel, onDraft }: FormProps) {
+export function CardioForm({ machines, initial, newId, onSave, onCancel, onDraft, memory }: FormProps) {
   const id = useId();
   // Une machine retirée des réglages reste proposée pour corriger un bloc qui l'utilise.
   const list =
     initial && !machines.some((m) => m.id === initial.machineId)
       ? [...machines, { id: initial.machineId, name: initial.machine, incline: initial.incline !== undefined }]
       : machines;
-  const [machineId, setMachineId] = useState(initial?.machineId ?? list[0]?.id ?? '');
-  const [incline, setIncline] = useState<Incline>(initial?.incline ?? 'neutre');
-  const [minutes, setMinutes] = useState(initial ? String(initial.minutes) : '');
-  const [distance, setDistance] = useState(initial?.distanceKm !== undefined ? String(initial.distanceKm).replace('.', ',') : '');
+  const kept = memory?.current;
+  const [machineId, setMachineId] = useState(kept?.machineId ?? initial?.machineId ?? list[0]?.id ?? '');
+  const [incline, setIncline] = useState<Incline>(kept?.incline ?? initial?.incline ?? 'neutre');
+  const [minutes, setMinutes] = useState(kept?.minutes ?? (initial ? String(initial.minutes) : ''));
+  const [distance, setDistance] = useState(kept?.distance ?? (initial?.distanceKm !== undefined ? String(initial.distanceKm).replace('.', ',') : ''));
+  if (memory) memory.current = { machineId, incline, minutes, distance };
   const [error, setError] = useState<string | null>(null);
   const [blockId] = useState(() => initial?.id ?? newId());
   const machine = list.find((m) => m.id === machineId);

@@ -62,7 +62,7 @@ test.describe('Séance, persistance et chronomètre', () => {
     await startSession(page);
     await addExercise(page, 'pec deck', 'Pec deck', '35');
     await addExercise(page, 'tirage', 'Tirage horizontal machine (appui pectoral) — Prise moyenne', '50');
-    await page.getByRole('link', { name: '+ Ajouter un exercice' }).click();
+    await page.getByRole('link', { name: 'Ajouter un exercice' }).click();
     // L'écran de choix s'ouvre en haut, quel que soit le défilement de la séance.
     await expect(page.getByRole('heading', { name: 'Récents' }).or(page.getByRole('searchbox'))).toBeInViewport();
     expect(await page.evaluate(() => window.scrollY)).toBe(0);
@@ -285,6 +285,7 @@ test.describe('§16 Scénarios de progression (parcours réel)', () => {
     await finishSession(page);
     await expect(page.getByTestId('next-target')).toHaveText('3 × 8');
     await page.getByRole('button', { name: 'Garder ce nom' }).click();
+    await expect(page.getByRole('button', { name: 'Démarrer une séance' })).toBeVisible();
 
     await page.getByRole('button', { name: 'Démarrer une séance' }).click();
     const card = await addExercise(page, 'leg extension', 'Leg extension');
@@ -294,6 +295,7 @@ test.describe('§16 Scénarios de progression (parcours réel)', () => {
     await finishSession(page);
     await expect(page.getByTestId('next-target')).toHaveText('3 × 9');
     await page.getByRole('button', { name: 'Garder ce nom' }).click();
+    await expect(page.getByRole('button', { name: 'Démarrer une séance' })).toBeVisible();
 
     await page.getByRole('button', { name: 'Démarrer une séance' }).click();
     const third = await addExercise(page, 'leg extension', 'Leg extension');

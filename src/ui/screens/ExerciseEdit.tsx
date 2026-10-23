@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
 import type { Exercise, MuscleGroup, Variant } from '../../domain/types';
 import { useApp } from '../../app/store';
-import { navigate } from '../../app/hooks';
+import { navigateBack, navigateReplace } from '../../app/hooks';
 import { resolveConfig } from '../../engine';
 import {
   createExercise,
@@ -132,22 +132,23 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false 
     const ok = await saveExercises([result.exercise]);
     setFailed(!ok);
     if (!ok) return;
-    if (!original && forSession) navigate('ajouter', result.exercise.id);
-    else navigate('exercice', result.exercise.id);
+    if (!original && forSession) navigateReplace('ajouter', result.exercise.id);
+    else if (original) navigateBack('exercice', result.exercise.id);
+    else navigateReplace('exercice', result.exercise.id);
   }
 
   async function setArchived(archived: boolean) {
     if (!original) return;
     const ok = await saveExercises([{ ...original, archived }]);
     setFailed(!ok);
-    if (ok) navigate('exercice', original.id);
+    if (ok) navigateBack('exercice', original.id);
   }
 
   async function remove() {
     if (!original) return;
     const ok = await deleteExercise(original);
     setFailed(!ok);
-    if (ok) navigate('bibliotheque');
+    if (ok) navigateBack('bibliotheque');
   }
 
   return (

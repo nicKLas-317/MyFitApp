@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Session } from '../src/domain/types';
-import { activeSession, exerciseCard, readExercises, readSessions, startSession, writeSessions } from './helpers';
+import { activeSession, exerciseCard, readExercises, readSessions, startSession, writeSessions, openScreen } from './helpers';
 
 /** Noms des résultats affichés, dans l'ordre. */
 async function resultNames(page: Page): Promise<string[]> {
@@ -14,7 +14,7 @@ async function search(page: Page, query: string): Promise<void> {
 
 async function openLibrary(page: Page): Promise<void> {
   await page.goto('./');
-  await page.getByRole('link', { name: 'Bibliothèque d’exercices' }).click();
+  await openScreen(page, 'Bibliothèque d’exercices');
   await expect(page.getByRole('searchbox', { name: 'Rechercher un exercice' })).toBeVisible();
 }
 
@@ -218,7 +218,7 @@ test.describe('Bibliothèque et recherche', () => {
 
   test('Création d’un exercice introuvable puis ajout direct à la séance', async ({ page }) => {
     await startSession(page);
-    await page.getByRole('link', { name: '+ Ajouter un exercice' }).click();
+    await page.getByRole('link', { name: 'Ajouter un exercice' }).click();
     await search(page, 'Hip thrust');
     await page.getByRole('link', { name: 'Créer l’exercice « Hip thrust »' }).click();
     await expect(page.getByLabel('Nom', { exact: true })).toHaveValue('Hip thrust');

@@ -42,6 +42,7 @@ test.describe('Bibliothèque version 7 (§4.0)', () => {
     }
     await finishSession(page);
     await page.getByRole('button', { name: 'Garder ce nom' }).click();
+    await expect(page.getByRole('button', { name: 'Démarrer une séance' })).toBeVisible();
     const [session] = await readSessions(page);
     expect(session!.performances.map((p) => p.variantId)).toEqual(['mollets-machine', 'abducteurs-machine', 'adducteurs-machine']);
     const recap = page.getByTestId('weekly-recap');

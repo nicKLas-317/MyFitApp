@@ -25,7 +25,7 @@ export function BodyScreen() {
   return (
     <main className="screen body-screen">
       <header className="simple-header">
-        <a href="#/" className="back" aria-label="Accueil">
+        <a href="#/progres" className="back" aria-label="Progrès">
           ‹
         </a>
         <h1>Mon poids</h1>
@@ -129,7 +129,7 @@ export function BodyScreen() {
   );
 }
 
-interface FormProps {
+export interface FormProps {
   today: string;
   initial?: WeighIn;
   existing: readonly WeighIn[];
@@ -140,7 +140,7 @@ interface FormProps {
 }
 
 /** Saisie d'une pesée en une action : date préremplie à aujourd'hui (§20). */
-function WeighInForm({ today, initial, existing, submitLabel, onSubmit, onCancel, onDelete }: FormProps) {
+export function WeighInForm({ today, initial, existing, submitLabel, onSubmit, onCancel, onDelete }: FormProps) {
   const id = useId();
   const [date, setDate] = useState(initial?.date ?? today);
   const [weight, setWeight] = useState(initial ? String(initial.weightKg).replace('.', ',') : '');

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useApp } from '../../app/store';
 import { useBody } from '../../body/store';
-import { navigate, useNow } from '../../app/hooks';
+import { navigateReplace, useNow } from '../../app/hooks';
 import type { WeighIn } from '../../body/model';
 import type { MuscleGroup } from '../../domain/types';
 import { GROUP_VIEW_GROUPS, groupIndex, groupWeeklySets, notEnoughForIndex, notEnoughForSets, SETS_WEEKS } from '../../analysis/groups';
@@ -39,14 +39,14 @@ export function GroupProgress({ group }: { group: MuscleGroup }) {
   return (
     <main className="screen group-progress">
       <header className="simple-header">
-        <a href="#/bilan" className="back" aria-label="Bilan de progression">
+        <a href="#/progres" className="back" aria-label="Progrès">
           ‹
         </a>
         <h1>Par groupe musculaire</h1>
       </header>
       <div className="group-picker" role="group" aria-label="Groupe musculaire">
         {GROUP_VIEW_GROUPS.map((g) => (
-          <button key={g} type="button" className="chip" aria-pressed={g === group} onClick={() => navigate('bilan-groupes', g)}>
+          <button key={g} type="button" className="chip" aria-pressed={g === group} onClick={() => navigateReplace('bilan-groupes', g)}>
             {MUSCLE_GROUP_LABELS[g]}
           </button>
         ))}

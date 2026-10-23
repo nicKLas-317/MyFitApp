@@ -19,7 +19,7 @@ async function chooseFile(page: Page, name: string, type: string, content: strin
 }
 
 test.describe('Bilan, graphiques et import de fichier sur Android', () => {
-  test('142. Fichier .json sans type reconnu importé ; bilan lisible depuis l’accueil ; un exercice ouvre son graphique', async ({ page }) => {
+  test('142. Fichier .json sans type reconnu importé ; bilan dans l’onglet Progrès ; un exercice ouvre son graphique', async ({ page }) => {
     await page.goto('./#/donnees');
     const input = page.getByLabel('Fichier à importer');
     // Aucun filtre de type : Android n'annonce pas toujours un .json comme application/json.
@@ -36,20 +36,21 @@ test.describe('Bilan, graphiques et import de fichier sur Android', () => {
     await page.getByRole('button', { name: 'Ajouter à mes données' }).click();
     await expect(page.getByText('Import terminé : 2 séances ajoutées.')).toBeVisible();
 
-    // Accueil : bouton du bilan avec les autres boutons, sous le récapitulatif, au même format qu'eux.
+    // Onglet Progrès : le bilan avec les autres bilans et Mon poids, au même format.
     await page.goto('./');
-    const recapBox = await page.getByTestId('weekly-recap').boundingBox();
-    const nav = page.locator('nav.home-nav');
+    await page.getByRole('navigation', { name: 'Onglets' }).getByRole('link', { name: /^Progrès/ }).click();
+    const nav = page.getByRole('navigation', { name: 'Bilans' });
     const link = nav.getByRole('link', { name: 'Bilan de progression', exact: true });
-    await expect(nav.getByRole('link')).toHaveText(['Historique', 'Bilan de progression', 'Bibliothèque d’exercices', 'Mon poids', 'Importer / exporter', 'Réglages']);
-    const [box, historyBox] = await Promise.all([link.boundingBox(), nav.getByRole('link', { name: 'Historique' }).boundingBox()]);
-    expect(box!.y).toBeGreaterThan(recapBox!.y + recapBox!.height - 1);
-    expect([box!.width, box!.height]).toEqual([historyBox!.width, historyBox!.height]);
+    await expect(nav.getByRole('link')).toHaveText(['Bilan de progression', 'Bilan de la semaine / du mois', 'Par groupe musculaire']);
+    const other = nav.getByRole('link', { name: 'Par groupe musculaire' });
+    const [box, otherBox] = await Promise.all([link.boundingBox(), other.boundingBox()]);
+    expect([box!.width, box!.height]).toEqual([otherBox!.width, otherBox!.height]);
     const style = (l: typeof link) => l.evaluate((el) => {
       const c = getComputedStyle(el);
       return [c.backgroundColor, c.color, c.borderRadius, c.fontSize, c.fontWeight, c.fontFamily].join('|');
     });
-    expect(await style(link)).toBe(await style(nav.getByRole('link', { name: 'Historique' })));
+    expect(await style(link)).toBe(await style(other));
+    await expect(page.getByRole('main').getByRole('link', { name: 'Mon poids : pesées et graphique' })).toBeVisible();
     await link.click();
 
     await expect(page.getByRole('heading', { name: 'Bilan de progression' })).toBeVisible();

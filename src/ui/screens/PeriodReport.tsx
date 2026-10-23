@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../../app/store';
-import { navigate } from '../../app/hooks';
+import { navigateReplace } from '../../app/hooks';
 import { useBody } from '../../body/store';
 import {
   buildReport,
@@ -66,7 +66,7 @@ export function PeriodReport({ kind, periodParam }: { kind: ReportKind; periodPa
     setMessage(null);
   }, [key, kind]);
 
-  const go = (k: ReportKind, p?: string) => navigate('bilan-periode', KIND_SEGMENTS[k], ...(p ? [p] : []));
+  const go = (k: ReportKind, p?: string) => navigateReplace('bilan-periode', KIND_SEGMENTS[k], ...(p ? [p] : []));
 
   async function send() {
     const result = await sendByMail(subject, text, reportSettings.email);
@@ -80,7 +80,7 @@ export function PeriodReport({ kind, periodParam }: { kind: ReportKind; periodPa
   return (
     <main className="screen period-report">
       <header className="simple-header">
-        <a href="#/bilan" className="back" aria-label="Bilan de progression">
+        <a href="#/progres" className="back" aria-label="Progrès">
           ‹
         </a>
         <h1>Bilan de la période</h1>

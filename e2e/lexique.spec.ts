@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { readSessions } from './helpers';
+import { readSessions, openScreen } from './helpers';
 
 const results = (page: Page) => page.getByRole('list', { name: 'Résultats' }).locator('.pick-item strong');
 const search = (page: Page, query: string) => page.getByRole('searchbox', { name: 'Rechercher un exercice' }).fill(query);
@@ -7,7 +7,7 @@ const search = (page: Page, query: string) => page.getByRole('searchbox', { name
 test.describe('Lexique d’équivalences (§4.2.1)', () => {
   test('130. Recherche et import en français, anglais et argot de salle ; mot inconnu ignoré ou à confirmer', async ({ page }) => {
     await page.goto('./');
-    await page.getByRole('link', { name: 'Bibliothèque d’exercices' }).click();
+    await openScreen(page, 'Bibliothèque d’exercices');
     for (const q of ['latéral raise haltère', 'lateral raise dumbbell', 'élévation latérale DB']) {
       await search(page, q);
       await expect(results(page)).toHaveText(['Élévations latérales haltères']);

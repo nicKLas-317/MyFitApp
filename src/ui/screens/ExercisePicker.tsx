@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useApp } from '../../app/store';
-import { navigate } from '../../app/hooks';
+import { navigateBack } from '../../app/hooks';
 import type { VariantRef } from '../../library/catalog';
 import { addExercise, checkWeight, findPerformance } from '../../session/ops';
 import { ExerciseBrowser } from '../library/ExerciseBrowser';
@@ -21,7 +21,7 @@ export function ExercisePicker({ variantId }: { variantId?: string }) {
     if (!active) return;
     const id = ref.variant.id;
     if (findPerformance(active, id)) {
-      navigate('seance', id);
+      navigateBack('seance', id);
       return;
     }
     const ctx = ctxFor(id);
@@ -32,7 +32,7 @@ export function ExercisePicker({ variantId }: { variantId?: string }) {
       return;
     }
     const { session } = addExercise(active, id, ctx, Date.now(), startKg);
-    navigate('seance', id);
+    navigateBack('seance', id);
     await commit(session);
   }
 

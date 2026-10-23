@@ -4,7 +4,8 @@ Application personnelle de suivi de musculation, en français, installable sur s
 
 **Adresse : https://nicklas-317.github.io/MyFitApp/**
 
-- Saisie d'une séance en quelques secondes : poids, séries, répétitions, ressenti global. Chaque saisie est écrite aussitôt sur l'appareil : verrouiller le téléphone ou fermer l'appli juste après ne perd rien.
+- Quatre onglets : **Séance** (récapitulatif de la semaine et démarrage), **Historique**, **Progrès** (bilans, Mon poids) et **Plus** (bibliothèque, réglages, import / export). Le bouton retour d'Android suit la navigation et ne ferme jamais l'appli en pleine séance.
+- Saisie d'une séance en quelques secondes, en « mode salle » plein écran avec une barre sous le pouce (« + Exercice », « + Cardio », « Terminer ») : poids, séries, répétitions, ressenti global. Chaque saisie est écrite aussitôt sur l'appareil : verrouiller le téléphone ou fermer l'appli juste après ne perd rien.
 - Surcharge progressive automatique : statut vert, orange ou rouge, et prochaine cible calculée par le moteur (deux séances vertes consécutives pour progresser, quatre rouges pour baisser la charge). Les exercices assistés (dips, tractions) suivent le sens inverse : « moins d'aide », « plus d'aide ».
 - Bibliothèque illustrée avec une recherche unique par exercice, machine ou groupe musculaire, qui comprend le français, l'anglais et l'argot de salle (« latéral raise haltère », « DB », « pecs ») grâce à un lexique facile à compléter : [`src/library/lexique.json`](src/library/lexique.json).
 - Cardio en version minimale : blocs « machine, inclinaison du tapis, durée » ajoutés à la séance, sans progression ; total de la semaine sur l'accueil.
@@ -27,7 +28,7 @@ Dans **Réglages**, la ligne « Stockage persistant » indique si le navigateur 
 ## Données et sauvegardes
 
 - Les séances, la bibliothèque, les réglages et les pesées restent **sur l'appareil**. GitHub Pages ne sert que les fichiers de l'application.
-- **Sauvegarder** : Importer / exporter → **Exporter mes données** (fichier JSON complet). Un rappel discret apparaît sur l'accueil après 14 jours sans export.
+- **Sauvegarder** : Plus → Importer / exporter → **Exporter mes données** (fichier JSON complet). Un rappel discret apparaît sur l'accueil après 14 jours sans export.
 - **Changer d'appareil** : exporter sur l'ancien, puis sur le nouveau : Importer / exporter → **Choisir un fichier** → **Ajouter à mes données**. L'import fusionne sans rien écraser ; le remplacement complet demande une confirmation et télécharge d'abord une sauvegarde.
 - **Reprendre un historique existant** : coller ses notes ou un JSON dans Importer / exporter, vérifier l'aperçu, confirmer.
 - Les données d'une adresse ne sont pas visibles depuis une autre : une version de test locale (voir ci-dessous) et la version GitHub Pages ont chacune leurs données. On passe de l'une à l'autre par l'export et l'import.

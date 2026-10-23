@@ -1,27 +1,52 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useApp } from '../../app/store';
-import { navigate, useNow } from '../../app/hooks';
+import { navigateReplace, useNow } from '../../app/hooks';
 import { elapsedMs, finishSession, missingFeelings, newId } from '../../session/ops';
 import { addCardio, cardioOf, formatCardio, removeCardio, updateCardio } from '../../cardio/model';
-import { CardioForm, CardioList, type CardioDraft } from '../CardioForm';
+import { CardioForm, CardioList, type CardioDraft, type CardioFormMemory } from '../CardioForm';
 import { formatDuration } from '../../session/format';
 import { ExerciseCard } from '../ExerciseCard';
 import { finishLabel, MissingFeelings, remainingFeelings } from '../MissingFeelings';
 import { SaveIndicator } from '../SaveIndicator';
 
+/**
+ * État d'écran de la séance gardé en mémoire le temps de l'ouverture de l'appli : quitter le mode salle (fiche,
+ * onglet Séance, bouton retour) puis revenir retrouve l'exercice ouvert et le cardio en cours de saisie.
+ */
+const memory: { sessionId: string | null; openId: string | undefined; cardio: CardioFormMemory } = {
+  sessionId: null,
+  openId: undefined,
+  cardio: { current: null },
+};
+
+/**
+ * Mode salle (§5.8) : écran plein, sans barre d'onglets. En haut le chronomètre et la liste compacte des exercices
+ * (un seul ouvert à la fois) ; en bas une barre fixe dans la zone du pouce : « + Exercice », « + Cardio »,
+ * « Terminer ». La flèche « ‹ » ramène à l'onglet Séance sans terminer la séance.
+ */
 export function SessionScreen({ openVariantId }: { openVariantId: string | undefined }) {
   const { active, commit, setLastFinish, cardioMachines } = useApp();
   const now = useNow();
-  const [openId, setOpenId] = useState<string | undefined>(openVariantId);
+  if (active && memory.sessionId !== active.id) {
+    memory.sessionId = active.id;
+    memory.openId = undefined;
+    memory.cardio.current = null;
+  }
+  const [openId, setOpenIdState] = useState<string | undefined>(openVariantId ?? memory.openId);
+  const setOpenId = (id: string) => {
+    memory.openId = id;
+    setOpenIdState(id);
+  };
   /** Confirmation de fin ouverte : exercices sans ressenti relevés à l'ouverture. */
   const [confirmFinish, setConfirmFinish] = useState<string[] | null>(null);
-  const [addingCardio, setAddingCardio] = useState(false);
+  const [addingCardio, setAddingCardio] = useState(memory.cardio.current !== null);
   /** Saisie du formulaire de cardio ouvert, proposée à l'enregistrement si la séance est terminée sans « Valider ». */
   const [cardioDraft, setCardioDraft] = useState<CardioDraft>({ kind: 'empty' });
 
   useEffect(() => {
     if (!openVariantId) return;
-    setOpenId(openVariantId);
+    memory.openId = openVariantId;
+    setOpenIdState(openVariantId);
     // Amène l'exercice ouvert à l'écran (ajout ou exercice déjà présent).
     requestAnimationFrame(() =>
       document.querySelector(`article[data-variant="${CSS.escape(openVariantId)}"]`)?.scrollIntoView({ block: 'start' }),
@@ -45,6 +70,13 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
   function openCardio(open: boolean) {
     setAddingCardio(open);
     setCardioDraft({ kind: 'empty' });
+    if (!open) memory.cardio.current = null;
+  }
+
+  /** « + Cardio » : ouvre le formulaire (ou le retrouve) et l'amène à l'écran. */
+  function showCardio() {
+    if (!addingCardio) openCardio(true);
+    requestAnimationFrame(() => document.querySelector('form.cardio-form')?.scrollIntoView({ block: 'center' }));
   }
 
   async function finish() {
@@ -55,12 +87,12 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
     openCardio(false);
     const { session, removed } = finishSession(withCardio, now);
     setLastFinish({ sessionId: session.id, removed });
-    navigate('recap', session.id);
+    navigateReplace('recap', session.id);
     await commit(session);
   }
 
   return (
-    <main className="screen session">
+    <main className="screen session gym-mode">
       <header className="session-header">
         <a href="#/" className="back" aria-label="Accueil">
           ‹
@@ -96,35 +128,37 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
         onRemove={(block) => void commit(removeCardio(active, block.id, Date.now()), 'Cardio retiré')}
       />
 
-      <div className="session-actions">
-        <a className="btn primary big" href="#/ajouter">
-          + Ajouter un exercice
+      {addingCardio && (
+        <CardioForm
+          machines={cardioMachines}
+          newId={newId}
+          memory={memory.cardio}
+          onCancel={() => openCardio(false)}
+          onDraft={setCardioDraft}
+          onSave={(block) => {
+            openCardio(false);
+            void commit(addCardio(active, block, Date.now()));
+          }}
+        />
+      )}
+
+      <nav className="session-bar" aria-label="Actions de la séance">
+        <a className="btn primary" href="#/ajouter" aria-label="Ajouter un exercice">
+          + Exercice
         </a>
-        {addingCardio ? (
-          <CardioForm
-            machines={cardioMachines}
-            newId={newId}
-            onCancel={() => openCardio(false)}
-            onDraft={setCardioDraft}
-            onSave={(block) => {
-              openCardio(false);
-              void commit(addCardio(active, block, Date.now()));
-            }}
-          />
-        ) : (
-          <button type="button" className="btn big" onClick={() => openCardio(true)}>
-            + Ajouter du cardio
-          </button>
-        )}
+        <button type="button" className="btn" aria-label="Ajouter du cardio" onClick={showCardio}>
+          + Cardio
+        </button>
         <button
           type="button"
-          className="btn big"
+          className="btn"
+          aria-label="Terminer la séance"
           aria-expanded={confirmFinish !== null}
           onClick={() => setConfirmFinish(missingFeelings(active).map((p) => p.variantId))}
         >
-          Terminer la séance
+          Terminer
         </button>
-      </div>
+      </nav>
 
       {confirmFinish && (
         <FinishSheet onClose={() => setConfirmFinish(null)}>

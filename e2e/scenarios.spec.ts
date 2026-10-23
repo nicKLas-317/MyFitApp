@@ -38,6 +38,7 @@ async function session(page: Page, reps: number[], feeling: string, startWeight?
   await finishSession(page);
   const next = (await page.getByTestId('next-target').textContent()) ?? '';
   await page.getByRole('button', { name: 'Garder ce nom' }).click();
+  await expect(page.getByRole('button', { name: 'Démarrer une séance' })).toBeVisible();
   return next;
 }
 

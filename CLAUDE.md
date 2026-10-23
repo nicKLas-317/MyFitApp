@@ -96,17 +96,12 @@ Ne pas disperser les règles de progression dans plusieurs composants de l'inter
 
 Créer une interface moderne, sobre, lisible et rapide.
 
-L'écran principal doit donner accès directement à :
+L'application est organisée en quatre onglets (§3.4, version 1.20.0), qui séparent l'usage « à la salle » (saisie rapide, écran épuré) de l'usage « au calme » (bilans, historique, réglages) :
 
-- La séance en cours ou au démarrage d'une nouvelle séance.
-- La recherche et la bibliothèque d'exercices.
-- L'historique des séances.
-- L'import et l'export des données.
-- Des réglages simples.
-- La rubrique « Mon poids ».
-- Le bilan de progression (§19.3), par un bouton du même style que les autres boutons de l'accueil, placé avec eux sous le récapitulatif hebdomadaire (juste après « Historique »).
-- Le bandeau discret « Ton bilan de la semaine est prêt » / « Ton bilan du mois est prêt » (§19.7), tout en haut, sous le titre et au-dessus du récapitulatif hebdomadaire, quand un bilan est à voir.
-- La question d'une activité habituelle (« Badminton lundi soir (21 h – 22 h 30) ? », §19.8), tout en haut, avant le bandeau du bilan.
+- **Séance** (onglet par défaut, l'accueil) : la question d'une activité habituelle en haut s'il y en a une (« Badminton lundi soir (21 h – 22 h 30) ? », §19.8), le récapitulatif de la semaine (§19.6), puis « Démarrer une séance » / « Reprendre la séance » (toujours 1 appui), et le rappel de sauvegarde éventuel (§12).
+- **Historique** : la liste des séances et des activités (§10).
+- **Progrès** : en haut, le bandeau « Ton bilan de la semaine / du mois est prêt » quand un bilan est à voir (§19.7) ; puis le bilan de progression (§19.3), les bilans de la semaine et du mois (§19.7), le bilan par groupe musculaire (§19.10) et « Mon poids » (§20), avec une pesée rapide.
+- **Plus** : la bibliothèque d'exercices et sa recherche (§4), les réglages (§14), « Importer / exporter » (§11 ; l'écran porte le même nom).
 
 Éviter les menus profonds, les écrans superflus, les animations inutiles et les longs textes explicatifs.
 
@@ -124,13 +119,25 @@ L'application doit rester lisible en mode sombre, notamment pour les trois coule
 
 Ne pas ajouter de fonctionnalités sociales, de calories, de programmes complexes ou de tableaux de bord encombrants.
 
+### 3.4. Barre d'onglets et bouton retour (précision validée, version 1.20.0)
+
+- **Barre d'onglets** fixe en bas de l'écran, 56 px de haut, au-dessus de la zone système d'Android (`env(safe-area-inset-bottom)`) : Séance · Historique · Progrès · Plus, chacun avec une icône et un libellé, 8 px entre deux onglets. L'onglet actif est en couleur d'accent, en gras, avec un trait au-dessus ; les écrans ouverts depuis un onglet le gardent actif (`tabOf`, `src/ui/TabBar.tsx`). Masquée en mode salle (§5.8).
+- **Pastille** sur l'onglet Progrès quand un bilan de la semaine ou du mois est prêt (§19.7) : point discret couleur d'accent, nom accessible « Progrès : bilan prêt ».
+- **Bouton retour d'Android** (`src/app/navigation.ts`) : chaque entrée de l'historique connaît sa profondeur.
+  - Il suit la navigation : la fiche ouverte depuis la séance revient à la séance, le détail revient à l'historique, etc. ; les flèches « ‹ » font de même (à défaut d'écran précédent, elles mènent à l'écran parent de l'onglet).
+  - Un onglet s'ouvre toujours juste au-dessus de l'onglet Séance : « retour » depuis un onglet (ou un écran d'onglet atteint par un autre onglet) ramène à la Séance. Une adresse ouverte directement reçoit une entrée Séance en dessous.
+  - Après « Ajouter un exercice », « retour » ne rouvre pas la recherche ; après la fin d'une séance, il ne ramène pas dans la séance terminée.
+  - Il ne ferme jamais l'appli en pleine séance : sur l'onglet Séance, une entrée de garde absorbe « retour » tant qu'une séance est en cours.
+  - Il ne perd aucune saisie : un poids tapé sans quitter le champ est enregistré en quittant l'écran (même protection au-delà de 50 %, §5.3), les répétitions ajustées (− / +) de la série en cours, l'exercice ouvert et le cardio en cours de saisie sont retrouvés au retour dans la séance, et le nom saisi au récapitulatif est enregistré.
+- **Nombre d'appuis** : aucune action de saisie n'en demande plus qu'avant les onglets, et aucune ne demande de défiler (test 230) : démarrer ou reprendre une séance 1, ajouter un exercice récent 2, valider une série 1, ressenti 1, cardio 2 (+ la durée), terminer 2, pesée 2 (+ le poids), corriger une séance passée 3.
+
 ### 3.1. Cadres de section (précision validée)
 
 Toutes les sections de l'application (cartes d'exercice, éléments de liste, graphiques, bandeaux d'information, blocs des réglages, de l'import/export, de « Mon poids », de la fiche et du bilan, fenêtres et volets de confirmation, menus « ⋯ ») sont encadrées selon **une seule règle commune** :
 
 - Bordure sur les quatre côtés, de même épaisseur (2 px) et de même couleur, coins arrondis (même rayon que les boutons).
 - Règle définie une seule fois : la liste des éléments encadrés est unique (`FRAME_SELECTOR`, `src/ui/frames.ts`, qui les marque `data-frame`) et le style est la seule règle `[data-frame]` de `styles.css`. Aucun écran ne définit sa propre bordure de section (pas de bordure gauche seule).
-- **Couleur (précision validée, version 1.19.0)** : plus d'alternance « arc-en-ciel ». Un cadre est **neutre** (gris foncé discret `--frame-neutral`) ; seul ce qui concerne un groupe musculaire prend la couleur de ce groupe (§3.2). Sont donc neutres : bandeaux et récapitulatif de l'accueil, « Mon poids » (une simple liste dans un seul cadre, sans un cadre par pesée), réglages, import/export, liste des séances, catégories du bilan, cardio, confirmations, volet de fin de séance, menus.
+- **Couleur (précision validée, version 1.19.0)** : plus d'alternance « arc-en-ciel ». Un cadre est **neutre** (gris foncé discret `--frame-neutral`) ; seul ce qui concerne un groupe musculaire prend la couleur de ce groupe (§3.2). Sont donc neutres : bandeaux (onglets Séance et Progrès) et récapitulatif de l'accueil, « Mon poids » (une simple liste dans un seul cadre, sans un cadre par pesée), réglages, import/export, liste des séances, catégories du bilan, cardio, confirmations, volet de fin de séance, menus.
 - Ne sont pas des cadres : les pastilles de statut (§8) et les cases du récapitulatif hebdomadaire (§19.6), qui gardent leurs couleurs de statut.
 - Rien ne dépasse de l'écran d'un smartphone (vérifié à 412, 360 et 320 px de large, et à 360 px avec le texte agrandi à 115 %) : les cartes d'exercice s'adaptent à la largeur ; dans la ligne de série, « Série 1 » ne se coupe jamais, les boutons `+` et `−` gardent 48 px, et si la ligne ne tient pas (écran étroit, texte agrandi), « Valider » passe dessous, sur toute la largeur, à 8 px au moins du `+`.
 
@@ -538,6 +545,14 @@ Version minimale : le cardio est un simple enregistrement dans la séance.
 **Import de notes** : une ligne avec une durée en minutes est un bloc de cardio (« Tapis 15 min », « Tapis incliné 20 min », « Marche inclinée haute 20min », « Rameur 10 min », « Elliptique 15 min », « Vélo elliptique 20 min ») ; la machine peut aussi être sur la ligne précédente. La machine est reconnue d'après la liste des réglages et des noms usuels (« tapis » et « marche » → tapis ; « vélo » seul → Vélo, le vélo classique ; « elliptique » ou « vélo elliptique » → Vélo elliptique). « Tapis » ou « marche » sans précision : inclinaison Neutre. « Incliné » ou « inclinée » sans niveau : l'aperçu demande de choisir Moyenne ou Haute (import bloqué jusque-là). Une machine non reconnue est à choisir dans l'aperçu (ou le bloc est exclu), jamais devinée. Un JSON simple peut contenir une liste `cardio` (`machine`, `minutes`, `inclinaison`, `distanceKm`).
 
 **Données** : les blocs sont inclus dans l'export et l'import JSON (format `schemaVersion` 3, puis 4 avec les activités habituelles, §19.8) ; une sauvegarde au format 2 est migrée sans perte. Une installation existante n'a aucune migration de base à subir : ses séances, sans cardio, restent intactes, et la liste de machines par défaut s'applique. Deux séances qui ne diffèrent que par leur cardio ne sont pas des doublons (§11.9).
+
+### 5.8. Mode salle (précision validée, version 1.20.0)
+
+Pendant la saisie d'une séance (écran de séance, ajout d'un exercice), l'écran est plein et la barre d'onglets masquée :
+
+- En haut, l'en-tête collant (flèche « ‹ », nom de la séance, chronomètre, « Enregistré »), puis la liste compacte des exercices : nom, charge et séries faites (« 30 kg · 0/3 »), avec la couronne d'un nouveau record ; un seul exercice ouvert à la fois, comme avant. Les blocs de cardio suivent.
+- En bas, une barre fixe dans la zone du pouce, au-dessus de la zone système : « + Exercice » (bouton principal, un peu plus large), « + Cardio » (ouvre le formulaire et l'amène à l'écran), « Terminer » (ouvre le volet de fin, §5.6). Libellés en 15 px sur une ligne, même à 360 px avec le texte agrandi.
+- La flèche « ‹ » ramène à l'onglet Séance sans terminer la séance, qui reste enregistrée et se reprend en un appui (« Reprendre la séance »), sur l'exercice qui était ouvert.
 
 ## 6. Chronomètre global de séance
 
@@ -1076,7 +1091,7 @@ Prévoir une gestion claire des erreurs de sauvegarde. Ne jamais annoncer qu'une
 - Un poids tapé sans quitter le champ est enregistré au passage en arrière-plan (avec la même protection contre les fautes de frappe).
 - **Plusieurs fenêtres de l'appli (précision validée).** L'appli installée et un onglet Chrome partagent la même base : une fenêtre restée en mémoire ne doit jamais écrire une ancienne version d'une séance par-dessus une plus récente (cardio ajouté ailleurs effacé par la série suivante). Chaque écriture réussie est annoncée aux autres fenêtres (`BroadcastChannel`), qui relisent séances et bibliothèque ; chaque fenêtre relit aussi la base en revenant au premier plan. Une écriture locale non confirmée garde sa version.
 
-**Rappel de sauvegarde** : si aucun export n'a été fait depuis 14 jours et que de nouvelles séances existent, afficher un rappel discret sur l'écran d'accueil, avec un bouton d'export direct. Pas de fenêtre bloquante.
+**Rappel de sauvegarde** : si aucun export n'a été fait depuis 14 jours et que de nouvelles séances existent, afficher un rappel discret sur l'onglet Séance (accueil), avec un bouton d'export direct. Pas de fenêtre bloquante.
 
 Prévoir une procédure simple pour transférer les données vers un autre appareil grâce à l'export et à l'import JSON.
 
@@ -1109,7 +1124,7 @@ Prévoir une page de réglages simple permettant notamment :
 - D'exporter les données complètes.
 - De voir l'état du stockage persistant.
 - De modifier la liste des machines de cardio (§5.7).
-- De désactiver le bandeau du bilan de la semaine et/ou du mois, et de renseigner une adresse e-mail facultative pour les bilans (§19.7).
+- De désactiver le signalement du bilan de la semaine et/ou du mois (pastille sur l'onglet Progrès et bandeau en haut de cet onglet), et de renseigner une adresse e-mail facultative pour les bilans (§19.7).
 - De gérer les activités habituelles hors salle : ajout, modification, suppression, désactivation (§19.8).
 - De consulter la version de l'application.
 
@@ -1316,7 +1331,7 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 
 140. Données de départ (exemple anonymisé) : l'extension triceps haltère assis (deux vertes, palier validé) est « En progression » ; les exercices à une seule séance sont « Trop tôt pour conclure » ; le graphique a un point dès la première séance.
 141. Fichier d'import : un .json, même sans type reconnu, du texte ou des notes sont acceptés ; un fichier vide, binaire, tronqué ou trop volumineux est refusé avec un message clair.
-142. (bout en bout) Champ fichier sans filtre de type ; fichier non valide refusé sans rien importer ; .json annoncé en `application/octet-stream` importé ; bouton « Bilan de progression » parmi les boutons de l'accueil, sous le récapitulatif, de même taille et de même style que « Historique » ; résumé et titres avec le nombre d'exercices par catégorie, libellé « Une seule séance sur cet exercice. », aucune couleur de statut ; un exercice ouvre sa fiche sur son graphique (deux points), un exercice à une seule séance montre un point et le message.
+142. (bout en bout) Champ fichier sans filtre de type ; fichier non valide refusé sans rien importer ; .json annoncé en `application/octet-stream` importé ; bouton « Bilan de progression » dans l'onglet Progrès, avec les autres bilans, de même taille et de même style ; résumé et titres avec le nombre d'exercices par catégorie, libellé « Une seule séance sur cet exercice. », aucune couleur de statut ; un exercice ouvre sa fiche sur son graphique (deux points), un exercice à une seule séance montre un point et le message.
 
 ### Cadres de section et filtres du bilan (§3.1, §19.3)
 
@@ -1398,7 +1413,7 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 191. Comparaison avec la période précédente (+1, −1, « autant que »), durée (y compris une séance importée sans heure), cardio par machine, groupes directs et indirects, semaine et mois (« par rapport au mois précédent »).
 192. Texte du mail complet, en texte brut (titres en capitales, listes « - », sans HTML), mention d'une période en cours ; lien mailto avec adresse, objet et corps encodés (retours à la ligne CRLF).
 193. Bandeau : semaine écoulée à partir du lundi, mois écoulé à partir du 1er, une seule fois par période (plus affiché une fois le bilan ouvert ; ouvrir la période en cours ou une plus ancienne ne compte pas), seulement si la période contient une séance, désactivable séparément ; réglages lus ou importés contrôlés (adresse invalide écartée).
-194. (bout en bout, format smartphone) Lundi : bandeau de la semaine seul, au-dessus du récapitulatif resté visible sans défilement ; « Plus tard » le masque jusqu'à la prochaine ouverture ; « Voir » ouvre la semaine écoulée avec toutes ses sections ; aucune couleur de statut, rien ne dépasse à 412, 360 et 320 px ; « Envoyer par mail » transmet l'objet et le texte au partage natif ; « Copier le texte » ; navigation précédente / suivante jusqu'à la période en cours ; onglet Mois ; bandeau disparu après ouverture, même après relance ; accès depuis le bilan de progression ; adresse invalide refusée, adresse et bandeaux conservés ; bouton « Mail à … » quand une adresse est renseignée ; éléments importants en gras.
+194. (bout en bout, format smartphone) Lundi : plus de bandeau sur l'accueil, pastille sur l'onglet Progrès (« Progrès : bilan prêt »), pilotée par le réglage « Signaler le bilan de la semaine » ; bandeau de la semaine seul en haut de l'onglet Progrès ; « Plus tard » masque bandeau et pastille jusqu'à la prochaine ouverture ; « Voir » ouvre la semaine écoulée avec toutes ses sections ; aucune couleur de statut, rien ne dépasse à 412, 360 et 320 px ; « Envoyer par mail » transmet l'objet et le texte au partage natif ; « Copier le texte » ; navigation précédente / suivante jusqu'à la période en cours ; onglet Mois ; bandeau et pastille disparus après ouverture, même après relance ; accès depuis le bilan de progression ; adresse invalide refusée, adresse et réglages conservés ; bouton « Mail à … » quand une adresse est renseignée ; éléments importants en gras.
 195. Mise en évidence : comparaisons (y compris « autant que »), « Non travaillés », changement de cible des progressions, séances rouges de la période et « poids inférieur recommandé », valeurs des pesées ; noms, nombres de séances et dates en texte simple ; le mail sans aucune marque.
 
 ### Activités habituelles hors salle (§19.8)
@@ -1441,8 +1456,15 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 222. (bout en bout) Menu « ⋯ » de la carte ouverte : « Ajuster séries et répétitions », « Voir la fiche de l'exercice », « Retirer de la séance », plus aucune de ces actions en permanence ; Échap le ferme ; ajustement de la cible puis « Terminé » ; fiche ouverte ; ligne de série à 360 px (et texte à 115 %) et 320 px : « Série 1 » sur une ligne, 8 px au moins entre « + » et « Valider », dans la carte. Retrait d'un exercice ou d'un cardio : confirmé, « Non » garde, « Annuler » rétablit (tests de séance et de cardio).
 223. (bout en bout) Fin de séance avec six exercices : volet entièrement visible sans défiler à 412 et 360 px, texte à 115 % compris ; ressentis de 48 px, à 8 px, sur une ligne, deux rangées à 360 px, en bleu tant qu'ils manquent ; « Terminer sans compléter » secondaire ; un niveau choisi : lui seul en bleu, « Oui, terminer » principal, ressenti enregistré.
 224. (bout en bout) Récapitulatif de fin : « Retour à l'accueil » mène à l'accueil et garde le nom saisi.
-225. (bout en bout) Sur chaque écran (accueil, bibliothèque, fiche, modification d'un exercice, historique, détail, bilans, par groupe, Mon poids, réglages, données, séance avec menu ouvert, ajout d'un exercice, volet de fin), à 412, 360 et 320 px, et à 360 px avec le texte à 115 % pour la séance : seulement les cinq tailles de police, espacements de 8, 16 et 24 px, éléments tactiles d'au moins 48 px et à 8 px au moins de leurs voisins, un seul style de titre de section, étiquettes des graphiques d'au moins 12 px, rien ne dépasse.
+225. (bout en bout) Sur chaque écran (accueil, onglets Progrès et Plus, bibliothèque, fiche, modification d'un exercice, historique, détail, bilans, par groupe, Mon poids, réglages, données, séance avec menu ouvert, ajout d'un exercice, volet de fin), à 412, 360 et 320 px, et à 360 px avec le texte à 115 % pour la séance : seulement les cinq tailles de police, espacements de 8, 16 et 24 px, éléments tactiles d'au moins 48 px et à 8 px au moins de leurs voisins, un seul style de titre de section, étiquettes des graphiques d'au moins 12 px, rien ne dépasse.
 226. (bout en bout) Cadres neutres sur l'accueil (bandeaux, récapitulatif, cases du récapitulatif inchangées), les réglages, les données, le volet de fin ; Mon poids : un seul cadre pour la liste des pesées, aucune pesée encadrée ; par groupe : cadres à la couleur du groupe ; carte d'exercice à la couleur de son groupe.
+
+### Barre d'onglets, mode salle et bouton retour (§3.4, §5.8, version 1.20.0)
+
+227. (bout en bout) Barre d'onglets Séance, Historique, Progrès, Plus : fixe en bas, 56 px, icône et libellé, onglet actif en couleur d'accent (`aria-current`), y compris sur les écrans de l'onglet ; onglet Séance : récapitulatif et « Démarrer une séance », aucun autre lien ni bandeau de bilan ; Progrès : trois bilans et Mon poids ; Plus : bibliothèque, réglages, « Importer / exporter » (écran du même nom) ; onglets d'au moins 48 px, rien ne dépasse à 412, 360 et 320 px.
+228. (bout en bout) Mode salle : barre d'onglets masquée, barre du pouce fixe en bas (« + Exercice », « + Cardio », « Terminer », 48 px), liste compacte (« 35 kg · 1/3 »), un seul exercice ouvert ; « + Cardio » amène le formulaire à l'écran, « Terminer » ouvre le volet ; la flèche ramène à l'onglet Séance, séance conservée, reprise en un appui sur le même exercice ; libellés sur une ligne à 360 px avec le texte à 115 %.
+229. (bout en bout) Bouton retour : Plus → Réglages → retour → Plus → retour → Séance ; Historique → détail → retour → Historique → retour → Séance ; adresse ouverte directement → retour → Séance ; fiche ouverte depuis la séance → retour → séance ; après l'ajout d'un exercice, retour → Séance (pas la recherche) ; en pleine séance, retour sur l'onglet Séance ne ferme pas l'appli (deux fois de suite) ; poids tapé sans quitter le champ enregistré, répétitions ajustées et cardio en cours retrouvés ; nom saisi au récapitulatif enregistré, retour → Séance (pas la séance terminée).
+230. (bout en bout) Nombre d'appuis, chaque élément déjà à l'écran (aucun défilement) : démarrer 1, ajouter un exercice récent 2, série 1, ressenti 1, cardio 2, terminer 2 (avec six exercices), garder le nom 1, pesée 2, corriger une séance passée 3, reprendre 1 ; aucun de plus qu'avant les onglets.
 
 Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
 
@@ -1558,7 +1580,7 @@ Ne jamais déclarer un exercice en stagnation sur la base d'une seule séance di
 - Libellé de « Trop tôt pour conclure » : « Une seule séance sur cet exercice. »
 - Présentation : un résumé en tête donne le nombre d'exercices de chaque catégorie ; chaque catégorie a un titre de section bien visible, un pictogramme (↗ en progression, → stables, ↘ en difficulté, … trop tôt pour conclure), un cadre neutre et son nombre d'exercices ; chaque exercice listé est encadré à la couleur de son groupe (§3.2). Pas de vert, d'orange ni de rouge (réservés aux statuts, §8).
 - Filtres : le résumé du haut est une rangée de vrais boutons rectangulaires arrondis, au style des boutons de l'accueil, un par catégorie (pictogramme, titre, nombre d'exercices) et un bouton « Tous ». Les boutons sont neutres (les couleurs désignent les groupes, §3.2). Un appui n'affiche que la catégorie choisie et remplit le bouton, comme un bouton principal ; un nouvel appui sur le bouton actif, ou « Tous », réaffiche tout. Une catégorie sans exercice reste visible mais n'est pas sélectionnable. Par défaut tout est affiché ; le dernier filtre est mémorisé sur l'appareil (s'il ne contient plus d'exercice, tout est affiché). « Dernières évolutions » n'apparaît que sans filtre.
-- Un appui sur un exercice ouvre sa fiche directement sur son graphique d'évolution (§19.2) ; le retour ramène au bilan. Le bilan est accessible depuis l'accueil (§3) et depuis l'historique. Il mène aux bilans de la semaine et du mois (§19.7) et à la vue « Par groupe musculaire » (§19.10).
+- Un appui sur un exercice ouvre sa fiche directement sur son graphique d'évolution (§19.2) ; le retour ramène au bilan. Le bilan est accessible depuis l'onglet Progrès (§3). Il mène aux bilans de la semaine et du mois (§19.7) et à la vue « Par groupe musculaire » (§19.10).
 
 ### 19.4. Séparation entre historique réel et recommandation
 
@@ -1606,7 +1628,7 @@ But : un coup d'œil de 2 secondes avant la séance pour savoir quels groupes tr
 
 L'application n'a pas de serveur : aucun envoi automatique. Elle prépare le bilan, le signale, et l'utilisateur l'envoie en un geste.
 
-**Écran « Bilan de la période »** (`#/bilan-periode`), accessible depuis le bilan de progression (bouton « Bilan de la semaine / du mois ») et depuis le bandeau de l'accueil.
+**Écran « Bilan de la période »** (`#/bilan-periode`), accessible depuis l'onglet Progrès et le bilan de progression (bouton « Bilan de la semaine / du mois »), et depuis le bandeau de l'onglet Progrès.
 
 - Deux onglets, Semaine et Mois. Semaine = lundi 0 h 00 au dimanche, mois = mois calendaire, heure locale ; une séance compte dans la période de son début (même règle que le §19.6). Boutons ‹ et › vers la période précédente ou suivante ; pas de période suivante après la période en cours, pas de période précédente avant la première séance.
 - Période ouverte par défaut : la période en cours si elle contient une séance, sinon la précédente. Une période en cours l'indique (« Semaine en cours, arrêtée au jeu. 22 oct. »).
@@ -1632,11 +1654,11 @@ L'application n'a pas de serveur : aucun envoi automatique. Elle prépare le bil
 
 **Signalement**
 
-- À l'ouverture de l'appli à partir du lundi (semaine écoulée) et à partir du 1er (mois écoulé), un bandeau discret tout en haut de l'accueil, au-dessus du récapitulatif hebdomadaire (qui reste visible sans défilement) : « Ton bilan de la semaine est prêt » / « Ton bilan du mois est prêt », avec « Voir » et « Plus tard ». Pas de notification système.
+- À partir du lundi (semaine écoulée) et à partir du 1er (mois écoulé) : une **pastille sur l'onglet Progrès** (§3.4), et un bandeau discret tout en haut de cet onglet (version 1.20.0 : plus sur l'accueil) : « Ton bilan de la semaine est prêt » / « Ton bilan du mois est prêt », avec « Voir » et « Plus tard ». Pas de notification système.
 - Seulement si la période écoulée contient au moins une séance terminée. Seule la dernière période écoulée est signalée.
-- Il disparaît définitivement pour cette période une fois le bilan ouvert (donc aussi une fois envoyé). Ouvrir la période en cours ou une période plus ancienne ne compte pas.
-- « Plus tard » le masque jusqu'à la prochaine ouverture de l'appli (rechargement ou relance).
-- Réglages (§14) : bandeau hebdomadaire et bandeau mensuel désactivables séparément ; adresse e-mail facultative, contrôlée, préremplie dans le `mailto:`. Ces réglages sont inclus dans l'export et restaurés par un remplacement global ; les bilans déjà ouverts sont mémorisés sur l'appareil seulement.
+- Pastille et bandeau disparaissent définitivement pour cette période une fois le bilan ouvert (donc aussi une fois envoyé). Ouvrir la période en cours ou une période plus ancienne ne compte pas.
+- « Plus tard » masque le bandeau et la pastille jusqu'à la prochaine ouverture de l'appli (rechargement ou relance).
+- Réglages (§14) : « Signaler le bilan de la semaine (pastille sur Progrès) » et « … du mois » désactivables séparément ; ils pilotent la pastille et le bandeau ; adresse e-mail facultative, contrôlée, préremplie dans le `mailto:`. Ces réglages sont inclus dans l'export et restaurés par un remplacement global ; les bilans déjà ouverts sont mémorisés sur l'appareil seulement.
 
 ### 19.8. Activités habituelles hors salle (précision validée)
 
@@ -1686,7 +1708,7 @@ But : compter, sans rien saisir, une activité régulière faite hors de la sall
 
 ### 19.10. Bilan par groupe musculaire (précision validée)
 
-Vue secondaire (`#/bilan-groupes/<groupe>`), accessible depuis le bilan de progression (bouton « Par groupe musculaire »), jamais depuis l'accueil. Sélecteur de groupe : pectoraux, dos, épaules, biceps, triceps, jambes (pectoraux par défaut ; les sous-groupes des jambes comptent dans « jambes »). Calcul pur (`src/analysis/groups.ts`), refait à l'affichage à partir des séances terminées ; ni cardio ni activités habituelles ; aucun effet sur le moteur.
+Vue secondaire (`#/bilan-groupes/<groupe>`), accessible depuis l'onglet Progrès et le bilan de progression (bouton « Par groupe musculaire »), jamais depuis l'onglet Séance. Sélecteur de groupe : pectoraux, dos, épaules, biceps, triceps, jambes (pectoraux par défaut ; les sous-groupes des jambes comptent dans « jambes »). Calcul pur (`src/analysis/groups.ts`), refait à l'affichage à partir des séances terminées ; ni cardio ni activités habituelles ; aucun effet sur le moteur.
 
 **Indice de progression (base 100)**
 
@@ -1710,7 +1732,7 @@ Vue secondaire (`#/bilan-groupes/<groupe>`), accessible depuis le bilan de progr
 
 ## 20. Suivi corporel simplifié : « Mon poids »
 
-- Rubrique indépendante des entraînements.
+- Rubrique indépendante des entraînements, dans l'onglet Progrès : une pesée s'y enregistre directement (« Enregistrer la pesée », dernière pesée rappelée), l'écran « Mon poids » garde l'historique, les corrections et le graphique.
 - Taille enregistrée une seule fois dans les réglages.
 - Saisie du poids avec la date (préremplie à aujourd'hui), en une action.
 - Historique des pesées (une simple liste dans un seul cadre neutre, une ligne par pesée, §3.1) et graphique simple de l'évolution.

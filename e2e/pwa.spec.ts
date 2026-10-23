@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { activeSession, addExercise, validateSets } from './helpers';
+import { activeSession, addExercise, validateSets, openScreen } from './helpers';
 
 test.describe('Application installable et hors ligne (§2, §16.13, §17, §21)', () => {
   test('manifeste et icônes compatibles avec GitHub Pages (/MyFitApp/)', async ({ page, request }) => {
@@ -44,7 +44,7 @@ test.describe('Application installable et hors ligne (§2, §16.13, §17, §21)'
     await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
     expect(await page.evaluate(() => navigator.onLine)).toBe(false);
 
-    await page.getByRole('link', { name: 'Bibliothèque d’exercices' }).click();
+    await openScreen(page, 'Bibliothèque d’exercices');
     const search = page.getByRole('searchbox', { name: 'Rechercher un exercice' });
     await search.fill('chest press');
     await expect(page.getByRole('list', { name: 'Résultats' }).locator('strong').first()).toHaveText('Chest press');

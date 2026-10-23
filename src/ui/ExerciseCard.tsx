@@ -3,7 +3,6 @@ import type { Performance, Session } from '../domain/types';
 import { compareWeight, progressMarker } from '../engine';
 import { useApp } from '../app/store';
 import { displayName } from '../library/catalog';
-import { MUSCLE_GROUP_LABELS } from '../library/seed';
 import { formatKg } from '../session/format';
 import {
   correctSet,
@@ -24,6 +23,12 @@ import { Crown } from './Crown';
 import { beatsRecord } from '../analysis/records';
 import { WeightField } from './WeightField';
 
+/**
+ * Répétitions ajustées (− / +) de la série en cours, pas encore validées : gardées le temps de l'ouverture de l'appli,
+ * pour les retrouver après être sorti du mode salle (fiche, bouton retour).
+ */
+const repsDrafts = new Map<string, number>();
+
 interface Props {
   session: Session;
   performance: Performance;
@@ -40,7 +45,13 @@ export function ExerciseCard({ session, performance: p, open, onToggle }: Props)
   const target = p.targetReps ?? 0;
   const planned = p.plannedSets ?? 0;
   const done = p.reps.length;
-  const [draft, setDraft] = useState<number | null>(null);
+  const draftKey = `${session.id}|${p.variantId}|${done}`;
+  const [draft, setDraftState] = useState<number | null>(repsDrafts.get(draftKey) ?? null);
+  const setDraft = (value: number | null) => {
+    if (value === null) repsDrafts.delete(draftKey);
+    else repsDrafts.set(draftKey, value);
+    setDraftState(value);
+  };
   const [adjust, setAdjust] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const now = () => Date.now();
@@ -89,11 +100,10 @@ export function ExerciseCard({ session, performance: p, open, onToggle }: Props)
       <div className="card-head">
         <button type="button" className="card-header" onClick={onToggle} aria-expanded={open}>
           {ref && <ExercisePicto exercise={ref.exercise} variantId={ref.variant.id} />}
-          {/* Nom sur toute la largeur ; groupe, charge et séries faites dessous : rien ne coupe le nom. */}
+          {/* Liste compacte du mode salle : nom sur toute la largeur, charge et séries faites dessous. */}
           <span className="card-title">
             <strong>{name}</strong>
             <span className="card-summary muted small">
-              {ref && <span>{MUSCLE_GROUP_LABELS[ref.exercise.primaryGroup]} · </span>}
               <span>{formatKg(p.weightKg)}</span>
               <span className="sets-count">
                 {' · '}

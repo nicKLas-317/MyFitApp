@@ -56,7 +56,7 @@ export async function startSession(page: Page): Promise<void> {
 
 /** Ajoute un exercice depuis la recherche ; `startWeight` pour un exercice jamais réalisé. */
 export async function addExercise(page: Page, query: string, name: string, startWeight?: string): Promise<Locator> {
-  await page.getByRole('link', { name: '+ Ajouter un exercice' }).click();
+  await page.getByRole('link', { name: 'Ajouter un exercice' }).click();
   await page.getByRole('searchbox', { name: 'Rechercher un exercice' }).fill(query);
   // Le bouton de résultat affiche la variante sans tiret : « Tirage vertical Prise moyenne ».
   const escaped = name.replace(' — ', ' ').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -77,6 +77,32 @@ export function exerciseCard(page: Page, name: string): Locator {
 /** Valide `count` séries à la valeur préremplie (la cible). */
 export async function validateSets(card: Locator, count: number): Promise<void> {
   for (let i = 0; i < count; i++) await card.getByRole('button', { name: 'Valider' }).click();
+}
+
+/** Onglet de chaque écran ouvert depuis un onglet (§3.4). */
+const TAB_OF: Record<string, string> = {
+  Historique: 'Historique',
+  'Bilan de progression': 'Progrès',
+  'Bilan de la semaine / du mois': 'Progrès',
+  'Par groupe musculaire': 'Progrès',
+  'Mon poids': 'Progrès',
+  'Bibliothèque d’exercices': 'Plus',
+  Réglages: 'Plus',
+  'Importer / exporter': 'Plus',
+};
+
+/** Barre d'onglets. */
+export function tabBar(page: Page): Locator {
+  return page.getByRole('navigation', { name: 'Onglets' });
+}
+
+/** Ouvre un écran depuis la barre d'onglets : l'onglet, puis le lien de l'écran dans l'onglet. */
+export async function openScreen(page: Page, name: string): Promise<void> {
+  const tab = TAB_OF[name] ?? name;
+  await tabBar(page).getByRole('link', { name: new RegExp(`^${tab}`) }).click();
+  if (name === tab) return;
+  const link = name === 'Mon poids' ? 'Mon poids : pesées et graphique' : name;
+  await page.getByRole('main').getByRole('link', { name: link, exact: true }).click();
 }
 
 /** Action secondaire d'une carte (exercice ou cardio), dans son menu « ⋯ ». */

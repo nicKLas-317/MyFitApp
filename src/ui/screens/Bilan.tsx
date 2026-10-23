@@ -59,7 +59,7 @@ export function Bilan() {
   return (
     <main className="screen bilan">
       <header className="simple-header">
-        <a href="#/" className="back" aria-label="Accueil">
+        <a href="#/progres" className="back" aria-label="Progrès">
           ‹
         </a>
         <h1>Bilan de progression</h1>

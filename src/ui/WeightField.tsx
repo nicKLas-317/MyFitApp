@@ -36,13 +36,20 @@ export function WeightField({ value, previous, label = 'Poids (kg)', highlight =
     return () => {
       document.removeEventListener('visibilitychange', onHide);
       window.removeEventListener('pagehide', onHide);
+      // Écran quitté sans sortir du champ (bouton retour, onglet) : le poids tapé est enregistré, avec la même
+      // protection (un poids qui demanderait confirmation n'est pas enregistré sans elle).
+      submitRef.current(true);
     };
   }, []);
 
-  function submit() {
+  function submit(leaving = false) {
     if (pending !== null) return;
     if (value !== null && text === format(value)) return;
     const result = checkWeight(text, previous);
+    if (leaving) {
+      if (result.kind === 'ok') onCommit(result.value);
+      return;
+    }
     if (result.kind === 'invalid') {
       setError(true);
       return;
@@ -69,7 +76,7 @@ export function WeightField({ value, previous, label = 'Poids (kg)', highlight =
             setText(e.target.value);
             setError(false);
           }}
-          onBlur={submit}
+          onBlur={() => submit()}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();

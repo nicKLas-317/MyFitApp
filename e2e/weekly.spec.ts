@@ -28,6 +28,7 @@ test.describe('Récapitulatif hebdomadaire de l’accueil (§19.6)', () => {
     await page.goto('./#/seance');
     await finishSession(page);
     await page.getByRole('button', { name: 'Garder ce nom' }).click();
+    await expect(page.getByRole('button', { name: 'Démarrer une séance' })).toBeVisible();
     await expect(recap.getByRole('heading')).toHaveText(/: 1\sséance$/);
     const pecs = recap.locator('[data-group="pectoraux"]');
     await expect(pecs).toHaveAttribute('data-color', 'orange');

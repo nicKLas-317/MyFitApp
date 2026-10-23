@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp } from '../app/store';
 import { navigate, useNow } from '../app/hooks';
 import { pendingReports, periodKey, type ReportPeriod } from '../analysis/report';
@@ -9,15 +9,35 @@ const idOf = (p: ReportPeriod) => `${p.kind}:${periodKey(p)}`;
 
 const TEXTS = { week: 'Ton bilan de la semaine est prêt', month: 'Ton bilan du mois est prêt' } as const;
 
+/** Composants à rafraîchir quand un bilan est remis à plus tard (bandeau et pastille de l'onglet). */
+const listeners = new Set<() => void>();
+
+function postpone(p: ReportPeriod): void {
+  postponed.add(idOf(p));
+  listeners.forEach((refresh) => refresh());
+}
+
 /**
- * Bandeau discret de l'accueil (§19.7) : bilan de la semaine écoulée à partir du lundi, du mois écoulé à partir
- * du 1er. Il disparaît une fois le bilan ouvert ; « Plus tard » le masque jusqu'à la prochaine ouverture de l'appli.
+ * Bilans à signaler (§19.7) : semaine écoulée à partir du lundi, mois écoulé à partir du 1er, jusqu'à leur ouverture,
+ * selon les réglages ; ceux remis « à plus tard » sont masqués jusqu'à la prochaine ouverture de l'appli.
  */
-export function ReportBanner() {
+export function usePendingReports(): ReportPeriod[] {
   const { sessions, reportSettings, reportSeen } = useApp();
   const now = useNow(60_000);
   const [, refresh] = useState(0);
-  const pending = pendingReports(sessions, now, reportSettings, reportSeen).filter((p) => !postponed.has(idOf(p)));
+  useEffect(() => {
+    const listener = () => refresh((n) => n + 1);
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  }, []);
+  return pendingReports(sessions, now, reportSettings, reportSeen).filter((p) => !postponed.has(idOf(p)));
+}
+
+/** Bandeau en haut de l'onglet Progrès : « Ton bilan de la semaine est prêt », « Voir » ou « Plus tard ». */
+export function ReportBanner() {
+  const pending = usePendingReports();
   if (pending.length === 0) return null;
   return (
     <>
@@ -31,10 +51,7 @@ export function ReportBanner() {
             <button
               type="button"
               className="btn"
-              onClick={() => {
-                postponed.add(idOf(p));
-                refresh((n) => n + 1);
-              }}
+              onClick={() => postpone(p)}
             >
               Plus tard
             </button>

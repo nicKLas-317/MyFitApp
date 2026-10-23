@@ -33,7 +33,7 @@ test.describe('Bibliothèque version 8 (§4.0)', () => {
 
     // Séance : tractions assistées (charge = aide) et squat kettlebell.
     await startSession(page);
-    await page.getByRole('link', { name: '+ Ajouter un exercice' }).click();
+    await page.getByRole('link', { name: 'Ajouter un exercice' }).click();
     await page.getByRole('searchbox', { name: 'Rechercher un exercice' }).fill('tractions assistées');
     await page.getByRole('button', { name: /^Tractions assistées/ }).first().click();
     await page.getByLabel('Aide de départ (kg)').fill('30');
@@ -45,6 +45,7 @@ test.describe('Bibliothèque version 8 (§4.0)', () => {
     await doExercise(squat, 3, 'Bien');
     await finishSession(page);
     await page.getByRole('button', { name: 'Garder ce nom' }).click();
+    await expect(page.getByRole('button', { name: 'Démarrer une séance' })).toBeVisible();
     const [session] = await readSessions(page);
     expect(session!.performances.map((p) => [p.variantId, p.weightKg])).toEqual([['tractions-assistees', 30], ['squat-kettlebell', 16]]);
     const recap = page.getByTestId('weekly-recap');

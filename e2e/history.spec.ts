@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Session } from '../src/domain/types';
-import { activeSession, readSessions, writeSessions } from './helpers';
+import { activeSession, readSessions, writeSessions, openScreen } from './helpers';
 
 function done(id: string, name: string, date: string, reps: number[], feeling: 'bien' | 'moyen' = 'bien', variantId = 'tirage-vertical'): Session {
   const t = Date.parse(`${date}T18:00:00`);
@@ -43,7 +43,7 @@ const SESSIONS = [done('s1', 'Haut du corps', '2026-10-01', [8, 8, 8]), done('s2
 test.describe('Historique, analyse et Mon poids', () => {
   test('§10. Historique chronologique et recherche par nom', async ({ page }) => {
     await seed(page, SESSIONS);
-    await page.getByRole('link', { name: 'Historique' }).click();
+    await openScreen(page, 'Historique');
     const list = page.getByRole('list', { name: 'Séances' });
     await expect(list.locator('strong')).toHaveText(['Dos et biceps', 'Haut du corps']);
     await page.getByRole('searchbox', { name: 'Rechercher une séance' }).fill('haut');
@@ -105,7 +105,7 @@ test.describe('Historique, analyse et Mon poids', () => {
 
   test('§20 et 52. Mon poids : saisie en une action, pesée invalide refusée, correction, suppression, taille', async ({ page }) => {
     await seed(page, SESSIONS);
-    await page.getByRole('link', { name: 'Mon poids' }).click();
+    await openScreen(page, 'Mon poids');
     await expect(page.getByText('Aucune pesée. Elle n’est jamais obligatoire.')).toBeVisible();
 
     await page.getByLabel('Poids (kg)').fill('7a8');
@@ -152,7 +152,7 @@ test.describe('Historique, analyse et Mon poids', () => {
     });
     await page.goto('./');
     await page.getByRole('button', { name: 'Démarrer une séance' }).click();
-    await page.getByRole('link', { name: '+ Ajouter un exercice' }).click();
+    await page.getByRole('link', { name: 'Ajouter un exercice' }).click();
     await page.getByRole('searchbox', { name: 'Rechercher un exercice' }).fill('pec deck');
     await page.getByRole('button', { name: /^Pec deck/ }).first().click();
     await page.getByLabel('Poids de départ (kg)').fill('30');

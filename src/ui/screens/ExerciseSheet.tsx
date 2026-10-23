@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../../app/store';
-import { navigate } from '../../app/hooks';
+import { navigate, navigateReplace } from '../../app/hooks';
 import { sortSessions } from '../../engine';
 import { displayName, variantLabel } from '../../library/catalog';
 import { addVariant, updateVariant, validateVariantName } from '../../library/edit';
@@ -77,7 +77,7 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
     const { exercise: next, variantId: id } = addVariant(exercise, name, exercises);
     if (await saveExercises([next])) {
       setVariantName(null);
-      navigate('exercice', id);
+      navigateReplace('exercice', id);
     }
   }
 

@@ -38,11 +38,8 @@ export function History() {
   const total = sessions.filter((s) => s.state === 'done').length + done.length;
 
   return (
-    <main className="screen history-screen">
+    <main className="screen tab-screen history-screen">
       <header className="picker-header">
-        <a href="#/" className="back" aria-label="Accueil">
-          ‹
-        </a>
         <input
           type="search"
           className="search"
@@ -52,11 +49,6 @@ export function History() {
           onChange={(e) => setQuery(e.target.value)}
         />
       </header>
-      <div className="row history-links">
-        <a className="btn" href="#/bilan">
-          Bilan de progression
-        </a>
-      </div>
 
       {total === 0 ? (
         <p className="empty muted">Aucune séance terminée pour l’instant.</p>

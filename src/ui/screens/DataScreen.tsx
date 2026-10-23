@@ -94,10 +94,10 @@ export function DataScreen() {
   return (
     <main className="screen data">
       <header className="simple-header">
-        <a href="#/" className="back" aria-label="Accueil">
+        <a href="#/plus" className="back" aria-label="Plus">
           ‹
         </a>
-        <h1>Données</h1>
+        <h1>Importer / exporter</h1>
       </header>
 
       {outcome && (

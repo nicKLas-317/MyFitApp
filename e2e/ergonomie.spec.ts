@@ -89,8 +89,10 @@ function auditScreen(page: Page, scale = 1) {
       const values = [s.marginTop, s.marginBottom, s.paddingTop, s.paddingBottom, s.paddingLeft, s.paddingRight, s.rowGap, s.columnGap];
       for (const v of values) if (!Number.isNaN(parseFloat(v)) && !spacing.has(Math.round(parseFloat(v)))) badSpacing.push(`${name(e)} ${v}`);
     }
+    // Volet modal ouvert : seules ses commandes sont touchables.
+    const modal = document.querySelector('[aria-modal="true"]');
     const targets = [...document.querySelectorAll('button, a[href], input:not([type=hidden]), select, textarea, summary, [role=menuitem]')]
-      .filter((e) => visible(e) && !e.closest('.visually-hidden') && !e.classList.contains('visually-hidden'))
+      .filter((e) => visible(e) && !e.closest('.visually-hidden') && !e.classList.contains('visually-hidden') && (!modal || modal.contains(e)))
       .map((e) => (e.matches('input[type=checkbox]') && e.closest('label') ? e.closest('label')! : e))
       .filter((e) => {
         // Une cible recouverte (volet, menu ouvert, en-tête collant) n'est pas touchable.
@@ -106,6 +108,9 @@ function auditScreen(page: Page, scale = 1) {
     for (let i = 0; i < targets.length; i++)
       for (let j = i + 1; j < targets.length; j++) {
         if (targets[i]!.contains(targets[j]!) || targets[j]!.contains(targets[i]!)) continue;
+        // Barre fixe (onglets, mode salle) : le contenu défile dessous, jamais à côté.
+        const bar = (e: Element) => e.closest('.tab-bar, .session-bar');
+        if (bar(targets[i]!) !== bar(targets[j]!)) continue;
         const [a, b] = [boxes[i]!, boxes[j]!];
         const gx = Math.max(0, Math.max(a.left, b.left) - Math.min(a.right, b.right));
         const gy = Math.max(0, Math.max(a.top, b.top) - Math.min(a.bottom, b.bottom));
@@ -324,6 +329,8 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
 
     const screens: [string, string][] = [
       ['Accueil', './'],
+      ['Progrès', './#/progres'],
+      ['Plus', './#/plus'],
       ['Bibliothèque', './#/bibliotheque'],
       ['Fiche', './#/exercice/chest-press'],
       ['Modifier un exercice', './#/modifier/chest-press'],
@@ -350,7 +357,7 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
     await page.setViewportSize({ width: 360, height: 800 });
     await startSession(page);
     const card = await addExercise(page, 'chest press', 'Chest press');
-    await page.getByRole('button', { name: '+ Ajouter du cardio' }).click();
+    await page.getByRole('button', { name: 'Ajouter du cardio' }).click();
     await page.getByRole('form', { name: 'Cardio' }).getByLabel('Durée (min)').fill('10');
     await page.getByRole('form', { name: 'Cardio' }).getByRole('button', { name: 'Valider' }).click();
     await expectClean(page, 'Séance à 360 px');
@@ -360,7 +367,7 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
     const restore = await largeText(page);
     await expectClean(page, 'Séance, texte agrandi', 1.15);
     await restore();
-    await page.getByRole('link', { name: '+ Ajouter un exercice' }).click();
+    await page.getByRole('link', { name: 'Ajouter un exercice' }).click();
     await expect(page.getByRole('searchbox', { name: 'Rechercher un exercice' })).toBeVisible();
     await expectClean(page, 'Ajout d’un exercice');
   });

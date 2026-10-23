@@ -1,3 +1,4 @@
+import { goHome, leaveTo, push, replace } from './navigation';
 import { useEffect, useState } from 'react';
 
 /** Route courante, en routage par hash (compatible hébergement statique, §21). */
@@ -12,8 +13,26 @@ export function useHashRoute(): string[] {
   return route;
 }
 
+/** Adresse d'un écran : `routeHash('exercice', id)` → « #/exercice/<id> ». */
+export function routeHash(...parts: string[]): string {
+  return `#/${parts.filter((p) => p !== '').map(encodeURIComponent).join('/')}`;
+}
+
+/** Ouvre un écran par-dessus l'écran courant (« retour » y ramène) ; `navigate('')` revient à l'onglet Séance. */
 export function navigate(...parts: string[]): void {
-  window.location.hash = `#/${parts.map(encodeURIComponent).join('/')}`;
+  const hash = routeHash(...parts);
+  if (hash === '#/') goHome();
+  else push(hash);
+}
+
+/** Remplace l'écran courant, sans nouvelle entrée dans l'historique. */
+export function navigateReplace(...parts: string[]): void {
+  replace(routeHash(...parts));
+}
+
+/** Quitte l'écran courant vers un écran d'où l'on vient (voir `leaveTo`). */
+export function navigateBack(...parts: string[]): void {
+  leaveTo(routeHash(...parts));
 }
 
 /** Heure courante rafraîchie périodiquement, et immédiatement au retour au premier plan. */

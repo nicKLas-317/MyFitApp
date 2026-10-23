@@ -1,11 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
-import { activeSession, addExercise, doExercise, finishSession, readSessions, startSession, validateSets, cardAction, finishSheet } from './helpers';
+import { activeSession, addExercise, doExercise, finishSession, readSessions, startSession, validateSets, cardAction, finishSheet, openScreen } from './helpers';
 
 const cardioForm = (page: Page) => page.getByRole('form', { name: 'Cardio' });
 
 /** Machine, inclinaison si tapis, durée, valider. */
 async function addCardio(page: Page, machine: string, minutes: string, incline?: string): Promise<void> {
-  await page.getByRole('button', { name: '+ Ajouter du cardio' }).click();
+  await page.getByRole('button', { name: 'Ajouter du cardio' }).click();
   const form = cardioForm(page);
   await form.getByRole('button', { name: machine, exact: true }).click();
   if (incline) await form.getByRole('button', { name: incline, exact: true }).click();
@@ -20,7 +20,7 @@ test.describe('Cardio', () => {
   test('114. Séance avec un exercice et deux blocs de cardio : saisie, rechargement, récapitulatif, historique et accueil', async ({ page }) => {
     await startSession(page);
     // Cardio au début de la séance : l'inclinaison n'est proposée que pour le tapis, Neutre par défaut.
-    await page.getByRole('button', { name: '+ Ajouter du cardio' }).click();
+    await page.getByRole('button', { name: 'Ajouter du cardio' }).click();
     await expect(cardioForm(page).getByRole('button', { name: 'Neutre' })).toHaveAttribute('aria-pressed', 'true');
     await cardioForm(page).getByRole('button', { name: 'Rameur' }).click();
     await expect(cardioForm(page).getByText('Inclinaison')).toBeHidden();
@@ -51,12 +51,13 @@ test.describe('Cardio', () => {
     await expect(texts).toHaveText(['Tapis de marche · inclinaison haute · 20 min', 'Rameur · 15 min']);
     await expect(page.locator('.recap-item').first()).toContainText('Pec deck');
     await page.getByRole('button', { name: 'Garder ce nom' }).click();
+    await expect(page.getByRole('button', { name: 'Démarrer une séance' })).toBeVisible();
 
     await expect(recapTitle(page)).toContainText(/1\s+séance · 35\s+min\s+de cardio/);
     // Le cardio n'entre dans aucun groupe : seuls les pectoraux sont comptés.
     await expect(page.locator('.recap-cell:not([data-color="vert"])')).toHaveCount(1);
 
-    await page.getByRole('link', { name: 'Historique' }).click();
+    await openScreen(page, 'Historique');
     await expect(page.locator('.pick-meta')).toContainText('1 ex. · 35 min cardio');
     await page.locator('.session-link').click();
     await expect(texts).toHaveText(['Tapis de marche · inclinaison haute · 20 min', 'Rameur · 15 min']);
@@ -87,13 +88,14 @@ test.describe('Cardio', () => {
     await page.getByRole('button', { name: 'Oui, terminer' }).click();
     await expect(page.getByTestId('cardio-text')).toHaveText(['Vélo elliptique · 25 min']);
     await page.getByRole('button', { name: 'Garder ce nom' }).click();
+    await expect(page.getByRole('button', { name: 'Démarrer une séance' })).toBeVisible();
     await expect(recapTitle(page)).toContainText(/1\s+séance · 25\s+min\s+de cardio/);
     await expect(page.locator('.recap-cell:not([data-color="vert"])')).toHaveCount(0);
   });
 
   test('116. Import de notes : « incliné » sans niveau demande de choisir, puis le cardio est importé', async ({ page }) => {
     await page.goto('./');
-    await page.getByRole('link', { name: 'Importer / exporter' }).click();
+    await openScreen(page, 'Importer / exporter');
     await page.getByLabel('Notes de séance ou JSON').fill('Tapis incliné 20 min\nRameur 10 min\nMarche 15 min');
     await page.getByRole('button', { name: 'Analyser' }).click();
     const preview = page.getByRole('region', { name: 'Aperçu de l’import' });
@@ -118,7 +120,7 @@ test.describe('Cardio', () => {
 
   test('117. Les machines se modifient dans les réglages et sont proposées pendant la séance', async ({ page }) => {
     await page.goto('./');
-    await page.getByRole('link', { name: 'Réglages' }).click();
+    await openScreen(page, 'Réglages');
     await page.getByLabel('Nouvelle machine').fill('Vélo droit');
     await page.getByRole('button', { name: 'Ajouter', exact: true }).click();
     await page.getByRole('button', { name: 'Retirer Autre' }).click();
@@ -128,7 +130,7 @@ test.describe('Cardio', () => {
     await page.reload();
     await expect(page.getByLabel('Nom de la machine 5')).toHaveValue('Vélo droit');
     await startSession(page);
-    await page.getByRole('button', { name: '+ Ajouter du cardio' }).click();
+    await page.getByRole('button', { name: 'Ajouter du cardio' }).click();
     await expect(cardioForm(page).locator('.chip')).toHaveText(['Tapis de marche', 'Rameur', 'Vélo elliptique', 'Vélo', 'Vélo droit', 'Neutre', 'Moyenne', 'Haute']);
   });
 
@@ -184,7 +186,7 @@ test.describe('Cardio', () => {
     await startSession(page);
     const card = await addExercise(page, 'pec deck', 'Pec deck', '30');
     await doExercise(card, 3, 'Bien');
-    await page.getByRole('button', { name: '+ Ajouter du cardio' }).click();
+    await page.getByRole('button', { name: 'Ajouter du cardio' }).click();
     await cardioForm(page).getByRole('button', { name: 'Vélo elliptique', exact: true }).click();
     await cardioForm(page).getByLabel('Durée (min)').fill('0');
 
@@ -208,8 +210,9 @@ test.describe('Cardio', () => {
 
     // Formulaire ouvert mais vide : la fin est inchangée.
     await page.getByRole('button', { name: 'Garder ce nom' }).click();
+    await expect(page.getByRole('button', { name: 'Démarrer une séance' })).toBeVisible();
     await startSession(page);
-    await page.getByRole('button', { name: '+ Ajouter du cardio' }).click();
+    await page.getByRole('button', { name: 'Ajouter du cardio' }).click();
     await page.getByRole('button', { name: 'Terminer la séance' }).click();
     await expect(page.getByTestId('unsaved-cardio')).toHaveCount(0);
     await page.getByRole('button', { name: 'Oui, terminer' }).click();

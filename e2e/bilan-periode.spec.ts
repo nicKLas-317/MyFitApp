@@ -56,7 +56,7 @@ const ADDRESS = 'moi@example.org';
 const STATUS_COLORS = ['rgb(74, 222, 128)', 'rgb(253, 186, 116)', 'rgb(252, 165, 165)'];
 
 test.describe('Bilans de la semaine et du mois (§19.7)', () => {
-  test('194. Bandeau le lundi, bilan de la semaine écoulée, envoi par partage natif, copie, navigation, réglages ; format smartphone', async ({ page, context }) => {
+  test('194. Pastille sur l’onglet Progrès et bandeau en haut de l’onglet le lundi, bilan de la semaine écoulée, envoi par partage natif, copie, navigation, réglages ; format smartphone', async ({ page, context }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     // Partage natif simulé : on vérifie l'objet et le texte transmis.
     await page.addInitScript(() => {
@@ -79,21 +79,34 @@ test.describe('Bilans de la semaine et du mois (§19.7)', () => {
     ]);
     await page.reload();
 
-    // Bandeau : semaine écoulée seulement (septembre n'a aucune séance, pas de bandeau du mois).
+    // Onglet Séance : plus de bandeau ; une pastille sur l'onglet Progrès (semaine écoulée seulement : septembre n'a
+    // aucune séance, pas de bilan du mois).
+    const tabs = page.getByRole('navigation', { name: 'Onglets' });
+    const badge = tabs.getByTestId('report-badge');
     const banner = page.locator('.report-banner');
+    await expect(banner).toHaveCount(0);
+    await expect(badge).toHaveCount(1);
+    await expect(tabs.getByRole('link', { name: 'Progrès : bilan prêt' })).toBeVisible();
+    // Le réglage « Signaler le bilan de la semaine » pilote la pastille.
+    await page.goto('./#/reglages');
+    await page.getByLabel('Signaler le bilan de la semaine (pastille sur Progrès)').uncheck();
+    await expect(badge).toHaveCount(0);
+    await page.getByLabel('Signaler le bilan de la semaine (pastille sur Progrès)').check();
+    await expect(badge).toHaveCount(1);
+    // Onglet Progrès : le bandeau, tout en haut.
+    await tabs.getByRole('link', { name: /^Progrès/ }).click();
     await expect(banner).toHaveCount(1);
     await expect(banner).toContainText('Ton bilan de la semaine est prêt');
-    // « Plus tard » : masqué pendant cette ouverture, de retour à la suivante.
+    const [bannerBox, linksBox] = [(await banner.boundingBox())!, (await page.getByRole('navigation', { name: 'Bilans' }).boundingBox())!];
+    expect(bannerBox.y).toBeLessThan(linksBox.y);
+    // « Plus tard » : bandeau et pastille masqués pendant cette ouverture, de retour à la suivante.
     await banner.getByRole('button', { name: 'Plus tard' }).click();
     await expect(banner).toHaveCount(0);
+    await expect(badge).toHaveCount(0);
     await page.reload();
     await expect(banner).toHaveCount(1);
-    // Tout en haut de l'accueil, au-dessus du récapitulatif, qui reste visible sans défilement.
-    const recap = page.getByTestId('weekly-recap');
-    const [bannerBox, recapBox] = [(await banner.boundingBox())!, (await recap.boundingBox())!];
-    expect(bannerBox.y).toBeLessThan(recapBox.y);
-    expect(recapBox.y + recapBox.height).toBeLessThanOrEqual(page.viewportSize()!.height);
-    await test.info().attach('accueil-bandeau', { body: await page.screenshot(), contentType: 'image/png' });
+    await expect(badge).toHaveCount(1);
+    await test.info().attach('progres-bandeau', { body: await page.screenshot(), contentType: 'image/png' });
 
     await banner.getByRole('button', { name: 'Voir' }).click();
     await expect(page).toHaveURL(/#\/bilan-periode\/semaine\/2026-10-19$/);
@@ -151,13 +164,15 @@ test.describe('Bilans de la semaine et du mois (§19.7)', () => {
     await expect(section('Séances')).toContainText('7 séances, +7 par rapport au mois précédent');
     await expect(page.getByRole('button', { name: 'Semaine', exact: true })).toHaveAttribute('aria-pressed', 'false');
 
-    // Bilan ouvert : le bandeau ne revient plus pour cette semaine, même après relance.
-    await page.goto('./#/');
-    await expect(page.getByRole('button', { name: 'Démarrer une séance' })).toBeVisible();
+    // Bilan ouvert : ni bandeau ni pastille pour cette semaine, même après relance.
+    await page.goto('./#/progres');
+    await expect(page.getByRole('heading', { name: 'Progrès' })).toBeVisible();
     await expect(banner).toHaveCount(0);
+    await expect(badge).toHaveCount(0);
     await page.reload();
-    await expect(page.getByRole('button', { name: 'Démarrer une séance' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Progrès' })).toBeVisible();
     await expect(banner).toHaveCount(0);
+    await expect(badge).toHaveCount(0);
 
     // Accès depuis le bilan de progression : semaine en cours vide, donc la semaine écoulée.
     await page.goto('./#/bilan');
@@ -173,10 +188,10 @@ test.describe('Bilans de la semaine et du mois (§19.7)', () => {
     await email.fill(ADDRESS);
     await page.getByRole('button', { name: 'Enregistrer l’adresse' }).click();
     await expect(page.getByText('Adresse enregistrée.')).toBeVisible();
-    await page.getByLabel('Signaler le bilan de la semaine sur l’accueil').uncheck();
+    await page.getByLabel('Signaler le bilan de la semaine (pastille sur Progrès)').uncheck();
     await page.reload();
-    await expect(page.getByLabel('Signaler le bilan de la semaine sur l’accueil')).not.toBeChecked();
-    await expect(page.getByLabel('Signaler le bilan du mois sur l’accueil')).toBeChecked();
+    await expect(page.getByLabel('Signaler le bilan de la semaine (pastille sur Progrès)')).not.toBeChecked();
+    await expect(page.getByLabel('Signaler le bilan du mois (pastille sur Progrès)')).toBeChecked();
     await expect(email).toHaveValue(ADDRESS);
     await page.goto('./#/bilan-periode/semaine/2026-10-19');
     await expect(page.getByRole('button', { name: `Mail à ${ADDRESS}` })).toBeVisible();
