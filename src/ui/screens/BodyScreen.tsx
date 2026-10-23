@@ -1,7 +1,7 @@
 import { useId, useMemo, useState } from 'react';
 import { useBody } from '../../body/store';
 import { availablePeriods, inPeriod, parseWeighIn, type Period, type WeighIn, type WeighInError } from '../../body/model';
-import { formatIsoDay, formatKg, localDate } from '../../session/format';
+import { formatKg, formatShortDate, localDate } from '../../session/format';
 import { LineChart } from '../LineChart';
 
 const ERRORS: Record<WeighInError, string> = {
@@ -56,10 +56,14 @@ export function BodyScreen() {
               </p>
             )}
             <p className="muted small height-line">
-              Taille : {data.heightCm ? `${data.heightCm} cm` : 'non renseignée'} ·{' '}
-              <a className="link" href="#/reglages">
-                modifier dans les réglages
-              </a>
+              <span>
+                <span>Taille : {data.heightCm ? `${data.heightCm} cm` : 'non renseignée'}</span>
+                <span className="height-link">
+                  <a className="link" href="#/reglages">
+                    modifier dans les réglages
+                  </a>
+                </span>
+              </span>
             </p>
           </section>
 
@@ -109,7 +113,7 @@ export function BodyScreen() {
                       />
                     ) : (
                       <>
-                        <span className="history-date">{formatIsoDay(w.date)}</span>
+                        <span className="history-date">{formatShortDate(w.date)}</span>
                         <span className="weigh-value">
                           <span>{formatKg(w.weightKg)}</span>
                           <button type="button" className="link" onClick={() => setEditing(w.date)}>

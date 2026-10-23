@@ -245,4 +245,57 @@ test.describe('Écrans au calme allégés (version 1.21.0)', () => {
     await machines.getByRole('button', { name: 'Annuler' }).click();
     await expect(machines.locator('.machine-row input')).toHaveCount(5);
   });
+
+  test('236. Mon poids : date courte, une pesée par ligne à 412 et 360 px ; « Taille » sans séparateur isolé quand le lien passe à la ligne', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-22T19:30:00'));
+    await page.goto('./');
+    await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
+    const dates = ['06-02', '06-16', '06-30', '07-14', '07-28', '08-11', '08-25', '09-08', '09-22', '10-06', '10-20'];
+    await page.evaluate(
+      (weights) =>
+        new Promise<void>((resolve, reject) => {
+          const open = indexedDB.open('myfitapp-corps');
+          open.onsuccess = () => {
+            const tx = open.result.transaction(['weighIns', 'meta'], 'readwrite');
+            for (const w of weights) tx.objectStore('weighIns').put(w);
+            tx.objectStore('meta').put(178, 'heightCm');
+            tx.oncomplete = () => (open.result.close(), resolve());
+            tx.onerror = () => reject(tx.error);
+          };
+        }),
+      dates.map((d, i) => ({ date: `2026-${d}`, weightKg: Math.round((80.4 - i * 0.3) * 10) / 10 })),
+    );
+    await page.goto('./#/poids');
+    await page.reload();
+    const rows = page.getByRole('list', { name: 'Historique des pesées' }).getByRole('listitem');
+    await expect(rows).toHaveCount(11);
+    await expect(rows.locator('.history-date')).toContainText(['20 oct. 2026', '6 oct. 2026', '22 sept. 2026', '8 sept. 2026', '25 août 2026', '11 août 2026', '28 juil. 2026']);
+
+    /** Pesées dont le poids et « Corriger » sont passés sous la date. */
+    const wrapped = () =>
+      rows.evaluateAll((els) =>
+        els.filter((li) => {
+          const [date, value] = [li.querySelector('.history-date')!, li.querySelector('.weigh-value')!].map((e) => e.getBoundingClientRect());
+          return value!.top >= date!.bottom - 1;
+        }).map((li) => li.querySelector('.history-date')!.textContent),
+      );
+    /** Séparateur « · » devant le lien : visible (dans la ligne) ou rogné (hors du bord gauche). */
+    const separator = () =>
+      page.locator('.height-line').evaluate((p) => {
+        const [label, link] = [...p.querySelectorAll(':scope > span > span')].map((e) => e.getBoundingClientRect());
+        return { sameLine: link!.top < label!.bottom && label!.top < link!.bottom, visible: link!.left >= p.getBoundingClientRect().left };
+      });
+
+    await atWidths(page, async (where) => {
+      if (!where.includes('115')) expect(await wrapped(), where).toEqual([]);
+      const sep = await separator();
+      // Sur la même ligne, le « · » sépare ; quand le lien passe à la ligne, il n'est jamais visible.
+      expect(sep.visible, where).toBe(sep.sameLine);
+    });
+    await page.setViewportSize({ width: 412, height: 915 });
+    expect((await separator()).sameLine).toBe(true);
+    await page.setViewportSize({ width: 360, height: 800 });
+    expect(await separator()).toEqual({ sameLine: false, visible: false });
+  });
 });
+

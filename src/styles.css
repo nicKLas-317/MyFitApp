@@ -1669,25 +1669,36 @@ fieldset {
 }
 
 /* Date entière à gauche ; poids et « Corriger » ensemble à droite, ou dessous si la place manque. */
+/*
+ * Une ligne par pesée, même à 360 px avec le texte agrandi : date courte (« 22 sept. 2026 »), poids en gras, écarts
+ * minimaux de 8 px. Si la place manque malgré tout, poids et « Corriger » passent sous la date.
+ */
 .weigh-in {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0 var(--space-2);
+  gap: 0 var(--space-1);
   min-height: var(--tap);
 }
 
 .weigh-in .history-date {
+  font-weight: 400;
   white-space: nowrap;
 }
 
 .weigh-value {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-1);
   margin-left: auto;
   white-space: nowrap;
+  font-weight: 600;
+}
+
+.weigh-value .link {
+  font-size: var(--fs-2);
+  font-weight: 400;
 }
 
 /* Date et poids côte à côte, l'un sous l'autre si l'écran est étroit ou le texte agrandi. */
@@ -1710,8 +1721,29 @@ fieldset {
   margin-block: var(--space-1);
 }
 
+/*
+ * « Taille : 178 cm · modifier dans les réglages » : le séparateur précède le lien ; quand le lien passe à la ligne,
+ * le séparateur se retrouve en début de ligne, hors du cadre visible (décalage de la ligne, rogné), jamais isolé en
+ * fin de ligne. La marge de rognage garde le contour de focus visible.
+ */
 .height-line {
   margin: var(--space-1) 0 0;
+  overflow: clip;
+  overflow-clip-margin: 4px;
+}
+
+.height-line > span {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-left: -1.5em;
+}
+
+.height-line > span > span::before {
+  content: '·' / '';
+  display: inline-block;
+  width: 1.5em;
+  text-align: center;
 }
 
 .period-chips {

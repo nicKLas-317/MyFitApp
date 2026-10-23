@@ -70,6 +70,14 @@ export function formatShortDay(date: string): string {
   return SHORT_DAY_FORMAT.format(new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1));
 }
 
+const SHORT_DATE_FORMAT = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+
+/** Date YYYY-MM-DD courte avec l'année : « 22 sept. 2026 ». */
+export function formatShortDate(date: string): string {
+  const [y, m, d] = date.split('-').map(Number);
+  return SHORT_DATE_FORMAT.format(new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1));
+}
+
 /** Date courte numérique, « 15/10 » : tient sur une ligne même sur un petit écran. */
 export function formatNumericDay(date: string): string {
   const [, m, d] = date.split('-');
