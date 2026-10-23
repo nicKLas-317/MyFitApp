@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import type { Session } from '../src/domain/types';
 import { simulatedHistory } from '../src/analysis/__tests__/simulation';
-import { addExercise, cardAction, doExercise, finishSheet, readSessions, startSession, validateSets, writeSessions } from './helpers';
+import { activeSession, addExercise, cardAction, doExercise, finishSheet, readSessions, startSession, validateSets, writeSessions } from './helpers';
 
 /** Fond d'un bouton principal (bleu) et cadre neutre. */
 const ACCENT = 'rgb(91, 157, 255)';
@@ -22,6 +22,11 @@ async function seed(page: Page, sessions: Session[]): Promise<void> {
   await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
   await writeSessions(page, sessions);
   await page.reload();
+}
+
+/** Répétitions préremplies de chaque série (série en cours et séries à venir), dans l'ordre. */
+function prefilled(card: Locator): Promise<string[]> {
+  return card.locator('.sets li').evaluateAll((rows) => rows.map((li) => (li.querySelector('output') ?? li.querySelector('.muted'))?.textContent?.trim() ?? ''));
 }
 
 /** Taille de police Android agrandie (simulation) : tout le texte à 115 %. */
@@ -136,7 +141,7 @@ async function expectClean(page: Page, screen: string, scale = 1): Promise<void>
 }
 
 test.describe('Ergonomie de la saisie et harmonisation du style', () => {
-  test('221. Carte ouverte : une seule ligne de cible avec la charge et une courte mention ; « Dernière fois » jamais tronquée, même à 360 px et texte agrandi', async ({ page }) => {
+  test('221. Carte ouverte : une seule ligne de cible avec la charge et une courte mention ; « Dernière fois » jamais tronquée ; poids supérieur saisi : séries préremplies à 8', async ({ page }) => {
     await seed(page, [pecDeck(1, 8, 52.5), pecDeck(3, 8, 52.5)]);
     await startSession(page);
     const card = await addExercise(page, 'pec deck', 'Pec deck');
@@ -167,13 +172,29 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
     await page.goto('./#/seance');
     await cardAction(card, 'Retirer de la séance');
     await card.getByRole('button', { name: 'Oui, retirer' }).click();
-    const up = await addExercise(page, 'pec deck', 'Pec deck');
-    await expect(up.getByTestId('next-target')).toHaveText('3 × 12 à 35 kg');
-    await expect(up.getByTestId('progress-marker')).toHaveText('↑ Poids supérieur → 3 × 8');
-    await up.getByLabel('Poids (kg)').fill('40');
-    await up.getByLabel('Poids (kg)').press('Enter');
-    await expect(up.getByTestId('next-target')).toHaveText('3 × 8 à 40 kg');
-    await expect(up.getByTestId('progress-marker')).toHaveCount(0);
+    // Un poids supérieur saisi : cible 3 × 8 à ce poids, séries préremplies à 8 (§7.7), même si « − » a été touché avant.
+    for (const touched of [false, true]) {
+      const up = await addExercise(page, 'pec deck', 'Pec deck');
+      await expect(up.getByTestId('next-target')).toHaveText('3 × 12 à 35 kg');
+      await expect(up.getByTestId('progress-marker')).toHaveText('↑ Poids supérieur → 3 × 8');
+      expect(await prefilled(up)).toEqual(['12', '12', '12']);
+      if (touched) {
+        await up.getByRole('button', { name: 'Répétitions série 1 : moins' }).click();
+        expect(await prefilled(up)).toEqual(['11', '12', '12']);
+      }
+      await up.getByLabel('Poids (kg)').fill('40');
+      await up.getByLabel('Poids (kg)').press('Enter');
+      await expect(up.getByTestId('next-target')).toHaveText('3 × 8 à 40 kg');
+      await expect(up.getByTestId('progress-marker')).toHaveCount(0);
+      await expect.poll(() => prefilled(up), touched ? '« − » touché avant' : '').toEqual(['8', '8', '8']);
+      await expect.poll(async () => (await activeSession(page)).performances[0]).toMatchObject({ weightKg: 40, targetReps: 8, plannedSets: 3 });
+      // La série validée vaut 8.
+      await up.getByRole('button', { name: 'Valider' }).click();
+      await expect.poll(async () => (await activeSession(page)).performances[0]?.reps).toEqual([8]);
+      await cardAction(up, 'Retirer de la séance');
+      await up.getByRole('button', { name: 'Oui, retirer' }).click();
+      await expect(up).toBeHidden();
+    }
   });
 
   test('222. Menu « ⋯ » de la carte : ajuster, voir la fiche, retirer avec confirmation ; ligne de série à 360 px', async ({ page }) => {
