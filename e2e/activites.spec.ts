@@ -152,9 +152,18 @@ test.describe('Activités habituelles hors salle', () => {
     await expect(banner(page)).toContainText('Tennis mercredi soir (19 h – 20 h 30)');
   });
 
-  test('240. Activité ponctuelle : « + Activité » discret sur l’onglet Séance, activité connue (habitude désactivée comprise) ou nouveau nom, date, durée et groupes préremplis ; comptée comme une activité confirmée ; habitudes inchangées ; format smartphone', async ({ page }) => {
+  test('240. Activité ponctuelle : « + Activité » discret sur l’onglet Séance, activité connue (hors habitude active en tête et présélectionnée, habitude désactivée comprise) ou nouveau nom, date, durée et groupes préremplis ; comptée comme une activité confirmée ; habitudes inchangées ; format smartphone', async ({ page }) => {
+    // Seul le badminton (habitude active) est connu : proposé, mais jamais présélectionné.
+    await openAt(page, '2026-10-23', '12:00');
+    await page.getByRole('button', { name: '+ Activité' }).click();
+    const only = page.getByRole('form', { name: 'Activité ponctuelle' });
+    await expect(only.getByRole('group', { name: 'Activité' }).getByRole('button')).toHaveText(['Badminton', 'Autre']);
+    await expect(only.getByRole('group', { name: 'Activité' }).getByRole('button', { pressed: true })).toHaveCount(0);
+    await only.getByRole('button', { name: 'Enregistrer l’activité' }).click();
+    await expect(only.getByRole('alert')).toHaveText('Choisissez une activité.');
+
     // Futsal : habitude désactivée (jambes), donc jamais de question.
-    await openAt(page, '2026-10-23', '12:00', './#/reglages');
+    await page.goto('./#/reglages');
     const habits = await openSettingsSection(page, 'Activités habituelles');
     await habits.getByLabel('Nouvelle activité').fill('Futsal');
     await habits.getByRole('button', { name: 'Ajouter l’activité' }).click();
@@ -177,8 +186,9 @@ test.describe('Activités habituelles hors salle', () => {
     await add.click();
     const form = page.getByRole('form', { name: 'Activité ponctuelle' });
     const choices = form.getByRole('group', { name: 'Activité' });
-    await expect(choices.getByRole('button')).toHaveText(['Badminton', 'Futsal', 'Autre']);
-    await choices.getByRole('button', { name: 'Futsal' }).click();
+    // Futsal (hors habitude active) en tête et présélectionné ; le badminton (habitude active) ensuite.
+    await expect(choices.getByRole('button')).toHaveText(['Futsal', 'Badminton', 'Autre']);
+    await expect(choices.getByRole('button', { pressed: true })).toHaveText(['Futsal']);
     // Préremplie d'après l'habitude : durée (20 h – 21 h) et groupes ; date du jour.
     await expect(form.getByLabel('Date')).toHaveValue('2026-10-23');
     await expect(form.getByLabel('Durée (min)')).toHaveValue('60');
@@ -202,7 +212,8 @@ test.describe('Activités habituelles hors salle', () => {
     await expect(recapCell(page, 'jambes')).toContainText('aujourd’hui');
     await expect(banner(page)).toContainText('Badminton lundi soir');
 
-    // Deuxième saisie : le futsal en tête, prérempli d'après la dernière fois ; nouveau nom avec « Autre ».
+    // Deuxième saisie : le futsal en tête, présélectionné et prérempli d'après la dernière fois (2 appuis :
+    // « + Activité », « Enregistrer l'activité ») ; nouveau nom avec « Autre ».
     await add.click();
     await expect(choices.getByRole('button')).toHaveText(['Futsal', 'Badminton', 'Autre']);
     await expect(choices.getByRole('button', { name: 'Futsal' })).toHaveAttribute('aria-pressed', 'true');
@@ -221,6 +232,11 @@ test.describe('Activités habituelles hors salle', () => {
     await expect(page.getByRole('status').filter({ hasText: 'Activité enregistrée' })).toHaveText('Activité enregistrée : Escalade · 1 h 30, 21 oct. 2026.');
     await expect(recapTitle(page)).toContainText(/0\s+séance · 2\s+activités/);
     await expect(recapCell(page, 'dos')).toContainText(/\+1\s+indirect/);
+    // Hors habitude active, la plus récente en tête (futsal du 23, escalade du 21), puis le badminton.
+    await add.click();
+    await expect(choices.getByRole('button')).toHaveText(['Futsal', 'Escalade', 'Badminton', 'Autre']);
+    await expect(choices.getByRole('button', { pressed: true })).toHaveText(['Futsal']);
+    await form.getByRole('button', { name: 'Annuler' }).click();
 
     // Après relance : toujours là ; historique (ligne compacte, détail sans heures) et bilan de la semaine.
     await page.reload();

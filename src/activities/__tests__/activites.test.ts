@@ -211,19 +211,24 @@ describe('Activités ponctuelles (« + Activité »)', () => {
     return r.record;
   };
 
-  it('238. Activités proposées (dernière fois, puis habitudes même désactivées), préremplissage, rattachement à l’habitude, contrôles', () => {
-    // Sans rien d'enregistré : les habitudes, désactivées comprises, avec leurs groupes et leur durée.
+  it('238. Activités proposées (hors habitude active d’abord, la plus récente en tête, puis habitudes actives), préremplissage, rattachement à l’habitude, contrôles', () => {
+    // Sans rien d'enregistré : d'abord les activités hors habitude active (futsal, habitude désactivée), puis les
+    // habitudes actives (badminton), jamais présélectionnées ; groupes et durée de l'habitude.
     expect(knownActivities([BADMINTON, FUTSAL], [])).toEqual([
-      { name: 'Badminton', groups: ['epaules', 'jambes'], minutes: 90 },
-      { name: 'Futsal', groups: ['jambes'], minutes: 60 },
+      { name: 'Futsal', groups: ['jambes'], minutes: 60, habitual: false },
+      { name: 'Badminton', groups: ['epaules', 'jambes'], minutes: 90, habitual: true },
     ]);
-    // La dernière fois l'emporte (groupes et durée), la plus récente en tête ; un nom nouveau saisi une fois est proposé ensuite.
-    const records = [badminton('2026-10-19'), futsal('2026-10-16', 75, ['jambes', 'abdominaux']), { ...futsal('2026-10-22', 50), name: 'Tennis', id: 'act-ponctuelle-tennis-2026-10-22', habitId: 'ponctuelle-tennis' }];
+    expect(knownActivities([BADMINTON], []).map((a) => a.habitual)).toEqual([true]);
+    // La dernière fois l'emporte (groupes et durée) ; hors habitude active, la plus récente en tête, même si un badminton
+    // est plus récent ; un nom nouveau saisi une fois est proposé ensuite.
+    const records = [badminton('2026-10-19'), futsal('2026-10-16', 75, ['jambes', 'abdominaux']), { ...futsal('2026-10-15', 50), name: 'Tennis', id: 'act-ponctuelle-tennis-2026-10-15', habitId: 'ponctuelle-tennis' }];
     expect(knownActivities([BADMINTON, FUTSAL], records)).toEqual([
-      { name: 'Tennis', groups: ['jambes', 'abdominaux'], minutes: 50 },
-      { name: 'Badminton', groups: ['epaules', 'jambes'], minutes: 90 },
-      { name: 'Futsal', groups: ['jambes', 'abdominaux'], minutes: 75 },
+      { name: 'Futsal', groups: ['jambes', 'abdominaux'], minutes: 75, habitual: false },
+      { name: 'Tennis', groups: ['jambes', 'abdominaux'], minutes: 50, habitual: false },
+      { name: 'Badminton', groups: ['epaules', 'jambes'], minutes: 90, habitual: true },
     ]);
+    // Badminton désactivé (vacances) : plus couvert par une habitude active, il est classé par date comme les autres.
+    expect(knownActivities([{ ...BADMINTON, enabled: false }, FUTSAL], records).map((a) => a.name)).toEqual(['Badminton', 'Futsal', 'Tennis']);
 
     // Activité enregistrée : date choisie, à 0 h 00 (heures inconnues), durée, groupes ; rattachée à l'habitude du même nom.
     const r = futsal('2026-10-23', 75);

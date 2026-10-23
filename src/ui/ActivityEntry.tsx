@@ -68,8 +68,10 @@ interface FormProps {
 function ActivityForm({ known, onCancel, onSave }: FormProps) {
   const id = useId();
   const today = localDate(Date.now());
-  const first = known[0];
-  const [chosen, setChosen] = useState<string | null>(first?.name ?? null);
+  // Présélection : seulement une activité hors habitude active (le futsal), jamais le badminton par erreur.
+  const first = known[0]?.habitual ? undefined : known[0];
+  /** Nom choisi ; `null` : « Autre » (nouveau nom) ; `undefined` : rien de choisi. */
+  const [chosen, setChosen] = useState<string | null | undefined>(known.length === 0 ? null : first?.name);
   const [name, setName] = useState('');
   const [date, setDate] = useState(today);
   const [minutes, setMinutes] = useState(first ? String(first.minutes) : '');
@@ -86,6 +88,7 @@ function ActivityForm({ known, onCancel, onSave }: FormProps) {
   async function submit() {
     const text = minutes.trim();
     const value = /^\d+$/.test(text) ? Number(text) : NaN;
+    if (chosen === undefined) return setErrors(['Choisissez une activité.']);
     setErrors(await onSave({ name: chosen ?? name, date, minutes: value, groups }));
   }
 

@@ -220,23 +220,28 @@ export interface KnownActivity {
   name: string;
   groups: MuscleGroup[];
   minutes: number;
+  /** Couverte par une habitude active (badminton) : déjà demandée chaque semaine, jamais présélectionnée. */
+  habitual: boolean;
 }
 
 /**
- * Activités proposées à la saisie : celles déjà enregistrées, de la plus récente à la plus ancienne, puis les
- * habitudes (même désactivées) jamais enregistrées. Préremplissage d'après la dernière fois, sinon d'après l'habitude.
+ * Activités proposées à la saisie. D'abord celles qui ne sont pas couvertes par une habitude active (futsal, habitude
+ * désactivée ou nom libre) : enregistrées, de la plus récente à la plus ancienne, puis jamais enregistrées ; ensuite les
+ * habitudes actives, dans le même ordre. Préremplissage d'après la dernière fois, sinon d'après l'habitude.
  */
 export function knownActivities(habits: readonly Habit[], records: readonly ActivityRecord[]): KnownActivity[] {
+  const active = new Set(habits.filter((h) => h.enabled).map((h) => normalizeName(h.name)));
   const out = new Map<string, KnownActivity>();
   for (const a of [...doneActivities(records)].sort((x, y) => activityStart(y) - activityStart(x) || y.answeredAt - x.answeredAt)) {
     const key = normalizeName(a.name);
-    if (!out.has(key)) out.set(key, { name: a.name, groups: [...a.groups], minutes: activityMinutes(a) });
+    if (!out.has(key)) out.set(key, { name: a.name, groups: [...a.groups], minutes: activityMinutes(a), habitual: active.has(key) });
   }
   for (const h of habits) {
     const key = normalizeName(h.name);
-    if (!out.has(key) && h.name.trim()) out.set(key, { name: h.name.trim(), groups: [...h.groups], minutes: activityMinutes(h) });
+    if (!out.has(key) && h.name.trim()) out.set(key, { name: h.name.trim(), groups: [...h.groups], minutes: activityMinutes(h), habitual: active.has(key) });
   }
-  return [...out.values()];
+  const list = [...out.values()];
+  return [...list.filter((a) => !a.habitual), ...list.filter((a) => a.habitual)];
 }
 
 /** Durée d'une activité ponctuelle : 1 à 600 minutes entières (comme un bloc de cardio). */
