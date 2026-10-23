@@ -3,7 +3,7 @@ import type { Exercise, Performance, Session } from '../../domain/types';
 import { rebuildProfile } from '../../engine';
 import { buildEngineSettings } from '../../library/catalog';
 import { SEED_EXERCISES } from '../../library/seed';
-import { epley, groupIndex, groupWeeklySets, notEnoughForIndex, notEnoughForSets, performanceIndex } from '../groups';
+import { epley, groupIndex, groupWeeklySets, nearestBodyWeight, notEnoughForIndex, notEnoughForSets, performanceIndex } from '../groups';
 import { simulatedHistory } from './simulation';
 
 /** Sources de l'application, hors tests : aucune ne doit charger les données simulées. */
@@ -63,7 +63,7 @@ describe('Bilan par groupe musculaire', () => {
     expect(values([session(at(10, 5), [['presse-a-cuisses', 100, [8, 8, 8]], ['leg-extension', 40, [8, 8, 8]]])], 'jambes')).toEqual([100]);
   });
 
-  it('211. Exercice assisté : l’indice monte quand l’aide baisse', () => {
+  it('211. Exercice assisté sans pesée : l’indice monte quand l’aide baisse (aide inversée)', () => {
     const first = perf(30, [8, 8, 8]);
     expect(performanceIndex(perf(25, [8, 8, 8]), first, true)).toBeCloseTo(116.67, 2);
     expect(performanceIndex(perf(35, [8, 8, 8]), first, true)).toBeCloseTo(83.33, 2);
@@ -71,6 +71,53 @@ describe('Bilan par groupe musculaire', () => {
     expect(performanceIndex(perf(70, [8, 8, 8]), first, true)).toBe(0);
     // Dans un groupe : dips assistés (triceps), aide de 40 à 35 kg.
     expect(values([session(at(10, 5), [['dips-assistes', 40, [10, 10, 10]]]), session(at(10, 8), [['dips-assistes', 35, [10, 10, 10]]])], 'triceps')).toEqual([100, 112.5]);
+  });
+
+  it('218. Exercice assisté avec pesée : charge réelle = poids du corps − aide, puis Epley comme un exercice classique', () => {
+    const first = perf(30, [8, 8, 8]);
+    const body = { current: 80, first: 80 };
+    expect(performanceIndex(perf(25, [8, 8, 8]), first, true, body)).toBeCloseTo(110, 10); // 55 kg contre 50 kg
+    expect(performanceIndex(perf(35, [8, 8, 8]), first, true, body)).toBeCloseTo(90, 10);
+    expect(performanceIndex(perf(30, [10, 10, 10]), first, true, body)).toBeCloseTo(105.26, 2);
+    expect(performanceIndex(perf(90, [8, 8, 8]), first, true, body)).toBe(0); // aide au-delà du poids du corps : jamais sous 0
+    // Le poids du corps compte : 2 kg perdus à aide égale, la charge réelle baisse.
+    expect(performanceIndex(perf(30, [8, 8, 8]), first, true, { current: 78, first: 80 })).toBeCloseTo(96, 10);
+    // Aide au moins égale au poids du corps à la première séance : retour à l'aide inversée.
+    expect(performanceIndex(perf(70, [8, 8, 8]), perf(80, [8, 8, 8]), true, { current: 80, first: 80 })).toBeCloseTo(112.5, 10);
+    // Un exercice classique ignore les pesées.
+    expect(performanceIndex(perf(45, [8, 8, 8]), perf(40, [8, 8, 8]), false, body)).toBeCloseTo(112.5, 10);
+  });
+
+  it('219. Pesée la plus proche de chaque séance ; sans aucune pesée, méthode de l’aide inversée ; exercices classiques inchangés', () => {
+    const weighIns = [
+      { date: '2026-10-07', weightKg: 76 },
+      { date: '2026-10-01', weightKg: 80 },
+    ];
+    expect(nearestBodyWeight(weighIns, '2026-10-05')).toBe(76); // 2 jours après contre 4 jours avant
+    expect(nearestBodyWeight(weighIns, '2026-10-04')).toBe(80); // à égale distance : la plus ancienne
+    expect(nearestBodyWeight(weighIns, '2026-09-01')).toBe(80);
+    expect(nearestBodyWeight(weighIns, '2026-12-01')).toBe(76);
+    expect(nearestBodyWeight([], '2026-10-04')).toBeNull();
+
+    const dips = [session(at(10, 1), [['dips-assistes', 40, [10, 10, 10]]]), session(at(10, 8), [['dips-assistes', 35, [10, 10, 10]]])];
+    const triceps = (w: { date: string; weightKg: number }[]) => groupIndex(dips, LIB, SETTINGS, 'triceps', w);
+    // Une seule pesée (75 kg) : 35 kg puis 40 kg de charge réelle.
+    expect(triceps([{ date: '2026-09-15', weightKg: 75 }]).points.map((p) => Number(p.value.toFixed(2)))).toEqual([100, 114.29]);
+    // 80 kg le 1er, 74 kg le 8 : 40 kg puis 39 kg de charge réelle, l'indice baisse malgré l'aide en baisse.
+    const twoWeighIns = triceps([{ date: '2026-10-01', weightKg: 80 }, { date: '2026-10-08', weightKg: 74 }]);
+    expect(twoWeighIns.points.map((p) => Number(p.value.toFixed(2)))).toEqual([100, 97.5]);
+    expect(twoWeighIns.assistedMethod).toBe('bodyWeight');
+    // Sans pesée : aide inversée (40 → 35 kg = 112,5).
+    expect(triceps([]).points.map((p) => Number(p.value.toFixed(2)))).toEqual([100, 112.5]);
+    expect(triceps([]).assistedMethod).toBe('inverseAid');
+    // Données simulées : dips de 40 à 27,5 kg d'aide, 78 kg (20 mai) puis 74 kg (15 oct.).
+    const sim = simulatedHistory();
+    const simWeighIns = [{ date: '2026-05-20', weightKg: 78 }, { date: '2026-10-15', weightKg: 74 }];
+    expect(groupIndex(sim, LIB, SETTINGS, 'triceps', simWeighIns).points.at(-1)!.value).toBeCloseTo((100 * 46.5 / 38 + 100) / 2, 6);
+    // Exercices classiques : pesées sans effet, et pas de méthode d'assistance.
+    const pecs = groupIndex(sim, LIB, SETTINGS, 'pectoraux', simWeighIns);
+    expect(pecs).toEqual(groupIndex(sim, LIB, SETTINGS, 'pectoraux'));
+    expect(pecs.assistedMethod).toBeNull();
   });
 
   it('212. Changement de palier de charge : 3×12 puis poids supérieur à 3×8, l’indice continue de monter', () => {

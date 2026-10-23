@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { useApp } from '../../app/store';
+import { useBody } from '../../body/store';
 import { navigate, useNow } from '../../app/hooks';
+import type { WeighIn } from '../../body/model';
 import type { MuscleGroup } from '../../domain/types';
 import { GROUP_VIEW_GROUPS, groupIndex, groupWeeklySets, notEnoughForIndex, notEnoughForSets, SETS_WEEKS } from '../../analysis/groups';
 import { displayName } from '../../library/catalog';
@@ -15,6 +17,8 @@ export function groupOfSegment(segment: string | undefined): MuscleGroup {
   return GROUP_VIEW_GROUPS.find((g) => g === segment) ?? 'pectoraux';
 }
 
+const EMPTY: readonly WeighIn[] = [];
+
 const fmt = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 });
 
 /**
@@ -23,9 +27,11 @@ const fmt = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 
  */
 export function GroupProgress({ group }: { group: MuscleGroup }) {
   const { sessions, exercises, settings, variants } = useApp();
+  const body = useBody();
+  const weighIns = body.status === 'ready' ? body.data.weighIns : EMPTY;
   const now = useNow(60_000);
   const week = Math.floor(now / 3_600_000);
-  const index = useMemo(() => groupIndex(sessions, exercises, settings, group), [sessions, exercises, settings, group]);
+  const index = useMemo(() => groupIndex(sessions, exercises, settings, group, weighIns), [sessions, exercises, settings, group, weighIns]);
   const sets = useMemo(() => groupWeeklySets(sessions, exercises, group, Date.now()), [sessions, exercises, group, week]);
   const label = MUSCLE_GROUP_LABELS[group];
   const last = index.points.at(-1);
@@ -62,6 +68,13 @@ export function GroupProgress({ group }: { group: MuscleGroup }) {
               <p className="muted small" data-testid="index-exercises">
                 {index.variantIds.map((id) => displayName(variants.get(id))).join(' · ')}
               </p>
+              {index.assistedMethod && (
+                <p className="muted small" data-testid="index-assisted">
+                  {index.assistedMethod === 'bodyWeight'
+                    ? 'Exercices assistés : charge réelle = poids du corps (pesée la plus proche de chaque séance) − aide.'
+                    : 'Exercices assistés : sans pesée dans « Mon poids », la baisse de l’aide compte comme une hausse de charge.'}
+                </p>
+              )}
             </>
           ) : (
             <p className="group-not-enough" data-testid="index-not-enough">

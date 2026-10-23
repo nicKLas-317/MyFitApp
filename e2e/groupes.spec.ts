@@ -26,6 +26,28 @@ async function open(page: Page, now: string, until: string): Promise<void> {
   await expect(page.getByRole('heading', { name: 'Par groupe musculaire' })).toBeVisible();
 }
 
+/** Pesées de « Mon poids », écrites dans la base du suivi corporel. */
+function writeWeighIns(page: Page, weighIns: { date: string; weightKg: number }[]): Promise<void> {
+  return page.evaluate(
+    (list) =>
+      new Promise<void>((resolve, reject) => {
+        const open = indexedDB.open('myfitapp-corps');
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const db = open.result;
+          const tx = db.transaction('weighIns', 'readwrite');
+          for (const w of list) tx.objectStore('weighIns').put(w);
+          tx.oncomplete = () => {
+            db.close();
+            resolve();
+          };
+          tx.onerror = () => reject(tx.error);
+        };
+      }),
+    weighIns,
+  );
+}
+
 const indexSection = (page: Page) => page.getByRole('region', { name: 'Indice de progression' });
 const setsSection = (page: Page) => page.getByRole('region', { name: 'Séries par semaine' });
 
@@ -70,6 +92,9 @@ test.describe('Bilan par groupe musculaire', () => {
     await page.getByRole('button', { name: 'Triceps' }).click();
     await expect(indexSection(page).getByTestId('index-last')).toHaveText('Triceps : 115,6');
     await expect(indexSection(page).getByTestId('index-exercises')).toHaveText('Dips assistés · Extension triceps poulie — Corde');
+    await expect(indexSection(page).getByTestId('index-assisted')).toHaveText(
+      'Exercices assistés : sans pesée dans « Mon poids », la baisse de l’aide compte comme une hausse de charge.',
+    );
     await noOverflow(page);
     await test.info().attach('groupe-triceps', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
   });
@@ -102,5 +127,28 @@ test.describe('Bilan par groupe musculaire', () => {
     await page.reload();
     await expect(indexSection(page).getByTestId('chart-index')).toHaveAttribute('data-points', '6');
     await expect(indexSection(page).getByTestId('index-not-enough')).toHaveCount(0);
+  });
+
+  test('220. Exercice assisté avec des pesées : charge réelle = poids du corps − aide (pesée la plus proche), sans pesée : aide inversée', async ({ page }) => {
+    await open(page, '2026-10-22T20:00:00', '2026-10-22');
+    await page.getByRole('button', { name: 'Triceps' }).click();
+    await expect(indexSection(page).getByTestId('index-last')).toHaveText('Triceps : 115,6');
+    // 78 kg le 20 mai, 74 kg le 15 octobre : dips de 40 kg d'aide (38 kg réels) à 27,5 kg (46,5 kg réels).
+    await writeWeighIns(page, [
+      { date: '2026-05-20', weightKg: 78 },
+      { date: '2026-10-15', weightKg: 74 },
+    ]);
+    await page.reload();
+    await expect(indexSection(page).getByTestId('index-last')).toHaveText('Triceps : 111,2');
+    await expect(indexSection(page).getByTestId('index-assisted')).toHaveText(
+      'Exercices assistés : charge réelle = poids du corps (pesée la plus proche de chaque séance) − aide.',
+    );
+    // Exercices classiques : les pesées ne changent rien, pas de mention.
+    await page.getByRole('button', { name: 'Pectoraux' }).click();
+    await expect(indexSection(page).getByTestId('index-last')).toHaveText('Pectoraux : 123,6');
+    await expect(indexSection(page).getByTestId('index-assisted')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Triceps' }).click();
+    await noOverflow(page);
+    await test.info().attach('groupe-triceps-pesees', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
   });
 });

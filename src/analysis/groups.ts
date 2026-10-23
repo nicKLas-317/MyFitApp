@@ -4,6 +4,7 @@
  * Les charges brutes de deux exercices différents ne sont jamais additionnées ni moyennées : chaque exercice-variante
  * est rapporté à sa propre première séance, et seuls ces indices sont moyennés. Ni cardio ni activités habituelles.
  */
+import type { WeighIn } from '../body/model';
 import type { Exercise, MuscleGroup, Performance, Session } from '../domain/types';
 import { resolveConfig, sortSessions, type EngineSettings } from '../engine';
 import { localDate } from '../session/format';
@@ -38,14 +39,39 @@ function usable(p: Performance): boolean {
   return !p.partial && p.reps.length > 0 && p.weightKg > 0;
 }
 
+/** Poids du corps (kg) de la pesée la plus proche d'une date « YYYY-MM-DD » ; à égale distance, la plus ancienne. */
+export function nearestBodyWeight(weighIns: readonly WeighIn[], date: string): number | null {
+  const day = (d: string) => Date.parse(`${d}T00:00:00Z`) / 86_400_000;
+  let best: WeighIn | null = null;
+  for (const w of weighIns) {
+    const gap = Math.abs(day(w.date) - day(date));
+    const bestGap = best ? Math.abs(day(best.date) - day(date)) : Infinity;
+    if (gap < bestGap || (gap === bestGap && best && w.date < best.date)) best = w;
+  }
+  return best?.weightKg ?? null;
+}
+
+/** Poids du corps à la date de la performance et à celle de la première séance de l'exercice-variante. */
+export interface BodyWeights {
+  current: number;
+  first: number;
+}
+
 /**
  * Indice d'une performance par rapport à la première séance de son exercice-variante (= 100).
- * Exercice assisté (§7.12) : la charge est une aide, et moins d'aide est plus dur. Sans poids du corps connu, la
- * variation relative de l'aide est inversée : 30 → 25 kg d'aide (−17 %) donne +17 %, comme 30 → 35 kg pour un
- * exercice classique ; l'effet des répétitions (Epley) reste le même. L'indice ne descend pas sous 0.
+ * Exercice assisté (§7.12) : la charge est une aide, et moins d'aide est plus dur.
+ * - Avec une pesée (`body`) : charge réelle = poids du corps (pesée la plus proche de chaque séance) − aide, puis
+ *   Epley comme pour un exercice classique. Une aide au moins égale au poids du corps à la première séance n'a pas de
+ *   sens physique : on revient alors à la méthode sans pesée.
+ * - Sans pesée : la variation relative de l'aide est inversée : 30 → 25 kg d'aide (−17 %) donne +17 %, comme
+ *   30 → 35 kg pour un exercice classique ; l'effet des répétitions (Epley) reste le même.
+ * L'indice ne descend pas sous 0.
  */
-export function performanceIndex(p: Performance, first: Performance, assisted: boolean): number {
+export function performanceIndex(p: Performance, first: Performance, assisted: boolean, body?: BodyWeights): number {
   if (!assisted) return 100 * (epley(p.weightKg, worstSet(p)) / epley(first.weightKg, worstSet(first)));
+  if (body && body.first > first.weightKg) {
+    return 100 * (epley(Math.max(0, body.current - p.weightKg), worstSet(p)) / epley(body.first - first.weightKg, worstSet(first)));
+  }
   const repsFactor = epley(1, worstSet(p)) / epley(1, worstSet(first));
   return 100 * Math.max(0, 2 - p.weightKg / first.weightKg) * repsFactor;
 }
@@ -66,28 +92,43 @@ export interface GroupIndex {
   /** Semaines (lundi–dimanche) différentes de ces séances. */
   weekCount: number;
   enough: boolean;
+  /** Méthode appliquée aux exercices assistés du groupe : charge réelle (pesées) ou aide inversée ; null sans assisté. */
+  assistedMethod: 'bodyWeight' | 'inverseAid' | null;
 }
 
 /**
  * Indice de progression d'un groupe : moyenne des indices de ses exercices-variantes (groupe principal seulement),
- * chacun gardant sa dernière valeur connue. Un point par date de séance.
+ * chacun gardant sa dernière valeur connue. Un point par date de séance. Les pesées de « Mon poids » servent aux
+ * exercices assistés (charge réelle = poids du corps − aide) ; sans pesée, l'aide est inversée.
  */
-export function groupIndex(sessions: readonly Session[], exercises: readonly Exercise[], settings: EngineSettings, group: MuscleGroup): GroupIndex {
+export function groupIndex(
+  sessions: readonly Session[],
+  exercises: readonly Exercise[],
+  settings: EngineSettings,
+  group: MuscleGroup,
+  weighIns: readonly WeighIn[] = [],
+): GroupIndex {
   const primary = new Map<string, MuscleGroup>();
   for (const e of exercises) for (const v of e.variants) primary.set(v.id, viewGroup(e.primaryGroup));
-  const first = new Map<string, Performance>();
+  const first = new Map<string, { perf: Performance; date: string }>();
   const last = new Map<string, number>();
   const points: IndexPoint[] = [];
   const weeks = new Set<string>();
   let sessionCount = 0;
+  let hasAssisted = false;
   for (const s of sortSessions(sessions.filter((x) => x.state === 'done'))) {
     const perfs = s.performances.filter((p) => primary.get(p.variantId) === group && usable(p));
     if (perfs.length === 0) continue;
     sessionCount++;
     weeks.add(localDate(weekStart(new Date(sessionStartTime(s))).getTime()));
     for (const p of perfs) {
-      if (!first.has(p.variantId)) first.set(p.variantId, p);
-      last.set(p.variantId, performanceIndex(p, first.get(p.variantId)!, resolveConfig(settings, p.variantId).assisted));
+      if (!first.has(p.variantId)) first.set(p.variantId, { perf: p, date: s.date });
+      const base = first.get(p.variantId)!;
+      const assisted = resolveConfig(settings, p.variantId).assisted;
+      hasAssisted ||= assisted;
+      const current = assisted ? nearestBodyWeight(weighIns, s.date) : null;
+      const body = current === null ? undefined : { current, first: nearestBodyWeight(weighIns, base.date)! };
+      last.set(p.variantId, performanceIndex(p, base.perf, assisted, body));
     }
     const value = [...last.values()].reduce((a, b) => a + b, 0) / last.size;
     // Deux séances le même jour : un seul point, après la seconde.
@@ -100,6 +141,7 @@ export function groupIndex(sessions: readonly Session[], exercises: readonly Exe
     sessionCount,
     weekCount: weeks.size,
     enough: sessionCount >= INDEX_MIN_SESSIONS && weeks.size >= INDEX_MIN_WEEKS,
+    assistedMethod: hasAssisted ? (weighIns.length > 0 ? 'bodyWeight' : 'inverseAid') : null,
   };
 }
 

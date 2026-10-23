@@ -1409,13 +1409,16 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 
 209. Indice : Epley sur la moins bonne série (9-9-8 vaut 8), base 100 à la première séance de l'exercice.
 210. Indice du groupe : moyenne des derniers indices connus de ses exercices, un point par date (deux séances le même jour : un seul point) ; charges brutes jamais mélangées entre exercices.
-211. Exercice assisté : 30 → 25 kg d'aide = 116,7, 30 → 35 kg = 83,3 ; répétitions comptées ; jamais sous 0.
+211. Exercice assisté sans pesée : 30 → 25 kg d'aide = 116,7, 30 → 35 kg = 83,3 ; répétitions comptées ; jamais sous 0.
 212. Changement de palier de charge : 3×12 puis 3×8 au poids supérieur, l'indice continue de monter (100 → 110,53 → 112,5).
 213. Groupe principal seulement (dips assistés hors pectoraux, chest press hors triceps), sous-groupes des jambes dans « jambes », ni historique partiel, ni séance en cours, ni cardio.
 214. Séries par semaine : lundi 0 h 00 – dimanche (dimanche 23 h 30 dans la semaine précédente), 12 semaines, séries réellement enregistrées, indirectes pour moitié.
 215. Seuils et messages (séances, semaines, les deux, singulier) ; séries : 3 semaines ; données simulées : pectoraux en progression continue, dos à 100, épaules en baisse, triceps en hausse, semaines vides ; moteur inchangé ; fixture jamais chargée par l'application.
 216. (bout en bout, format smartphone) Données simulées : accès depuis le bilan, pectoraux par défaut (123,6, 17 points, 12 barres avec les semaines vides), courbe et barres cyan, indirectes plus claires, aucune couleur de statut ; épaules en jaune (82,9) ; dos 100 ; triceps 115,6 avec les dips assistés ; rien ne dépasse à 412, 360 et 320 px.
 217. (bout en bout) Historique court : « 3 séances sur 6 nécessaires. » à la place de l'indice, barres affichées ; biceps : séances et semaines manquantes, message des séries ; le graphique apparaît dès six séances.
+218. Exercice assisté avec pesée : charge réelle = poids du corps − aide, Epley (80 kg, 30 → 25 kg d'aide = 110) ; le poids du corps compte (2 kg perdus à aide égale = 96) ; jamais sous 0 ; aide au moins égale au poids du corps à la première séance : aide inversée ; exercice classique sans effet.
+219. Pesée la plus proche de chaque séance (avant ou après, la plus ancienne à égale distance) ; une perte de poids peut faire baisser l'indice malgré une aide en baisse ; sans aucune pesée, aide inversée ; exercices classiques identiques avec ou sans pesées.
+220. (bout en bout) Données simulées, triceps : 115,6 sans pesée (mention de l'aide inversée), 111,2 avec des pesées à 78 puis 74 kg (mention de la charge réelle) ; pectoraux inchangés (123,6), sans mention ; rien ne dépasse à 412, 360 et 320 px.
 
 Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
 
@@ -1664,7 +1667,10 @@ Vue secondaire (`#/bilan-groupes/<groupe>`), accessible depuis le bilan de progr
 **Indice de progression (base 100)**
 
 - Pour chaque exercice-variante dont le groupe est le groupe **principal** (un groupe secondaire est ignoré) : force estimée à chaque séance par la formule d'Epley, charge × (1 + répétitions / 30), sur la **moins bonne série** ; exprimée en pourcentage de sa première séance (= 100). Historique partiel ignoré.
-- Exercice assisté (§7.12), sans poids du corps connu (choix signalé) : la variation relative de l'aide est inversée, indice = 100 × (2 − aide ÷ aide de la première séance) × l'effet des répétitions (Epley) ; 30 → 25 kg d'aide donne 116,7, comme 30 → 35 kg pour un exercice classique. Jamais sous 0.
+- Exercice assisté (§7.12) :
+  - quand au moins une pesée existe dans « Mon poids » (§20) : charge réelle = poids du corps − aide, avec la pesée la plus proche de la date de chaque séance (à égale distance, la plus ancienne), puis Epley comme pour un exercice classique (80 kg, 30 → 25 kg d'aide : 50 → 55 kg réels, 110). Seule lecture des pesées : le suivi corporel n'en est pas modifié. Une aide au moins égale au poids du corps à la première séance (sans sens physique) revient à la méthode sans pesée ;
+  - sans aucune pesée : la variation relative de l'aide est inversée, indice = 100 × (2 − aide ÷ aide de la première séance) × l'effet des répétitions (Epley) ; 30 → 25 kg d'aide donne 116,7, comme 30 → 35 kg pour un exercice classique ;
+  - la méthode appliquée est indiquée sous la liste des exercices ; jamais sous 0.
 - Indice du groupe à une date = moyenne des indices de ses exercices, chacun avec sa dernière valeur connue ; un point par date de séance. Les charges brutes de deux exercices différents ne sont jamais additionnées ni moyennées.
 - Affichage : dernière valeur (« Pectoraux : 123,6 »), courbe dans le temps avec une ligne pointillée à 100, liste des exercices pris en compte.
 
