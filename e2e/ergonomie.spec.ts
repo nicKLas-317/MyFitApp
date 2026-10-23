@@ -351,7 +351,10 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
         ]),
       {
         weights: ['06-02', '06-16', '06-30', '07-14', '07-28', '08-11', '08-25', '09-08', '09-22', '10-06', '10-20'].map((d, i) => ({ date: `2026-${d}`, weightKg: 80.4 - i * 0.3 })),
-        activities: [{ id: 'act-badminton-2026-10-12', habitId: 'badminton', date: '2026-10-12', name: 'Badminton', start: '21:00', end: '22:30', groups: ['epaules', 'jambes'], status: 'done', answeredAt: 0 }],
+        activities: [
+          { id: 'act-badminton-2026-10-12', habitId: 'badminton', date: '2026-10-12', name: 'Badminton', start: '21:00', end: '22:30', groups: ['epaules', 'jambes'], status: 'done', answeredAt: 0 },
+          { id: 'act-ponctuelle-futsal-2026-10-16', habitId: 'ponctuelle-futsal', date: '2026-10-16', name: 'Futsal', start: '00:00', end: '01:00', groups: ['jambes'], status: 'done', answeredAt: 0, oneOff: true },
+        ],
       },
     );
     await page.reload();
@@ -370,6 +373,7 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
         ['Historique', './#/historique'],
         ['Détail de séance', './#/historique/sim-2026-10-19'],
         ['Détail d’une activité', './#/historique/act-badminton-2026-10-12'],
+        ['Détail d’une activité ponctuelle', './#/historique/act-ponctuelle-futsal-2026-10-16'],
         ['Bilan', './#/bilan'],
         ['Bilan de la semaine', './#/bilan-periode/semaine/2026-10-12'],
         ['Bilan du mois', './#/bilan-periode/mois/2026-09'],
@@ -378,6 +382,11 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
         ['Réglages', './#/reglages'],
         ['Données', './#/donnees'],
       ] as const).map(([screen, url]) => [screen, () => page.goto(url).then(() => undefined)] as [string, () => Promise<void>]),
+      ['Accueil, activité ponctuelle ouverte', async () => {
+        await page.goto('./');
+        await page.getByRole('button', { name: '+ Activité' }).click();
+        await page.getByRole('form', { name: 'Activité ponctuelle' }).getByRole('button', { name: 'Autre' }).click();
+      }],
       ['Mon poids, correction et suppression ouvertes', async () => {
         await page.goto('./#/poids');
         const list = page.getByRole('list', { name: 'Historique des pesées' });

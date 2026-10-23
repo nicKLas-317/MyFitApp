@@ -57,6 +57,8 @@ interface AppValue {
   activities: ActivityRecord[];
   /** Répond à la question d'une habitude ; rien d'autre à saisir. */
   answerActivity(occurrence: Occurrence, yes: boolean): Promise<boolean>;
+  /** Enregistre une activité ponctuelle (« + Activité ») ; remplace une réponse « Non » du même jour. */
+  addActivity(record: ActivityRecord): Promise<boolean>;
   /** Supprime une activité confirmée (historique) : la question ne revient pas pour ce jour. */
   removeActivity(id: string): Promise<boolean>;
   /** Machines de cardio proposées à la saisie, modifiables dans les réglages. */
@@ -527,6 +529,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [writeActivities],
   );
 
+  const addActivity = useCallback(
+    (record: ActivityRecord) => writeActivities([...activitiesRef.current.filter((a) => a.id !== record.id), record]),
+    [writeActivities],
+  );
+
   const removeActivity = useCallback(
     (id: string) =>
       writeActivities(activitiesRef.current.map((a) => (a.id === id ? { ...a, status: 'declined' as const, answeredAt: Date.now() } : a))),
@@ -605,6 +612,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setHabits,
     activities,
     answerActivity,
+    addActivity,
     removeActivity,
     cardioMachines,
     setCardioMachines,

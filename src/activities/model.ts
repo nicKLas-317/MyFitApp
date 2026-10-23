@@ -1,6 +1,8 @@
 /**
  * Activités habituelles hors salle (ex. badminton) : une habitude hebdomadaire (jour, heures, groupes sollicités)
  * que l'utilisateur confirme en un geste, « Oui » ou « Non », après l'heure de fin. Aucune saisie.
+ * Activités ponctuelles (ex. futsal de temps en temps) : saisies à la main depuis l'accueil (« + Activité »), sans
+ * question hebdomadaire ; elles comptent ensuite exactement comme une activité habituelle confirmée.
  * Une activité confirmée compte comme travail indirect au récapitulatif et figure dans l'historique et les bilans ;
  * ce n'est pas une séance de salle et elle n'a aucun effet sur le moteur de progression. Fonctions pures.
  */
@@ -42,6 +44,11 @@ export interface ActivityRecord {
   groups: MuscleGroup[];
   status: 'done' | 'declined';
   answeredAt: number;
+  /**
+   * Activité ponctuelle saisie à la main : heures inconnues. Elle est rangée à 0 h 00 de sa date (comme une séance
+   * importée sans heure) et `end` porte sa durée ; les heures ne sont jamais affichées.
+   */
+  oneOff?: true;
 }
 
 export const WEEKDAY_LABELS: Record<Weekday, string> = {
@@ -131,6 +138,7 @@ export function activityErrors(v: unknown, path: string): string[] {
   if (!Array.isArray(v.groups) || !v.groups.every(isGroup)) errors.push(`${path}.groups invalide.`);
   if (v.status !== 'done' && v.status !== 'declined') errors.push(`${path}.status invalide.`);
   if (typeof v.answeredAt !== 'number' || !Number.isFinite(v.answeredAt)) errors.push(`${path}.answeredAt invalide.`);
+  if (v.oneOff !== undefined && v.oneOff !== true) errors.push(`${path}.oneOff invalide.`);
   return errors;
 }
 
@@ -204,6 +212,84 @@ export function answer(occurrence: Occurrence, yes: boolean, now: number): Activ
     groups: [...habit.groups],
     status: yes ? 'done' : 'declined',
     answeredAt: now,
+  };
+}
+
+/** Activité connue, proposée par « + Activité » : nom, groupes et durée de la dernière fois (ou de l'habitude). */
+export interface KnownActivity {
+  name: string;
+  groups: MuscleGroup[];
+  minutes: number;
+}
+
+/**
+ * Activités proposées à la saisie : celles déjà enregistrées, de la plus récente à la plus ancienne, puis les
+ * habitudes (même désactivées) jamais enregistrées. Préremplissage d'après la dernière fois, sinon d'après l'habitude.
+ */
+export function knownActivities(habits: readonly Habit[], records: readonly ActivityRecord[]): KnownActivity[] {
+  const out = new Map<string, KnownActivity>();
+  for (const a of [...doneActivities(records)].sort((x, y) => activityStart(y) - activityStart(x) || y.answeredAt - x.answeredAt)) {
+    const key = normalizeName(a.name);
+    if (!out.has(key)) out.set(key, { name: a.name, groups: [...a.groups], minutes: activityMinutes(a) });
+  }
+  for (const h of habits) {
+    const key = normalizeName(h.name);
+    if (!out.has(key) && h.name.trim()) out.set(key, { name: h.name.trim(), groups: [...h.groups], minutes: activityMinutes(h) });
+  }
+  return [...out.values()];
+}
+
+/** Durée d'une activité ponctuelle : 1 à 600 minutes entières (comme un bloc de cardio). */
+export const ONE_OFF_MAX_MINUTES = 600;
+
+export type OneOffError = 'empty_name' | 'bad_minutes' | 'bad_date' | 'future_date' | 'already_recorded';
+
+export interface OneOffInput {
+  name: string;
+  date: string;
+  minutes: number;
+  groups: readonly MuscleGroup[];
+}
+
+const clock = (minutes: number) => `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+
+/**
+ * Activité ponctuelle à enregistrer, ou ses erreurs. Une activité du même nom qu'une habitude lui est rattachée
+ * (`act-<habitude>-<date>`) : saisie le jour de l'habitude, elle répond à sa question, sans doublon. Une activité déjà
+ * confirmée ce jour-là sous ce nom est refusée ; une réponse « Non » est remplacée.
+ */
+export function oneOffActivity(
+  input: OneOffInput,
+  habits: readonly Habit[],
+  records: readonly ActivityRecord[],
+  now: number,
+): { record: ActivityRecord } | { errors: OneOffError[] } {
+  const name = input.name.trim();
+  const errors: OneOffError[] = [];
+  if (!name) errors.push('empty_name');
+  if (!Number.isInteger(input.minutes) || input.minutes < 1 || input.minutes > ONE_OFF_MAX_MINUTES) errors.push('bad_minutes');
+  if (!isIsoDate(input.date)) errors.push('bad_date');
+  else if (input.date > localDate(now)) errors.push('future_date');
+  const habit = habits.find((h) => normalizeName(h.name) === normalizeName(name));
+  const habitId = habit?.id ?? `ponctuelle-${slug(name)}`;
+  const id = recordId(habitId, input.date);
+  if (name && records.some((a) => a.status === 'done' && a.date === input.date && (a.id === id || normalizeName(a.name) === normalizeName(name)))) {
+    errors.push('already_recorded');
+  }
+  if (errors.length > 0) return { errors };
+  return {
+    record: {
+      id,
+      habitId,
+      date: input.date,
+      name,
+      start: '00:00',
+      end: clock(input.minutes),
+      groups: HABIT_GROUPS.filter((g) => input.groups.includes(g)),
+      status: 'done',
+      answeredAt: now,
+      oneOff: true,
+    },
   };
 }
 

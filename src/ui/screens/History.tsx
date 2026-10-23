@@ -3,9 +3,9 @@ import { useApp } from '../../app/store';
 import { navigateBack } from '../../app/hooks';
 import type { Session } from '../../domain/types';
 import { searchSessions } from '../../history/ops';
-import { formatIsoDay } from '../../session/format';
+import { formatDurationLong, formatIsoDay } from '../../session/format';
 import { cardioMinutes, formatMinutes } from '../../cardio/model';
-import { activityLabel, activityStart, doneActivities, formatClock, type ActivityRecord } from '../../activities/model';
+import { activityLabel, activityMinutes, activityStart, doneActivities, formatClock, type ActivityRecord } from '../../activities/model';
 import { sessionStartTime } from '../../analysis/weekly';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
 import { normalizeName } from '../../library/text';
@@ -178,7 +178,9 @@ export function ActivityDetail({ activity: a }: { activity: ActivityRecord }) {
         <h1>{activityLabel(a)}</h1>
       </header>
       <p className="muted">
-        {formatIsoDay(a.date)} · {formatClock(a.start)} – {formatClock(a.end)} · activité habituelle
+        {a.oneOff
+          ? `${formatIsoDay(a.date)} · ${formatDurationLong(activityMinutes(a) * 60_000)} · activité ponctuelle`
+          : `${formatIsoDay(a.date)} · ${formatClock(a.start)} – ${formatClock(a.end)} · activité habituelle`}
       </p>
       {a.groups.length > 0 && <p>Groupes sollicités (en indirect) : {a.groups.map((g) => MUSCLE_GROUP_LABELS[g]).join(', ')}</p>}
       {failed && (

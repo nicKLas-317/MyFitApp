@@ -13,7 +13,9 @@ import {
   activityLabel,
   answer,
   habitErrors,
+  knownActivities,
   mergeActivities,
+  oneOffActivity,
   pendingOccurrences,
   questionText,
   sanitizeActivities,
@@ -200,3 +202,88 @@ const ORDER = ['Pectoraux', 'Dos', 'Épaules', 'Biceps', 'Triceps', 'Jambes', 'N
 function order(line: string): number {
   return ORDER.findIndex((g) => line.startsWith(g));
 }
+
+describe('Activités ponctuelles (« + Activité »)', () => {
+  const FUTSAL: Habit = { id: 'habitude-futsal', name: 'Futsal', weekday: 5, start: '20:00', end: '21:00', groups: ['jambes'], enabled: false };
+  const futsal = (date: string, minutes = 60, groups: Habit['groups'] = ['jambes', 'abdominaux']) => {
+    const r = oneOffActivity({ name: 'Futsal', date, minutes, groups }, [BADMINTON, FUTSAL], [], at(23, 22));
+    if (!('record' in r)) throw new Error(r.errors.join());
+    return r.record;
+  };
+
+  it('238. Activités proposées (dernière fois, puis habitudes même désactivées), préremplissage, rattachement à l’habitude, contrôles', () => {
+    // Sans rien d'enregistré : les habitudes, désactivées comprises, avec leurs groupes et leur durée.
+    expect(knownActivities([BADMINTON, FUTSAL], [])).toEqual([
+      { name: 'Badminton', groups: ['epaules', 'jambes'], minutes: 90 },
+      { name: 'Futsal', groups: ['jambes'], minutes: 60 },
+    ]);
+    // La dernière fois l'emporte (groupes et durée), la plus récente en tête ; un nom nouveau saisi une fois est proposé ensuite.
+    const records = [badminton('2026-10-19'), futsal('2026-10-16', 75, ['jambes', 'abdominaux']), { ...futsal('2026-10-22', 50), name: 'Tennis', id: 'act-ponctuelle-tennis-2026-10-22', habitId: 'ponctuelle-tennis' }];
+    expect(knownActivities([BADMINTON, FUTSAL], records)).toEqual([
+      { name: 'Tennis', groups: ['jambes', 'abdominaux'], minutes: 50 },
+      { name: 'Badminton', groups: ['epaules', 'jambes'], minutes: 90 },
+      { name: 'Futsal', groups: ['jambes', 'abdominaux'], minutes: 75 },
+    ]);
+
+    // Activité enregistrée : date choisie, à 0 h 00 (heures inconnues), durée, groupes ; rattachée à l'habitude du même nom.
+    const r = futsal('2026-10-23', 75);
+    expect(r).toEqual({
+      id: 'act-habitude-futsal-2026-10-23', habitId: 'habitude-futsal', date: '2026-10-23', name: 'Futsal',
+      start: '00:00', end: '01:15', groups: ['jambes', 'abdominaux'], status: 'done', answeredAt: at(23, 22), oneOff: true,
+    });
+    expect(activityLabel(r)).toBe('Futsal · 1 h 15');
+    expect(sanitizeActivities([r])).toEqual([r]);
+    // Nouveau nom : identifiant propre ; durée maximale 600 min.
+    const climbing = oneOffActivity({ name: '  Escalade ', date: '2026-10-21', minutes: 600, groups: [] }, [BADMINTON], [], at(23));
+    expect(climbing).toMatchObject({ record: { id: 'act-ponctuelle-escalade-2026-10-21', name: 'Escalade', end: '10:00', groups: [] } });
+
+    // Erreurs : nom vide, durée invalide, date future ou invalide, déjà enregistrée ce jour-là sous ce nom.
+    const errors = (input: Partial<Parameters<typeof oneOffActivity>[0]>, records: ActivityRecord[] = []) => {
+      const x = oneOffActivity({ name: 'Futsal', date: '2026-10-23', minutes: 60, groups: [], ...input }, [FUTSAL], records, at(23, 22));
+      return 'errors' in x ? x.errors : [];
+    };
+    expect(errors({ name: ' ' })).toEqual(['empty_name']);
+    for (const minutes of [0, 601, 1.5, NaN]) expect(errors({ minutes })).toEqual(['bad_minutes']);
+    expect(errors({ date: '2026-10-24' })).toEqual(['future_date']);
+    expect(errors({ date: '23/10/2026' })).toEqual(['bad_date']);
+    expect(errors({}, [r])).toEqual(['already_recorded']);
+    expect(errors({ name: 'futsal' }, [{ ...r, id: 'autre', habitId: 'autre' }])).toEqual(['already_recorded']);
+    expect(errors({ date: '2026-10-22' }, [r])).toEqual([]);
+
+    // Saisie le jour d'une habitude active : elle répond à la question (même identifiant), sans doublon ;
+    // une réponse « Non » est remplacée par l'activité (le store remplace l'identifiant).
+    const monday = oneOffActivity({ name: 'badminton', date: '2026-10-19', minutes: 60, groups: ['jambes'] }, [BADMINTON], [], at(23));
+    if (!('record' in monday)) throw new Error('refusée');
+    expect(monday.record.id).toBe(answer({ habit: BADMINTON, date: '2026-10-19' }, true, 0).id);
+    expect(pendingOccurrences([BADMINTON], [monday.record], at(20, 9))).toEqual([]);
+    expect(errors({ date: '2026-10-19', name: 'Badminton' }, [badminton('2026-10-19', false)])).toEqual([]);
+    // Les habitudes ne changent pas : la question du badminton reste posée pour un lundi sans réponse.
+    expect(pendingOccurrences([BADMINTON, FUTSAL], [r], at(19, 23)).map((o) => o.habit.id)).toEqual(['badminton']);
+  });
+
+  it('239. Comptée comme une activité habituelle confirmée : récapitulatif, bilans, mail, historique ; sauvegarde ; aucun effet sur le moteur', () => {
+    const r = futsal('2026-10-23', 60, ['jambes']);
+    // Récapitulatif : travail indirect, « aujourd'hui », « · 1 activité » dans l'en-tête.
+    const recap = weeklyRecap([], LIB, at(23, 22), undefined, [r]);
+    expect(cell(recap, 'jambes')).toMatchObject({ count: 0, indirect: 1, score: 0.5, recency: 'today' });
+    expect(nb(recapTitle(recap))).toBe('Semaine du lun. 19 au dim. 25 oct. : 0 séance · 1 activité');
+    expect(cell(weeklyRecap([], LIB, at(24, 9), undefined, [r]), 'jambes').recency).toBe('yesterday');
+    // Bilan de la semaine et texte du mail.
+    const sessions = [session(at(20, 18), ['pec-deck'])];
+    const report = buildReport(periodContaining('week', at(23)), {
+      sessions, exercises: LIB, evaluations: rebuildProfile(sessions, SETTINGS).evaluations, settings: SETTINGS,
+      groups: ['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes'], weighIns: [], activities: [r, badminton('2026-10-19')], now: at(26, 9),
+    });
+    expect(report.activities).toEqual([{ name: 'Badminton', count: 1, minutes: 90 }, { name: 'Futsal', count: 1, minutes: 60 }]);
+    expect(reportText(report, name)).toContain('\n- Activités : Badminton ×1, 1 h 30 ; Futsal ×1, 1 h 00\n');
+    expect(reportSections(report, name).find((x) => x.title === 'Groupes travaillés')!.lines.map(lineText)).toContain('Jambes : +2 indirect');
+    // Sauvegarde : exportée et réimportée telle quelle (format 4 inchangé).
+    const backup = buildBackup({ sessions: [], exercises: LIB, activities: [r] }, at(25));
+    const parsed = parseJsonImport(JSON.stringify(backup), LIB, '2026-10-25');
+    if (parsed.kind !== 'backup') throw new Error(parsed.kind);
+    expect(parsed.backup.activities).toEqual([r]);
+    expect(sanitizeActivities([{ ...r, oneOff: false }])).toEqual([]);
+    // Le moteur ne reçoit jamais les activités.
+    expect(rebuildProfile(sessions, SETTINGS)).toEqual(rebuildProfile(structuredClone(sessions), SETTINGS));
+  });
+});

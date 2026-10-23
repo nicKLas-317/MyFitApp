@@ -151,4 +151,95 @@ test.describe('Activités habituelles hors salle', () => {
     await expect(banner(page)).toHaveCount(1);
     await expect(banner(page)).toContainText('Tennis mercredi soir (19 h – 20 h 30)');
   });
+
+  test('240. Activité ponctuelle : « + Activité » discret sur l’onglet Séance, activité connue (habitude désactivée comprise) ou nouveau nom, date, durée et groupes préremplis ; comptée comme une activité confirmée ; habitudes inchangées ; format smartphone', async ({ page }) => {
+    // Futsal : habitude désactivée (jambes), donc jamais de question.
+    await openAt(page, '2026-10-23', '12:00', './#/reglages');
+    const habits = await openSettingsSection(page, 'Activités habituelles');
+    await habits.getByLabel('Nouvelle activité').fill('Futsal');
+    await habits.getByRole('button', { name: 'Ajouter l’activité' }).click();
+    const futsalRow = habits.getByRole('listitem', { name: 'Futsal' });
+    await futsalRow.getByLabel('Jour : Futsal').selectOption('5');
+    await futsalRow.getByRole('group', { name: 'Groupes sollicités : Futsal' }).getByRole('button', { name: 'Jambes' }).click();
+    await futsalRow.getByLabel('Activée').uncheck();
+    await habits.getByRole('button', { name: 'Enregistrer les activités' }).click();
+    await expect(habits.getByText('Activités enregistrées.')).toBeVisible();
+
+    // Vendredi 22 h : la question du badminton de lundi reste posée (habitudes inchangées), aucune pour le futsal.
+    await openAt(page, '2026-10-23', '22:00');
+    await expect(banner(page)).toHaveCount(1);
+    await expect(banner(page)).toContainText('Badminton lundi soir');
+    // Bouton discret : un lien d'action sous « Démarrer une séance », 48 px de haut.
+    const add = page.getByRole('button', { name: '+ Activité' });
+    await expect(add).toHaveClass(/\blink\b/);
+    expect((await add.boundingBox())!.height).toBeGreaterThanOrEqual(47.5);
+    expect((await add.boundingBox())!.y).toBeGreaterThan((await page.getByRole('button', { name: 'Démarrer une séance' }).boundingBox())!.y);
+    await add.click();
+    const form = page.getByRole('form', { name: 'Activité ponctuelle' });
+    const choices = form.getByRole('group', { name: 'Activité' });
+    await expect(choices.getByRole('button')).toHaveText(['Badminton', 'Futsal', 'Autre']);
+    await choices.getByRole('button', { name: 'Futsal' }).click();
+    // Préremplie d'après l'habitude : durée (20 h – 21 h) et groupes ; date du jour.
+    await expect(form.getByLabel('Date')).toHaveValue('2026-10-23');
+    await expect(form.getByLabel('Durée (min)')).toHaveValue('60');
+    const groups = form.getByRole('group', { name: 'Groupes sollicités' });
+    await expect(groups.getByRole('button', { pressed: true })).toHaveText(['Jambes']);
+    await form.getByLabel('Durée (min)').fill('75');
+    await groups.getByRole('button', { name: 'Abdominaux' }).click();
+    // Date future refusée, avec un message.
+    await form.getByLabel('Date').fill('2026-10-24');
+    await form.getByRole('button', { name: 'Enregistrer l’activité' }).click();
+    await expect(form.getByRole('alert')).toHaveText('La date ne peut pas être dans le futur.');
+    await form.getByLabel('Date').fill('2026-10-23');
+    await noOverflow(page);
+    await test.info().attach('accueil-activite', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
+    await form.getByRole('button', { name: 'Enregistrer l’activité' }).click();
+    await expect(form).toHaveCount(0);
+    await expect(page.getByRole('status').filter({ hasText: 'Activité enregistrée' })).toHaveText('Activité enregistrée : Futsal · 1 h 15, 23 oct. 2026.');
+    // Comptée comme une activité confirmée : en-tête et travail indirect « aujourd'hui ».
+    await expect(recapTitle(page)).toContainText(/0\s+séance · 1\s+activité/);
+    await expect(recapCell(page, 'jambes')).toContainText(/\+1\s+indirect/);
+    await expect(recapCell(page, 'jambes')).toContainText('aujourd’hui');
+    await expect(banner(page)).toContainText('Badminton lundi soir');
+
+    // Deuxième saisie : le futsal en tête, prérempli d'après la dernière fois ; nouveau nom avec « Autre ».
+    await add.click();
+    await expect(choices.getByRole('button')).toHaveText(['Futsal', 'Badminton', 'Autre']);
+    await expect(choices.getByRole('button', { name: 'Futsal' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(form.getByLabel('Durée (min)')).toHaveValue('75');
+    await expect(groups.getByRole('button', { pressed: true })).toHaveText(['Jambes', 'Abdominaux']);
+    // Déjà enregistrée ce jour-là : refusée.
+    await form.getByRole('button', { name: 'Enregistrer l’activité' }).click();
+    await expect(form.getByRole('alert')).toHaveText('Cette activité est déjà enregistrée ce jour-là.');
+    await choices.getByRole('button', { name: 'Autre' }).click();
+    await expect(form.getByLabel('Durée (min)')).toHaveValue('');
+    await form.getByLabel('Nom de l’activité').fill('Escalade');
+    await form.getByLabel('Date').fill('2026-10-21');
+    await form.getByLabel('Durée (min)').fill('90');
+    for (const g of ['Dos', 'Biceps']) await groups.getByRole('button', { name: g }).click();
+    await form.getByRole('button', { name: 'Enregistrer l’activité' }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Activité enregistrée' })).toHaveText('Activité enregistrée : Escalade · 1 h 30, 21 oct. 2026.');
+    await expect(recapTitle(page)).toContainText(/0\s+séance · 2\s+activités/);
+    await expect(recapCell(page, 'dos')).toContainText(/\+1\s+indirect/);
+
+    // Après relance : toujours là ; historique (ligne compacte, détail sans heures) et bilan de la semaine.
+    await page.reload();
+    await expect(recapTitle(page)).toContainText(/2\s+activités/);
+    await page.goto('./#/historique');
+    const item = page.getByRole('link', { name: /Futsal · 1 h 15/ });
+    await expect(item).toHaveAccessibleName(/^23 octobre 2026 : Futsal · 1 h 15 activité/);
+    await item.click();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Futsal · 1 h 15');
+    await expect(page.getByRole('main')).toContainText('23 octobre 2026 · 1 h 15 · activité ponctuelle');
+    await expect(page.getByRole('main')).toContainText('Groupes sollicités (en indirect) : Jambes, Abdominaux');
+    await page.goto('./#/bilan-periode/semaine/2026-10-19');
+    await expect(page.getByRole('region', { name: 'Séances' })).toContainText('Activités : Escalade ×1, 1 h 30 ; Futsal ×1, 1 h 15');
+    await expect(page.getByTestId('report-text')).toContainText('- Activités : Escalade ×1, 1 h 30 ; Futsal ×1, 1 h 15');
+
+    // Le futsal reste une habitude désactivée : aucune question, même le vendredi suivant.
+    await openAt(page, '2026-10-30', '22:00');
+    await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
+    await expect(page.locator('.activity-banner[data-habit="habitude-futsal"]')).toHaveCount(0);
+  });
 });
+

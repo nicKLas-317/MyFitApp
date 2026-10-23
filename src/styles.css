@@ -220,6 +220,30 @@ fieldset.frame > legend {
   margin: var(--space-1) 0 var(--space-2);
 }
 
+/* « + Activité » : discret, sous le bouton de séance ; le formulaire s'ouvre à sa place. */
+.home .add-activity {
+  margin-top: var(--space-1);
+}
+
+.home .activity-form {
+  margin-top: var(--space-2);
+}
+
+/* Date et durée côte à côte si la date tient en entier, sinon l'une sous l'autre (écran étroit, texte agrandi). */
+.activity-form .field-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+}
+
+.activity-form .field-grid > :first-child {
+  flex: 1 1 10em;
+}
+
+.activity-form .field-grid > :last-child {
+  flex: 1 1 6em;
+}
+
 .chrono-inline {
   font-variant-numeric: tabular-nums;
   font-weight: 500;
@@ -1828,20 +1852,23 @@ fieldset {
 }
 
 /* Cardio : simple enregistrement, sans pastille de progression. */
-.cardio-form {
+.cardio-form,
+.activity-form {
   display: grid;
   gap: var(--space-2);
   padding: var(--space-2);
 }
 
 .cardio-form .feeling-options,
+.activity-form .feeling-options,
 .cardio-machines .feeling-options {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
 }
 
-.cardio-form .chip {
+.cardio-form .chip,
+.activity-form .chip {
   flex: none;
 }
 

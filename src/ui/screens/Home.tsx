@@ -6,6 +6,7 @@ import { needsBackupReminder } from '../../transfer/backup';
 import { useBody } from '../../body/store';
 import { downloadBackup } from '../download';
 import { ActivityBanner } from '../ActivityBanner';
+import { ActivityEntry } from '../ActivityEntry';
 import { WeeklyRecapBlock } from '../WeeklyRecap';
 
 export function Home() {
@@ -40,6 +41,7 @@ export function Home() {
           Démarrer une séance
         </button>
       )}
+      <ActivityEntry />
       {remind && (
         <div className="banner info reminder" role="status">
           <span>{lastExportAt ? 'Aucune sauvegarde depuis plus de 14 jours.' : 'Pensez à sauvegarder vos séances.'}</span>
