@@ -4,7 +4,7 @@
  * Les charges brutes de deux exercices différents ne sont jamais additionnées ni moyennées : chaque exercice-variante
  * est rapporté à sa propre première séance, et seuls ces indices sont moyennés. Ni cardio ni activités habituelles.
  */
-import type { WeighIn } from '../body/model';
+import { sortWeighIns, type WeighIn } from '../body/model';
 import type { Exercise, MuscleGroup, Performance, Session } from '../domain/types';
 import { resolveConfig, sortSessions, type EngineSettings } from '../engine';
 import { localDate } from '../session/format';
@@ -39,16 +39,22 @@ function usable(p: Performance): boolean {
   return !p.partial && p.reps.length > 0 && p.weightKg > 0;
 }
 
-/** Poids du corps (kg) de la pesée la plus proche d'une date « YYYY-MM-DD » ; à égale distance, la plus ancienne. */
-export function nearestBodyWeight(weighIns: readonly WeighIn[], date: string): number | null {
+/**
+ * Poids du corps (kg) à une date « YYYY-MM-DD », d'après les pesées : interpolation linéaire entre les deux pesées qui
+ * l'encadrent ; avant la première pesée, la première ; après la dernière, la dernière ; une seule pesée : ce poids.
+ * Null sans pesée.
+ */
+export function bodyWeightAt(weighIns: readonly WeighIn[], date: string): number | null {
+  const sorted = sortWeighIns(weighIns);
+  const first = sorted[0];
+  const last = sorted.at(-1);
+  if (!first || !last) return null;
+  if (date <= first.date) return first.weightKg;
+  if (date >= last.date) return last.weightKg;
   const day = (d: string) => Date.parse(`${d}T00:00:00Z`) / 86_400_000;
-  let best: WeighIn | null = null;
-  for (const w of weighIns) {
-    const gap = Math.abs(day(w.date) - day(date));
-    const bestGap = best ? Math.abs(day(best.date) - day(date)) : Infinity;
-    if (gap < bestGap || (gap === bestGap && best && w.date < best.date)) best = w;
-  }
-  return best?.weightKg ?? null;
+  const after = sorted.findIndex((w) => w.date >= date);
+  const [a, b] = [sorted[after - 1]!, sorted[after]!];
+  return a.weightKg + ((b.weightKg - a.weightKg) * (day(date) - day(a.date))) / (day(b.date) - day(a.date));
 }
 
 /** Poids du corps à la date de la performance et à celle de la première séance de l'exercice-variante. */
@@ -60,7 +66,7 @@ export interface BodyWeights {
 /**
  * Indice d'une performance par rapport à la première séance de son exercice-variante (= 100).
  * Exercice assisté (§7.12) : la charge est une aide, et moins d'aide est plus dur.
- * - Avec une pesée (`body`) : charge réelle = poids du corps (pesée la plus proche de chaque séance) − aide, puis
+ * - Avec une pesée (`body`) : charge réelle = poids du corps (interpolé entre les pesées) − aide, puis
  *   Epley comme pour un exercice classique. Une aide au moins égale au poids du corps à la première séance n'a pas de
  *   sens physique : on revient alors à la méthode sans pesée.
  * - Sans pesée : la variation relative de l'aide est inversée : 30 → 25 kg d'aide (−17 %) donne +17 %, comme
@@ -126,8 +132,8 @@ export function groupIndex(
       const base = first.get(p.variantId)!;
       const assisted = resolveConfig(settings, p.variantId).assisted;
       hasAssisted ||= assisted;
-      const current = assisted ? nearestBodyWeight(weighIns, s.date) : null;
-      const body = current === null ? undefined : { current, first: nearestBodyWeight(weighIns, base.date)! };
+      const current = assisted ? bodyWeightAt(weighIns, s.date) : null;
+      const body = current === null ? undefined : { current, first: bodyWeightAt(weighIns, base.date)! };
       last.set(p.variantId, performanceIndex(p, base.perf, assisted, body));
     }
     const value = [...last.values()].reduce((a, b) => a + b, 0) / last.size;

@@ -129,19 +129,28 @@ test.describe('Bilan par groupe musculaire', () => {
     await expect(indexSection(page).getByTestId('index-not-enough')).toHaveCount(0);
   });
 
-  test('220. Exercice assisté avec des pesées : charge réelle = poids du corps − aide (pesée la plus proche), sans pesée : aide inversée', async ({ page }) => {
+  test('220. Exercice assisté avec des pesées : charge réelle = poids du corps (interpolé entre les pesées) − aide, sans creux artificiel ; sans pesée : aide inversée', async ({ page }) => {
     await open(page, '2026-10-22T20:00:00', '2026-10-22');
     await page.getByRole('button', { name: 'Triceps' }).click();
     await expect(indexSection(page).getByTestId('index-last')).toHaveText('Triceps : 115,6');
-    // 78 kg le 20 mai, 74 kg le 15 octobre : dips de 40 kg d'aide (38 kg réels) à 27,5 kg (46,5 kg réels).
+    // 78 kg le 20 mai, 74 kg le 15 octobre : dips de 40 kg d'aide (37,68 kg réels le 1er juin, poids interpolé)
+    // à 27,5 kg (46,5 kg réels).
     await writeWeighIns(page, [
       { date: '2026-05-20', weightKg: 78 },
       { date: '2026-10-15', weightKg: 74 },
     ]);
     await page.reload();
-    await expect(indexSection(page).getByTestId('index-last')).toHaveText('Triceps : 111,2');
+    await expect(indexSection(page).getByTestId('index-last')).toHaveText('Triceps : 111,7');
+    // Pas de creux à la mi-août : le poids baisse progressivement, jamais plus d'un point d'un point à l'autre,
+    // et l'indice monte quand l'aide baisse (30 juillet → 3 août).
+    const values = (await indexSection(page).getByTestId('chart-index').getAttribute('data-values'))!.split(' ').map(Number);
+    expect(values).toHaveLength(33);
+    expect(Math.max(...values.slice(1).map((v, i) => values[i]! - v))).toBeLessThanOrEqual(1.01);
+    expect(values.slice(17, 19)).toEqual([104.63, 107.69]);
+    // Étiquettes de l'axe sans chevauchement : 99,5 est trop proche de la ligne 100, seule la ligne 100 est étiquetée.
+    await expect(indexSection(page).locator('.chart-label[text-anchor="end"]')).toHaveText(['111,8', '100', '22 oct.']);
     await expect(indexSection(page).getByTestId('index-assisted')).toHaveText(
-      'Exercices assistés : charge réelle = poids du corps (pesée la plus proche de chaque séance) − aide.',
+      'Exercices assistés : charge réelle = poids du corps (interpolé entre les pesées de « Mon poids ») − aide.',
     );
     // Exercices classiques : les pesées ne changent rien, pas de mention.
     await page.getByRole('button', { name: 'Pectoraux' }).click();

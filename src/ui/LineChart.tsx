@@ -21,6 +21,8 @@ interface Props {
 const W = 320;
 const H = 140;
 const M = { top: 12, right: 12, bottom: 22, left: 40 };
+/** Écart vertical minimal entre deux étiquettes de l'axe. */
+const LABEL_GAP = 12;
 
 const toTime = (date: string) => Date.parse(`${date}T00:00:00Z`);
 const fmt = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 });
@@ -41,32 +43,26 @@ export function LineChart({ data, label, unit, testId, baseline }: Props) {
   yMax += pad;
   const x = (t: number) => (xMax === xMin ? M.left + (W - M.left - M.right) / 2 : M.left + ((t - xMin) / (xMax - xMin)) * (W - M.left - M.right));
   const y = (v: number) => M.top + (1 - (v - yMin) / (yMax - yMin)) * (H - M.top - M.bottom);
+  // Étiquettes de l'axe : maximum, ligne de référence, minimum ; une étiquette trop proche d'une autre déjà placée
+  // n'est pas dessinée (elles se chevaucheraient).
+  const yLabels: number[] = [];
+  for (const v of [Math.max(...ys), ...(baseline === undefined ? [] : [baseline]), Math.min(...ys)]) {
+    if (yLabels.every((u) => Math.abs(y(u) - y(v)) >= LABEL_GAP)) yLabels.push(v);
+  }
   const points = data.map((d, i) => `${x(xs[i]!).toFixed(1)},${y(d.value).toFixed(1)}`).join(' ');
   const first = data[0]!;
   const last = data[data.length - 1]!;
   const summary = `${label} : ${data.length} point${data.length > 1 ? 's' : ''}, de ${fmt(first.value)} ${unit} le ${shortDate(first.date)} à ${fmt(last.value)} ${unit} le ${shortDate(last.date)}.`;
 
   return (
-    <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={summary} data-testid={testId} data-points={data.length}>
+    <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={summary} data-testid={testId} data-points={data.length} data-values={ys.map((v) => v.toFixed(2)).join(' ')}>
       <line className="chart-axis" x1={M.left} y1={H - M.bottom} x2={W - M.right} y2={H - M.bottom} />
-      {baseline !== undefined && (
-        <>
-          <line className="chart-baseline" x1={M.left} y1={y(baseline)} x2={W - M.right} y2={y(baseline)} />
-          {baseline !== Math.max(...ys) && baseline !== Math.min(...ys) && (
-            <text className="chart-label" x={M.left - 6} y={y(baseline) + 4} textAnchor="end">
-              {fmt(baseline)}
-            </text>
-          )}
-        </>
-      )}
-      <text className="chart-label" x={M.left - 6} y={y(Math.max(...ys)) + 4} textAnchor="end">
-        {fmt(Math.max(...ys))}
-      </text>
-      {Math.min(...ys) !== Math.max(...ys) && (
-        <text className="chart-label" x={M.left - 6} y={y(Math.min(...ys)) + 4} textAnchor="end">
-          {fmt(Math.min(...ys))}
+      {baseline !== undefined && <line className="chart-baseline" x1={M.left} y1={y(baseline)} x2={W - M.right} y2={y(baseline)} />}
+      {yLabels.map((v) => (
+        <text key={v} className="chart-label" x={M.left - 6} y={y(v) + 4} textAnchor="end">
+          {fmt(v)}
         </text>
-      )}
+      ))}
       <text className="chart-label" x={M.left} y={H - 6}>
         {shortDate(first.date)}
       </text>

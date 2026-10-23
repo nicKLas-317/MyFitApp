@@ -3,7 +3,7 @@ import type { Exercise, Performance, Session } from '../../domain/types';
 import { rebuildProfile } from '../../engine';
 import { buildEngineSettings } from '../../library/catalog';
 import { SEED_EXERCISES } from '../../library/seed';
-import { epley, groupIndex, groupWeeklySets, nearestBodyWeight, notEnoughForIndex, notEnoughForSets, performanceIndex } from '../groups';
+import { epley, groupIndex, groupWeeklySets, bodyWeightAt, notEnoughForIndex, notEnoughForSets, performanceIndex } from '../groups';
 import { simulatedHistory } from './simulation';
 
 /** Sources de l'application, hors tests : aucune ne doit charger les données simulées. */
@@ -88,16 +88,17 @@ describe('Bilan par groupe musculaire', () => {
     expect(performanceIndex(perf(45, [8, 8, 8]), perf(40, [8, 8, 8]), false, body)).toBeCloseTo(112.5, 10);
   });
 
-  it('219. Pesée la plus proche de chaque séance ; sans aucune pesée, méthode de l’aide inversée ; exercices classiques inchangés', () => {
+  it('219. Poids du corps interpolé entre les deux pesées qui encadrent la séance ; sans aucune pesée, aide inversée ; exercices classiques inchangés', () => {
     const weighIns = [
-      { date: '2026-10-07', weightKg: 76 },
+      { date: '2026-10-11', weightKg: 75 },
       { date: '2026-10-01', weightKg: 80 },
     ];
-    expect(nearestBodyWeight(weighIns, '2026-10-05')).toBe(76); // 2 jours après contre 4 jours avant
-    expect(nearestBodyWeight(weighIns, '2026-10-04')).toBe(80); // à égale distance : la plus ancienne
-    expect(nearestBodyWeight(weighIns, '2026-09-01')).toBe(80);
-    expect(nearestBodyWeight(weighIns, '2026-12-01')).toBe(76);
-    expect(nearestBodyWeight([], '2026-10-04')).toBeNull();
+    expect(bodyWeightAt(weighIns, '2026-10-05')).toBeCloseTo(78, 10); // 4 jours sur 10 : 80 − 2
+    expect(bodyWeightAt(weighIns, '2026-10-01')).toBe(80);
+    expect(bodyWeightAt(weighIns, '2026-09-01')).toBe(80); // avant la première pesée : la première
+    expect(bodyWeightAt(weighIns, '2026-12-01')).toBe(75); // après la dernière : la dernière
+    expect(bodyWeightAt([{ date: '2026-10-01', weightKg: 80 }], '2026-12-01')).toBe(80); // une seule pesée : constante
+    expect(bodyWeightAt([], '2026-10-04')).toBeNull();
 
     const dips = [session(at(10, 1), [['dips-assistes', 40, [10, 10, 10]]]), session(at(10, 8), [['dips-assistes', 35, [10, 10, 10]]])];
     const triceps = (w: { date: string; weightKg: number }[]) => groupIndex(dips, LIB, SETTINGS, 'triceps', w);
@@ -107,13 +108,23 @@ describe('Bilan par groupe musculaire', () => {
     const twoWeighIns = triceps([{ date: '2026-10-01', weightKg: 80 }, { date: '2026-10-08', weightKg: 74 }]);
     expect(twoWeighIns.points.map((p) => Number(p.value.toFixed(2)))).toEqual([100, 97.5]);
     expect(twoWeighIns.assistedMethod).toBe('bodyWeight');
+    // 80 kg le 1er, 74 kg le 11 : 75,8 kg interpolés le 8, soit 40,8 kg réels contre 40.
+    expect(triceps([{ date: '2026-10-01', weightKg: 80 }, { date: '2026-10-11', weightKg: 74 }]).points.map((p) => Number(p.value.toFixed(2)))).toEqual([100, 102]);
     // Sans pesée : aide inversée (40 → 35 kg = 112,5).
     expect(triceps([]).points.map((p) => Number(p.value.toFixed(2)))).toEqual([100, 112.5]);
     expect(triceps([]).assistedMethod).toBe('inverseAid');
-    // Données simulées : dips de 40 à 27,5 kg d'aide, 78 kg (20 mai) puis 74 kg (15 oct.).
+    // Données simulées : dips de 40 à 27,5 kg d'aide, 78 kg (20 mai) puis 74 kg (15 oct.) : 77,68 kg le 1er juin
+    // (12 jours sur 148), 74 kg le 19 octobre.
     const sim = simulatedHistory();
     const simWeighIns = [{ date: '2026-05-20', weightKg: 78 }, { date: '2026-10-15', weightKg: 74 }];
-    expect(groupIndex(sim, LIB, SETTINGS, 'triceps', simWeighIns).points.at(-1)!.value).toBeCloseTo((100 * 46.5 / 38 + 100) / 2, 6);
+    const simTriceps = groupIndex(sim, LIB, SETTINGS, 'triceps', simWeighIns).points;
+    expect(simTriceps.at(-1)!.value).toBeCloseTo((100 * 46.5 / (78 - (4 * 12) / 148 - 40) + 100) / 2, 6);
+    // Pas de saut de poids artificiel : d'un point au suivant, l'indice ne baisse jamais de plus d'un point (la
+    // perte de poids est progressive), et l'aide qui baisse le 3 août fait monter l'indice.
+    const drops = simTriceps.slice(1).map((p, i) => simTriceps[i]!.value - p.value);
+    expect(Math.max(...drops)).toBeLessThanOrEqual(1.01);
+    const on = (date: string) => simTriceps.find((p) => p.date === date)!.value;
+    expect(on('2026-08-03')).toBeGreaterThan(on('2026-07-30'));
     // Exercices classiques : pesées sans effet, et pas de méthode d'assistance.
     const pecs = groupIndex(sim, LIB, SETTINGS, 'pectoraux', simWeighIns);
     expect(pecs).toEqual(groupIndex(sim, LIB, SETTINGS, 'pectoraux'));

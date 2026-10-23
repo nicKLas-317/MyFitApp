@@ -71,7 +71,7 @@ export function GroupProgress({ group }: { group: MuscleGroup }) {
               {index.assistedMethod && (
                 <p className="muted small" data-testid="index-assisted">
                   {index.assistedMethod === 'bodyWeight'
-                    ? 'Exercices assistés : charge réelle = poids du corps (pesée la plus proche de chaque séance) − aide.'
+                    ? 'Exercices assistés : charge réelle = poids du corps (interpolé entre les pesées de « Mon poids ») − aide.'
                     : 'Exercices assistés : sans pesée dans « Mon poids », la baisse de l’aide compte comme une hausse de charge.'}
                 </p>
               )}
