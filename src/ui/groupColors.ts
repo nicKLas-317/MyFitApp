@@ -39,8 +39,8 @@ export function colorGroupOf(group: MuscleGroup): ColorGroup {
 }
 
 /**
- * Attributs d'un élément coloré selon le groupe : `data-group-color` (le cadre prend cette couleur au lieu de
- * l'alternance, §3.1) et la variable `--group-color` (bordure du cadre, fond du pictogramme).
+ * Attributs d'un élément coloré selon le groupe : `data-group-color` (le cadre prend cette couleur au lieu du
+ * gris neutre, §3.1) et la variable `--group-color` (bordure du cadre, fond du pictogramme).
  */
 export function groupColorProps(group: MuscleGroup): { 'data-group-color': ColorGroup; style: CSSProperties } {
   const color = colorGroupOf(group);
@@ -51,9 +51,3 @@ export function groupColorProps(group: MuscleGroup): { 'data-group-color': Color
 export function exerciseColorProps(exercise: Exercise | undefined): Partial<ReturnType<typeof groupColorProps>> {
   return exercise ? groupColorProps(exercise.primaryGroup) : {};
 }
-
-/**
- * Écran lié à des exercices de plusieurs groupes (séance, détail et récapitulatif d'une séance, historique, bilan,
- * bibliothèque) : les cadres qui ne concernent pas un exercice précis sont neutres, jamais d'une couleur de groupe.
- */
-export const NEUTRAL_FRAMES = { 'data-neutral-frames': '' } as const;

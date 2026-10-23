@@ -32,7 +32,7 @@ async function importDepart(page: Page): Promise<void> {
   await expect(page.getByText('Import terminé : 2 séances ajoutées.')).toBeVisible();
 }
 
-type FrameInfo = { label: string; frame: string | null; widths: string[]; styles: string[]; colors: string[]; radii: string[]; bilan: boolean; group: string | null; neutral: boolean };
+type FrameInfo = { label: string; frame: string | null; widths: string[]; styles: string[]; colors: string[]; radii: string[]; group: string | null };
 
 /** Relève, dans l'ordre d'affichage, la bordure calculée de chaque cadre de l'écran. */
 function readFrames(page: Page): Promise<FrameInfo[]> {
@@ -48,45 +48,34 @@ function readFrames(page: Page): Promise<FrameInfo[]> {
         styles: sides.map((s) => c.getPropertyValue(`border-${s}-style`)),
         colors: sides.map((s) => c.getPropertyValue(`border-${s}-color`)),
         radii: corners.map((s) => c.getPropertyValue(`border-${s}-radius`)),
-        bilan: el.classList.contains('bilan-section'),
         // Couleur de groupe portée par le cadre ou par un conteneur (fiche, carte d'exercice).
         group: el.closest('[data-group-color]')?.getAttribute('data-group-color') ?? null,
-        neutral: !!el.closest('[data-neutral-frames]'),
       };
     });
   }, FRAME_SELECTOR);
 }
 
 /**
- * Vérifie la règle commune des cadres (§3.1) sur l'écran affiché, et sa coloration (§3.2) : « alternance » (écrans
- * sans lien avec un groupe), « neutre » (écrans liés à plusieurs groupes : exercices à leur couleur, le reste neutre)
- * ou le groupe de l'exercice (fiche : tous les cadres).
+ * Vérifie la règle commune des cadres (§3.1) sur l'écran affiché, et sa coloration (§3.2) : gris neutre, sauf ce qui
+ * concerne un groupe musculaire (cartes d'exercice, fiche…), à la couleur du groupe. « neutre » : écran sans groupe
+ * imposé ; sinon le groupe dont tous les cadres doivent avoir la couleur (fiche d'un exercice).
  */
-async function checkFrames(page: Page, screen: string, minimum: number, coloring: 'alternance' | 'neutre' | string): Promise<void> {
+async function checkFrames(page: Page, screen: string, minimum: number, coloring: 'neutre' | string): Promise<void> {
   await expect(page.locator('[data-frame]').first()).toBeAttached();
   const frames = await readFrames(page);
   expect(frames.length, `${screen} : nombre de cadres`).toBeGreaterThanOrEqual(minimum);
   for (const f of frames) {
     const where = `${screen} · ${f.label}`;
-    expect(f.frame, where).not.toBeNull();
+    expect(f.frame, where).toBe('');
     expect(f.widths, where).toEqual(['2px', '2px', '2px', '2px']);
     expect(f.styles, where).toEqual(['solid', 'solid', 'solid', 'solid']);
     expect(new Set(f.colors).size, `${where} : même couleur sur les quatre côtés`).toBe(1);
-    // Cadre d'un exercice : couleur fixe de son groupe (§3.2) ; sinon neutre, ou couleur alternée de la palette.
+    // Ce qui concerne un groupe : couleur fixe du groupe (§3.2) ; tout le reste : gris neutre, plus d'alternance.
     if (f.group) expect(f.colors[0], `${where} : couleur du groupe ${f.group}`).toBe(GROUP_RGB[f.group]);
-    else if (f.neutral) expect(f.colors[0], `${where} : neutre`).toBe(NEUTRAL);
-    else expect(PALETTE, `${where} : couleur de la palette`).toContain(f.colors[0]);
-    if (coloring === 'alternance') expect([f.group, f.neutral], `${where} : alternance`).toEqual([null, false]);
-    else if (coloring === 'neutre') expect(f.group !== null || f.neutral, `${where} : exercice ou neutre`).toBe(true);
-    else expect(f.group, `${where} : couleur du groupe de l'exercice`).toBe(coloring);
+    else expect(f.colors[0], `${where} : neutre`).toBe(NEUTRAL);
+    if (coloring !== 'neutre') expect(f.group, `${where} : couleur du groupe de l'exercice`).toBe(coloring);
     expect(f.radii, where).toEqual(['14px', '14px', '14px', '14px']);
   }
-  // Deux cadres consécutifs n'ont jamais la même couleur, sauf les couleurs fixes (catégories du bilan, groupes).
-  frames.slice(1).forEach((f, i) => {
-    const prev = frames[i]!;
-    if (f.bilan || prev.bilan || f.group || prev.group || f.neutral || prev.neutral) return;
-    expect(f.colors[0], `${screen} : ${prev.label} puis ${f.label}`).not.toBe(prev.colors[0]);
-  });
   // Ni les pastilles de statut ni les cases du récapitulatif ne sont des cadres.
   await expect(page.locator('[data-status][data-frame], .recap-cell[data-frame]')).toHaveCount(0);
   // Rien ne dépasse de l'écran du smartphone.
@@ -169,13 +158,13 @@ test.describe('Filtres du bilan et cadres de section', () => {
     await expect(early).toHaveAttribute('aria-pressed', 'true');
   });
 
-  test('146. Cadres : même règle sur chaque écran, quatre côtés, couleurs alternées, neutres ou de groupe selon l’écran, rien ne dépasse', async ({ page }) => {
+  test('146. Cadres : même règle sur chaque écran, quatre côtés, gris neutre sauf la couleur des groupes, rien ne dépasse', async ({ page }) => {
     await importDepart(page);
-    await checkFrames(page, 'Import / export', 3, 'alternance');
+    await checkFrames(page, 'Import / export', 3, 'neutre');
 
     await page.goto('./');
-    await checkFrames(page, 'Accueil', 1, 'alternance');
-    await expect(page.getByTestId('weekly-recap')).toHaveAttribute('data-frame', /\d/);
+    await checkFrames(page, 'Accueil', 1, 'neutre');
+    await expect(page.getByTestId('weekly-recap')).toHaveAttribute('data-frame', '');
 
     await page.goto('./#/bibliotheque');
     await checkFrames(page, 'Bibliothèque', 5, 'neutre');
@@ -194,10 +183,10 @@ test.describe('Filtres du bilan et cadres de section', () => {
     await checkFrames(page, 'Bilan', 2, 'neutre');
 
     await page.goto('./#/poids');
-    await checkFrames(page, 'Mon poids', 1, 'alternance');
+    await checkFrames(page, 'Mon poids', 1, 'neutre');
 
     await page.goto('./#/reglages');
-    await checkFrames(page, 'Réglages', 3, 'alternance');
+    await checkFrames(page, 'Réglages', 3, 'neutre');
 
     // Séance : la carte d'exercice tient dans l'écran, cadres compris.
     await page.goto('./');
@@ -205,7 +194,7 @@ test.describe('Filtres du bilan et cadres de section', () => {
     await addExercise(page, 'chest press', 'Chest press');
     await addExercise(page, 'pec deck', 'Pec deck', '30');
     await checkFrames(page, 'Séance', 2, 'neutre');
-    // Écrans étroits : la ligne de série reste dans sa carte (à 320 px, « Valider » passe à la ligne).
+    // Écrans étroits : la ligne de série reste dans sa carte (« Valider » passe à la ligne si elle ne tient pas).
     for (const width of [360, 320]) {
       await page.setViewportSize({ width, height: 800 });
       const overflow = await page.locator('article[aria-label="Pec deck"]').evaluate((card) => {

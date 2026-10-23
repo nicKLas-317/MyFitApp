@@ -34,7 +34,9 @@ function layout(summary: Locator) {
       targetWeight: getComputedStyle(target).fontWeight,
       targetColor: getComputedStyle(target).color,
       separator: getComputedStyle(next).borderTopWidth,
-      lastOverflow: last.scrollWidth - last.clientWidth,
+      lastOverflow: Math.max(last.scrollWidth - last.clientWidth, ...[...last.querySelectorAll<HTMLElement>('.last-part')].map((p) => p.getBoundingClientRect().right - last.getBoundingClientRect().right)),
+      lastLines: Math.round(last.getBoundingClientRect().height / parseFloat(getComputedStyle(last).lineHeight)),
+      ellipsis: [...root.querySelectorAll<HTMLElement>('*')].some((el) => getComputedStyle(el).textOverflow === 'ellipsis'),
       badgeInLast: !!last.querySelector('svg.status'),
       colors: statusColored,
     };
@@ -42,16 +44,16 @@ function layout(summary: Locator) {
 }
 
 test.describe('Dernière fois / Prochaine cible (§5.3.2)', () => {
-  test('163. Deux zones : dernière fois discrète sur une ligne, prochaine cible en grand dans la couleur du groupe, repère ou « = Même cible : consolide »', async ({ page }) => {
+  test('163. Deux zones : dernière fois discrète et jamais tronquée, une seule ligne de cible en grand dans la couleur du groupe, repère court ou « = Même cible : consolide »', async ({ page }) => {
     await importDepart(page);
 
     // Fiche, cible en hausse : repère sous la cible.
     await page.goto('./#/exercice/extension-triceps-haltere-assis');
     const summary = page.getByTestId('target-summary');
-    await expect(summary.getByTestId('last-time')).toHaveText(/^Dernière fois\s*14 kg · 8 · 8 · 8 · 12 mars$/);
+    await expect(summary.getByTestId('last-time')).toHaveText(/^Dernière fois\s*14 kg · 8 · 8 · 8 · 12\/03$/);
     await expect(summary.getByTestId('next-target')).toHaveText('3 × 9 à 14 kg');
     await expect(summary.getByTestId('sheet-next')).toHaveText('3 × 9');
-    await expect(summary.getByTestId('progress-marker')).toHaveText('↑ +1 répétition : 3×9 (au lieu de 3×8)');
+    await expect(summary.getByTestId('progress-marker')).toHaveText('↑ +1 rép.');
     await expect(summary.getByTestId('same-target')).toHaveCount(0);
     const sheet = await layout(summary);
     expect(sheet.badgeInLast).toBe(true);
@@ -61,6 +63,8 @@ test.describe('Dernière fois / Prochaine cible (§5.3.2)', () => {
     expect(sheet.lastColor).toBe('rgb(154, 161, 176)'); // gris clair
     expect(sheet.separator).toBe('1px');
     expect(sheet.lastOverflow).toBeLessThanOrEqual(0);
+    expect(sheet.lastLines, 'une seule ligne à 412 px').toBe(1);
+    expect(sheet.ellipsis, 'jamais tronquée').toBe(false);
     for (const c of STATUS_COLORS) expect(sheet.colors, 'aucune couleur de statut hors de la pastille').not.toContain(c);
 
     // Fiche, cible identique à la dernière fois : mention discrète.
@@ -81,7 +85,7 @@ test.describe('Dernière fois / Prochaine cible (§5.3.2)', () => {
     await page.getByRole('button', { name: 'Démarrer une séance' }).click();
     const card = await addExercise(page, 'extension triceps haltère assis', 'Extension triceps haltère assis');
     const inCard = card.getByTestId('target-summary');
-    await expect(inCard.getByTestId('last-time')).toHaveText(/14 kg · 8 · 8 · 8 · 12 mars$/);
+    await expect(inCard.getByTestId('last-time')).toHaveText(/14 kg · 8 · 8 · 8 · 12\/03$/);
     await expect(inCard.getByTestId('next-target')).toHaveText('3 × 9 à 14 kg');
     await expect(inCard.getByTestId('progress-marker')).toBeVisible();
     const [summaryBox, weightBox] = await Promise.all([inCard.boundingBox(), card.getByLabel('Poids (kg)').boundingBox()]);
@@ -92,14 +96,18 @@ test.describe('Dernière fois / Prochaine cible (§5.3.2)', () => {
     await card.getByLabel('Poids (kg)').blur();
     await expect(inCard.getByTestId('progress-marker')).toHaveCount(0);
     await expect(inCard.getByTestId('same-target')).toHaveCount(0);
+    // La ligne de cible suit la charge réellement saisie (plus lourde : retour à 3 × 8, §7.7).
+    await expect(inCard.getByTestId('next-target')).toHaveText('3 × 8 à 16 kg');
     const chest = await addExercise(page, 'chest press', 'Chest press');
     await expect(chest.getByTestId('same-target')).toHaveText('= Même cible : consolide');
     await expect(exerciseCard(page, 'Chest press').getByTestId('next-target')).toHaveText('3 × 8 à 47 kg');
 
-    // Petit écran : la ligne « Dernière fois » ne déborde jamais.
+    // Petit écran : la ligne « Dernière fois » ne déborde jamais et n'est jamais tronquée (elle passe à la ligne).
     for (const width of [360, 320]) {
       await page.setViewportSize({ width, height: 800 });
-      expect((await layout(chest.getByTestId('target-summary'))).lastOverflow, `${width} px`).toBeLessThanOrEqual(0);
+      const narrow = await layout(chest.getByTestId('target-summary'));
+      expect(narrow.lastOverflow, `${width} px`).toBeLessThanOrEqual(0);
+      expect(narrow.ellipsis, `${width} px`).toBe(false);
     }
   });
 });

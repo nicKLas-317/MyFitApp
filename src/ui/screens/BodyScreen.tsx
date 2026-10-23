@@ -55,8 +55,11 @@ export function BodyScreen() {
                 Enregistrement impossible : réessayez.
               </p>
             )}
-            <p className="muted small">
-              Taille : {data.heightCm ? `${data.heightCm} cm` : 'non renseignée'} · <a href="#/reglages">modifier dans les réglages</a>
+            <p className="muted small height-line">
+              Taille : {data.heightCm ? `${data.heightCm} cm` : 'non renseignée'} ·{' '}
+              <a className="link" href="#/reglages">
+                modifier dans les réglages
+              </a>
             </p>
           </section>
 
@@ -82,9 +85,9 @@ export function BodyScreen() {
             {data.weighIns.length === 0 ? (
               <p className="muted">Aucune pesée. Elle n’est jamais obligatoire.</p>
             ) : (
-              <ul className="history" aria-label="Historique des pesées">
+              <ul className="frame weigh-list" aria-label="Historique des pesées">
                 {[...data.weighIns].reverse().map((w) => (
-                  <li key={w.date} className="history-item weigh-in">
+                  <li key={w.date} className="weigh-in">
                     {editing === w.date ? (
                       <WeighInForm
                         today={today}
@@ -107,10 +110,12 @@ export function BodyScreen() {
                     ) : (
                       <>
                         <span className="history-date">{formatIsoDay(w.date)}</span>
-                        <span>{formatKg(w.weightKg)}</span>
-                        <button type="button" className="link small" onClick={() => setEditing(w.date)}>
-                          Corriger
-                        </button>
+                        <span className="weigh-value">
+                          <span>{formatKg(w.weightKg)}</span>
+                          <button type="button" className="link" onClick={() => setEditing(w.date)}>
+                            Corriger
+                          </button>
+                        </span>
                       </>
                     )}
                   </li>
@@ -211,7 +216,7 @@ function WeighInForm({ today, initial, existing, submitLabel, onSubmit, onCancel
               </button>
             </>
           ) : (
-            <button type="button" className="link danger small" onClick={() => setConfirmDelete(true)}>
+            <button type="button" className="link danger" onClick={() => setConfirmDelete(true)}>
               Supprimer
             </button>
           ))}

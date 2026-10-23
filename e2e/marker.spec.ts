@@ -24,8 +24,9 @@ test.describe('Repère de progression (§5.3.1)', () => {
     await startSession(page);
     const card = await addExercise(page, 'pec deck', 'Pec deck');
     const marker = card.getByTestId('progress-marker');
-    await expect(marker).toHaveText('↑ +1 répétition : 3×9 (au lieu de 3×8)');
+    await expect(marker).toHaveText('↑ +1 rép.');
     await expect(card.getByTestId('target')).toHaveText('3 × 9');
+    await expect(card.getByTestId('next-target')).toHaveText('3 × 9 à 35 kg');
     // En haut de l'exercice : avant le champ de poids, sans couleur de statut.
     const [markerBox, weightBox] = await Promise.all([marker.boundingBox(), card.getByLabel('Poids (kg)').boundingBox()]);
     expect(markerBox!.y).toBeLessThan(weightBox!.y);
@@ -35,10 +36,10 @@ test.describe('Repère de progression (§5.3.1)', () => {
     await card.getByLabel('Poids (kg)').press('Enter');
     await expect(marker).toHaveCount(0);
 
-    // Fiche : même repère à côté de « Prochaine cible ».
+    // Fiche : même repère sous « Prochaine cible ».
     await page.goto('./#/exercice/pec-deck');
     await expect(page.getByTestId('sheet-next')).toHaveText('3 × 9');
-    await expect(page.getByTestId('progress-marker')).toHaveText('↑ +1 répétition : 3×9 (au lieu de 3×8)');
+    await expect(page.getByTestId('progress-marker')).toHaveText('↑ +1 rép.');
   });
 
   test('Une seule séance verte : la cible ne change pas, aucun repère', async ({ page }) => {

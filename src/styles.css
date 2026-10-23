@@ -13,21 +13,34 @@
   --rouge: #fca5a5;
   --danger: #fca5a5;
   --radius: 14px;
-  /* Cadres de section (§3.1) : couleurs vives et claires, alternées ; jamais vert, orange ni rouge (statuts). */
-  --frame-1: #ffe44a; /* jaune */
-  --frame-2: #3ee6ee; /* cyan */
-  --frame-3: #8cc8ff; /* bleu clair */
-  --frame-4: #c79bff; /* violet */
-  --frame-5: #ff7ad6; /* rose magenta */
-  /* Couleurs de groupe en plus de la palette (§3.2) : jambes et abdominaux. */
-  --frame-white: #f4f5f7; /* blanc */
-  --frame-grey: #b4bcc8; /* gris clair */
-  /* Cadre neutre : écrans liés à plusieurs groupes, pour ce qui ne concerne pas un exercice précis (§3.2). */
+  /* Couleurs des groupes musculaires (§3.2) : vives et claires ; jamais vert, orange ni rouge (statuts). */
+  --frame-1: #ffe44a; /* jaune : épaules */
+  --frame-2: #3ee6ee; /* cyan : pectoraux */
+  --frame-3: #8cc8ff; /* bleu clair : triceps */
+  --frame-4: #c79bff; /* violet : dos */
+  --frame-5: #ff7ad6; /* rose magenta : biceps */
+  --frame-white: #f4f5f7; /* blanc : jambes */
+  --frame-grey: #b4bcc8; /* gris clair : abdominaux */
+  /* Cadre neutre : tout ce qui ne concerne pas un groupe musculaire précis (§3.1). */
   --frame-neutral: #4a5163;
   /* Couronne des records personnels : dorée, distincte des statuts et des couleurs de groupe. */
   --gold: #e8b631;
   --frame-width: 2px;
   --tap: 48px;
+  /*
+   * Échelle typographique (§3.3) : cinq tailles seulement, en rem pour suivre la taille de police du téléphone.
+   * 13 px : étiquettes de graphiques, mentions annexes ; 15 px : textes secondaires, titres de section ;
+   * 17 px : texte courant, boutons ; 22 px : titres d'écran, valeurs saisies ; 28 px : chiffres clés (cible, chrono).
+   */
+  --fs-1: calc(13rem / 17);
+  --fs-2: calc(15rem / 17);
+  --fs-3: 1rem;
+  --fs-4: calc(22rem / 17);
+  --fs-5: calc(28rem / 17);
+  /* Espacements fixes : 8, 16 et 24 px. */
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
   color-scheme: dark;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   font-size: 17px;
@@ -48,9 +61,25 @@ body {
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
   color: inherit;
+}
+
+/* Valeurs par défaut du navigateur ramenées à l'échelle des espacements (8, 16, 24 px). */
+button {
+  padding: 0;
+}
+
+:where(input:not([type='checkbox'], [type='radio']), select, textarea) {
+  padding: 0 var(--space-1);
+}
+
+p,
+pre {
+  margin: var(--space-2) 0;
 }
 
 a {
@@ -58,14 +87,44 @@ a {
 }
 
 h1 {
-  font-size: 1.5rem;
-  margin: 0 0 0.75rem;
+  font-size: var(--fs-4);
+  line-height: 1.2;
+  margin: 0 0 var(--space-2);
+}
+
+h2,
+h3 {
+  font-size: var(--fs-3);
+  line-height: 1.2;
+}
+
+/*
+ * Titre de section : un seul style dans toute l'application (bibliothèque, fiche, bilans, réglages, données…).
+ * Dans un cadre, le premier titre colle au bord haut du cadre.
+ */
+.section-title,
+fieldset.frame > legend,
+.data-section h2,
+.bilan-title {
+  font-size: var(--fs-2);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: var(--space-3) 0 var(--space-1);
+}
+
+[data-frame] > .section-title:first-child,
+[data-frame] > h2:first-child,
+fieldset.frame > legend {
+  margin-top: 0;
 }
 
 .screen {
   max-width: 560px;
   margin: 0 auto;
-  padding: 16px 16px calc(96px + env(safe-area-inset-bottom));
+  padding: var(--space-2) var(--space-2) calc(96px + env(safe-area-inset-bottom));
 }
 
 .muted {
@@ -73,19 +132,19 @@ h1 {
 }
 
 .small {
-  font-size: 0.85rem;
+  font-size: var(--fs-2);
 }
 
 .row {
   display: flex;
-  gap: 8px;
+  gap: var(--space-1);
   flex-wrap: wrap;
   align-items: center;
 }
 
 .empty {
   text-align: center;
-  padding: 24px 0;
+  padding: var(--space-3) 0;
 }
 
 /* Boutons */
@@ -93,9 +152,9 @@ h1 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--space-1);
   min-height: var(--tap);
-  padding: 0 18px;
+  padding: 0 var(--space-2);
   border-radius: var(--radius);
   border: 1px solid var(--border);
   background: var(--surface-2);
@@ -103,6 +162,7 @@ h1 {
   color: var(--text);
   cursor: pointer;
   font-weight: 600;
+  text-align: center;
 }
 
 .btn.primary {
@@ -119,22 +179,26 @@ h1 {
 .btn.huge {
   width: 100%;
   min-height: 88px;
-  font-size: 1.25rem;
+  font-size: var(--fs-4);
   flex-direction: column;
-  gap: 2px;
+  gap: 0;
 }
 
 .btn:disabled {
   opacity: 0.4;
 }
 
+/* Lien d'action : texte, mais zone d'appui de 48 px de haut. */
 .link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  padding: 0;
   background: none;
   border: none;
   color: var(--accent);
-  padding: 8px 0;
-  min-height: 40px;
   cursor: pointer;
+  text-align: left;
 }
 
 .link.danger {
@@ -148,20 +212,24 @@ h1 {
 
 /* Accueil */
 .brand {
-  font-size: 1.75rem;
-  margin: 24px 0;
+  font-size: var(--fs-5);
+  margin: var(--space-3) 0;
+}
+
+.home .brand {
+  margin: var(--space-1) 0 var(--space-2);
 }
 
 .chrono-inline {
   font-variant-numeric: tabular-nums;
   font-weight: 500;
-  font-size: 1rem;
+  font-size: var(--fs-3);
 }
 
 .home-nav {
-  margin-top: 16px;
+  margin-top: var(--space-2);
   display: grid;
-  gap: 8px;
+  gap: var(--space-1);
 }
 
 .home-nav .btn {
@@ -177,8 +245,8 @@ h1 {
   z-index: 5;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 0 12px;
+  gap: var(--space-1);
+  padding: var(--space-1) 0;
   background: var(--bg);
 }
 
@@ -190,9 +258,10 @@ h1 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: none;
   min-width: var(--tap);
   min-height: var(--tap);
-  font-size: 2rem;
+  font-size: var(--fs-5);
   line-height: 1;
   text-decoration: none;
   color: var(--text);
@@ -212,8 +281,9 @@ h1 {
 }
 
 .chrono {
-  font-size: 2rem;
+  font-size: var(--fs-5);
   font-weight: 700;
+  line-height: 1.2;
   font-variant-numeric: tabular-nums;
 }
 
@@ -231,20 +301,36 @@ h1 {
   display: grid;
   /* Une carte ne dépasse jamais la largeur de l'écran, même avec une ligne de série large. */
   grid-template-columns: minmax(0, 1fr);
-  gap: 10px;
+  gap: var(--space-1);
 }
 
 .card {
   background: var(--surface);
 }
 
+/* En-tête de carte : le bouton qui ouvre ou ferme la carte, et le menu « ⋯ » quand elle est ouverte. */
+/* Le menu s'ouvre sous l'en-tête entier, à 8 px au moins de ce qu'il recouvre. */
+.card-head,
+.card-line {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.card-head .action-menu {
+  margin-right: var(--space-1);
+}
+
 .card-header {
+  flex: 1;
+  min-width: 0;
   width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
+  gap: var(--space-1);
+  padding: var(--space-2);
   min-height: 64px;
   background: none;
   border: none;
@@ -253,47 +339,100 @@ h1 {
 }
 
 .card-title {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
 }
 
 .card-summary {
-  display: flex;
-  gap: 12px;
   font-variant-numeric: tabular-nums;
+}
+
+.card-summary > span {
   white-space: nowrap;
 }
 
-.sets-count {
-  color: var(--muted);
-}
-
 .card-body {
-  padding: 0 16px 16px;
+  padding: 0 var(--space-2) var(--space-2);
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
+  gap: var(--space-2);
+}
+
+/* Menu « ⋯ » des actions secondaires (§5.3) : bouton de 48 px, liste d'actions de 48 px chacune. */
+.action-menu {
+  flex: none;
+}
+
+.menu-button {
+  width: var(--tap);
+  height: var(--tap);
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: var(--fs-4);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.menu-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + var(--space-1));
+  z-index: 10;
+  margin-right: var(--space-1);
+  min-width: 240px;
+  max-width: calc(100vw - 2 * var(--space-2));
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: var(--surface-2);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.5);
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  min-height: var(--tap);
+  padding: 0 var(--space-2);
+  border: none;
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-item.danger {
+  color: var(--danger);
+}
+
+/* Ligne d'un bloc (cardio) avec son menu « ⋯ » à droite. */
+.card-line {
+  justify-content: space-between;
 }
 
 /*
- * Dernière fois / Prochaine cible (§5.3.2), sur la fiche et dans la carte de séance : deux zones séparées.
- * Dernière fois : secondaire, petite, gris clair, sur une ligne. Prochaine cible : principale, en grand et en gras,
- * dans la couleur du groupe de l'exercice. Aucune couleur de statut hors de la pastille.
+ * Dernière fois / cible (§5.3.2), sur la fiche et dans la carte de séance : deux zones séparées.
+ * Dernière fois : secondaire, gris clair, jamais tronquée (retour à la ligne entre deux éléments si besoin).
+ * Cible : une seule ligne, en grand et en gras, dans la couleur du groupe ; puis une courte mention.
  */
 .target-summary {
   display: grid;
-  gap: 10px;
+  gap: var(--space-1);
 }
 
 .last-zone {
   margin: 0;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 0 var(--space-1);
   min-width: 0;
-  font-size: 0.85rem;
+  font-size: var(--fs-2);
   color: var(--muted);
-  white-space: nowrap;
 }
 
 .last-zone .zone-label {
@@ -303,8 +442,10 @@ h1 {
 
 .last-values {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+.last-part {
+  white-space: nowrap;
 }
 
 .last-zone .status {
@@ -314,14 +455,14 @@ h1 {
 
 .next-zone {
   display: grid;
-  gap: 6px;
-  padding-top: 10px;
+  gap: var(--space-1);
+  padding-top: var(--space-1);
   border-top: 1px solid var(--border);
 }
 
 .next-zone .zone-label {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: var(--fs-1);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -329,7 +470,7 @@ h1 {
 
 .next-target {
   margin: 0;
-  font-size: 1.6rem;
+  font-size: var(--fs-5);
   font-weight: 800;
   line-height: 1.2;
   color: var(--group-color, var(--text));
@@ -341,38 +482,36 @@ h1 {
 
 .next-hint {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--fs-2);
   color: var(--muted);
 }
 
-.reco {
-  margin: 0;
-  padding: 10px 14px;
+/* Changement recommandé (« ↑ +1 rép. », « ↑ Poids supérieur ») : en blanc et en gras, sans couleur de statut. */
+.next-hint.change {
+  color: var(--text);
   font-weight: 700;
-  font-size: 1.1rem;
-  background: var(--surface-2);
 }
 
 .weight-field label,
 .start-weight label,
-.name-form label,
-.dialog label {
+.name-form label:not(.check-line),
+.dialog label:not(.check-line) {
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
   color: var(--muted);
 }
 
 .weight-input-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-1);
 }
 
 input[type='text'],
 input[type='search'],
 input[type='datetime-local'] {
   min-height: var(--tap);
-  padding: 0 14px;
+  padding: 0 var(--space-2);
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--surface-2);
@@ -380,7 +519,7 @@ input[type='datetime-local'] {
 }
 
 .weight-input-row input {
-  font-size: 1.4rem;
+  font-size: var(--fs-4);
   font-weight: 700;
   max-width: 140px;
 }
@@ -396,38 +535,23 @@ input[aria-invalid='true'] {
 
 .field-error {
   color: var(--danger);
-  margin: 4px 0 0;
+  margin: var(--space-1) 0 0;
 }
 
 .confirm-box {
-  margin-top: 8px;
-  padding: 12px;
+  padding: var(--space-2);
   background: var(--surface-2);
 }
 
 .confirm-box p {
-  margin: 0 0 8px;
-}
-
-.target-line {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.target-line strong {
-  font-size: 1.2rem;
-}
-
-.target-line .link {
-  margin-left: auto;
+  margin: 0 0 var(--space-1);
 }
 
 .adjust {
   display: flex;
-  gap: 16px;
+  gap: var(--space-2);
   flex-wrap: wrap;
+  align-items: center;
 }
 
 /* Séries */
@@ -436,21 +560,31 @@ input[aria-invalid='true'] {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 8px;
+  gap: var(--space-1);
 }
 
+/*
+ * Ligne de série : libellé, − valeur +, « Valider ». Si la ligne ne tient pas (écran étroit, texte agrandi),
+ * « Valider » passe dessous, sur toute la largeur ; « Série 1 » ne se coupe jamais.
+ */
 .set {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-1);
   min-height: 56px;
-  padding: 4px 8px 4px 12px;
+  padding: 0 var(--space-1) 0 var(--space-2);
   border-radius: 10px;
   background: var(--surface-2);
 }
 
+.set.next {
+  padding-block: var(--space-1);
+}
+
 .set-label {
   min-width: 64px;
+  white-space: nowrap;
   color: var(--muted);
 }
 
@@ -462,71 +596,32 @@ input[aria-invalid='true'] {
   margin-left: auto;
   color: var(--vert);
   font-weight: 700;
-  padding-right: 8px;
+  padding-right: var(--space-1);
 }
 
 .set .validate {
+  flex: 1 0 auto;
   margin-left: auto;
-}
-
-/* Écran étroit (360 px) : la ligne de série tient dans la carte ; les boutons − et + gardent leur taille tactile. */
-@media (max-width: 380px) {
-  .card-body {
-    padding: 0 12px 14px;
-  }
-
-  .set {
-    gap: 4px;
-    padding: 4px 6px 4px 8px;
-  }
-
-  .set-label {
-    min-width: 0;
-    font-size: 0.85rem;
-  }
-
-  .set .validate {
-    padding: 0 10px;
-  }
-}
-
-/* Très petit écran (320 px) : « Valider » passe sous les boutons − et +, sur toute la largeur de la ligne ;
-   « Dernière fois » peut passer à la ligne plutôt que d'être tronquée. */
-@media (max-width: 340px) {
-  .last-zone {
-    flex-wrap: wrap;
-    white-space: normal;
-  }
-
-  .set.next {
-    flex-wrap: wrap;
-    padding-bottom: 8px;
-  }
-
-  .set.next .validate {
-    flex: 1 1 100%;
-    margin-left: 0;
-  }
 }
 
 .stepper {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1);
 }
 
 .stepper-label {
   color: var(--muted);
-  margin-right: 4px;
 }
 
 .step {
   width: var(--tap);
   height: var(--tap);
+  flex: none;
   border-radius: 50%;
   border: 1px solid var(--border);
   background: var(--surface);
-  font-size: 1.5rem;
+  font-size: var(--fs-4);
   line-height: 1;
   cursor: pointer;
 }
@@ -538,12 +633,12 @@ input[aria-invalid='true'] {
 .step-value {
   min-width: 2ch;
   text-align: center;
-  font-size: 1.4rem;
+  font-size: var(--fs-4);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
-/* Ressenti */
+/* Ressenti : cinq boutons de 48 px, libellés sur une ligne, sur deux rangées si l'écran est étroit. */
 .feeling {
   border: none;
   margin: 0;
@@ -552,22 +647,29 @@ input[aria-invalid='true'] {
 
 .feeling legend {
   color: var(--muted);
-  margin-bottom: 6px;
+  margin-bottom: var(--space-1);
+  padding: 0;
 }
 
 .feeling-options {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.feeling .chip {
+  flex: 1 0 auto;
 }
 
 .chip {
   min-height: var(--tap);
-  padding: 4px;
+  min-width: var(--tap);
+  padding: 0 var(--space-2);
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--surface-2);
-  font-size: 0.85rem;
+  font-size: var(--fs-2);
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -578,14 +680,68 @@ input[aria-invalid='true'] {
   font-weight: 700;
 }
 
-.remove {
-  justify-self: start;
-}
-
 .session-actions {
   display: grid;
-  gap: 10px;
-  margin-top: 16px;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+/*
+ * Volet de fin de séance (§5.6) : fixé en bas de l'écran, toujours visible sans défiler. Tant qu'un ressenti manque,
+ * l'action principale (bleue) est de le choisir.
+ */
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  background: rgb(0 0 0 / 0.6);
+}
+
+.bottom-sheet {
+  position: fixed;
+  left: var(--space-1);
+  right: var(--space-1);
+  bottom: calc(var(--space-1) + env(safe-area-inset-bottom));
+  z-index: 36;
+  max-width: 544px;
+  margin: 0 auto;
+  max-height: calc(100dvh - 2 * var(--space-3));
+  overflow-y: auto;
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  background: var(--surface);
+  box-shadow: 0 -8px 24px rgb(0 0 0 / 0.5);
+}
+
+.sheet-title {
+  margin: 0;
+  font-size: var(--fs-4);
+}
+
+.bottom-sheet p {
+  margin: 0;
+}
+
+.sheet-buttons {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.bottom-sheet .feeling[data-empty] .chip {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+  font-weight: 700;
+}
+
+.missing-feelings {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.missing-note {
+  margin: 0;
 }
 
 /* Statut */
@@ -618,15 +774,6 @@ input[aria-invalid='true'] {
 /* Choix d'exercice */
 .search {
   flex: 1;
-  font-size: 1.1rem;
-}
-
-.section-title {
-  font-size: 0.9rem;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin: 16px 0 8px;
 }
 
 .pick-list {
@@ -634,7 +781,7 @@ input[aria-invalid='true'] {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 8px;
+  gap: var(--space-1);
 }
 
 .pick-item {
@@ -644,11 +791,11 @@ input[aria-invalid='true'] {
 .pick-button {
   width: 100%;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
-  gap: 12px;
-  min-height: 60px;
-  padding: 10px 16px;
+  gap: var(--space-2);
+  min-height: 64px;
+  padding: var(--space-1) var(--space-2);
   background: none;
   border: none;
   text-align: left;
@@ -656,6 +803,8 @@ input[aria-invalid='true'] {
 }
 
 .pick-name {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
 }
@@ -663,12 +812,12 @@ input[aria-invalid='true'] {
 .pick-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-1);
   white-space: nowrap;
 }
 
 .start-weight {
-  padding: 0 16px 16px;
+  padding: 0 var(--space-2) var(--space-2);
 }
 
 .start-weight input {
@@ -680,38 +829,50 @@ input[aria-invalid='true'] {
 .recap-list {
   list-style: none;
   padding: 0;
-  margin: 16px 0;
+  margin: var(--space-2) 0;
   display: grid;
-  gap: 8px;
+  gap: var(--space-1);
 }
 
 .recap-item {
-  padding: 12px 16px;
+  padding: var(--space-1) var(--space-2);
   display: grid;
-  gap: 4px;
+  gap: 0;
 }
 
 .recap-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-1);
+}
+
+/* Nom d'exercice cliquable (détail d'une séance) : zone d'appui de 48 px. */
+.head-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--tap);
 }
 
 .name-form {
   display: grid;
-  gap: 8px;
-  margin: 16px 0;
+  gap: var(--space-1);
+  margin: var(--space-2) 0;
 }
 
 /* Réglages */
 .settings-list dt {
   color: var(--muted);
-  margin-top: 16px;
+  margin-top: var(--space-2);
+}
+
+.settings-list dt:first-child {
+  margin-top: 0;
 }
 
 .settings-list dd {
-  margin: 4px 0 0;
+  margin: 0;
 }
 
 /* Bandeaux, toast, dialogue */
@@ -719,10 +880,10 @@ input[aria-invalid='true'] {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: var(--space-1);
+  padding: var(--space-2);
   border-radius: var(--radius);
-  margin: 8px 0;
+  margin: var(--space-1) 0;
 }
 
 .banner.error {
@@ -742,19 +903,19 @@ input[aria-invalid='true'] {
 .toast {
   position: fixed;
   left: 50%;
-  bottom: calc(16px + env(safe-area-inset-bottom));
+  bottom: calc(var(--space-2) + env(safe-area-inset-bottom));
   transform: translateX(-50%);
   z-index: 30;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 8px 8px 8px 18px;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-2);
   border-radius: var(--radius);
   background: #2b3140;
   border: 1px solid var(--border);
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.5);
   width: max-content;
-  max-width: calc(100vw - 32px);
+  max-width: calc(100vw - 2 * var(--space-2));
 }
 
 .overlay {
@@ -765,24 +926,25 @@ input[aria-invalid='true'] {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: var(--space-2);
 }
 
 .dialog {
   width: 100%;
   max-width: 420px;
   background: var(--surface);
-  padding: 20px;
+  padding: var(--space-3);
   display: grid;
-  gap: 10px;
+  gap: var(--space-2);
 }
 
 .dialog h2 {
   margin: 0;
+  font-size: var(--fs-4);
 }
 
 .splash {
-  padding: 32px 16px;
+  padding: var(--space-3) var(--space-2);
   text-align: center;
 }
 
@@ -790,39 +952,20 @@ input[aria-invalid='true'] {
   color: var(--danger);
 }
 
-.missing-feelings {
-  display: grid;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.missing-feelings p {
-  margin: 0;
+.missing-feelings > p {
   color: var(--orange);
 }
 
 /* Données : import et export */
-select,
-textarea {
-  font: inherit;
-  color: inherit;
-}
-
 .data-section {
-  margin: 20px 0;
   display: grid;
-  gap: 10px;
-}
-
-.data-section h2 {
-  font-size: 1.15rem;
-  margin: 0;
+  gap: var(--space-1);
 }
 
 .data-section > label,
 .draft-field label {
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: var(--fs-2);
 }
 
 .data-section textarea,
@@ -830,7 +973,7 @@ textarea {
 .draft-field select {
   width: 100%;
   min-height: var(--tap);
-  padding: 10px 12px;
+  padding: var(--space-1) var(--space-2);
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--surface-2);
@@ -838,11 +981,15 @@ textarea {
 
 .data-section textarea {
   font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-  font-size: 0.95rem;
+  font-size: var(--fs-2);
   resize: vertical;
 }
 
 .draft-field input[type='date'] {
+  min-width: 0;
+}
+
+.draft-field .row > input[type='date'] {
   width: auto;
   flex: 1;
 }
@@ -867,12 +1014,12 @@ textarea {
 
 .draft {
   display: grid;
-  gap: 12px;
+  gap: var(--space-2);
 }
 
 .draft-field {
   display: grid;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .draft-field p {
@@ -882,7 +1029,7 @@ textarea {
 .field-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--space-1);
   align-items: end;
 }
 
@@ -891,14 +1038,14 @@ textarea {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 10px;
+  gap: var(--space-1);
 }
 
 .draft-exercise,
 .draft-cardio-entry {
   display: grid;
-  gap: 10px;
-  padding: 14px;
+  gap: var(--space-1);
+  padding: var(--space-2);
 }
 
 .draft-exercise.excluded,
@@ -909,7 +1056,7 @@ textarea {
 .draft-head {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-1);
   align-items: flex-start;
 }
 
@@ -918,17 +1065,17 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+/* Case à cocher et son libellé : toute la ligne est la zone d'appui, 48 px de haut. */
 .check-line {
   display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  min-height: 40px;
-  padding-top: 8px;
+  gap: var(--space-1);
+  align-items: center;
+  min-height: var(--tap);
 }
 
 .check-line input {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   flex: none;
   margin: 0;
 }
@@ -944,10 +1091,10 @@ textarea {
 
 .problems {
   margin: 0;
-  padding-left: 18px;
+  padding-left: var(--space-3);
   display: grid;
-  gap: 4px;
-  font-size: 0.9rem;
+  gap: var(--space-1);
+  font-size: var(--fs-2);
 }
 
 .problem.error {
@@ -959,11 +1106,11 @@ textarea {
 }
 
 .to-fix {
-  padding: 12px;
+  padding: var(--space-2);
 }
 
 .to-fix p {
-  margin: 0 0 6px;
+  margin: 0 0 var(--space-1);
   color: var(--danger);
   font-weight: 600;
 }
@@ -979,9 +1126,9 @@ textarea {
 
 .plan {
   margin: 0;
-  padding-left: 18px;
+  padding-left: var(--space-3);
   display: grid;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .source-text pre,
@@ -991,20 +1138,27 @@ textarea {
 }
 
 .source-text pre {
-  font-size: 0.85rem;
+  font-size: var(--fs-2);
   color: var(--muted);
 }
 
 .replace {
   display: grid;
-  gap: 8px;
+  gap: var(--space-1);
+}
+
+.replace summary,
+.archived summary,
+.report-text summary,
+.source-text summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--tap);
+  cursor: pointer;
 }
 
 .replace summary {
   color: var(--danger);
-  cursor: pointer;
-  min-height: 40px;
-  padding-top: 8px;
 }
 
 .btn.danger {
@@ -1014,7 +1168,7 @@ textarea {
 }
 
 .reminder {
-  margin: 12px 0;
+  margin: var(--space-2) 0;
 }
 
 /* Bibliothèque */
@@ -1045,7 +1199,6 @@ textarea {
   stroke-linejoin: round;
 }
 
-
 .pick-row {
   display: flex;
   align-items: stretch;
@@ -1056,79 +1209,69 @@ textarea {
   min-width: 0;
 }
 
-.pick-button {
-  justify-content: flex-start;
-}
-
-.pick-name {
-  flex: 1;
-  min-width: 0;
-}
-
 .variant-tag {
   display: inline-block;
-  padding: 0 6px;
-  margin-right: 6px;
+  padding: 0 var(--space-1);
+  margin-right: var(--space-1);
   border-radius: 6px;
   border: 1px solid var(--border);
   color: var(--text);
 }
 
 .add-to-session {
-  margin: 8px 8px 8px 0;
+  margin: var(--space-1) var(--space-1) var(--space-1) 0;
   min-width: var(--tap);
   padding: 0;
-  font-size: 1.4rem;
+  font-size: var(--fs-4);
 }
 
 .no-result {
   display: grid;
-  gap: 8px;
+  gap: var(--space-1);
   justify-items: start;
-  padding: 16px 0;
+  padding: var(--space-2) 0;
 }
 
 .new-exercise {
-  margin-top: 12px;
+  margin-top: var(--space-2);
 }
 
 .archived {
-  margin-top: 24px;
+  margin-top: var(--space-3);
 }
 
 .archived summary,
 .direct-name {
   color: var(--muted);
-  cursor: pointer;
-  min-height: 40px;
-  padding: 8px 16px 0;
+  padding: 0 var(--space-2);
   margin: 0;
 }
 
 .plain-list {
   list-style: none;
   padding: 0;
-  margin: 8px 0;
+  margin: var(--space-1) 0;
   display: grid;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .plain-list a,
 .plain-list strong {
-  display: inline-block;
-  padding: 8px 0;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
 }
 
 .sheet-head {
   display: grid;
   grid-template-columns: auto 1fr auto;
-  gap: 14px;
+  gap: var(--space-2);
   align-items: start;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-2);
 }
 
 .sheet-head p {
-  margin: 0 0 4px;
+  margin: 0;
 }
 
 .variant-line {
@@ -1138,7 +1281,7 @@ textarea {
 .favorite {
   background: none;
   border: none;
-  font-size: 1.8rem;
+  font-size: var(--fs-5);
   line-height: 1;
   min-width: var(--tap);
   min-height: var(--tap);
@@ -1151,9 +1294,9 @@ textarea {
 }
 
 .sheet-status {
-  padding: 12px 16px;
+  padding: var(--space-2);
   display: grid;
-  gap: 6px;
+  gap: var(--space-1);
 }
 
 .sheet-status p {
@@ -1164,20 +1307,20 @@ textarea {
 .settings-links,
 .danger-zone {
   display: grid;
-  gap: 8px;
-  margin: 16px 0;
+  gap: var(--space-1);
+  margin: var(--space-2) 0;
 }
 
 .inline-form {
   display: grid;
-  gap: 6px;
+  gap: var(--space-1);
 }
 
 .inline-form input {
   flex: 1;
   min-width: 0;
   min-height: var(--tap);
-  padding: 10px 12px;
+  padding: var(--space-1) var(--space-2);
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--surface-2);
@@ -1188,14 +1331,14 @@ textarea {
   padding: 0;
   margin: 0;
   display: grid;
-  gap: 6px;
+  gap: var(--space-1);
 }
 
 .history-item {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 2px 10px;
-  padding: 10px 14px;
+  gap: 0 var(--space-1);
+  padding: var(--space-1) var(--space-2);
   background: var(--surface);
 }
 
@@ -1211,12 +1354,12 @@ textarea {
 
 .edit-form {
   display: grid;
-  gap: 12px;
+  gap: var(--space-2);
 }
 
 .draft-field textarea {
   width: 100%;
-  padding: 10px 12px;
+  padding: var(--space-1) var(--space-2);
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--surface-2);
@@ -1233,27 +1376,29 @@ textarea {
   margin: 0;
 }
 
+/* Légende d'un groupe de champs (hors cadre) : libellé de champ, pas un titre de section. */
 .chips-field legend {
   font-weight: 600;
-  font-size: 0.9rem;
-  margin-bottom: 6px;
+  font-size: var(--fs-2);
+  margin-bottom: var(--space-1);
+  padding: 0;
 }
 
 .variant-forms {
   display: grid;
-  gap: 10px;
+  gap: var(--space-1);
 }
 
 .variant-form {
   display: grid;
-  gap: 10px;
-  padding: 12px 14px;
+  gap: var(--space-1);
+  padding: var(--space-2);
   margin: 0;
 }
 
 .variant-form legend {
   font-weight: 600;
-  padding: 0 4px;
+  padding: 0 var(--space-1);
 }
 
 /* Un fieldset ne doit pas imposer la largeur de son contenu sur petit écran. */
@@ -1264,7 +1409,7 @@ fieldset {
 .chips-field .feeling-options {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--space-1);
 }
 
 .chips-field .chip {
@@ -1273,11 +1418,6 @@ fieldset {
 
 .sheet .link {
   text-align: left;
-}
-
-.card-header .card-title {
-  flex: 1;
-  min-width: 0;
 }
 
 /* Illustrations : dessins au trait sur fond clair, lisibles en thème sombre. */
@@ -1293,9 +1433,9 @@ fieldset {
 }
 
 .illustration {
-  margin: 0 0 12px;
+  margin: 0 0 var(--space-2);
   display: grid;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .illustration img {
@@ -1305,29 +1445,43 @@ fieldset {
   object-fit: contain;
   background: #f4f5f7;
   border-radius: var(--radius);
-  padding: 8px;
+  padding: var(--space-1);
 }
 
 .attribution {
-  font-size: 0.72rem;
+  display: grid;
+  font-size: var(--fs-1);
   color: var(--muted);
 }
 
-.attribution a {
+/* Liens de la licence et des sources : zone d'appui de 48 × 48 px, écartés de 8 px. */
+.attribution-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-1);
+}
+
+.attribution-links a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--tap);
+  min-height: var(--tap);
   color: var(--muted);
 }
 
 .assisted-note {
   color: var(--accent);
-  margin: 4px 0 0;
+  margin: var(--space-1) 0 0;
 }
 
-/* Graphiques (§19.2, §20) */
+/* Graphiques (§19.2, §20) : dessinés à l'échelle 1, étiquettes de 13 px. */
 .chart {
   display: block;
   width: 100%;
   height: auto;
-  margin: 4px 0 12px;
+  margin: var(--space-1) 0 var(--space-2);
   background: var(--surface);
 }
 
@@ -1349,12 +1503,12 @@ fieldset {
 
 .chart-label {
   fill: var(--muted);
-  font-size: 10px;
+  font-size: var(--fs-1);
 }
 
 /* Historique et suivi corporel */
 .history-links {
-  margin: 12px 0;
+  margin: var(--space-2) 0;
 }
 
 .session-link {
@@ -1364,8 +1518,8 @@ fieldset {
 
 .tag {
   display: inline-block;
-  margin-left: 6px;
-  padding: 0 6px;
+  margin-left: var(--space-1);
+  padding: 0 var(--space-1);
   border-radius: 6px;
   border: 1px solid var(--border);
   color: var(--muted);
@@ -1374,8 +1528,8 @@ fieldset {
 .perf-editor,
 .weigh-in-form {
   display: grid;
-  gap: 8px;
-  margin-top: 8px;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
 }
 
 .weigh-in-form input,
@@ -1384,7 +1538,7 @@ fieldset {
 .name-form input[type='date'],
 .name-form .row input {
   min-height: var(--tap);
-  padding: 10px 12px;
+  padding: var(--space-1) var(--space-2);
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--surface-2);
@@ -1395,43 +1549,75 @@ fieldset {
   min-width: 0;
 }
 
+/* Mon poids : une simple liste dans un seul cadre, une ligne par pesée. */
+.weigh-list {
+  list-style: none;
+  padding: 0 var(--space-2);
+}
+
+/* Date entière à gauche ; poids et « Corriger » ensemble à droite, ou dessous si la place manque. */
 .weigh-in {
-  grid-template-columns: 1fr auto auto;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
+  gap: 0 var(--space-2);
+  min-height: 56px;
+}
+
+.weigh-in .history-date {
+  white-space: nowrap;
+}
+
+.weigh-value {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* Date et poids côte à côte, l'un sous l'autre si l'écran est étroit ou le texte agrandi. */
+.weigh-in-form .field-grid {
+  grid-template-columns: repeat(auto-fit, minmax(9em, 1fr));
+}
+
+.weigh-in + .weigh-in {
+  border-top: 1px solid var(--border);
 }
 
 .weigh-in .weigh-in-form {
-  grid-column: 1 / -1;
+  flex-basis: 100%;
+  margin-block: var(--space-1);
+}
+
+.height-line {
+  margin: var(--space-1) 0 0;
 }
 
 .period-chips {
-  margin: 8px 0;
+  margin: var(--space-1) 0;
 }
 
 .period-chips .chip {
   flex: none;
-  padding: 0 14px;
 }
 
 .recap-item .link,
 .session-detail .sheet-actions .link {
   justify-self: start;
-  text-align: left;
 }
 
 /* Récapitulatif hebdomadaire (§19.6) : cases pleines, distinctes des pastilles de progression. */
-.home .brand {
-  margin: 8px 0 12px;
-}
-
 .weekly-recap {
-  margin-bottom: 14px;
+  margin-bottom: var(--space-2);
 }
 
+/* Résumé de la semaine : une phrase, pas un titre de section. */
 .recap-title {
-  font-size: 0.95rem;
+  font-size: var(--fs-2);
   font-weight: 600;
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-1);
   color: var(--text);
 }
 
@@ -1441,15 +1627,14 @@ fieldset {
   padding: 0;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
+  gap: var(--space-1);
 }
 
 .recap-cell {
-  padding: 9px 10px;
+  padding: var(--space-1);
   border-radius: 10px;
   font-weight: 600;
-  font-size: 0.95rem;
-  line-height: 1.25;
+  font-size: var(--fs-2);
   /* Coupure entre les mots seulement : « indirect » n'est jamais coupé en deux. */
   overflow-wrap: break-word;
 }
@@ -1458,7 +1643,7 @@ fieldset {
 .recap-count,
 .recap-when {
   font-weight: 400;
-  font-size: 0.9em;
+  font-size: var(--fs-1);
 }
 
 /* Contraste du texte ≥ 6:1 sur chaque fond. */
@@ -1479,13 +1664,11 @@ fieldset {
 
 .recap-settings {
   display: grid;
-  gap: 10px;
-  margin: 16px 0;
+  gap: var(--space-1);
 }
 
 .recap-settings .chip {
   flex: none;
-  padding: 0 12px;
 }
 
 .update-toast {
@@ -1496,34 +1679,33 @@ fieldset {
 /* Cardio : simple enregistrement, sans pastille de progression. */
 .cardio-form {
   display: grid;
-  gap: 12px;
-  padding: 14px 16px;
+  gap: var(--space-2);
+  padding: var(--space-2);
 }
 
 .cardio-form .feeling-options,
 .cardio-machines .feeling-options {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--space-1);
 }
 
 .cardio-form .chip {
   flex: none;
-  padding: 4px 14px;
 }
 
 .cardio-line {
+  min-width: 0;
   overflow-wrap: anywhere;
 }
 
 .cardio-list {
-  margin-top: 10px;
+  margin-top: var(--space-1);
 }
 
 .cardio-machines {
   display: grid;
-  gap: 10px;
-  margin: 16px 0;
+  gap: var(--space-1);
 }
 
 .machine-list {
@@ -1531,18 +1713,14 @@ fieldset {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 6px;
+  gap: var(--space-1);
 }
 
 .machine-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: 8px;
+  gap: var(--space-1);
   align-items: center;
-}
-
-.machine-row .chip {
-  padding: 4px 10px;
 }
 
 .cardio-machines form.row input {
@@ -1551,7 +1729,7 @@ fieldset {
 }
 
 .draft-cardio {
-  margin-top: 10px;
+  margin-top: var(--space-1);
 }
 
 .cardio-line .tag,
@@ -1560,8 +1738,6 @@ fieldset {
 }
 
 /* Bilan de progression (§19.3) : catégories distinctes par pictogramme et style, sans couleurs de statut. */
-
-
 .bilan-section {
   background: var(--surface);
 }
@@ -1569,51 +1745,50 @@ fieldset {
 .bilan-title {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin: 0 0 4px;
-  font-size: 1.15rem;
+  gap: var(--space-1);
 }
 
 .bilan-icon {
   flex: none;
   display: inline-grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: 2px solid currentColor;
-  font-size: 1rem;
+  font-size: var(--fs-3);
   font-weight: 700;
   line-height: 1;
 }
-
 
 .bilan-name {
   flex: 1;
 }
 
 .bilan-count {
-  font-size: 0.85rem;
+  font-size: var(--fs-2);
   font-weight: 600;
   color: var(--muted);
+  text-transform: none;
+  letter-spacing: 0;
   white-space: nowrap;
 }
 
 .bilan-list {
   list-style: none;
-  margin: 8px 0 0;
+  margin: var(--space-1) 0 0;
   padding: 0;
   display: grid;
-  gap: 8px;
+  gap: var(--space-1);
 }
 
 /* Chaque exercice du bilan est encadré à la couleur de son groupe (§3.2). */
 .bilan-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-1);
   min-height: var(--tap);
-  padding: 8px 12px;
+  padding: var(--space-1) var(--space-2);
   color: var(--text);
   text-decoration: none;
 }
@@ -1621,54 +1796,29 @@ fieldset {
 .bilan-item-text {
   flex: 1;
   display: grid;
-  gap: 2px;
   min-width: 0;
 }
 
 .bilan-chevron {
   color: var(--muted);
-  font-size: 1.4rem;
+  font-size: var(--fs-4);
 }
 
 /*
  * Cadres de section (§3.1) : règle commune à toute l'application. Les éléments encadrés sont listés une seule fois
- * (FRAME_SELECTOR, src/ui/frames.ts) et numérotés dans l'ordre d'affichage (data-frame) : bordure sur les quatre
- * côtés, même épaisseur, même arrondi, couleur alternée. Les pastilles de statut et les cases du récapitulatif
- * hebdomadaire ne sont pas des cadres.
+ * (FRAME_SELECTOR, src/ui/frames.ts) et marqués `data-frame` : bordure sur les quatre côtés, même épaisseur, même
+ * arrondi, gris neutre. Les pastilles de statut et les cases du récapitulatif hebdomadaire ne sont pas des cadres.
  */
 [data-frame] {
+  --frame-color: var(--frame-neutral);
   border: var(--frame-width) solid var(--frame-color);
   border-radius: var(--radius);
 }
 
-[data-frame='0'] {
-  --frame-color: var(--frame-1);
-}
-
-[data-frame='1'] {
-  --frame-color: var(--frame-2);
-}
-
-[data-frame='2'] {
-  --frame-color: var(--frame-3);
-}
-
-[data-frame='3'] {
-  --frame-color: var(--frame-4);
-}
-
-[data-frame='4'] {
-  --frame-color: var(--frame-5);
-}
-
 /*
- * Couleur fixe du groupe musculaire (§3.2) : exercices de la bibliothèque, carte d'exercice de la séance et de la fiche.
- * Elle remplace l'alternance pour ces cadres seulement (correspondance unique : src/ui/groupColors.ts).
+ * Couleur fixe du groupe musculaire (§3.2), seulement sur ce qui concerne ce groupe : cartes d'exercice, exercices de
+ * la bibliothèque et du bilan, fiche d'un exercice, graphiques par groupe (correspondance unique : groupColors.ts).
  */
-[data-neutral-frames] [data-frame] {
-  --frame-color: var(--frame-neutral);
-}
-
 [data-group-color][data-frame],
 [data-group-color] [data-frame] {
   --frame-color: var(--group-color);
@@ -1676,8 +1826,8 @@ fieldset {
 
 /* Section sans style propre : mêmes marges intérieures et extérieures partout. */
 .frame {
-  margin: 14px 0;
-  padding: 12px 14px;
+  margin: var(--space-2) 0;
+  padding: var(--space-2);
 }
 
 /* Un groupe de champs encadré : la légende reste à l'intérieur du cadre, sans entaille dans la bordure. */
@@ -1685,7 +1835,6 @@ fieldset.frame > legend {
   float: left;
   width: 100%;
   padding: 0;
-  margin: 0 0 8px;
 }
 
 fieldset.frame > legend + * {
@@ -1696,16 +1845,16 @@ fieldset.frame > legend + * {
 .bilan-filters {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  margin: 8px 0 4px;
+  gap: var(--space-1);
+  margin: var(--space-1) 0;
 }
 
 .bilan-filter {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: var(--space-1);
+  padding: var(--space-1);
   border: var(--frame-width) solid var(--frame-neutral);
   text-align: left;
   line-height: 1.2;
@@ -1737,21 +1886,21 @@ fieldset.frame > legend + * {
 }
 
 .bilan-filter .bilan-icon {
-  width: 26px;
-  height: 26px;
-  font-size: 0.9rem;
+  width: 24px;
+  height: 24px;
+  font-size: var(--fs-2);
 }
 
 /* Bilans de la semaine et du mois (§19.7) : écran neutre, aucune couleur de statut. */
 .report-link {
-  margin: 4px 0 8px;
+  margin: var(--space-1) 0;
 }
 
 .report-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin: 8px 0;
+  gap: var(--space-1);
+  margin: var(--space-1) 0;
 }
 
 .report-tab {
@@ -1768,13 +1917,13 @@ fieldset.frame > legend + * {
   display: grid;
   grid-template-columns: var(--tap) minmax(0, 1fr) var(--tap);
   align-items: center;
-  gap: 8px;
-  margin: 8px 0;
+  gap: var(--space-1);
+  margin: var(--space-1) 0;
 }
 
 .report-nav .btn {
   padding: 0;
-  font-size: 1.4rem;
+  font-size: var(--fs-4);
 }
 
 .report-heading {
@@ -1782,29 +1931,22 @@ fieldset.frame > legend + * {
 }
 
 .report-heading h2 {
-  font-size: 1.05rem;
   margin: 0;
 }
 
 .report-heading p {
-  margin: 2px 0 0;
-}
-
-.report-section {
-  padding: 4px 14px 10px;
-  margin: 10px 0;
+  margin: 0;
 }
 
 .report-section .section-title {
-  margin: 10px 0 6px;
+  margin: 0 0 var(--space-1);
 }
 
 .report-lines {
   margin: 0;
-  padding-left: 18px;
+  padding-left: var(--space-3);
   display: grid;
-  gap: 4px;
-  line-height: 1.35;
+  gap: var(--space-1);
   overflow-wrap: break-word;
 }
 
@@ -1820,8 +1962,8 @@ fieldset.frame > legend + * {
 
 .report-actions {
   display: grid;
-  gap: 8px;
-  margin: 16px 0 8px;
+  gap: var(--space-1);
+  margin: var(--space-2) 0 var(--space-1);
 }
 
 .report-message {
@@ -1830,21 +1972,17 @@ fieldset.frame > legend + * {
 }
 
 .report-text summary {
-  cursor: pointer;
   color: var(--muted);
-  min-height: var(--tap);
-  display: flex;
-  align-items: center;
 }
 
 .report-text pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  font-size: 0.85rem;
+  font-size: var(--fs-2);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 10px;
+  padding: var(--space-2);
 }
 
 .report-banner,
@@ -1856,13 +1994,9 @@ fieldset.frame > legend + * {
   flex-basis: 100%;
 }
 
-.report-settings .section-title {
-  margin-top: 0;
-}
-
 /* Activités habituelles hors salle dans l'historique : pas des séances, supprimables après confirmation. */
 .activity-actions {
-  padding: 0 16px 12px;
+  padding: 0 var(--space-2) var(--space-2);
 }
 
 .habit-list {
@@ -1870,13 +2004,13 @@ fieldset.frame > legend + * {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 14px;
+  gap: var(--space-2);
 }
 
 .habit-row {
   display: grid;
-  gap: 8px;
-  padding-bottom: 12px;
+  gap: var(--space-1);
+  padding-bottom: var(--space-2);
   border-bottom: 1px solid var(--border);
 }
 
@@ -1884,7 +2018,7 @@ fieldset.frame > legend + * {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-1);
 }
 
 .habit-when select,
@@ -1902,31 +2036,31 @@ fieldset.frame > legend + * {
 .record-line {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1);
   margin: 0;
-  font-size: 0.9em;
+  font-size: var(--fs-2);
   color: var(--text);
 }
 
 .record-new {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 0.85em;
+  gap: var(--space-1);
+  font-size: var(--fs-2);
   font-weight: 700;
   color: var(--text);
 }
 
 .records-list .record-line + .record-line {
-  margin-top: 6px;
+  margin-top: var(--space-1);
 }
 
 /* Bilan par groupe musculaire (§19.10) : courbe et barres dans la couleur du groupe choisi. */
 .group-picker {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin: 8px 0 4px;
+  gap: var(--space-1);
+  margin: var(--space-1) 0;
 }
 
 .group-chart .chart-line {
@@ -1950,15 +2084,15 @@ fieldset.frame > legend + * {
 }
 
 .group-figure {
-  margin: 4px 0 0;
+  margin: var(--space-1) 0 0;
 }
 
 .group-figure strong {
   color: var(--group-color);
-  font-size: 1.3em;
+  font-size: var(--fs-4);
 }
 
 .group-not-enough {
   color: var(--text);
-  margin: 8px 0 4px;
+  margin: var(--space-1) 0;
 }

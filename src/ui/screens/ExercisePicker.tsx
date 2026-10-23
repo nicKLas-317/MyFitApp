@@ -4,7 +4,6 @@ import { navigate } from '../../app/hooks';
 import type { VariantRef } from '../../library/catalog';
 import { addExercise, checkWeight, findPerformance } from '../../session/ops';
 import { ExerciseBrowser } from '../library/ExerciseBrowser';
-import { NEUTRAL_FRAMES } from '../groupColors';
 
 /**
  * Choix d'un exercice pour la séance en cours (§5.2), avec la recherche de la bibliothèque (§4.1).
@@ -102,7 +101,7 @@ export function ExercisePicker({ variantId }: { variantId?: string }) {
     ) : null;
 
   return (
-    <main className="screen picker" {...NEUTRAL_FRAMES}>
+    <main className="screen picker">
       <header className="picker-header">
         <a href="#/seance" className="back" aria-label="Retour à la séance">
           ‹

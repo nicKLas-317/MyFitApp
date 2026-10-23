@@ -17,7 +17,7 @@ import {
   variantHasHistory,
 } from '../../library/edit';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
-import { groupColorProps, NEUTRAL_FRAMES } from '../groupColors';
+import { groupColorProps } from '../groupColors';
 
 const GROUPS = Object.keys(MUSCLE_GROUP_LABELS) as MuscleGroup[];
 
@@ -151,7 +151,7 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false 
   }
 
   return (
-    <main className="screen edit" {...(original ? groupColorProps(original.primaryGroup) : NEUTRAL_FRAMES)}>
+    <main className="screen edit" {...(original ? groupColorProps(original.primaryGroup) : {})}>
       <header className="simple-header">
         <a href={backHref} className="back" aria-label="Retour">
           ‹

@@ -3,7 +3,7 @@ import { useApp } from '../../app/store';
 import { analyzeProgress, recentChanges, type ProgressCategory } from '../../analysis/progress';
 import { displayName } from '../../library/catalog';
 import { formatIsoDay, formatKg } from '../../session/format';
-import { exerciseColorProps, NEUTRAL_FRAMES } from '../groupColors';
+import { exerciseColorProps } from '../groupColors';
 
 const SECTIONS: { category: ProgressCategory; title: string; icon: string; hint: string }[] = [
   { category: 'progressing', title: 'En progression', icon: '↗', hint: 'Au moins un palier validé sur les 6 dernières séances.' },
@@ -57,7 +57,7 @@ export function Bilan() {
   };
 
   return (
-    <main className="screen bilan" {...NEUTRAL_FRAMES}>
+    <main className="screen bilan">
       <header className="simple-header">
         <a href="#/" className="back" aria-label="Accueil">
           ‹

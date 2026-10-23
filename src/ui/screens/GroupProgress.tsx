@@ -10,7 +10,7 @@ import { MUSCLE_GROUP_LABELS } from '../../library/seed';
 import { formatShortDay } from '../../session/format';
 import { BarChart } from '../BarChart';
 import { ErrorBoundary } from '../ErrorBoundary';
-import { groupColorProps, NEUTRAL_FRAMES } from '../groupColors';
+import { groupColorProps } from '../groupColors';
 import { LineChart } from '../LineChart';
 
 export function groupOfSegment(segment: string | undefined): MuscleGroup {
@@ -37,7 +37,7 @@ export function GroupProgress({ group }: { group: MuscleGroup }) {
   const last = index.points.at(-1);
 
   return (
-    <main className="screen group-progress" {...NEUTRAL_FRAMES}>
+    <main className="screen group-progress">
       <header className="simple-header">
         <a href="#/bilan" className="back" aria-label="Bilan de progression">
           ‹

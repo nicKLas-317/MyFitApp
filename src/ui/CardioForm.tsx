@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from 'react';
 import type { CardioBlock, CardioMachine, Incline } from '../domain/types';
+import { ActionMenu, ConfirmRemove } from './ActionMenu';
 import { cardioErrors, formatCardio, INCLINE_LABELS, INCLINES, makeCardioBlock, parseDistance, parseMinutes } from '../cardio/model';
 
 /** Contenu du formulaire : rien de saisi, bloc prêt à enregistrer, ou saisie invalide. */
@@ -124,12 +125,10 @@ interface ListProps {
   newId(): string;
   onSave(block: CardioBlock): void;
   onRemove(block: CardioBlock): void;
-  /** Demande une confirmation avant de retirer (séance passée). */
-  confirmRemove?: boolean;
 }
 
-/** Blocs de cardio d'une séance, corrigeables et retirables. */
-export function CardioList({ blocks, machines, newId, onSave, onRemove, confirmRemove = false }: ListProps) {
+/** Blocs de cardio d'une séance : « Corriger » et « Retirer » (après confirmation) dans le menu « ⋯ » de chaque bloc. */
+export function CardioList({ blocks, machines, newId, onSave, onRemove }: ListProps) {
   const [editing, setEditing] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
   if (blocks.length === 0) return null;
@@ -151,30 +150,25 @@ export function CardioList({ blocks, machines, newId, onSave, onRemove, confirmR
           </li>
         ) : (
           <li key={b.id} className="card recap-item cardio-item" data-cardio={b.id}>
-            <CardioLine block={b} />
-            {removing === b.id ? (
-              <div className="row">
-                <span className="small">Retirer ce cardio de la séance ?</span>
-                <button type="button" className="btn danger" onClick={() => onRemove(b)}>
-                  Oui, retirer
-                </button>
-                <button type="button" className="btn" onClick={() => setRemoving(null)}>
-                  Non
-                </button>
-              </div>
-            ) : (
-              <div className="row">
-                <button type="button" className="link small" onClick={() => setEditing(b.id)}>
-                  Corriger
-                </button>
-                <button
-                  type="button"
-                  className="link danger small"
-                  onClick={() => (confirmRemove ? setRemoving(b.id) : onRemove(b))}
-                >
-                  Retirer
-                </button>
-              </div>
+            <div className="card-line">
+              <CardioLine block={b} />
+              <ActionMenu
+                label={`cardio ${formatCardio(b)}`}
+                actions={[
+                  { label: 'Corriger', onSelect: () => setEditing(b.id) },
+                  { label: 'Retirer', danger: true, onSelect: () => setRemoving(b.id) },
+                ]}
+              />
+            </div>
+            {removing === b.id && (
+              <ConfirmRemove
+                question="Retirer ce cardio de la séance ?"
+                onCancel={() => setRemoving(null)}
+                onConfirm={() => {
+                  setRemoving(null);
+                  onRemove(b);
+                }}
+              />
             )}
           </li>
         ),

@@ -8,7 +8,7 @@ import { FEELING_LABELS, formatRecommendation } from '../labels';
 import { StatusBadge } from '../StatusBadge';
 import { cardioOf } from '../../cardio/model';
 import { CardioLine } from '../CardioForm';
-import { NEUTRAL_FRAMES, exerciseColorProps } from '../groupColors';
+import { exerciseColorProps } from '../groupColors';
 import { Crown } from '../Crown';
 import { formatRecord } from '../../analysis/records';
 
@@ -43,7 +43,7 @@ export function Recap({ sessionId }: { sessionId: string }) {
   }
 
   return (
-    <main className="screen recap" {...NEUTRAL_FRAMES}>
+    <main className="screen recap">
       <h1>Séance terminée</h1>
       <p className="muted">
         {session.startedAt !== null && (
@@ -140,6 +140,11 @@ export function Recap({ sessionId }: { sessionId: string }) {
           </li>
         ))}
       </ul>
+
+      {/* Retour à l'accueil : le nom saisi, s'il a changé, est enregistré au passage. */}
+      <button type="button" className="btn big" onClick={() => void saveName()}>
+        Retour à l’accueil
+      </button>
     </main>
   );
 }

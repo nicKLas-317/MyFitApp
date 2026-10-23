@@ -70,6 +70,12 @@ export function formatShortDay(date: string): string {
   return SHORT_DAY_FORMAT.format(new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1));
 }
 
+/** Date courte numérique, « 15/10 » : tient sur une ligne même sur un petit écran. */
+export function formatNumericDay(date: string): string {
+  const [, m, d] = date.split('-');
+  return `${d}/${m}`;
+}
+
 /** Nom d'une séance importée sans heure connue : « Séance du 12 octobre 2026 ». */
 export function importedSessionName(date: string): string {
   return `Séance du ${formatIsoDay(date)}`;

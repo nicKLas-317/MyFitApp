@@ -126,14 +126,13 @@ Ne pas ajouter de fonctionnalités sociales, de calories, de programmes complexe
 
 ### 3.1. Cadres de section (précision validée)
 
-Toutes les sections de l'application (cartes d'exercice, éléments de liste, graphiques, bandeaux d'information, blocs des réglages, de l'import/export, de « Mon poids », de la fiche et du bilan, fenêtres de confirmation) sont encadrées selon **une seule règle commune** :
+Toutes les sections de l'application (cartes d'exercice, éléments de liste, graphiques, bandeaux d'information, blocs des réglages, de l'import/export, de « Mon poids », de la fiche et du bilan, fenêtres et volets de confirmation, menus « ⋯ ») sont encadrées selon **une seule règle commune** :
 
 - Bordure sur les quatre côtés, de même épaisseur (2 px) et de même couleur, coins arrondis (même rayon que les boutons).
-- Règle définie une seule fois : la liste des éléments encadrés est unique (`FRAME_SELECTOR`, `src/ui/frames.ts`) et le style est la seule règle `[data-frame]` de `styles.css`. Aucun écran ne définit sa propre bordure de section (pas de bordure gauche seule).
-- Couleurs vives et claires, qui alternent d'une section à la suivante dans l'ordre d'affichage : jaune, cyan, bleu clair, violet, rose magenta. Aucune couleur sombre ou terne, jamais de vert, d'orange ni de rouge (réservés aux statuts, §8). Contraste élevé sur le fond sombre.
-- Cette alternance ne vaut que pour les écrans sans lien avec un groupe musculaire : accueil, réglages, « Mon poids », import/export. Les écrans liés à un exercice ou à des groupes suivent le §3.2 (couleur du groupe, ou cadre neutre).
-- Ne sont pas des cadres : les pastilles de statut (§8) et les cases du récapitulatif hebdomadaire (§19.6), qui gardent leur style.
-- Rien ne dépasse de l'écran d'un smartphone (vérifié à 412, 360 et 320 px de large) : les cartes d'exercice s'adaptent à la largeur, la ligne de série se resserre sous 380 px en gardant des boutons `+` et `−` de 48 px, et sous 340 px le bouton « Valider » passe sous ces boutons, sur toute la largeur.
+- Règle définie une seule fois : la liste des éléments encadrés est unique (`FRAME_SELECTOR`, `src/ui/frames.ts`, qui les marque `data-frame`) et le style est la seule règle `[data-frame]` de `styles.css`. Aucun écran ne définit sa propre bordure de section (pas de bordure gauche seule).
+- **Couleur (précision validée, version 1.19.0)** : plus d'alternance « arc-en-ciel ». Un cadre est **neutre** (gris foncé discret `--frame-neutral`) ; seul ce qui concerne un groupe musculaire prend la couleur de ce groupe (§3.2). Sont donc neutres : bandeaux et récapitulatif de l'accueil, « Mon poids » (une simple liste dans un seul cadre, sans un cadre par pesée), réglages, import/export, liste des séances, catégories du bilan, cardio, confirmations, volet de fin de séance, menus.
+- Ne sont pas des cadres : les pastilles de statut (§8) et les cases du récapitulatif hebdomadaire (§19.6), qui gardent leurs couleurs de statut.
+- Rien ne dépasse de l'écran d'un smartphone (vérifié à 412, 360 et 320 px de large, et à 360 px avec le texte agrandi à 115 %) : les cartes d'exercice s'adaptent à la largeur ; dans la ligne de série, « Série 1 » ne se coupe jamais, les boutons `+` et `−` gardent 48 px, et si la ligne ne tient pas (écran étroit, texte agrandi), « Valider » passe dessous, sur toute la largeur, à 8 px au moins du `+`.
 
 ### 3.2. Couleurs des groupes musculaires (précision validée)
 
@@ -155,13 +154,24 @@ Chaque groupe musculaire a sa propre couleur **fixe**, la même partout où elle
   - à la carte de chaque exercice dans l'écran de séance, le récapitulatif de fin et le détail d'une séance passée, cadres intérieurs compris (repère de progression, confirmations) ;
   - à chaque exercice listé dans le bilan ;
   - sur la fiche d'un exercice et sur l'écran de modification d'un exercice : à **tous** les cadres (dernière fois / prochaine cible, variantes, autres noms, graphiques, historique), et à la prochaine cible elle-même (§5.3.2).
-- Aucun cadre d'une couleur de groupe n'apparaît sur un exercice d'un autre groupe. Sur les écrans liés à plusieurs groupes (séance, récapitulatif de fin, historique, détail d'une séance, bilan, bibliothèque, ajout d'un exercice, création d'un exercice), les cadres qui ne concernent pas un exercice précis (blocs de cardio, bandeaux d'information, confirmations, liste des séances, catégories du bilan) sont **neutres** : gris foncé discret `--frame-neutral`, distinct des sept couleurs (précision validée).
-- Les écrans sans lien avec un groupe (accueil, réglages, « Mon poids », import/export) gardent l'alternance du §3.1.
+- Aucun cadre d'une couleur de groupe n'apparaît sur un exercice d'un autre groupe. Tout cadre qui ne concerne pas un groupe précis est **neutre** : gris foncé discret `--frame-neutral`, distinct des sept couleurs (§3.1).
+- Le bilan par groupe musculaire (§19.10) : cadres, courbe et barres dans la couleur du groupe choisi.
 - Les pastilles de statut et les cases du récapitulatif hebdomadaire ne changent pas : elles restent vert, orange ou rouge.
 - La correspondance est définie une seule fois : `GROUP_COLORS` dans `src/ui/groupColors.ts`.
   - Les teintes sont des jetons de `styles.css` : les cinq couleurs de la palette, plus le blanc `--frame-white` et le gris clair `--frame-grey`.
-  - Une seule règle CSS donne la couleur du groupe à un cadre d'exercice et aux cadres qu'il contient (`[data-group-color]`, posé par `groupColorProps`) ; une seule règle rend neutres les cadres d'un écran lié à plusieurs groupes (`[data-neutral-frames]`, posé par `NEUTRAL_FRAMES`). La couleur du groupe l'emporte sur le neutre.
+  - Le neutre est la couleur de la règle commune `[data-frame]` ; une seule règle CSS donne la couleur du groupe à un cadre d'exercice et aux cadres qu'il contient (`[data-group-color]`, posé par `groupColorProps`). La couleur du groupe l'emporte sur le neutre.
 - Les sept couleurs sont toutes distinctes et lisibles sur le fond noir (contraste d'au moins 7:1). Aucune n'est un vert, un orange ou un rouge.
+
+### 3.3. Échelle typographique, espacements et éléments tactiles (précision validée, version 1.19.0)
+
+Une seule échelle, définie dans `styles.css` (jetons `--fs-1` à `--fs-5` et `--space-1` à `--space-3`), sur toute l'application :
+
+- **Cinq tailles de police seulement**, en rem pour suivre la taille de police du téléphone : 13 px (étiquettes des graphiques, mentions annexes), 15 px (textes secondaires, titres de section), 17 px (texte courant, boutons), 22 px (titres d'écran, valeurs saisies), 28 px (chiffres clés : cible, chronomètre).
+- **Espacements fixes** de 8, 16 et 24 px (marges, marges intérieures, écarts) ; les valeurs par défaut du navigateur (paragraphes, boutons, champs) y sont ramenées.
+- **Un seul style de titre de section** (15 px, gras, majuscules, gris clair) : bibliothèque, fiche, bilans, réglages, import/export, catégories du bilan. Le résumé de la semaine (accueil) est une phrase, pas un titre de section.
+- **Graphiques** : dessinés à la largeur réelle de l'écran, étiquettes de 13 px (jamais moins de 12 px), sans chevauchement.
+- **Éléments tactiles** : au moins 48 px de haut et 8 px d'écart avec leur voisin (liens d'action, cases à cocher et leur libellé, puces, liens de licence des illustrations compris).
+- Vérifié à 412, 360 et 320 px, et à 360 px avec le texte agrandi à 115 % (simulation de la taille de police Android).
 
 ## 4. Bibliothèque d'exercices illustrée
 
@@ -406,12 +416,14 @@ Le poids doit être modifiable facilement. Le nombre de séries et la cible peuv
 
 Prévoir une validation rapide de la préparation de l'exercice.
 
+**Actions secondaires (précision validée, version 1.19.0)** : « Ajuster séries et répétitions », « Voir la fiche de l'exercice » et « Retirer de la séance » sont dans un menu « ⋯ » en haut de la carte ouverte, jamais affichés en permanence sous le pouce. Retirer un exercice demande une confirmation (« Retirer cet exercice de la séance ? », « Oui, retirer » / « Non ») ; « Annuler » reste proposé quelques secondes après (§13). Même chose pour un bloc de cardio (« Corriger », « Retirer »).
+
 ### 5.3.1. Repère de progression (précision validée)
 
-Quand j'ajoute un exercice à la séance et que sa cible a changé depuis ma dernière séance sur cet exercice-variante, un repère bien visible s'affiche en haut de l'exercice, au-dessus du champ de poids, sous la prochaine cible (§5.3.2), dans le style du bandeau de changement de charge :
+Quand j'ajoute un exercice à la séance et que sa cible a changé depuis ma dernière séance sur cet exercice-variante, une courte mention s'affiche sous la ligne de cible (§5.3.2), en blanc et en gras (version 1.19.0 : plus d'encadré) :
 
-- « ↑ +1 répétition : 3×9 (au lieu de 3×8) » pour une hausse de répétitions recommandée par le moteur (« +2 répétitions » si l'écart est de deux) ;
-- « ↑ Poids supérieur » et « ↓ Poids inférieur » comme avant, avec leur flèche (« ↑ Moins d'aide » et « ↓ Plus d'aide » pour un exercice assisté, §7.12).
+- « ↑ +1 rép. » pour une hausse de répétitions recommandée par le moteur (« ↑ +2 rép. » si l'écart est de deux) ;
+- « ↑ Poids supérieur » et « ↓ Poids inférieur » (« ↑ Moins d'aide » et « ↓ Plus d'aide » pour un exercice assisté, §7.12). Dans la carte de séance, tant que la charge n'a pas été changée, la mention donne aussi la cible qui suivra : « ↑ Poids supérieur → 3 × 8 ».
 
 Pas de repère quand la cible ne change pas (palier conservé, exercice jamais réalisé, nouvelle cible déjà faite à la séance précédente). Le repère disparaît si je saisis une autre charge ou une autre cible : ce n'est plus la progression recommandée. Même repère sur la fiche de l'exercice, sous « Prochaine cible ». Il est dérivé de la recommandation du moteur et de la dernière performance réelle, sans règle nouvelle. Pas de vert, d'orange ni de rouge : ces couleurs sont réservées aux statuts (§8).
 
@@ -419,9 +431,9 @@ Pas de repère quand la cible ne change pas (palier conservé, exercice jamais r
 
 Sur la fiche d'un exercice et en haut de sa carte dans l'écran de séance (au-dessus du champ de poids), le bloc est séparé en deux zones, avec un fin séparateur entre elles :
 
-- **Dernière fois** : zone secondaire. Libellé et texte gris clair, en plus petit, sur une seule ligne : poids · répétitions · date courte (« 15 oct. ») · pastille de statut. Sur un très petit écran (moins de 340 px), la ligne peut passer à la ligne plutôt que d'être tronquée. Pour un exercice jamais réalisé : « jamais réalisé ».
+- **Dernière fois** : zone secondaire. Libellé et texte gris clair, en plus petit : poids · répétitions · date courte numérique (« 15/10 ») · pastille de statut. **Jamais tronquée** (version 1.19.0) : sur un écran étroit ou avec un texte agrandi, la ligne passe à la ligne entre deux éléments, chaque élément restant entier. Pour un exercice jamais réalisé : « jamais réalisé ».
 - **Record** (fiche seulement, §19.9) : sous « Dernière fois », une ligne « 👑 Record : 3 × 9 à 20 kg (16 oct.) », couronne dorée.
-- **Prochaine cible** : zone principale. Libellé visible, puis la cible en grand et en gras, dans la couleur du groupe de l'exercice (§3.2) : « 3 × 9 à 12 kg », « Poids supérieur · 3 × 8 ». Sous la cible, toujours une indication :
+- **Prochaine cible** : zone principale. Libellé visible, puis **une seule ligne de cible**, en grand et en gras, dans la couleur du groupe de l'exercice (§3.2), **avec la charge** : « 3 × 9 à 12 kg », « 3 × 9 avec 25 kg d'aide ». Dans la carte de séance, cette ligne suit la charge et la cible réellement saisies (elle remplace l'ancienne ligne « Cible : 3 × 9 », supprimée) ; sur la fiche, c'est la cible recommandée, sans charge quand le moteur recommande d'en changer (« 3 × 8 »). Sous la cible, une courte mention :
   - quand la cible change : le repère de progression (§5.3.1) ;
   - quand la cible est identique à la dernière fois : une mention discrète « = Même cible : consolide » ;
   - pour un exercice jamais réalisé : « Poids de départ à saisir ».
@@ -472,10 +484,13 @@ Si aucun ressenti n'est sélectionné, il est enregistré comme « inconnu » (v
 
 - Un ressenti sélectionné peut être remplacé par un autre niveau, mais jamais effacé : un nouvel appui sur le niveau déjà sélectionné ne change rien.
 - Un ressenti « inconnu » rend la performance orange et remet le compteur de validations à 0. Pour éviter un oubli, la confirmation de fin de séance (§5.6) liste les exercices ayant au moins une série enregistrée mais sans ressenti, et permet de choisir le ressenti de chacun directement dans cette confirmation. L'utilisateur peut ensuite terminer la séance, que les ressentis aient été complétés ou non.
+- Boutons de ressenti (version 1.19.0) : 48 px de haut au moins, 8 px d'écart, libellé sur une seule ligne (deux rangées si l'écran est étroit). Dans la confirmation de fin, tant qu'un ressenti manque, ses cinq boutons sont l'action principale (bleus) ; une fois un niveau choisi, seul celui-ci reste bleu.
 
 ### 5.6. Terminer une séance
 
 Prévoir une action claire pour terminer la séance.
+
+**Confirmation en volet (précision validée, version 1.19.0)** : « Terminer la séance » ouvre un volet fixé en bas de l'écran, toujours visible sans défiler, sur un fond assombri : « Terminer la séance ? », les ressentis manquants (§5.5), le cardio non validé, puis « Oui, terminer » (bouton principal, bleu) ou, s'il manque encore un ressenti, « Terminer sans compléter » (bouton secondaire) ; « Non, continuer la séance » (ou le fond, ou Échap) referme le volet.
 
 À la fin :
 
@@ -496,7 +511,7 @@ Proposer un nom généré automatiquement, par exemple :
 
 Le nom doit pouvoir être modifié facilement, par exemple en « Haut du corps » ou « Pectoraux et dos ».
 
-L'utilisateur doit pouvoir conserver le nom par défaut en une action. Le nommage ne doit jamais entraîner la perte d'une séance.
+L'utilisateur doit pouvoir conserver le nom par défaut en une action. Le nommage ne doit jamais entraîner la perte d'une séance. Le récapitulatif se termine par un bouton « Retour à l'accueil » (version 1.19.0), qui garde le nom saisi.
 
 ### 5.7. Cardio (précision validée)
 
@@ -508,8 +523,8 @@ Version minimale : le cardio est un simple enregistrement dans la séance.
 - Machines proposées par défaut : Tapis de marche, Rameur, Vélo elliptique, Vélo (vélo classique, sans inclinaison), Autre. La liste est modifiable dans les réglages (ajouter, renommer, retirer, indiquer si la machine se règle en inclinaison). Un bloc enregistré garde le nom de sa machine : renommer ou retirer une machine ne modifie pas l'historique. Une machine ajoutée à la liste par défaut après une première installation (comme « Vélo ») est ajoutée une seule fois à une liste déjà enregistrée, avant « Autre », sans doublon de nom et sans recréer une machine que l'utilisateur a retirée ensuite.
 - Tapis de marche uniquement : inclinaison en trois niveaux, Neutre, Moyenne ou Haute, avec trois boutons (Neutre par défaut). Aucune valeur en pourcentage.
 - Durée en minutes entières (1 à 600), seule donnée obligatoire. Distance en km facultative.
-- Saisie en quelques secondes : machine (la première de la liste est présélectionnée), inclinaison si tapis, durée, « Valider ». Un bloc peut être corrigé ou retiré (retrait annulable pendant la séance, confirmé sur une séance passée).
-- Bloc rempli mais pas validé au moment de « Terminer la séance » (précision validée) : la confirmation l'affiche (« Cardio non validé : Vélo elliptique · 11 min ») et le bouton devient « Enregistrer le cardio et terminer » ; une saisie invalide bloque la fin avec un message, jusqu'à correction ou « Annuler ». Un formulaire ouvert mais vide ne change rien.
+- Saisie en quelques secondes : machine (la première de la liste est présélectionnée), inclinaison si tapis, durée, « Valider ». Un bloc peut être corrigé ou retiré depuis son menu « ⋯ » ; le retrait est toujours confirmé, et annulable quelques secondes pendant la séance.
+- Bloc rempli mais pas validé au moment de « Terminer la séance » (précision validée) : la confirmation l'affiche (« Cardio non validé : Vélo elliptique · 11 min ») et le bouton devient « Enregistrer le cardio et terminer » ; une saisie invalide bloque la fin avec un message (« Non, continuer la séance » pour la corriger ou l'annuler). Un formulaire ouvert mais vide ne change rien.
 
 **Règles**
 
@@ -1070,7 +1085,7 @@ Prévoir une procédure simple pour transférer les données vers un autre appar
 Permettre :
 
 - De corriger rapidement une série.
-- D'annuler la dernière action de saisie pendant la séance en cours (bouton « Annuler » visible quelques secondes après une action : modification de série, retrait d'exercice).
+- D'annuler la dernière action de saisie pendant la séance en cours (bouton « Annuler » visible quelques secondes après une action : modification de série, retrait d'exercice ou de cardio, ce retrait étant d'abord confirmé, §5.3).
 - De retirer un exercice de la séance actuelle sans supprimer son historique.
 - De corriger une séance passée.
 - De recalculer les recommandations concernées après une correction.
@@ -1293,9 +1308,9 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 
 ### Repère de progression (§5.3.1)
 
-137. Deux vertes à 3×8 : « ↑ +1 répétition : 3×9 (au lieu de 3×8) » ; aucun repère après une seule verte, ni une fois 3×9 fait ; le repère reste si la hausse a été refusée avec une verte ; « +2 répétitions » au pluriel.
+137. Deux vertes à 3×8 : « ↑ +1 rép. » (de 3×8 à 3×9) ; aucun repère après une seule verte, ni une fois 3×9 fait ; le repère reste si la hausse a été refusée avec une verte ; « +2 rép. ».
 138. « ↑ Poids supérieur » après deux vertes à 3×12, « ↓ Poids inférieur » après quatre rouges, « Moins d'aide » et « Plus d'aide » pour un exercice assisté ; trois rouges : aucun repère.
-139. (bout en bout) Le repère s'affiche en haut de l'exercice ajouté (au-dessus du poids, sans couleur de statut) avec la cible 3 × 9, disparaît si la charge change, et figure sur la fiche sous « Prochaine cible » ; aucun repère quand la cible ne change pas.
+139. (bout en bout) Le repère « ↑ +1 rép. » s'affiche en haut de l'exercice ajouté, sous la ligne « 3 × 9 à 35 kg » (au-dessus du poids, sans couleur de statut), disparaît si la charge change, et figure sur la fiche sous « Prochaine cible » ; aucun repère quand la cible ne change pas.
 
 ### Bilan, graphiques et import de fichier (§19.2, §19.3, §11.1)
 
@@ -1305,10 +1320,10 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 
 ### Cadres de section et filtres du bilan (§3.1, §19.3)
 
-143. Palette des cadres : cinq couleurs vives et claires (contraste d'au moins 7:1 sur le fond), ni vert, ni orange, ni rouge ; une seule règle de bordure (quatre côtés), aucune bordure gauche seule.
-144. Les cadres sont numérotés dans l'ordre d'affichage et leur couleur alterne ; la liste des éléments encadrés est unique et exclut pastilles de statut et cases du récapitulatif.
+143. Une seule règle de bordure (quatre côtés), gris neutre par défaut, sans couleur par rang d'affichage ni bordure gauche seule ; les cinq couleurs vives (groupes) restent claires (contraste d'au moins 7:1), ni vert, ni orange, ni rouge.
+144. Les cadres sont tous marqués du même attribut ; la liste des éléments encadrés est unique (menus et volet de fin compris) et exclut pastilles de statut et cases du récapitulatif.
 145. (bout en bout) Bilan : un bouton par catégorie et « Tous » (actif par défaut) ; une catégorie vide est visible mais désactivée ; un appui n'affiche que la catégorie et remplit le bouton ; un nouvel appui ou « Tous » réaffiche tout ; le filtre est mémorisé après rechargement ; boutons et sections de catégorie neutres, chaque exercice à la couleur de son groupe.
-146. (bout en bout) Sur chaque écran (accueil, séance, fiche, bibliothèque, historique, détail de séance, bilan, Mon poids, réglages, import/export) : chaque cadre a une bordure de 2 px de la même couleur sur les quatre côtés et des coins arrondis ; accueil, Mon poids, réglages et import/export en couleurs alternées (deux cadres consécutifs jamais de la même couleur) ; fiche entièrement à la couleur du groupe ; autres écrans : exercices à la couleur de leur groupe, le reste neutre ; pastilles et cases du récapitulatif sans cadre ; rien ne dépasse de l'écran, et la ligne de série reste dans sa carte à 360 et 320 px.
+146. (bout en bout) Sur chaque écran (accueil, séance, fiche, bibliothèque, historique, détail de séance, bilan, Mon poids, réglages, import/export) : chaque cadre a une bordure de 2 px de la même couleur sur les quatre côtés et des coins arrondis ; fiche entièrement à la couleur du groupe ; ailleurs, ce qui concerne un groupe à sa couleur, tout le reste neutre ; pastilles et cases du récapitulatif sans cadre ; rien ne dépasse de l'écran, et la ligne de série reste dans sa carte à 360 et 320 px.
 
 ### Bibliothèque version 7 : curl à la barre, mollets, abducteurs, adducteurs (§4.0, §4.2.1)
 
@@ -1333,11 +1348,11 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 ### Couleurs des groupes musculaires (§3.2)
 
 161. Une couleur fixe par groupe, définie une seule fois : épaules jaune, pectoraux cyan, triceps bleu clair, dos violet, biceps rose, jambes blanc (sous-groupes compris), abdominaux gris clair ; toutes distinctes et lisibles sur le fond noir ; une seule règle CSS ; plus aucune teinte de pictogramme écrite à part.
-162. (bout en bout) Bibliothèque : chaque exercice, dans chaque section de groupe, a la bordure et le fond de pictogramme de son groupe ; fiche : tous les cadres ont la couleur du groupe de l'exercice ; détail d'une séance et séance : chaque carte d'exercice a la couleur de son groupe, un bloc de cardio est neutre ; accueil inchangé ; pastilles de statut et cases du récapitulatif sans couleur de groupe.
+162. (bout en bout) Bibliothèque : chaque exercice, dans chaque section de groupe, a la bordure et le fond de pictogramme de son groupe ; fiche : tous les cadres ont la couleur du groupe de l'exercice ; détail d'une séance et séance : chaque carte d'exercice a la couleur de son groupe, un bloc de cardio est neutre ; accueil sans couleur de groupe ; pastilles de statut et cases du récapitulatif sans couleur de groupe.
 
 ### Dernière fois / Prochaine cible (§5.3.2)
 
-163. (bout en bout) Fiche et carte de séance : « Dernière fois » en petit, gris clair, sur une ligne (poids, répétitions, date courte, pastille), jamais tronquée à 360 et 320 px ; « Prochaine cible » en grand, en gras, dans la couleur du groupe, avec le poids ; séparateur entre les zones ; repère quand la cible change, « = Même cible : consolide » quand elle est identique, « Poids de départ à saisir » pour un exercice jamais réalisé ; en séance, une autre charge saisie retire repère et mention ; aucune couleur de statut hors de la pastille.
+163. (bout en bout) Fiche et carte de séance : « Dernière fois » en petit, gris clair, sur une ligne à 412 px (poids, répétitions, date « 12/03 », pastille), jamais tronquée à 360 et 320 px ; « Prochaine cible » sur une seule ligne en grand, en gras, dans la couleur du groupe, avec le poids ; séparateur entre les zones ; repère court quand la cible change, « = Même cible : consolide » quand elle est identique, « Poids de départ à saisir » pour un exercice jamais réalisé ; en séance, une autre charge saisie met à jour la ligne et retire repère et mention ; aucune couleur de statut hors de la pastille.
 
 ### Cardio et fenêtres multiples (§5.7, §12)
 
@@ -1419,6 +1434,15 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 218. Exercice assisté avec pesée : charge réelle = poids du corps − aide, Epley (80 kg, 30 → 25 kg d'aide = 110) ; le poids du corps compte (2 kg perdus à aide égale = 96) ; jamais sous 0 ; aide au moins égale au poids du corps à la première séance : aide inversée ; exercice classique sans effet.
 219. Poids du corps interpolé entre les deux pesées qui encadrent la séance, première pesée avant, dernière après, constant avec une seule ; une perte de poids peut faire baisser l'indice malgré une aide en baisse ; données simulées sans creux artificiel (jamais plus d'un point de baisse d'un point à l'autre) ; sans aucune pesée, aide inversée ; exercices classiques identiques avec ou sans pesées.
 220. (bout en bout) Données simulées, triceps : 115,6 sans pesée (mention de l'aide inversée), 111,7 avec des pesées à 78 puis 74 kg (mention de la charge réelle), sans creux à la mi-août (104,63 le 30 juillet → 107,69 le 3 août, jamais plus d'un point de baisse), étiquettes de l'axe sans chevauchement (99,5 trop proche de 100 n'est pas affiché) ; pectoraux inchangés (123,6), sans mention ; rien ne dépasse à 412, 360 et 320 px.
+
+### Ergonomie de la saisie et harmonisation du style (§3.1, §3.3, §5.3, §5.6, version 1.19.0)
+
+221. (bout en bout) Carte ouverte : une seule ligne de cible avec la charge (« 3 × 9 à 52,5 kg ») et « ↑ +1 rép. », ni « Cible : » ni encadré ; « Dernière fois » (« 03/10 ») sur une ligne à 412 px, jamais tronquée à 360 et 320 px ni avec le texte à 115 % ; changement de charge recommandé : « 3 × 12 à 35 kg » et « ↑ Poids supérieur → 3 × 8 », puis « 3 × 8 à 40 kg » une fois la charge saisie.
+222. (bout en bout) Menu « ⋯ » de la carte ouverte : « Ajuster séries et répétitions », « Voir la fiche de l'exercice », « Retirer de la séance », plus aucune de ces actions en permanence ; Échap le ferme ; ajustement de la cible puis « Terminé » ; fiche ouverte ; ligne de série à 360 px (et texte à 115 %) et 320 px : « Série 1 » sur une ligne, 8 px au moins entre « + » et « Valider », dans la carte. Retrait d'un exercice ou d'un cardio : confirmé, « Non » garde, « Annuler » rétablit (tests de séance et de cardio).
+223. (bout en bout) Fin de séance avec six exercices : volet entièrement visible sans défiler à 412 et 360 px, texte à 115 % compris ; ressentis de 48 px, à 8 px, sur une ligne, deux rangées à 360 px, en bleu tant qu'ils manquent ; « Terminer sans compléter » secondaire ; un niveau choisi : lui seul en bleu, « Oui, terminer » principal, ressenti enregistré.
+224. (bout en bout) Récapitulatif de fin : « Retour à l'accueil » mène à l'accueil et garde le nom saisi.
+225. (bout en bout) Sur chaque écran (accueil, bibliothèque, fiche, modification d'un exercice, historique, détail, bilans, par groupe, Mon poids, réglages, données, séance avec menu ouvert, ajout d'un exercice, volet de fin), à 412, 360 et 320 px, et à 360 px avec le texte à 115 % pour la séance : seulement les cinq tailles de police, espacements de 8, 16 et 24 px, éléments tactiles d'au moins 48 px et à 8 px au moins de leurs voisins, un seul style de titre de section, étiquettes des graphiques d'au moins 12 px, rien ne dépasse.
+226. (bout en bout) Cadres neutres sur l'accueil (bandeaux, récapitulatif, cases du récapitulatif inchangées), les réglages, les données, le volet de fin ; Mon poids : un seul cadre pour la liste des pesées, aucune pesée encadrée ; par groupe : cadres à la couleur du groupe ; carte d'exercice à la couleur de son groupe.
 
 Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
 
@@ -1689,7 +1713,7 @@ Vue secondaire (`#/bilan-groupes/<groupe>`), accessible depuis le bilan de progr
 - Rubrique indépendante des entraînements.
 - Taille enregistrée une seule fois dans les réglages.
 - Saisie du poids avec la date (préremplie à aujourd'hui), en une action.
-- Historique des pesées et graphique simple de l'évolution.
+- Historique des pesées (une simple liste dans un seul cadre neutre, une ligne par pesée, §3.1) et graphique simple de l'évolution.
 - Périodes de consultation : 1 mois, 3 mois, 6 mois et 1 an, selon les données disponibles.
 - Correction ou suppression d'une mesure.
 - Taille et historique des pesées inclus dans la sauvegarde et l'export JSON.

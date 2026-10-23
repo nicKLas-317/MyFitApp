@@ -18,7 +18,8 @@ import {
 import { FeelingPicker } from './FeelingPicker';
 import { groupColorProps } from './groupColors';
 import { ExercisePicto } from './Pictogram';
-import { TargetSummary } from './TargetSummary';
+import { loadChangeHint, markerHint, TargetSummary, type TargetHint } from './TargetSummary';
+import { ActionMenu, ConfirmRemove } from './ActionMenu';
 import { Crown } from './Crown';
 import { beatsRecord } from '../analysis/records';
 import { WeightField } from './WeightField';
@@ -41,6 +42,7 @@ export function ExerciseCard({ session, performance: p, open, onToggle }: Props)
   const done = p.reps.length;
   const [draft, setDraft] = useState<number | null>(null);
   const [adjust, setAdjust] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const now = () => Date.now();
 
   // Le moteur recommande un changement de charge et la charge n'a pas encore été modifiée (§5.3).
@@ -57,6 +59,21 @@ export function ExerciseCard({ session, performance: p, open, onToggle }: Props)
       ? marker
       : null;
 
+  // Mention sous la cible (§5.3.1, §5.3.2) : changement de charge à saisir, repère de progression, ou cible identique ;
+  // rien si l'utilisateur a choisi une autre charge ou une autre cible.
+  const assisted = ctx.cfg.assisted;
+  const followsRecommendation =
+    !!rec && !!state && compareWeight(p.weightKg, state.palier.weightKg) === 0 && p.targetReps === rec.targetReps && p.plannedSets === rec.plannedSets;
+  const hint: TargetHint = !state
+    ? { kind: 'start' }
+    : weightChange && rec
+      ? loadChangeHint(weightChange, assisted, `→ ${rec.plannedSets} × ${rec.targetReps}`)
+      : shownMarker
+        ? markerHint(shownMarker, assisted)
+        : !marker && followsRecommendation
+          ? { kind: 'same' }
+          : null;
+
   const name = displayName(ref);
   // Toutes les séries faites à la cible et mieux que le record des séances précédentes (jamais pour une première fois).
   const newRecord = beatsRecord(p, records.current.get(p.variantId), ctx.cfg.assisted);
@@ -69,34 +86,58 @@ export function ExerciseCard({ session, performance: p, open, onToggle }: Props)
       aria-label={name}
       {...(ref ? groupColorProps(ref.exercise.primaryGroup) : {})}
     >
-      <button type="button" className="card-header" onClick={onToggle} aria-expanded={open}>
-        {ref && <ExercisePicto exercise={ref.exercise} variantId={ref.variant.id} />}
-        <span className="card-title">
-          <strong>{name}</strong>
-          {ref && <span className="muted small">{MUSCLE_GROUP_LABELS[ref.exercise.primaryGroup]}</span>}
-          {newRecord && (
-            <span className="record-new" data-testid="new-record">
-              <Crown /> Nouveau record !
+      <div className="card-head">
+        <button type="button" className="card-header" onClick={onToggle} aria-expanded={open}>
+          {ref && <ExercisePicto exercise={ref.exercise} variantId={ref.variant.id} />}
+          {/* Nom sur toute la largeur ; groupe, charge et séries faites dessous : rien ne coupe le nom. */}
+          <span className="card-title">
+            <strong>{name}</strong>
+            <span className="card-summary muted small">
+              {ref && <span>{MUSCLE_GROUP_LABELS[ref.exercise.primaryGroup]} · </span>}
+              <span>{formatKg(p.weightKg)}</span>
+              <span className="sets-count">
+                {' · '}
+                {done}/{planned}
+              </span>
             </span>
-          )}
-        </span>
-        <span className="card-summary">
-          <span>{formatKg(p.weightKg)}</span>
-          <span className="sets-count">
-            {done}/{planned}
+            {newRecord && (
+              <span className="record-new" data-testid="new-record">
+                <Crown /> Nouveau record !
+              </span>
+            )}
           </span>
-        </span>
-      </button>
+        </button>
+        {open && (
+          <ActionMenu
+            label={name}
+            actions={[
+              { label: adjust ? 'Masquer l’ajustement' : 'Ajuster séries et répétitions', onSelect: () => setAdjust(!adjust) },
+              { label: 'Voir la fiche de l’exercice', href: `#/exercice/${encodeURIComponent(p.variantId)}` },
+              { label: 'Retirer de la séance', danger: true, onSelect: () => setConfirmRemove(true) },
+            ]}
+          />
+        )}
+      </div>
 
       {open && (
         <div className="card-body">
+          {confirmRemove && (
+            <ConfirmRemove
+              question="Retirer cet exercice de la séance ?"
+              onCancel={() => setConfirmRemove(false)}
+              onConfirm={() => {
+                setConfirmRemove(false);
+                void commit(removeExercise(session, p.variantId, now()), 'Exercice retiré');
+              }}
+            />
+          )}
           <TargetSummary
             state={state}
-            assisted={ctx.cfg.assisted}
+            assisted={assisted}
             lastDate={state ? (sessions.find((s) => s.id === state.lastSessionId)?.date ?? null) : null}
-            marker={shownMarker}
-            deviated={!!marker && !shownMarker}
-            start={{ sets: ctx.cfg.sets, reps: ctx.cfg.minReps }}
+            label="Prochaine cible"
+            target={{ sets: planned, reps: target, weightKg: p.weightKg }}
+            hint={hint}
           />
 
           <WeightField
@@ -107,16 +148,8 @@ export function ExerciseCard({ session, performance: p, open, onToggle }: Props)
             onCommit={(w) => void commit(setWeight(session, p.variantId, w, ctx, now()))}
           />
 
-          <div className="target-line">
-            <span>
-              Cible : <strong data-testid="target">{planned} × {target}</strong>
-            </span>
-            <button type="button" className="link" onClick={() => setAdjust(!adjust)} aria-expanded={adjust}>
-              Ajuster
-            </button>
-          </div>
           {adjust && (
-            <div className="adjust">
+            <div className="adjust" role="group" aria-label="Ajuster séries et répétitions">
               <Stepper
                 label="Séries"
                 value={planned}
@@ -134,6 +167,9 @@ export function ExerciseCard({ session, performance: p, open, onToggle }: Props)
                   void commit(setTarget(session, p.variantId, v, now()));
                 }}
               />
+              <button type="button" className="btn" onClick={() => setAdjust(false)}>
+                Terminé
+              </button>
             </div>
           )}
 
@@ -187,7 +223,7 @@ export function ExerciseCard({ session, performance: p, open, onToggle }: Props)
           {done > 0 && (
             <button
               type="button"
-              className="link small"
+              className="link"
               onClick={() => void commit(deleteLastSet(session, p.variantId, now()), 'Série supprimée')}
             >
               Supprimer la dernière série
@@ -202,13 +238,6 @@ export function ExerciseCard({ session, performance: p, open, onToggle }: Props)
             />
           )}
 
-          <button
-            type="button"
-            className="link danger small remove"
-            onClick={() => void commit(removeExercise(session, p.variantId, now()), 'Exercice retiré')}
-          >
-            Retirer de la séance
-          </button>
         </div>
       )}
     </article>

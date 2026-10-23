@@ -18,7 +18,6 @@ import {
   type ReportKind,
 } from '../../analysis/report';
 import { displayName } from '../../library/catalog';
-import { NEUTRAL_FRAMES } from '../groupColors';
 import { copyText, openMailto, sendByMail } from '../share';
 
 const KIND_SEGMENTS: Record<ReportKind, string> = { week: 'semaine', month: 'mois' };
@@ -79,7 +78,7 @@ export function PeriodReport({ kind, periodParam }: { kind: ReportKind; periodPa
   }
 
   return (
-    <main className="screen period-report" {...NEUTRAL_FRAMES}>
+    <main className="screen period-report">
       <header className="simple-header">
         <a href="#/bilan" className="back" aria-label="Bilan de progression">
           ‹

@@ -1,10 +1,28 @@
-import type { ProgressMarker, ProgressState } from '../engine';
+import { Fragment } from 'react';
+import { progressMarker, type ProgressMarker, type ProgressState } from '../engine';
 import { formatRecordWithDate, type PersonalRecord } from '../analysis/records';
 import { Crown } from './Crown';
-import { formatKg, formatShortDay } from '../session/format';
-import { formatRecommendation } from './labels';
-import { ProgressMarkerBanner } from './ProgressMarker';
+import { formatKg, formatNumericDay } from '../session/format';
+import { loadChangeLabel, markerArrow, markerLabel } from './labels';
 import { StatusBadge } from './StatusBadge';
+
+/**
+ * Mention sous la cible (§5.3.1, §5.3.2) : exercice jamais réalisé, changement recommandé (« ↑ +1 rép. »,
+ * « ↑ Poids supérieur »), ou cible identique à la dernière fois. Null : rien (l'utilisateur a choisi une autre
+ * charge ou une autre cible, ce n'est plus la progression recommandée).
+ */
+export type TargetHint =
+  | { kind: 'start' }
+  | { kind: 'same' }
+  | { kind: 'change'; arrow: '↑' | '↓'; label: string; detail?: string }
+  | null;
+
+/** Ligne de cible : « 3 × 9 à 30 kg », « 3 × 9 avec 25 kg d’aide », ou « 3 × 8 » sans charge connue. */
+export interface TargetLine {
+  sets: number;
+  reps: number;
+  weightKg: number | null;
+}
 
 interface Props {
   /** État du moteur pour l'exercice-variante ; absent pour un exercice jamais réalisé. */
@@ -12,27 +30,52 @@ interface Props {
   assisted: boolean;
   /** Date (AAAA-MM-JJ) de la dernière séance évaluée. */
   lastDate: string | null;
-  /** Repère à afficher sous la cible (§5.3.1), ou null. */
-  marker: ProgressMarker | null;
-  /** La cible change, mais l'utilisateur a saisi une autre charge ou une autre cible : ni repère ni mention. */
-  deviated?: boolean;
-  /** Cible d'un exercice jamais réalisé. */
-  start: { sets: number; reps: number };
-  /** Identifiant de test de la cible. */
+  /** Libellé de la zone principale : « Prochaine cible » (fiche) ou « Cible » (séance). */
+  label: string;
+  target: TargetLine;
+  hint: TargetHint;
+  /** Identifiant de test de la cible (séries × répétitions). */
   targetTestId?: string;
   /** Record personnel, affiché sur la fiche (couronne dorée). */
   record?: PersonalRecord | null;
 }
 
+export function formatTargetLoad(weightKg: number, assisted: boolean): string {
+  return assisted ? ` avec ${formatKg(weightKg)} d’aide` : ` à ${formatKg(weightKg)}`;
+}
+
+/** Repère de progression (§5.3.1) en mention courte : « ↑ +1 rép. », « ↑ Poids supérieur », « ↓ Plus d’aide »… */
+export function markerHint(marker: ProgressMarker, assisted: boolean): TargetHint {
+  return { kind: 'change', arrow: markerArrow(marker), label: markerLabel(marker, assisted) };
+}
+
+/** Changement de charge recommandé (§7.6, §7.8), en mention : « ↑ Poids supérieur », « ↓ Plus d’aide ». */
+export function loadChangeHint(kind: 'weight_up' | 'weight_down', assisted: boolean, detail?: string): TargetHint {
+  return { kind: 'change', arrow: kind === 'weight_up' ? '↑' : '↓', label: loadChangeLabel(kind, assisted), ...(detail ? { detail } : {}) };
+}
+
 /**
- * « Dernière fois » et « Prochaine cible » (§5.3.2) : deux zones distinctes. La dernière fois, secondaire, sur une
- * ligne ; la prochaine cible, principale, en grand et dans la couleur du groupe, suivie d'une indication (repère de
- * progression, ou « = Même cible : consolide »). Aucune couleur de statut hors de la pastille.
+ * Prochaine cible recommandée par le moteur (fiche) : la cible, avec la charge du palier quand elle ne change pas ;
+ * sans charge quand le moteur recommande d'en changer (c'est l'utilisateur qui saisit la nouvelle).
  */
-export function TargetSummary({ state, assisted, lastDate, marker, deviated = false, start, targetTestId, record }: Props) {
-  const last = state?.lastPerformance;
+export function recommendedTarget(state: ProgressState | undefined, start: { sets: number; reps: number }, assisted: boolean): { target: TargetLine; hint: TargetHint } {
   const rec = state?.recommendation;
-  const atWeight = state && rec && (rec.kind === 'keep' || rec.kind === 'reps_up') ? ` à ${formatKg(state.palier.weightKg)}` : '';
+  if (!state || !rec) return { target: { ...start, weightKg: null }, hint: { kind: 'start' } };
+  const change = rec.kind === 'weight_up' || rec.kind === 'weight_down' ? rec.kind : null;
+  const marker = progressMarker(state);
+  return {
+    target: { sets: rec.plannedSets, reps: rec.targetReps, weightKg: change ? null : state.palier.weightKg },
+    hint: change ? loadChangeHint(change, assisted) : marker ? markerHint(marker, assisted) : { kind: 'same' },
+  };
+}
+
+/**
+ * « Dernière fois » et cible (§5.3.2) : deux zones distinctes. La dernière fois, secondaire, jamais tronquée (date
+ * courte « 15/10 », retour à la ligne si l'écran est étroit) ; la cible, une seule ligne en grand dans la couleur du
+ * groupe, avec la charge, puis une courte mention. Aucune couleur de statut hors de la pastille.
+ */
+export function TargetSummary({ state, assisted, lastDate, label, target, hint, targetTestId = 'target', record }: Props) {
+  const last = state?.lastPerformance;
   return (
     <div className="target-summary" data-testid="target-summary">
       <p className="last-zone" data-testid="last-time">
@@ -41,8 +84,16 @@ export function TargetSummary({ state, assisted, lastDate, marker, deviated = fa
           <>
             <span className="last-values">
               {assisted && 'aide '}
-              {formatKg(last.weightKg)} · {last.reps.join(' · ') || '—'}
-              {lastDate && ` · ${formatShortDay(lastDate)}`}
+              {/* Chaque élément reste entier ; la ligne passe à la ligne entre deux éléments plutôt que d'être tronquée. */}
+              {[formatKg(last.weightKg), ...(last.reps.length ? last.reps : ['—']), ...(lastDate ? [formatNumericDay(lastDate)] : [])].map((part, i) => (
+                <Fragment key={i}>
+                  {i > 0 && ' '}
+                  <span className="last-part">
+                    {i > 0 && '· '}
+                    {part}
+                  </span>
+                </Fragment>
+              ))}
             </span>
             <StatusBadge status={state.lastStatus} />
           </>
@@ -57,23 +108,29 @@ export function TargetSummary({ state, assisted, lastDate, marker, deviated = fa
         </p>
       )}
       <div className="next-zone">
-        <p className="zone-label">Prochaine cible</p>
+        <p className="zone-label">{label}</p>
         <p className="next-target" data-testid="next-target">
-          <strong data-testid={targetTestId}>{rec ? formatRecommendation(rec, assisted) : `${start.sets} × ${start.reps}`}</strong>
-          {atWeight}
+          <strong data-testid={targetTestId}>
+            {target.sets} × {target.reps}
+          </strong>
+          {target.weightKg !== null && target.weightKg > 0 && formatTargetLoad(target.weightKg, assisted)}
         </p>
-        {!state ? (
+        {hint?.kind === 'start' && (
           <p className="next-hint" data-testid="start-hint">
             Poids de départ à saisir
           </p>
-        ) : marker ? (
-          <ProgressMarkerBanner marker={marker} assisted={assisted} />
-        ) : (
-          !deviated && (
-            <p className="next-hint" data-testid="same-target">
-              = Même cible : consolide
-            </p>
-          )
+        )}
+        {hint?.kind === 'same' && (
+          <p className="next-hint" data-testid="same-target">
+            = Même cible : consolide
+          </p>
+        )}
+        {hint?.kind === 'change' && (
+          <p className="next-hint change" role="status" data-testid="progress-marker">
+            <span aria-hidden="true">{hint.arrow} </span>
+            <span>{hint.label}</span>
+            {hint.detail && <span> {hint.detail}</span>}
+          </p>
         )}
       </div>
     </div>

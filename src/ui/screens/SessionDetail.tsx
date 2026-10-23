@@ -11,7 +11,7 @@ import { FEELING_LABELS } from '../labels';
 import { StatusBadge } from '../StatusBadge';
 import { addCardio, cardioOf, removeCardio, updateCardio } from '../../cardio/model';
 import { CardioForm, CardioList } from '../CardioForm';
-import { NEUTRAL_FRAMES, exerciseColorProps } from '../groupColors';
+import { exerciseColorProps } from '../groupColors';
 import { Crown } from '../Crown';
 import { recordKeys } from '../../analysis/records';
 
@@ -76,7 +76,7 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
   }
 
   return (
-    <main className="screen session-detail" {...NEUTRAL_FRAMES}>
+    <main className="screen session-detail">
       <header className="simple-header">
         <a href="#/historique" className="back" aria-label="Historique">
           ‹
@@ -99,7 +99,7 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
         {session.performances.map((p) => (
           <li key={p.variantId} className="card recap-item" data-variant={p.variantId} {...exerciseColorProps(variants.get(p.variantId)?.exercise)}>
             <div className="recap-head">
-              <a href={`#/exercice/${encodeURIComponent(p.variantId)}`}>
+              <a className="head-link" href={`#/exercice/${encodeURIComponent(p.variantId)}`}>
                 <strong>{displayName(variants.get(p.variantId))}</strong>
                 {broke.has(`${session.id}|${p.variantId}`) && (
                   <>
@@ -146,7 +146,7 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
                 }}
               />
             ) : (
-              <button type="button" className="link small" onClick={() => setEditing(p.variantId)}>
+              <button type="button" className="link" onClick={() => setEditing(p.variantId)}>
                 Corriger
               </button>
             )}
@@ -158,7 +158,6 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
         blocks={cardioOf(session)}
         machines={cardioMachines}
         newId={newId}
-        confirmRemove
         onSave={(block) => void save(updateCardio(session, block, Date.now()))}
         onRemove={(block) => void save(removeCardio(session, block.id, Date.now()))}
       />

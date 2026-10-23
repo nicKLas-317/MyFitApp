@@ -79,6 +79,17 @@ export async function validateSets(card: Locator, count: number): Promise<void> 
   for (let i = 0; i < count; i++) await card.getByRole('button', { name: 'Valider' }).click();
 }
 
+/** Action secondaire d'une carte (exercice ou cardio), dans son menu « ⋯ ». */
+export async function cardAction(card: Locator, action: string): Promise<void> {
+  await card.getByRole('button', { name: /^Actions : / }).click();
+  await card.getByRole('menuitem', { name: action, exact: true }).click();
+}
+
+/** Volet de confirmation de fin de séance, fixé en bas de l'écran. */
+export function finishSheet(page: Page): Locator {
+  return page.getByRole('dialog', { name: 'Terminer la séance ?' });
+}
+
 export async function finishSession(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Terminer la séance' }).click();
   await page.getByRole('button', { name: 'Oui, terminer' }).click();

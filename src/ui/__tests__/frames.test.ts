@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import styles from '../../styles.css?raw';
-import { FRAME_SELECTOR, FRAME_TONES, numberFrames } from '../frames';
+import { FRAME_SELECTOR, markFrames } from '../frames';
 
 /** Teinte (°) et saturation (%) d'une couleur #rrggbb. */
 function hsl(hex: string): [number, number] {
@@ -32,9 +32,9 @@ const background = /--bg: (#[0-9a-f]{6})/.exec(styles)?.[1] ?? '';
 const palette = [1, 2, 3, 4, 5].map((i) => new RegExp(`--frame-${i}: (#[0-9a-f]{6})`).exec(styles)?.[1]);
 
 describe('Cadres de section (§3.1)', () => {
-  it('143. Palette de cinq couleurs vives et claires, sans vert, orange ni rouge ; une seule règle commune, sur les quatre côtés', () => {
+  it('143. Un seul style de cadre, gris neutre par défaut, sur les quatre côtés ; plus d’alternance « arc-en-ciel »', () => {
+    // Les cinq couleurs vives restent celles des groupes musculaires (§3.2) : jamais vert, orange ni rouge.
     expect(palette.every(Boolean)).toBe(true);
-    expect(FRAME_TONES).toBe(palette.length);
     for (const hex of palette as string[]) {
       const [h, s] = hsl(hex);
       expect(s, hex).toBeGreaterThanOrEqual(70); // vive
@@ -43,19 +43,22 @@ describe('Cadres de section (§3.1)', () => {
       expect(h >= 15 && h <= 45, `${hex} n'est pas orange`).toBe(false);
       expect(h >= 345 || h < 15, `${hex} n'est pas rouge`).toBe(false);
     }
-    // Couleurs vraiment distinctes : jaune, cyan, bleu clair, violet, rose magenta.
     expect(new Set(palette.map((hex) => Math.round(hsl(hex!)[0] / 25))).size).toBe(5);
-    // Une seule règle de bordure, sur les quatre côtés ; plus aucune simple ligne à gauche.
-    expect(styles.match(/\[data-frame\] \{\s*border: var\(--frame-width\) solid var\(--frame-color\);\s*border-radius: var\(--radius\);/g)).toHaveLength(1);
+    // Une seule règle de bordure, sur les quatre côtés, neutre par défaut ; aucune couleur par rang d'affichage.
+    expect(
+      styles.match(/\[data-frame\] \{\s*--frame-color: var\(--frame-neutral\);\s*border: var\(--frame-width\) solid var\(--frame-color\);\s*border-radius: var\(--radius\);/g),
+    ).toHaveLength(1);
+    expect(styles).not.toMatch(/\[data-frame='\d'\]/);
+    expect(styles).not.toMatch(/data-neutral-frames/);
     expect(styles).not.toMatch(/border-left(-width|-color|-style)?:/);
   });
 
-  it('144. Les cadres sont numérotés dans l’ordre d’affichage et leur couleur alterne ; la liste des cadres est unique', () => {
+  it('144. Les cadres sont tous marqués du même attribut ; la liste des cadres est unique', () => {
     const els = Array.from({ length: 7 }, () => ({ dataset: {} as Record<string, string> }));
     const root = { querySelectorAll: (selector: string) => (selector === FRAME_SELECTOR ? els : []) } as unknown as ParentNode;
-    numberFrames(root);
-    expect(els.map((e) => e.dataset.frame)).toEqual(['0', '1', '2', '3', '4', '0', '1']);
-    for (const cls of ['.frame', '.card', '.pick-item', '.history-item', '.chart', '.reco', '.confirm-box']) expect(FRAME_SELECTOR).toContain(cls);
+    markFrames(root);
+    expect(els.map((e) => e.dataset.frame)).toEqual(Array(7).fill(''));
+    for (const cls of ['.frame', '.card', '.pick-item', '.history-item', '.chart', '.confirm-box', '.menu-panel', '.bottom-sheet']) expect(FRAME_SELECTOR).toContain(cls);
     // Pastilles de statut et cases du récapitulatif hebdomadaire : jamais des cadres.
     expect(FRAME_SELECTOR).not.toMatch(/status|recap-cell/);
   });

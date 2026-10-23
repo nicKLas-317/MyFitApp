@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { activeSession, addExercise, doExercise, finishSession, readSessions, startSession, validateSets } from './helpers';
+import { activeSession, addExercise, doExercise, finishSession, readSessions, startSession, validateSets, cardAction, finishSheet } from './helpers';
 
 const cardioForm = (page: Page) => page.getByRole('form', { name: 'Cardio' });
 
@@ -39,8 +39,8 @@ test.describe('Cardio', () => {
     const texts = page.getByTestId('cardio-text');
     await expect(texts).toHaveText(['Tapis de marche · inclinaison haute · 20 min', 'Rameur · 10 min']);
 
-    // Correction d'un bloc.
-    await page.locator('.cardio-item').nth(1).getByRole('button', { name: 'Corriger' }).click();
+    // Correction d'un bloc, depuis son menu « ⋯ ».
+    await cardAction(page.locator('.cardio-item').nth(1), 'Corriger');
     await cardioForm(page).getByLabel('Durée (min)').fill('15');
     await cardioForm(page).getByRole('button', { name: 'Valider' }).click();
     await expect(texts.nth(1)).toHaveText('Rameur · 15 min');
@@ -69,11 +69,18 @@ test.describe('Cardio', () => {
     await startSession(page);
     await addCardio(page, 'Vélo elliptique', '25');
     await addCardio(page, 'Autre', '5');
-    await page.locator('.cardio-item').nth(1).getByRole('button', { name: 'Retirer' }).click();
+    // Retrait depuis le menu « ⋯ », après confirmation ; il s'annule ensuite.
+    const second = page.locator('.cardio-item').nth(1);
+    await cardAction(second, 'Retirer');
+    await second.getByRole('button', { name: 'Non' }).click();
+    await expect(page.getByTestId('cardio-text')).toHaveCount(2);
+    await cardAction(second, 'Retirer');
+    await second.getByRole('button', { name: 'Oui, retirer' }).click();
     await expect(page.getByTestId('cardio-text')).toHaveCount(1);
     await page.locator('.toast').getByRole('button', { name: 'Annuler' }).click();
     await expect(page.getByTestId('cardio-text')).toHaveCount(2);
-    await page.locator('.cardio-item').nth(1).getByRole('button', { name: 'Retirer' }).click();
+    await cardAction(second, 'Retirer');
+    await second.getByRole('button', { name: 'Oui, retirer' }).click();
     await expect.poll(async () => (await activeSession(page)).cardio?.length).toBe(1);
 
     await page.getByRole('button', { name: 'Terminer la séance' }).click();
@@ -183,11 +190,14 @@ test.describe('Cardio', () => {
 
     // Durée invalide : la fin est bloquée avec un message, sans bouton inactif.
     await page.getByRole('button', { name: 'Terminer la séance' }).click();
-    const confirm = page.getByRole('group', { name: 'Terminer la séance' });
+    const confirm = finishSheet(page);
     await expect(confirm.getByRole('alert')).toHaveText('Cardio non validé : Durée invalide : un nombre entier de minutes. Corrigez-le ou annulez-le.');
     await expect(confirm.getByRole('button', { name: /terminer/i })).toHaveCount(0);
 
+    // « Non, continuer la séance » referme le volet ; la durée corrigée, le cardio est proposé à l'enregistrement.
+    await confirm.getByRole('button', { name: 'Non, continuer la séance' }).click();
     await cardioForm(page).getByLabel('Durée (min)').fill('11');
+    await page.getByRole('button', { name: 'Terminer la séance' }).click();
     await expect(confirm.getByTestId('unsaved-cardio')).toHaveText('Cardio non validé : Vélo elliptique · 11 min');
     await confirm.getByRole('button', { name: 'Enregistrer le cardio et terminer' }).click();
     await expect(page.getByRole('heading', { name: 'Séance terminée' })).toBeVisible();

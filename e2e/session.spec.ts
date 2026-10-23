@@ -1,15 +1,5 @@
 import { expect, test } from '@playwright/test';
-import {
-  activeSession,
-  addExercise,
-  doExercise,
-  exerciseCard,
-  finishSession,
-  readSessions,
-  startSession,
-  validateSets,
-  writeSessions,
-} from './helpers';
+import { activeSession, addExercise, doExercise, exerciseCard, finishSession, readSessions, startSession, validateSets, writeSessions, cardAction, finishSheet } from './helpers';
 
 test.describe('Séance, persistance et chronomètre', () => {
   test('45 et 46. Le rechargement restaure la séance en cours et un chronomètre cohérent', async ({ page }) => {
@@ -222,7 +212,7 @@ test.describe('Séance, persistance et chronomètre', () => {
     await validateSets(await addExercise(page, 'curl', 'Curl biceps haltères', '12'), 2);
 
     await page.getByRole('button', { name: 'Terminer la séance' }).click();
-    const confirm = page.getByRole('group', { name: 'Terminer la séance' });
+    const confirm = finishSheet(page);
     await expect(confirm.getByText('Ressenti manquant (2)')).toBeVisible();
     await expect(confirm.getByRole('group', { name: 'Pec deck' })).toBeVisible();
     await expect(confirm.getByRole('group', { name: 'Curl biceps haltères' })).toBeVisible();
@@ -253,10 +243,16 @@ test.describe('Séance, persistance et chronomètre', () => {
     expect((await readSessions(page))[0]?.performances[0]?.feeling).toBe('inconnu');
   });
 
-  test('Retrait d’un exercice de la séance, avec annulation', async ({ page }) => {
+  test('Retrait d’un exercice de la séance : menu « ⋯ », confirmation, puis annulation possible', async ({ page }) => {
     await startSession(page);
     const card = await addExercise(page, 'crunch', 'Crunch machine', '20');
-    await card.getByRole('button', { name: 'Retirer de la séance' }).click();
+    // Menu « ⋯ », puis confirmation : « Non » garde l'exercice, « Oui, retirer » le retire.
+    await cardAction(card, 'Retirer de la séance');
+    await card.getByRole('alertdialog', { name: 'Retirer cet exercice de la séance ?' }).getByRole('button', { name: 'Non' }).click();
+    await expect(card.getByRole('alertdialog')).toHaveCount(0);
+    expect((await activeSession(page)).performances).toHaveLength(1);
+    await cardAction(card, 'Retirer de la séance');
+    await card.getByRole('button', { name: 'Oui, retirer' }).click();
     await expect(card).toBeHidden();
     await expect.poll(async () => (await activeSession(page)).performances.length).toBe(0);
     await page.locator('.toast').getByRole('button', { name: 'Annuler' }).click();

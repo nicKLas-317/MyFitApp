@@ -8,10 +8,13 @@ interface Props {
   onChange(feeling: RatedFeeling): void;
 }
 
-/** Ressenti global sur cinq niveaux (§5.5) : on peut changer de niveau, jamais revenir à « inconnu ». */
+/**
+ * Ressenti global sur cinq niveaux (§5.5) : on peut changer de niveau, jamais revenir à « inconnu ». Boutons de 48 px,
+ * libellés sur une ligne, sur deux rangées si l'écran est étroit. `data-empty` : aucun niveau choisi.
+ */
 export function FeelingPicker({ value, legend, onChange }: Props) {
   return (
-    <fieldset className="feeling">
+    <fieldset className="feeling" data-empty={value === 'inconnu' || undefined}>
       <legend>{legend}</legend>
       <div className="feeling-options">
         {FEELINGS.map((f) => (

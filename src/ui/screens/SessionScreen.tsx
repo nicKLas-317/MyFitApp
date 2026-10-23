@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useApp } from '../../app/store';
 import { navigate, useNow } from '../../app/hooks';
 import { elapsedMs, finishSession, missingFeelings, newId } from '../../session/ops';
@@ -6,9 +6,8 @@ import { addCardio, cardioOf, formatCardio, removeCardio, updateCardio } from '.
 import { CardioForm, CardioList, type CardioDraft } from '../CardioForm';
 import { formatDuration } from '../../session/format';
 import { ExerciseCard } from '../ExerciseCard';
-import { finishLabel, MissingFeelings } from '../MissingFeelings';
+import { finishLabel, MissingFeelings, remainingFeelings } from '../MissingFeelings';
 import { SaveIndicator } from '../SaveIndicator';
-import { NEUTRAL_FRAMES } from '../groupColors';
 
 export function SessionScreen({ openVariantId }: { openVariantId: string | undefined }) {
   const { active, commit, setLastFinish, cardioMachines } = useApp();
@@ -61,7 +60,7 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
   }
 
   return (
-    <main className="screen session" {...NEUTRAL_FRAMES}>
+    <main className="screen session">
       <header className="session-header">
         <a href="#/" className="back" aria-label="Accueil">
           ‹
@@ -117,41 +116,66 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
             + Ajouter du cardio
           </button>
         )}
-        {confirmFinish ? (
-          <div className="confirm-box" role="group" aria-label="Terminer la séance">
-            <p>Terminer la séance ?</p>
-            <MissingFeelings session={active} variantIds={confirmFinish} />
-            {unsavedCardio?.kind === 'block' && (
-              <p className="small" data-testid="unsaved-cardio">
-                Cardio non validé : {formatCardio(unsavedCardio.block)}
-              </p>
-            )}
-            {unsavedCardio?.kind === 'error' && (
-              <p className="field-error" role="alert">
-                Cardio non validé : {unsavedCardio.message} Corrigez-le ou annulez-le.
-              </p>
-            )}
-            <div className="row">
-              {unsavedCardio?.kind !== 'error' && (
-                <button type="button" className="btn primary" onClick={() => void finish()}>
-                  {unsavedCardio ? 'Enregistrer le cardio et terminer' : finishLabel(active, confirmFinish)}
-                </button>
-              )}
-              <button type="button" className="btn" onClick={() => setConfirmFinish(null)}>
-                Non
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button
-            type="button"
-            className="btn big"
-            onClick={() => setConfirmFinish(missingFeelings(active).map((p) => p.variantId))}
-          >
-            Terminer la séance
-          </button>
-        )}
+        <button
+          type="button"
+          className="btn big"
+          aria-expanded={confirmFinish !== null}
+          onClick={() => setConfirmFinish(missingFeelings(active).map((p) => p.variantId))}
+        >
+          Terminer la séance
+        </button>
       </div>
+
+      {confirmFinish && (
+        <FinishSheet onClose={() => setConfirmFinish(null)}>
+          <MissingFeelings session={active} variantIds={confirmFinish} />
+          {unsavedCardio?.kind === 'block' && (
+            <p data-testid="unsaved-cardio">Cardio non validé : {formatCardio(unsavedCardio.block)}</p>
+          )}
+          {unsavedCardio?.kind === 'error' && (
+            <p className="field-error" role="alert">
+              Cardio non validé : {unsavedCardio.message} Corrigez-le ou annulez-le.
+            </p>
+          )}
+          <div className="sheet-buttons">
+            {unsavedCardio?.kind !== 'error' && (
+              <button
+                type="button"
+                className={`btn big${remainingFeelings(active, confirmFinish) && !unsavedCardio ? '' : ' primary'}`}
+                onClick={() => void finish()}
+              >
+                {unsavedCardio ? 'Enregistrer le cardio et terminer' : finishLabel(active, confirmFinish)}
+              </button>
+            )}
+            <button type="button" className="btn big" onClick={() => setConfirmFinish(null)}>
+              Non, continuer la séance
+            </button>
+          </div>
+        </FinishSheet>
+      )}
     </main>
+  );
+}
+
+/**
+ * Confirmation de fin de séance (§5.6), en volet fixé en bas de l'écran : toujours visible sans défiler, quelle que
+ * soit la longueur de la séance. Le fond assombri ferme le volet (comme « Non »).
+ */
+function FinishSheet({ onClose, children }: { onClose(): void; children: ReactNode }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  return (
+    <>
+      <div className="sheet-backdrop" aria-hidden="true" onClick={onClose} />
+      <div className="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="finish-title">
+        <h2 id="finish-title" className="sheet-title">
+          Terminer la séance ?
+        </h2>
+        {children}
+      </div>
+    </>
   );
 }

@@ -42,9 +42,8 @@ export function markerArrow(marker: ProgressMarker): '↑' | '↓' {
   return marker.kind === 'weight_down' ? '↓' : '↑';
 }
 
-/** Texte du repère : « +1 répétition : 3×9 (au lieu de 3×8) », « Poids supérieur », « Moins d’aide »… */
+/** Texte court du repère, sous la cible : « +1 rép. », « +2 rép. », « Poids supérieur », « Moins d’aide »… */
 export function markerLabel(marker: ProgressMarker, assisted = false): string {
   if (marker.kind !== 'reps_up') return loadChangeLabel(marker.kind, assisted);
-  const { added, from, to } = marker;
-  return `+${added} répétition${added > 1 ? 's' : ''} : ${to.plannedSets}×${to.targetReps} (au lieu de ${from.plannedSets}×${from.targetReps})`;
+  return `+${marker.added} rép.`;
 }

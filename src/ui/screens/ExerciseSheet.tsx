@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../../app/store';
 import { navigate } from '../../app/hooks';
-import { progressMarker, sortSessions } from '../../engine';
+import { sortSessions } from '../../engine';
 import { displayName, variantLabel } from '../../library/catalog';
 import { addVariant, updateVariant, validateVariantName } from '../../library/edit';
 import { illustrationFor } from '../../library/illustrations';
@@ -15,7 +15,7 @@ import { FEELING_LABELS } from '../labels';
 import { groupColorProps } from '../groupColors';
 import { equipmentLabel, ExercisePicto } from '../Pictogram';
 import { StatusBadge } from '../StatusBadge';
-import { TargetSummary } from '../TargetSummary';
+import { recommendedTarget, TargetSummary } from '../TargetSummary';
 import { Crown } from '../Crown';
 import { recordKeys } from '../../analysis/records';
 
@@ -123,19 +123,22 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
         <figure className="illustration">
           <img src={illustration.src} alt={`${exercise.name} : positions de début et de fin du mouvement`} decoding="async" />
           <figcaption className="attribution" data-testid="attribution">
-            Illustration : {illustration.author} ·{' '}
-            <a href={illustration.licenseUrl} target="_blank" rel="noopener noreferrer license">
-              {illustration.license}
-            </a>{' '}
-            · sources{' '}
-            <a href={illustration.sources[0]} target="_blank" rel="noopener noreferrer">
-              1
-            </a>
-            ,{' '}
-            <a href={illustration.sources[1]} target="_blank" rel="noopener noreferrer">
-              2
-            </a>{' '}
-            ({illustration.origin}) · recadrée et assemblée
+            <span>
+              Illustration : {illustration.author} ({illustration.origin}) · recadrée et assemblée
+            </span>
+            <span className="attribution-links">
+              Licence
+              <a href={illustration.licenseUrl} target="_blank" rel="noopener noreferrer license">
+                {illustration.license}
+              </a>
+              · sources
+              <a href={illustration.sources[0]} target="_blank" rel="noopener noreferrer">
+                1
+              </a>
+              <a href={illustration.sources[1]} target="_blank" rel="noopener noreferrer">
+                2
+              </a>
+            </span>
           </figcaption>
         </figure>
       )}
@@ -147,8 +150,8 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
           state={state}
           assisted={ctx.cfg.assisted}
           lastDate={last?.session.date ?? null}
-          marker={progressMarker(state)}
-          start={{ sets: ctx.cfg.sets, reps: ctx.cfg.minReps }}
+          label="Prochaine cible"
+          {...recommendedTarget(state, { sets: ctx.cfg.sets, reps: ctx.cfg.minReps }, ctx.cfg.assisted)}
           targetTestId="sheet-next"
           record={records.current.get(variantId) ?? null}
         />

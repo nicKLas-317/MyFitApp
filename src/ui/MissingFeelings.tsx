@@ -14,7 +14,7 @@ export function MissingFeelings({ session, variantIds }: { session: Session; var
   const remaining = variantIds.filter((id) => findPerformance(session, id)?.feeling === 'inconnu').length;
   return (
     <div className="missing-feelings">
-      <p>
+      <p className="missing-note">
         {remaining > 0
           ? `Ressenti manquant (${remaining}) : sans ressenti, l’exercice ne valide pas son palier.`
           : 'Ressentis complétés.'}
@@ -35,8 +35,15 @@ export function MissingFeelings({ session, variantIds }: { session: Session; var
   );
 }
 
-/** Libellé du bouton de fin selon qu'il reste des ressentis manquants. */
+/** Il reste au moins un exercice sans ressenti parmi ceux relevés à l'ouverture de la confirmation. */
+export function remainingFeelings(session: Session, variantIds: readonly string[]): boolean {
+  return variantIds.some((id) => findPerformance(session, id)?.feeling === 'inconnu');
+}
+
+/**
+ * Libellé du bouton de fin. Tant qu'un ressenti manque, l'action principale est de le choisir : « Terminer sans
+ * compléter » n'est qu'un bouton secondaire.
+ */
 export function finishLabel(session: Session, variantIds: readonly string[]): string {
-  const remaining = variantIds.some((id) => findPerformance(session, id)?.feeling === 'inconnu');
-  return remaining ? 'Terminer sans compléter' : 'Oui, terminer';
+  return remainingFeelings(session, variantIds) ? 'Terminer sans compléter' : 'Oui, terminer';
 }
