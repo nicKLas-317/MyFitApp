@@ -1,5 +1,6 @@
 import { Fragment } from 'react';
-import { progressMarker, type ProgressMarker, type ProgressState } from '../engine';
+import { compareWeight, progressMarker, type ProgressMarker, type ProgressState } from '../engine';
+import type { Performance } from '../domain/types';
 import { formatRecordWithDate, type PersonalRecord } from '../analysis/records';
 import { Crown } from './Crown';
 import { formatKg, formatNumericDay } from '../session/format';
@@ -70,6 +71,80 @@ export function recommendedTarget(state: ProgressState | undefined, start: { set
 }
 
 /**
+ * Mention de la carte d'un exercice de la séance (et d'un exercice de la séance prévue, §5.9) d'après la charge et la
+ * cible saisies : changement de charge à saisir (« ↑ Poids supérieur → 3 × 8 »), repère de progression (§5.3.1),
+ * cible identique ; rien si l'utilisateur a choisi une autre charge ou une autre cible.
+ */
+export function cardHint(
+  state: ProgressState | undefined,
+  assisted: boolean,
+  p: Pick<Performance, 'weightKg' | 'targetReps' | 'plannedSets'>,
+): { hint: TargetHint; weightChange: 'weight_up' | 'weight_down' | null } {
+  const rec = state?.recommendation;
+  if (!state) return { hint: { kind: 'start' }, weightChange: null };
+  const samePalier = compareWeight(p.weightKg, state.palier.weightKg) === 0;
+  // Le moteur recommande un changement de charge et la charge n'a pas encore été modifiée (§5.3).
+  const weightChange = rec && (rec.kind === 'weight_up' || rec.kind === 'weight_down') && samePalier ? rec.kind : null;
+  // Repère de progression : il disparaît si l'utilisateur change la charge ou la cible.
+  const marker = progressMarker(state);
+  const shownMarker = marker && samePalier && (marker.kind !== 'reps_up' || p.targetReps === marker.to.targetReps) ? marker : null;
+  const followsRecommendation = !!rec && samePalier && p.targetReps === rec.targetReps && p.plannedSets === rec.plannedSets;
+  const hint: TargetHint =
+    weightChange && rec
+      ? loadChangeHint(weightChange, assisted, `→ ${rec.plannedSets} × ${rec.targetReps}`)
+      : shownMarker
+        ? markerHint(shownMarker, assisted)
+        : !marker && followsRecommendation
+          ? { kind: 'same' }
+          : null;
+  return { hint, weightChange };
+}
+
+/** Ligne de cible en grand (« 3 × 9 à 30 kg ») et sa mention dessous. */
+export function NextTarget({
+  target,
+  assisted,
+  hint,
+  targetTestId = 'target',
+  startLabel = 'Poids de départ à saisir',
+}: {
+  target: TargetLine;
+  assisted: boolean;
+  hint: TargetHint;
+  targetTestId?: string;
+  /** Mention d'un exercice jamais réalisé (séance prévue : le poids de départ est déjà donné). */
+  startLabel?: string;
+}) {
+  return (
+    <>
+      <p className="next-target" data-testid="next-target">
+        <strong data-testid={targetTestId}>
+          {target.sets} × {target.reps}
+        </strong>
+        {target.weightKg !== null && target.weightKg > 0 && formatTargetLoad(target.weightKg, assisted)}
+      </p>
+      {hint?.kind === 'start' && (
+        <p className="next-hint" data-testid="start-hint">
+          {startLabel}
+        </p>
+      )}
+      {hint?.kind === 'same' && (
+        <p className="next-hint" data-testid="same-target">
+          = Même cible : consolide
+        </p>
+      )}
+      {hint?.kind === 'change' && (
+        <p className="next-hint change" role="status" data-testid="progress-marker">
+          <span aria-hidden="true">{hint.arrow} </span>
+          <span>{hint.label}</span>
+          {hint.detail && <span> {hint.detail}</span>}
+        </p>
+      )}
+    </>
+  );
+}
+
+/**
  * « Dernière fois » et cible (§5.3.2) : deux zones distinctes. La dernière fois, secondaire, jamais tronquée (date
  * courte « 15/10 », retour à la ligne si l'écran est étroit) ; la cible, une seule ligne en grand dans la couleur du
  * groupe, avec la charge, puis une courte mention. Aucune couleur de statut hors de la pastille.
@@ -109,29 +184,7 @@ export function TargetSummary({ state, assisted, lastDate, label, target, hint, 
       )}
       <div className="next-zone">
         <p className="zone-label">{label}</p>
-        <p className="next-target" data-testid="next-target">
-          <strong data-testid={targetTestId}>
-            {target.sets} × {target.reps}
-          </strong>
-          {target.weightKg !== null && target.weightKg > 0 && formatTargetLoad(target.weightKg, assisted)}
-        </p>
-        {hint?.kind === 'start' && (
-          <p className="next-hint" data-testid="start-hint">
-            Poids de départ à saisir
-          </p>
-        )}
-        {hint?.kind === 'same' && (
-          <p className="next-hint" data-testid="same-target">
-            = Même cible : consolide
-          </p>
-        )}
-        {hint?.kind === 'change' && (
-          <p className="next-hint change" role="status" data-testid="progress-marker">
-            <span aria-hidden="true">{hint.arrow} </span>
-            <span>{hint.label}</span>
-            {hint.detail && <span> {hint.detail}</span>}
-          </p>
-        )}
+        <NextTarget target={target} assisted={assisted} hint={hint} targetTestId={targetTestId} />
       </div>
     </div>
   );

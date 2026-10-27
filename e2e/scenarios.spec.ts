@@ -25,7 +25,7 @@ async function doSets(card: Locator, reps: number[], feeling: string): Promise<v
   for (const [i, r] of reps.entries()) {
     const value = card.locator('.set.next .step-value');
     while (Number(await value.textContent()) > r) await card.getByRole('button', { name: `Répétitions série ${i + 1} : moins` }).click();
-    await card.getByRole('button', { name: 'Valider' }).click();
+    await card.getByRole('button', { name: 'Valider', exact: true }).click();
   }
   await card.getByRole('button', { name: feeling, exact: true }).click();
 }

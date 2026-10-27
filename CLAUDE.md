@@ -98,7 +98,7 @@ Créer une interface moderne, sobre, lisible et rapide.
 
 L'application est organisée en quatre onglets (§3.4, version 1.20.0), qui séparent l'usage « à la salle » (saisie rapide, écran épuré) de l'usage « au calme » (bilans, historique, réglages) :
 
-- **Séance** (onglet par défaut, l'accueil) : la question d'une activité habituelle en haut s'il y en a une (« Badminton lundi soir (21 h – 22 h 30) ? », §19.8), le récapitulatif de la semaine (§19.6), puis « Démarrer une séance » / « Reprendre la séance » (toujours 1 appui), le lien discret « + Activité » (activité ponctuelle, §19.8) et le rappel de sauvegarde éventuel (§12).
+- **Séance** (onglet par défaut, l'accueil) : la question d'une activité habituelle en haut s'il y en a une (« Badminton lundi soir (21 h – 22 h 30) ? », §19.8), le récapitulatif de la semaine (§19.6), puis « Démarrer une séance » / « Reprendre la séance » (toujours 1 appui) avec le lien discret « Préparer ma prochaine séance », ou, quand une séance est prévue, « Démarrer la séance prévue », « Séance libre » et le résumé du plan avec « Modifier ma séance prévue » (§5.9) ; puis le lien discret « + Activité » (activité ponctuelle, §19.8) et le rappel de sauvegarde éventuel (§12).
 - **Historique** : la liste des séances et des activités, regroupée par mois (§10, §3.5).
 - **Progrès** : en haut, le bandeau « Ton bilan de la semaine / du mois est prêt » quand un bilan est à voir (§19.7) ; puis le bilan de progression (§19.3), les bilans de la semaine et du mois (§19.7), le bilan par groupe musculaire (§19.10) et « Mon poids » (§20), avec une pesée rapide.
 - **Plus** : la bibliothèque d'exercices et sa recherche (§4), les réglages (§14), « Importer / exporter » (§11 ; l'écran porte le même nom).
@@ -129,7 +129,7 @@ Ne pas ajouter de fonctionnalités sociales, de calories, de programmes complexe
   - Après « Ajouter un exercice », « retour » ne rouvre pas la recherche ; après la fin d'une séance, il ne ramène pas dans la séance terminée.
   - Il ne ferme jamais l'appli en pleine séance : sur l'onglet Séance, une entrée de garde absorbe « retour » tant qu'une séance est en cours.
   - Il ne perd aucune saisie : un poids tapé sans quitter le champ est enregistré en quittant l'écran (même protection au-delà de 50 %, §5.3), les répétitions ajustées (− / +) de la série en cours, l'exercice ouvert et le cardio en cours de saisie sont retrouvés au retour dans la séance, et le nom saisi au récapitulatif est enregistré.
-- **Nombre d'appuis** : aucune action de saisie n'en demande plus qu'avant les onglets, et aucune ne demande de défiler (test 230) : démarrer ou reprendre une séance 1, ajouter un exercice récent 2, valider une série 1, ressenti 1, cardio 2 (+ la durée), terminer 2, pesée 2 (+ le poids), corriger une séance passée 3.
+- **Nombre d'appuis** : aucune action de saisie n'en demande plus qu'avant les onglets, et aucune ne demande de défiler (test 230) : démarrer ou reprendre une séance 1, ajouter un exercice récent 2, valider une série 1 (les 3 séries d'un coup : 1, §5.4), ressenti 1, cardio 2 (+ la durée ; cardio prévu : 1), terminer 2, pesée 2 (+ le poids), corriger une séance passée 3. Séance de 5 exercices (test 245) : 33 appuis série par série, 23 avec « Valider les 3 séries », 17 avec une séance prévue (§5.9).
 
 ### 3.5. Écrans au calme allégés (précision validée, version 1.21.0)
 
@@ -484,6 +484,8 @@ Ne pas imposer de ressenti individuel pour chaque série.
 
 Permettre de corriger facilement une série enregistrée par erreur.
 
+**Valider les 3 séries (précision validée, version 1.23.0)** : tant qu'aucune série n'est enregistrée et que la série en cours est préremplie à la cible (− / + non touchés), un bouton secondaire « Valider les 3 séries » (« les 4 séries »… selon le nombre prévu), sous les séries, les enregistre toutes à la cible en un appui ; il ne reste que le ressenti. « Annuler » le défait quelques secondes (§13). La validation série par série reste possible. Proposé dans toute séance, prévue ou libre (choix signalé à l'utilisateur).
+
 ### 5.5. Ressenti global de l'exercice
 
 À la fin de l'exercice, proposer une seule évaluation globale sur cinq niveaux :
@@ -570,6 +572,32 @@ Pendant la saisie d'une séance (écran de séance, ajout d'un exercice), l'écr
 - En haut, l'en-tête collant (flèche « ‹ », nom de la séance, chronomètre, « Enregistré »), puis la liste compacte des exercices : nom, charge et séries faites (« 30 kg · 0/3 »), avec la couronne d'un nouveau record ; un seul exercice ouvert à la fois, comme avant. Les blocs de cardio suivent.
 - En bas, une barre fixe dans la zone du pouce, au-dessus de la zone système : « + Exercice » (bouton principal, un peu plus large), « + Cardio » (ouvre le formulaire et l'amène à l'écran), « Terminer » (ouvre le volet de fin, §5.6). Libellés en 15 px sur une ligne, même à 360 px avec le texte agrandi.
 - La flèche « ‹ » ramène à l'onglet Séance sans terminer la séance, qui reste enregistrée et se reprend en un appui (« Reprendre la séance »), sur l'exercice qui était ouvert.
+
+### 5.9. Séance prévue (précision validée, version 1.23.0)
+
+But : préparer la prochaine séance au calme pour passer moins de temps sur le téléphone à la salle.
+
+**Préparation** (`#/seance-prevue`, onglet Séance, barre d'onglets visible)
+
+- Une seule séance prévue à la fois. Sur l'accueil sans plan : lien discret « Préparer ma prochaine séance » sous « Démarrer une séance ». Avec un plan : résumé (exercices puis cardio, « · » entre chacun) et « Modifier ma séance prévue ». Pendant une séance en cours, l'accueil n'affiche que « Reprendre la séance » (le plan n'est ni affiché ni modifiable).
+- « + Exercice » ouvre le même écran d'ajout qu'en séance (recherche, récents, puces de filtre, prises regroupées) ; un exercice déjà prévu est marqué « déjà prévu » et n'est pas ajouté deux fois ; un exercice jamais réalisé demande son poids de départ (seule saisie). Un exercice créé depuis cet écran est ajouté au plan.
+- Une carte par exercice, à la couleur de son groupe : nom, puis la charge et la cible que le moteur donne à l'instant, avec la même mention que la carte en séance (« 3 × 9 à 30 kg », « ↑ +1 rép. », « ↑ Poids supérieur → 3 × 8 », « = Même cible : consolide » ; « Jamais réalisé : poids de départ ») ; cible en 22 px (vue d'ensemble). Rien n'est saisi : le plan ne fige ni charge ni cible.
+- « ↑ » / « ↓ » pour réordonner (pas de « ↑ » sur le premier ni de « ↓ » sur le dernier) ; menu « ⋯ » : « Voir la fiche de l'exercice », « Retirer de la séance prévue ». « + Cardio » : même formulaire qu'en séance ; cardio prévu corrigé ou retiré par son menu. « Supprimer la séance prévue », avec confirmation.
+- Chaque modification est enregistrée aussitôt (méta `plan` de la base) ; un plan vidé est supprimé.
+
+**À la salle**
+
+- Avec un plan, le bouton principal devient « Démarrer la séance prévue » (1 appui) ; « Séance libre » reste en secondaire (bouton plein largeur, sous le bouton principal).
+- La séance s'ouvre en mode salle (§5.8) avec les exercices du plan dans l'ordre, déjà remplis : charge et cible **recalculées par le moteur au démarrage** (une séance faite entre-temps compte), séries préremplies. Un exercice supprimé ou archivé depuis la préparation est ignoré. Le premier exercice est ouvert, et le reste une fois ses séries validées (le ressenti est encore à choisir).
+- Tout se change comme dans une séance normale : charge, cible, retirer, ajouter (« + Exercice », une autre prise comprise). Les exercices se font dans l'ordre voulu (un appui ouvre n'importe quelle carte) ; leur ordre d'affichage reste celui du plan (§5.2 : pas de réordonnancement en séance). Changer de variante : ajouter l'autre variante et laisser ou retirer celle du plan.
+- Cardio prévu : une ligne « Prévu · Tapis de marche · 15 min » avec « Valider », qui l'enregistre en un appui (même identifiant) ; « Corriger » ensuite dans son menu ; retiré, il redevient « prévu ».
+- Fin : les exercices prévus sans aucune série ne sont pas enregistrés (§5.6) et le cardio prévu non validé non plus. Le volet de fin les signale sans bloquer : « 2 exercices prévus non faits (Leg extension, Curl biceps haltères) : pas enregistrés. » (« · 1 cardio prévu non fait »).
+
+**Durée de vie**
+
+- Le plan reste proposé jusqu'à ce qu'il soit réalisé, quel que soit le délai. Il est consommé quand la séance démarrée à partir de lui (`fromPlan.planId`) est terminée avec au moins une série ou un cardio ; une séance prévue terminée sans rien de fait le laisse en place (choix signalé à l'utilisateur). Une séance libre ne le touche pas.
+- Le plan consommé est retiré de la base (il ne revient pas si la séance est ensuite supprimée de l'historique).
+- Données : `SessionPlan` (`id`, `createdAt`, `updatedAt`, `exercises: { variantId, startWeightKg? }[]`, `cardio`) dans la méta `plan` ; la séance démarrée garde `fromPlan` (`planId`, `variantIds`, `cardio` prévu). Export et import (§11.10) : champ `plan` de la sauvegarde (format `schemaVersion` 4 inchangé, champ absent d'une sauvegarde antérieure = aucun plan) ; en fusion, le plan de l'appareil est gardé (écart signalé), sinon celui de la sauvegarde est repris s'il n'a pas été réalisé ; un remplacement global le remplace. Aucun effet sur le moteur.
 
 ## 6. Chronomètre global de séance
 
@@ -1054,6 +1082,7 @@ Prévoir un export complet de l'application au format JSON, contenant les donné
 - Réglages des bilans de la semaine et du mois : bandeaux et adresse e-mail (§19.7).
 - Activités habituelles hors salle : liste des habitudes (réglages), réponses « Oui » / « Non » et activités ponctuelles (§19.8), format `schemaVersion` 4 ; une sauvegarde au format 2 ou 3 est migrée sans perte (aucune activité, habitudes par défaut).
 - Blocs de cardio des séances et liste des machines de cardio (§5.7).
+- Séance prévue (§5.9) : champ `plan` (null sans plan), et origine `fromPlan` des séances démarrées à partir d'elle.
 
 Utiliser un format versionné (`schemaVersion`) pour permettre de faire évoluer la structure des données, avec des migrations testées.
 
@@ -1501,6 +1530,14 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 238. Activités proposées : hors habitude active d'abord (enregistrées, la plus récente en tête, puis habitudes désactivées), puis les habitudes actives, même plus récentes ; badminton désactivé classé par date comme les autres ; préremplissage d'après la dernière fois, sinon l'habitude ; activité à 0 h 00 de sa date, durée, groupes, marque `oneOff`, rattachée à l'habitude du même nom (saisie le jour de l'habitude : la question disparaît, un « Non » est remplacé) ; erreurs : nom vide, durée hors de 1 à 600 ou non entière, date invalide ou future, déjà enregistrée ce jour-là ; la question du badminton reste posée.
 239. Comptée comme une activité confirmée : récapitulatif (« +1 indirect », « aujourd'hui », puis « hier », « · 1 activité »), bilan et texte du mail (« Activités : Badminton ×1, 1 h 30 ; Futsal ×1, 1 h 00 »), groupes indirects ; export puis import identiques (format 4) ; marque invalide refusée ; moteur inchangé.
 240. (bout en bout, format smartphone) badminton seul connu : proposé sans présélection (« Choisis une activité. ») ; futsal en habitude désactivée ; « + Activité » discret (lien de 48 px sous « Démarrer une séance ») ; puces Futsal, Badminton, Autre, futsal présélectionné et prérempli (60 min, Jambes), date du jour ; date future refusée avec un message ; enregistrée : message, en-tête « 1 activité », jambes « +1 indirect · aujourd'hui », question du badminton toujours là ; deuxième ouverture : futsal en tête, présélectionné, prérempli d'après la dernière fois (2 appuis), refus d'un doublon le même jour ; « Autre » : Escalade le 21, puis ordre Futsal, Escalade, Badminton ; après relance, historique (détail « activité ponctuelle », sans heures) et bilan de la semaine ; jamais de question pour le futsal ; rien ne dépasse à 412, 360 et 320 px. Le test 225 contrôle aussi le formulaire ouvert et le détail d'une activité ponctuelle.
+
+### Séance prévue (§5.9, version 1.23.0)
+
+242. Préparation : exercices dans l'ordre, sans doublon, réordonnés, cardio prévu ; charge, cible et mention du moteur comme la carte en séance (« = même cible », « ↑ Poids supérieur → 3 × 8 », poids de départ d'un exercice jamais réalisé) ; une séance libre entre-temps laisse le plan intact et fait évoluer la cible (« 3 × 9 ↑ +1 rép. ») ; démarrage 3 jours plus tard : charge et cible recalculées, séries préremplies, ordre du plan, origine `fromPlan` ; exercice archivé ignoré.
+243. Réalisation modifiée à la salle (« Valider les 3 séries », autre charge, exercice retiré ou ajouté) ; exercices et cardio prévus non faits relevés, pas enregistrés ; plan consommé à la fin, pas pendant la séance ; séance libre ou séance prévue terminée vide : plan gardé. Contrôle du plan (doublon, poids, cardio), export puis import identiques (origine comprise), sauvegarde antérieure sans plan, exercice inconnu ou origine invalide refusés ; fusion (plan de l'appareil gardé, plan réalisé non repris).
+244. (bout en bout, format smartphone) Accueil sans plan puis préparation (même écran d'ajout, « déjà prévu », poids de départ, ↑ / ↓, cardio) avec charges et cibles affichées ; accueil avec plan (« Démarrer la séance prévue », « Séance libre », résumé, « Modifier ») ; séance libre : plan intact et préparation à jour (3 × 9, « ↑ +1 rép. ») ; 3 jours plus tard : 1 appui, mode salle, ordre du plan, premier exercice ouvert, charge et cible recalculées ; « Valider les 3 séries », charge changée, séries une par une, exercice ajouté, cardio prévu validé ; volet « 2 exercices prévus non faits (…) » ; séance enregistrée sans eux, plan consommé, accueil sans plan ; export puis import du plan.
+245. (bout en bout) Appuis, séance de 5 exercices, sans défilement : sans plan 23 (série par série : 33), avec plan 17.
+Le test 225 contrôle aussi l'accueil avec un plan, la préparation (vide, avec cardio et suppression ouverts, menu ouvert), l'ajout à la séance prévue, la séance prévue démarrée (texte à 115 % compris) et le volet de fin avec les non faits.
 
 ### Ton de l'appli (§3.6, version 1.22.2)
 

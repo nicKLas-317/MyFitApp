@@ -118,4 +118,36 @@ export interface Session {
   performances: Performance[];
   /** Blocs de cardio dans l'ordre d'ajout ; absent quand la séance n'en contient pas. */
   cardio?: CardioBlock[];
+  /** Séance démarrée à partir de la séance prévue (§5.9) ; absent pour une séance libre. */
+  fromPlan?: PlanOrigin;
+}
+
+/**
+ * Exercice d'une séance prévue (§5.9). Charge et cible ne sont jamais figées : le moteur les donne à la préparation
+ * puis les recalcule au démarrage.
+ */
+export interface PlanItem {
+  variantId: string;
+  /** Poids de départ d'un exercice jamais réalisé, saisi à la préparation ; ignoré dès qu'il a un historique. */
+  startWeightKg?: number;
+}
+
+/** Séance prévue (§5.9) : une seule à la fois, proposée jusqu'à ce qu'une séance démarrée à partir d'elle soit terminée. */
+export interface SessionPlan {
+  id: string;
+  createdAt: number;
+  updatedAt: number;
+  /** Dans l'ordre prévu. Un seul exemplaire par exercice-variante. */
+  exercises: PlanItem[];
+  /** Cardio prévu, à valider en un appui pendant la séance. */
+  cardio: CardioBlock[];
+}
+
+/** Origine d'une séance démarrée à partir de la séance prévue. */
+export interface PlanOrigin {
+  planId: string;
+  /** Exercices prévus, dans l'ordre. */
+  variantIds: string[];
+  /** Cardio prévu ; un bloc validé est enregistré dans `cardio` sous le même identifiant. */
+  cardio?: CardioBlock[];
 }

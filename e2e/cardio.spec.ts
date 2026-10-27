@@ -10,7 +10,7 @@ async function addCardio(page: Page, machine: string, minutes: string, incline?:
   await form.getByRole('button', { name: machine, exact: true }).click();
   if (incline) await form.getByRole('button', { name: incline, exact: true }).click();
   await form.getByLabel('Durée (min)').fill(minutes);
-  await form.getByRole('button', { name: 'Valider' }).click();
+  await form.getByRole('button', { name: 'Valider', exact: true }).click();
   await expect(form).toBeHidden();
 }
 
@@ -48,7 +48,7 @@ test.describe('Cardio', () => {
     // Correction d'un bloc, depuis son menu « ⋯ ».
     await cardAction(page.locator('.cardio-item').nth(1), 'Corriger');
     await cardioForm(page).getByLabel('Durée (min)').fill('15');
-    await cardioForm(page).getByRole('button', { name: 'Valider' }).click();
+    await cardioForm(page).getByRole('button', { name: 'Valider', exact: true }).click();
     await expect(texts.nth(1)).toHaveText('Rameur · 15 min');
 
     await page.getByRole('button', { name: 'Terminer la séance' }).click();

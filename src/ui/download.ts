@@ -1,6 +1,6 @@
 import type { ActivityRecord } from '../activities/model';
 import type { BodyTracking } from '../body/model';
-import type { Exercise, Session } from '../domain/types';
+import type { Exercise, Session, SessionPlan } from '../domain/types';
 import { backupFileName, buildBackup } from '../transfer/backup';
 
 /** Télécharge une sauvegarde complète au format JSON (§11.10). Renvoie l'horodatage de l'export. */
@@ -10,6 +10,7 @@ export function downloadBackup(data: {
   bodyTracking?: BodyTracking;
   settings?: Record<string, unknown>;
   activities?: readonly ActivityRecord[];
+  plan?: SessionPlan | null;
 }): number {
   const now = Date.now();
   const blob = new Blob([JSON.stringify(buildBackup(data, now), null, 2)], { type: 'application/json' });

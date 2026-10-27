@@ -7,7 +7,7 @@ test.describe('Séance, persistance et chronomètre', () => {
     const card = await addExercise(page, 'lat pulldown', 'Tirage vertical — Prise moyenne', '40');
     await validateSets(card, 1);
     await card.getByRole('button', { name: 'Répétitions série 2 : moins' }).click();
-    await card.getByRole('button', { name: 'Valider' }).click();
+    await card.getByRole('button', { name: 'Valider', exact: true }).click();
     await card.getByRole('button', { name: 'Bien', exact: true }).click();
     await expect(page.getByText('Enregistré')).toBeVisible();
 
@@ -70,7 +70,7 @@ test.describe('Séance, persistance et chronomètre', () => {
     await expect(page.getByText('dans la séance')).toBeVisible();
     await page.getByRole('button', { name: /^Pec deck/ }).click();
     await expect(page.locator('article.exercise-card')).toHaveCount(2);
-    await expect(exerciseCard(page, 'Pec deck').getByRole('button', { name: 'Valider' })).toBeVisible();
+    await expect(exerciseCard(page, 'Pec deck').getByRole('button', { name: 'Valider', exact: true })).toBeVisible();
     const session = await activeSession(page);
     expect(session.performances.map((p) => p.variantId)).toEqual(['pec-deck', 'tirage-horizontal']);
   });

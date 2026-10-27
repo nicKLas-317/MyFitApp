@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { formalForms } from '../src/ui/__tests__/vouvoiement';
-import type { Session } from '../src/domain/types';
+import type { Session, SessionPlan } from '../src/domain/types';
 import { simulatedHistory } from '../src/analysis/__tests__/simulation';
 import { activeSession, addExercise, cardAction, doExercise, finishSheet, openSettingsSection, readSessions, startSession, validateSets, writeSessions } from './helpers';
 
@@ -8,6 +8,32 @@ import { activeSession, addExercise, cardAction, doExercise, finishSheet, openSe
 const ACCENT = 'rgb(91, 157, 255)';
 const NEUTRAL = 'rgb(74, 81, 99)';
 const CYAN = 'rgb(62, 230, 238)';
+
+/** Séance prévue (§5.9) : trois exercices (un jamais réalisé) et un cardio. */
+const PLAN: SessionPlan = {
+  id: 'plan-test', createdAt: 0, updatedAt: 0,
+  exercises: [{ variantId: 'chest-press', startWeightKg: 40 }, { variantId: 'pec-deck', startWeightKg: 30 }, { variantId: 'crunch-machine', startWeightKg: 25 }],
+  cardio: [{ id: 'prevu-tapis', machineId: 'tapis', machine: 'Tapis de marche', incline: 'neutre', minutes: 15 }],
+};
+
+/** Enregistre (ou supprime) la séance prévue dans la base, puis recharge l'appli. */
+async function setPlan(page: Page, plan: SessionPlan | null): Promise<void> {
+  await page.evaluate(
+    (value) =>
+      new Promise<void>((resolve, reject) => {
+        const open = indexedDB.open('myfitapp');
+        open.onsuccess = () => {
+          const tx = open.result.transaction('meta', 'readwrite');
+          tx.objectStore('meta').put(value, 'plan');
+          tx.oncomplete = () => (open.result.close(), resolve());
+          tx.onerror = () => reject(tx.error);
+        };
+      }),
+    plan,
+  );
+  await page.reload();
+  await expect(page.locator('main').first()).toBeVisible();
+}
 
 function pecDeck(day: number, target: number, weightKg = 35): Session {
   const t = new Date(2026, 9, day, 18).getTime();
@@ -201,7 +227,7 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
       await expect.poll(() => prefilled(up), touched ? '« − » touché avant' : '').toEqual(['8', '8', '8']);
       await expect.poll(async () => (await activeSession(page)).performances[0]).toMatchObject({ weightKg: 40, targetReps: 8, plannedSets: 3 });
       // La série validée vaut 8.
-      await up.getByRole('button', { name: 'Valider' }).click();
+      await up.getByRole('button', { name: 'Valider', exact: true }).click();
       await expect.poll(async () => (await activeSession(page)).performances[0]?.reps).toEqual([8]);
       await cardAction(up, 'Retirer de la séance');
       await up.getByRole('button', { name: 'Oui, retirer' }).click();
@@ -427,6 +453,26 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
         await page.goto('./#/reglages');
         for (const name of ['Récapitulatif de la semaine', 'Bilans de la semaine et du mois', 'Activités habituelles', 'Machines de cardio']) await openSettingsSection(page, name);
       }],
+      // Séance prévue (§5.9) : accueil avec un plan, préparation, ajout, menus ; puis sans plan (écran vide).
+      ['Accueil avec une séance prévue', async () => {
+        await page.goto('./');
+        await setPlan(page, PLAN);
+      }],
+      ['Séance prévue', () => page.goto('./#/seance-prevue').then(() => undefined)],
+      ['Séance prévue, cardio et suppression ouverts', async () => {
+        await page.goto('./#/seance-prevue');
+        await page.getByRole('main').getByRole('button', { name: '+ Cardio' }).click();
+        await page.getByRole('button', { name: 'Supprimer la séance prévue' }).click();
+      }],
+      ['Séance prévue, menu ouvert', async () => {
+        await page.goto('./#/seance-prevue');
+        await page.getByRole('button', { name: 'Actions : Pec deck' }).click();
+      }],
+      ['Ajout à la séance prévue', () => page.goto('./#/seance-prevue/ajouter').then(() => undefined)],
+      ['Séance prévue vide', async () => {
+        await page.goto('./#/seance-prevue');
+        await setPlan(page, null);
+      }],
     ];
     // À 412, 360 et 320 px, puis à 360 px avec le texte agrandi à 115 % : chaque écran, page entière.
     for (const [width, scale] of [[412, 1], [360, 1], [320, 1], [360, 1.15]] as const) {
@@ -453,7 +499,9 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
     const card = await addExercise(page, 'chest press', 'Chest press');
     await page.getByRole('button', { name: 'Ajouter du cardio' }).click();
     await page.getByRole('form', { name: 'Cardio' }).getByLabel('Durée (min)').fill('10');
-    await page.getByRole('form', { name: 'Cardio' }).getByRole('button', { name: 'Valider' }).click();
+    await page.getByRole('form', { name: 'Cardio' }).getByRole('button', { name: 'Valider', exact: true }).click();
+    // Le formulaire de cardio a été amené à l'écran : la page revient en haut (sinon la carte passe sous l'en-tête collant).
+    await page.evaluate(() => window.scrollTo(0, 0));
     await expectClean(page, 'Séance à 360 px');
     await card.getByRole('button', { name: 'Actions : Chest press' }).click();
     await expectClean(page, 'Séance, menu ouvert');
@@ -471,8 +519,10 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
     await expectClean(page, 'Séance, confirmation du poids');
     await card.getByRole('alertdialog', { name: 'Confirmer le poids' }).getByRole('button', { name: 'Corriger' }).click();
     await page.locator('.cardio-item').getByRole('button', { name: /^Actions : / }).click();
+    await page.evaluate(() => window.scrollTo(0, 0));
     await expectClean(page, 'Séance, menu du cardio');
     await page.keyboard.press('Escape');
+    await page.evaluate(() => window.scrollTo(0, 0));
     const restore = await largeText(page);
     await expectClean(page, 'Séance, texte agrandi', 1.15);
     await restore();
@@ -490,6 +540,20 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
     const larger = await largeText(page);
     await expectClean(page, 'Récapitulatif de fin, texte agrandi', 1.15);
     await larger();
+    // Séance prévue démarrée : carte ouverte (« Valider les 3 séries »), cardio prévu ; volet de fin avec les non faits.
+    await page.goto('./');
+    await setPlan(page, PLAN);
+    await page.getByRole('button', { name: 'Démarrer la séance prévue' }).click();
+    await expect(page.getByRole('button', { name: 'Valider les 3 séries' })).toBeVisible();
+    await expectClean(page, 'Séance prévue démarrée');
+    const largerPlan = await largeText(page);
+    await expectClean(page, 'Séance prévue démarrée, texte agrandi', 1.15);
+    await largerPlan();
+    await page.getByRole('button', { name: 'Terminer la séance' }).click();
+    await expect(finishSheet(page).getByTestId('planned-not-done')).toBeVisible();
+    await expectClean(page, 'Fin de séance prévue, non faits');
+    await finishSheet(page).getByRole('button', { name: 'Oui, terminer' }).click();
+    await setPlan(page, null);
     // Séance oubliée (ouverte depuis plus de 4 heures) : fenêtre à la réouverture.
     await startSession(page);
     await page.clock.setFixedTime(new Date('2026-10-23T01:00:00'));

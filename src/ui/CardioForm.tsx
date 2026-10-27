@@ -193,11 +193,11 @@ export function CardioList({ blocks, machines, newId, onSave, onRemove }: ListPr
   );
 }
 
-/** « Cardio · Tapis de marche · inclinaison haute · 20 min ». */
-export function CardioLine({ block }: { block: CardioBlock }) {
+/** « Cardio · Tapis de marche · inclinaison haute · 20 min » ; « Prévu · … » pour un cardio de la séance prévue. */
+export function CardioLine({ block, prefix = 'Cardio' }: { block: CardioBlock; prefix?: string }) {
   return (
     <div className="cardio-line">
-      <span className="tag">Cardio</span> <span data-testid="cardio-text">{formatCardio(block)}</span>
+      <span className="tag">{prefix}</span> <span data-testid="cardio-text">{formatCardio(block)}</span>
     </div>
   );
 }

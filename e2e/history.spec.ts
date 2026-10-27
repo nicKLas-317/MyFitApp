@@ -157,7 +157,7 @@ test.describe('Historique, analyse et Mon poids', () => {
     await page.getByRole('button', { name: /^Pec deck/ }).first().click();
     await page.getByLabel('Poids de départ (kg)').fill('30');
     await page.getByRole('button', { name: 'Ajouter', exact: true }).click();
-    await page.locator('article[aria-label="Pec deck"]').getByRole('button', { name: 'Valider' }).click();
+    await page.locator('article[aria-label="Pec deck"]').getByRole('button', { name: 'Valider', exact: true }).click();
     await expect.poll(async () => (await activeSession(page)).performances[0]?.reps).toEqual([8]);
 
     await page.goto('./#/poids');

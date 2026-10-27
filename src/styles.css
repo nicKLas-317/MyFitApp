@@ -225,8 +225,94 @@ fieldset.frame > legend {
   margin-top: var(--space-1);
 }
 
+/* « Préparer ma prochaine séance » et « + Activité » : l'un sous l'autre, chacun à la largeur de son texte. */
+.home .prepare-plan,
+.home .add-activity {
+  display: flex;
+  width: fit-content;
+}
+
 .home .activity-form {
   margin-top: var(--space-2);
+}
+
+/* Séance prévue (§5.9) sur l'accueil : « Séance libre » en secondaire, puis le résumé du plan et « Modifier ». */
+.home .free-session,
+.home .prepare-plan {
+  margin-top: var(--space-1);
+}
+
+.plan-summary {
+  margin-top: var(--space-2);
+  padding: var(--space-1) var(--space-2) 0;
+}
+
+.plan-names {
+  margin: 0;
+  color: var(--muted);
+}
+
+/* Préparation de la séance prévue : une carte par exercice, cible du moteur comme dans la carte de séance. */
+.plan-list {
+  list-style: none;
+  margin: var(--space-2) 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-1);
+}
+
+.plan-item {
+  padding: var(--space-1) 0 var(--space-1) var(--space-2);
+  display: grid;
+  gap: var(--space-1);
+}
+
+.plan-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Cible à gauche, « ↑ » « ↓ » à droite ; si la place manque, les flèches passent dessous. */
+.plan-target {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1);
+  padding-right: var(--space-1);
+}
+
+.plan-target-text {
+  min-width: 0;
+}
+
+/* Vue d'ensemble : cible un cran plus petite que dans la carte de séance, pour garder « ↑ » « ↓ » sur sa ligne. */
+.plan-item .next-target {
+  font-size: var(--fs-4);
+}
+
+.plan-move {
+  display: flex;
+  gap: var(--space-1);
+  margin-left: auto;
+}
+
+.btn.move {
+  width: var(--tap);
+  padding: 0;
+  font-size: var(--fs-4);
+}
+
+.plan-actions {
+  margin: var(--space-2) 0;
+}
+
+.plan-actions .btn {
+  flex: 1 1 8em;
 }
 
 /* Date et durée côte à côte si la date tient en entier, sinon l'une sous l'autre (écran étroit, texte agrandi). */
@@ -619,6 +705,11 @@ input[aria-invalid='true'] {
   margin-left: auto;
 }
 
+/* « Valider les 3 séries » : sous les séries, avant la première ; il ne reste ensuite que le ressenti. */
+.btn.validate-all {
+  width: 100%;
+}
+
 .stepper {
   display: inline-flex;
   align-items: center;
@@ -856,7 +947,8 @@ input[aria-invalid='true'] {
   gap: var(--space-2);
 }
 
-.missing-note {
+.missing-note,
+.planned-not-done {
   margin: 0;
 }
 

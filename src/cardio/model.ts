@@ -96,6 +96,21 @@ export function cardioErrors(input: CardioInput): CardioError[] {
   return errors;
 }
 
+/** Contrôle d'un bloc enregistré (sauvegarde, séance prévue). Liste vide = valide. */
+export function cardioBlockErrors(b: unknown, path: string): string[] {
+  if (typeof b !== 'object' || b === null || Array.isArray(b)) return [`${path} : bloc de cardio invalide.`];
+  const o = b as Record<string, unknown>;
+  const errors: string[] = [];
+  const text = (v: unknown) => typeof v === 'string' && v.trim() !== '';
+  if (!text(o.id)) errors.push(`${path}.id manquant.`);
+  if (!text(o.machineId)) errors.push(`${path}.machineId manquant.`);
+  if (!text(o.machine)) errors.push(`${path}.machine manquant.`);
+  if (o.incline !== undefined && !INCLINES.includes(o.incline as Incline)) errors.push(`${path}.incline inconnue.`);
+  if (!isValidMinutes(o.minutes)) errors.push(`${path}.minutes invalide.`);
+  if (o.distanceKm !== undefined && !isValidDistance(o.distanceKm)) errors.push(`${path}.distanceKm invalide.`);
+  return errors;
+}
+
 /** Bloc prêt à enregistrer ; l'appelant a vérifié `cardioErrors`. */
 export function makeCardioBlock(input: CardioInput, id: string): CardioBlock {
   if (cardioErrors(input).length > 0) throw new Error('Bloc de cardio invalide');

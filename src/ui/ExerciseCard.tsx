@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import type { Performance, Session } from '../domain/types';
-import { compareWeight, progressMarker } from '../engine';
 import { useApp } from '../app/store';
 import { displayName } from '../library/catalog';
 import { formatKg } from '../session/format';
 import {
   correctSet,
   deleteLastSet,
+  recordRemainingSets,
   recordSet,
   removeExercise,
   setFeeling,
@@ -17,7 +17,7 @@ import {
 import { FeelingPicker } from './FeelingPicker';
 import { groupColorProps } from './groupColors';
 import { ExercisePicto } from './Pictogram';
-import { loadChangeHint, markerHint, TargetSummary, type TargetHint } from './TargetSummary';
+import { cardHint, TargetSummary } from './TargetSummary';
 import { ActionMenu, ConfirmRemove } from './ActionMenu';
 import { Crown } from './Crown';
 import { beatsRecord } from '../analysis/records';
@@ -41,7 +41,6 @@ export function ExerciseCard({ session, performance: p, open, onToggle }: Props)
   const ref = variants.get(p.variantId);
   const ctx = ctxFor(p.variantId);
   const { state } = ctx;
-  const rec = state?.recommendation;
   const target = p.targetReps ?? 0;
   const planned = p.plannedSets ?? 0;
   const done = p.reps.length;
@@ -56,34 +55,9 @@ export function ExerciseCard({ session, performance: p, open, onToggle }: Props)
   const [confirmRemove, setConfirmRemove] = useState(false);
   const now = () => Date.now();
 
-  // Le moteur recommande un changement de charge et la charge n'a pas encore été modifiée (§5.3).
-  const weightChange =
-    rec && state && (rec.kind === 'weight_up' || rec.kind === 'weight_down') && compareWeight(p.weightKg, state.palier.weightKg) === 0
-      ? rec.kind
-      : null;
-
-  // Repère de progression (§5.3.1) : la cible a changé depuis la dernière séance. Il disparaît si l'utilisateur
-  // change la charge ou la cible (ce n'est plus la progression recommandée).
-  const marker = progressMarker(state);
-  const shownMarker =
-    marker && state && compareWeight(p.weightKg, state.palier.weightKg) === 0 && (marker.kind !== 'reps_up' || p.targetReps === marker.to.targetReps)
-      ? marker
-      : null;
-
-  // Mention sous la cible (§5.3.1, §5.3.2) : changement de charge à saisir, repère de progression, ou cible identique ;
-  // rien si l'utilisateur a choisi une autre charge ou une autre cible.
+  // Mention sous la cible (§5.3.1, §5.3.2) : changement de charge à saisir, repère de progression, ou cible identique.
   const assisted = ctx.cfg.assisted;
-  const followsRecommendation =
-    !!rec && !!state && compareWeight(p.weightKg, state.palier.weightKg) === 0 && p.targetReps === rec.targetReps && p.plannedSets === rec.plannedSets;
-  const hint: TargetHint = !state
-    ? { kind: 'start' }
-    : weightChange && rec
-      ? loadChangeHint(weightChange, assisted, `→ ${rec.plannedSets} × ${rec.targetReps}`)
-      : shownMarker
-        ? markerHint(shownMarker, assisted)
-        : !marker && followsRecommendation
-          ? { kind: 'same' }
-          : null;
+  const { hint, weightChange } = cardHint(state, assisted, p);
 
   const name = displayName(ref);
   // Toutes les séries faites à la cible et mieux que le record des séances précédentes (jamais pour une première fois).
@@ -230,6 +204,19 @@ export function ExerciseCard({ session, performance: p, open, onToggle }: Props)
               </li>
             ))}
           </ol>
+          {/* Séries préremplies conformes à ce qui a été fait : toutes enregistrées en un appui, il ne reste que le ressenti. */}
+          {done === 0 && planned > 1 && nextValue === target && (
+            <button
+              type="button"
+              className="btn validate-all"
+              onClick={() => {
+                setDraft(null);
+                void commit(recordRemainingSets(session, p.variantId, now()), 'Séries enregistrées');
+              }}
+            >
+              Valider les {planned} séries
+            </button>
+          )}
           {done > 0 && (
             <button
               type="button"

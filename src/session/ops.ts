@@ -59,6 +59,23 @@ export interface VariantContext {
 }
 
 /**
+ * Exercice prérempli d'après le moteur : charge du palier actuel (ou poids de départ pour un exercice jamais réalisé),
+ * cible attendue et séries standard, aucune série faite. Null sans charge connue.
+ */
+export function newPerformance(variantId: string, ctx: VariantContext, startWeightKg?: number): Performance | null {
+  const weightKg = ctx.state?.palier.weightKg ?? startWeightKg;
+  if (weightKg === undefined || !(weightKg > 0)) return null;
+  return {
+    variantId,
+    weightKg,
+    targetReps: expectedTarget(ctx.state, weightKg, ctx.cfg),
+    plannedSets: ctx.cfg.sets,
+    reps: [],
+    feeling: 'inconnu',
+  };
+}
+
+/**
  * Ajoute un exercice-variante à la séance (§5.2), prérempli avec le dernier poids et la cible du moteur.
  * S'il est déjà présent, la séance est renvoyée inchangée (`added: false`) : on ouvre l'existant.
  * Pour un exercice jamais réalisé, le poids de départ est obligatoire.
@@ -71,16 +88,8 @@ export function addExercise(
   startWeightKg?: number,
 ): { session: Session; added: boolean } {
   if (findPerformance(session, variantId)) return { session, added: false };
-  const weightKg = ctx.state?.palier.weightKg ?? startWeightKg;
-  if (weightKg === undefined || !(weightKg > 0)) throw new Error('Poids de départ requis');
-  const performance: Performance = {
-    variantId,
-    weightKg,
-    targetReps: expectedTarget(ctx.state, weightKg, ctx.cfg),
-    plannedSets: ctx.cfg.sets,
-    reps: [],
-    feeling: 'inconnu',
-  };
+  const performance = newPerformance(variantId, ctx, startWeightKg);
+  if (!performance) throw new Error('Poids de départ requis');
   return {
     session: { ...session, performances: [...session.performances, performance], updatedAt: now },
     added: true,
@@ -127,6 +136,17 @@ export function recordSet(session: Session, variantId: string, reps: number, now
   return updatePerformance(session, variantId, now, (p) => {
     if (p.targetReps === null || p.plannedSets === null || p.reps.length >= p.plannedSets) return p;
     return { ...p, reps: [...p.reps, clampReps(reps, p.targetReps)] };
+  });
+}
+
+/**
+ * « Valider les 3 séries » : enregistre d'un coup toutes les séries restantes à la cible (séries préremplies conformes
+ * à ce qui a été fait). Il ne reste que le ressenti.
+ */
+export function recordRemainingSets(session: Session, variantId: string, now: number): Session {
+  return updatePerformance(session, variantId, now, (p) => {
+    if (p.targetReps === null || p.plannedSets === null || p.reps.length >= p.plannedSets) return p;
+    return { ...p, reps: [...p.reps, ...Array.from({ length: p.plannedSets - p.reps.length }, () => p.targetReps as number)] };
   });
 }
 

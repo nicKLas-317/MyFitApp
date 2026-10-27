@@ -40,10 +40,12 @@ interface Props {
   initialName?: string;
   /** Création depuis l'ajout à la séance : l'exercice créé y est ajouté. */
   forSession?: boolean;
+  /** Création depuis l'ajout à la séance prévue (§5.9) : l'exercice créé y est ajouté. */
+  forPlan?: boolean;
 }
 
 /** Création et modification d'un exercice et de ses variantes (§4.3, §14). */
-export function ExerciseEdit({ exerciseId, initialName = '', forSession = false }: Props) {
+export function ExerciseEdit({ exerciseId, initialName = '', forSession = false, forPlan = false }: Props) {
   const { exercises, sessions, settings, saveExercises, deleteExercise } = useApp();
   const id = useId();
   const original = exerciseId ? exercises.find((e) => e.id === exerciseId) : undefined;
@@ -86,7 +88,13 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false 
 
   const hasHistory = original ? exerciseHasHistory(original, sessions) : false;
   const input = { name, synonyms: parseList(synonyms), primaryGroup: primary, secondaryGroups: secondary, equipment };
-  const backHref = original ? `#/exercice/${encodeURIComponent(original.id)}` : forSession ? '#/ajouter' : '#/bibliotheque';
+  const backHref = original
+    ? `#/exercice/${encodeURIComponent(original.id)}`
+    : forSession
+      ? '#/ajouter'
+      : forPlan
+        ? '#/seance-prevue/ajouter'
+        : '#/bibliotheque';
 
   function patchVariant(vid: string, patch: Partial<VariantForm>) {
     setVariantForms((list) => list.map((v) => (v.id === vid ? { ...v, ...patch } : v)));
@@ -133,6 +141,7 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false 
     setFailed(!ok);
     if (!ok) return;
     if (!original && forSession) navigateReplace('ajouter', result.exercise.id);
+    else if (!original && forPlan) navigateReplace('seance-prevue', 'ajouter', result.exercise.id);
     else if (original) navigateBack('exercice', result.exercise.id);
     else navigateReplace('exercice', result.exercise.id);
   }

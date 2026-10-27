@@ -3,7 +3,9 @@ import { useApp } from '../../app/store';
 import { navigateReplace, useNow } from '../../app/hooks';
 import { elapsedMs, finishSession, missingFeelings, newId } from '../../session/ops';
 import { addCardio, cardioOf, formatCardio, removeCardio, updateCardio } from '../../cardio/model';
-import { CardioForm, CardioList, type CardioDraft, type CardioFormMemory } from '../CardioForm';
+import { CardioForm, CardioLine, CardioList, type CardioDraft, type CardioFormMemory } from '../CardioForm';
+import { pendingPlanCardio, plannedNotDone } from '../../plan/model';
+import { displayName } from '../../library/catalog';
 import { formatDuration } from '../../session/format';
 import { ExerciseCard } from '../ExerciseCard';
 import { finishLabel, MissingFeelings, remainingFeelings } from '../MissingFeelings';
@@ -25,7 +27,7 @@ const memory: { sessionId: string | null; openId: string | undefined; cardio: Ca
  * « Terminer ». La flèche « ‹ » ramène à l'onglet Séance sans terminer la séance.
  */
 export function SessionScreen({ openVariantId }: { openVariantId: string | undefined }) {
-  const { active, commit, setLastFinish, cardioMachines } = useApp();
+  const { active, commit, setLastFinish, cardioMachines, variants } = useApp();
   const now = useNow();
   if (active && memory.sessionId !== active.id) {
     memory.sessionId = active.id;
@@ -64,7 +66,13 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
     );
   }
 
-  const current = openId ?? active.performances.at(-1)?.variantId;
+  // Par défaut : le dernier exercice ajouté ; dans une séance prévue, le premier exercice pas encore fait, qui reste
+  // ouvert une fois ses séries validées (le ressenti est encore à choisir).
+  if (active.fromPlan && openId === undefined && memory.openId === undefined) {
+    memory.openId = active.performances.find((p) => p.plannedSets === null || p.reps.length < p.plannedSets)?.variantId;
+  }
+  const current = openId ?? memory.openId ?? active.performances.at(-1)?.variantId;
+  const notDone = plannedNotDone(active);
   const unsavedCardio = addingCardio && cardioDraft.kind !== 'empty' ? cardioDraft : null;
 
   function openCardio(open: boolean) {
@@ -128,6 +136,27 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
         onRemove={(block) => void commit(removeCardio(active, block.id, Date.now()), 'Cardio retiré')}
       />
 
+      {pendingPlanCardio(active).length > 0 && (
+        <ul className="recap-list cardio-list planned-cardio" aria-label="Cardio prévu">
+          {pendingPlanCardio(active).map((b) => (
+            <li key={b.id} className="card recap-item cardio-item" data-cardio={b.id}>
+              <div className="card-line">
+                <CardioLine block={b} prefix="Prévu" />
+                {/* Le cardio prévu s'enregistre en un appui ; « Corriger » dans son menu une fois validé. */}
+                <button
+                  type="button"
+                  className="btn primary"
+                  aria-label={`Valider le cardio prévu : ${formatCardio(b)}`}
+                  onClick={() => void commit(addCardio(active, b, Date.now()))}
+                >
+                  Valider
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
       {addingCardio && (
         <CardioForm
           machines={cardioMachines}
@@ -163,6 +192,20 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
       {confirmFinish && (
         <FinishSheet onClose={() => setConfirmFinish(null)}>
           <MissingFeelings session={active} variantIds={confirmFinish} />
+          {(notDone.exercises.length > 0 || notDone.cardio.length > 0) && (
+            <p className="planned-not-done" data-testid="planned-not-done">
+              {[
+                notDone.exercises.length > 0 &&
+                  `${notDone.exercises.length === 1 ? '1 exercice prévu non fait' : `${notDone.exercises.length} exercices prévus non faits`} (${notDone.exercises
+                    .map((p) => displayName(variants.get(p.variantId)))
+                    .join(', ')})`,
+                notDone.cardio.length > 0 && `${notDone.cardio.length === 1 ? '1 cardio prévu non fait' : `${notDone.cardio.length} cardios prévus non faits`}`,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+              {' : pas enregistrés.'}
+            </p>
+          )}
           {unsavedCardio?.kind === 'block' && (
             <p data-testid="unsaved-cardio">Cardio non validé : {formatCardio(unsavedCardio.block)}</p>
           )}

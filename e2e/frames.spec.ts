@@ -286,7 +286,7 @@ test.describe('Filtres du bilan et cadres de section', () => {
     await page.getByRole('button', { name: 'Ajouter du cardio' }).click();
     const cardio = page.getByRole('form', { name: 'Cardio' });
     await cardio.getByLabel('Durée (min)').fill('15');
-    await cardio.getByRole('button', { name: 'Valider' }).click();
+    await cardio.getByRole('button', { name: 'Valider', exact: true }).click();
     await expect(page.locator('.cardio-item').first()).toBeVisible();
     expect(await page.locator('.cardio-item').first().evaluate((el) => getComputedStyle(el).borderTopColor)).toBe(NEUTRAL);
 

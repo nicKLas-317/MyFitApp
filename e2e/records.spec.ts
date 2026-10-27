@@ -53,7 +53,7 @@ test.describe('Records personnels', () => {
     await curl.getByLabel('Poids (kg)').press('Enter');
     await validateSets(curl, 2);
     await expect(curl.getByTestId('new-record')).toHaveCount(0);
-    await curl.getByRole('button', { name: 'Valider' }).click();
+    await curl.getByRole('button', { name: 'Valider', exact: true }).click();
     await expect(curl.getByTestId('new-record')).toHaveText('Nouveau record !');
     await curl.getByRole('button', { name: 'Bien', exact: true }).click();
     // Première fois sur le pec deck : devient le record, sans célébration.

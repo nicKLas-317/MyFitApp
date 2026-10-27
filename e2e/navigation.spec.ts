@@ -216,7 +216,7 @@ test.describe('Barre d’onglets, mode salle et bouton retour (§3.4, §5.8)', (
     await expect(cardio.getByRole('button', { name: 'Rameur', exact: true })).toHaveAttribute('aria-pressed', 'true');
 
     // Récapitulatif : le nom saisi est gardé si l'on part par « retour ».
-    await cardio.getByRole('button', { name: 'Valider' }).click();
+    await cardio.getByRole('button', { name: 'Valider', exact: true }).click();
     await doExercise(pec, 3, 'Bien');
     await sessionBar(page).getByRole('button', { name: 'Terminer la séance' }).click();
     await finishSheet(page).getByRole('button', { name: 'Oui, terminer' }).click();
@@ -255,7 +255,7 @@ test.describe('Barre d’onglets, mode salle et bouton retour (§3.4, §5.8)', (
     ).toBe(2);
     const pec = page.locator('article[aria-label="Pec deck"]');
     // Une série : 1 ; le ressenti : 1 (avant : idem).
-    expect(await count(() => tap(pec.getByRole('button', { name: 'Valider' })))).toBe(1);
+    expect(await count(() => tap(pec.getByRole('button', { name: 'Valider', exact: true })))).toBe(1);
     await validateSets(pec, 2);
     expect(await count(() => tap(pec.getByRole('button', { name: 'Bien', exact: true })))).toBe(1);
     // Six exercices : la barre reste à l'écran.
@@ -265,7 +265,7 @@ test.describe('Barre d’onglets, mode salle et bouton retour (§3.4, §5.8)', (
       await count(async () => {
         await tap(sessionBar(page).getByRole('button', { name: 'Ajouter du cardio' }));
         await page.getByRole('form', { name: 'Cardio' }).getByLabel('Durée (min)').fill('10');
-        await tap(page.getByRole('form', { name: 'Cardio' }).getByRole('button', { name: 'Valider' }));
+        await tap(page.getByRole('form', { name: 'Cardio' }).getByRole('button', { name: 'Valider', exact: true }));
       }),
     ).toBe(2);
     // Terminer : 2, sans défilement (avant : 2, après défilement jusqu'en bas).

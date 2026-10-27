@@ -112,13 +112,16 @@ export class Repository {
   /**
    * Enregistre un import en une seule transaction (§11.10, §12) : soit tout est écrit, soit rien.
    * `replace` vide d'abord séances et exercices ; l'appelant ne le demande qu'après confirmation explicite.
-   * Les activités habituelles (méta « activities ») sont écrites dans la même transaction.
+   * Les activités habituelles (méta « activities ») et la séance prévue (méta « plan ») sont écrites dans la même
+   * transaction.
    */
   async applyImport(data: {
     sessions: readonly Session[];
     exercises: readonly Exercise[];
     /** Liste complète des activités habituelles (réponses) après l'import, écrite dans la même transaction. */
     activities?: readonly unknown[];
+    /** Séance prévue après l'import (null : aucune) ; absente : inchangée. */
+    plan?: unknown;
     replace?: boolean;
   }): Promise<void> {
     const tx = this.db.transaction(['sessions', 'exercises', 'meta'], 'readwrite', STRICT);
@@ -130,6 +133,7 @@ export class Repository {
       for (const e of data.exercises) writes.push(exercises.put(e));
       for (const s of data.sessions) writes.push(sessions.put(s));
       if (data.activities) writes.push(tx.objectStore('meta').put([...data.activities], 'activities'));
+      if (data.plan !== undefined) writes.push(tx.objectStore('meta').put(data.plan, 'plan'));
     } catch (error) {
       abortQuietly(tx, writes);
       throw error;

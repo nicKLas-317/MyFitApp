@@ -8,11 +8,12 @@
  * - Autre JSON : structure détectée si possible, sinon erreur détaillée. Jamais d'échec silencieux.
  * Aucune fonction de ce module n'écrit : l'import passe par un plan appliqué en une seule transaction.
  */
-import type { CardioMachine, Exercise, Feeling, Incline, MuscleGroup, Session, Variant } from '../domain/types';
-import { DEFAULT_CARDIO_MACHINES, INCLINES, isValidDistance, isValidMinutes } from '../cardio/model';
+import type { CardioMachine, Exercise, Feeling, Incline, MuscleGroup, Session, SessionPlan, Variant } from '../domain/types';
+import { cardioBlockErrors, DEFAULT_CARDIO_MACHINES, INCLINES } from '../cardio/model';
 import { MUSCLE_GROUP_LABELS, SEED_EXERCISES, redefineSeedExercises, sameGroups, sameNaming, seedNamings, seedSecondaryGroups } from '../library/seed';
 import { EMPTY_BODY, isValidHeight, isValidWeighIn, type BodyTracking } from '../body/model';
 import { activityErrors, type ActivityRecord } from '../activities/model';
+import { planErrors, planOriginErrors } from '../plan/model';
 
 export { EMPTY_BODY, type BodyTracking };
 import { importedSessionName, isIsoDate, localDate } from '../session/format';
@@ -41,6 +42,8 @@ export interface Backup {
   bodyTracking: BodyTracking;
   /** Activités habituelles hors salle : réponses « Oui » (activités confirmées) et « Non ». */
   activities: ActivityRecord[];
+  /** Séance prévue (§5.9), null sans plan ; absente d'une sauvegarde antérieure à la version 1.23.0. */
+  plan: SessionPlan | null;
 }
 
 export function buildBackup(
@@ -50,6 +53,7 @@ export function buildBackup(
     bodyTracking?: BodyTracking;
     settings?: Record<string, unknown>;
     activities?: readonly ActivityRecord[];
+    plan?: SessionPlan | null;
   },
   now: number,
 ): Backup {
@@ -62,6 +66,7 @@ export function buildBackup(
     settings: { ...data.settings },
     bodyTracking: data.bodyTracking ?? EMPTY_BODY,
     activities: [...(data.activities ?? [])],
+    plan: data.plan ?? null,
   };
 }
 
@@ -100,6 +105,7 @@ const MUSCLE_GROUPS = Object.keys(MUSCLE_GROUP_LABELS) as MuscleGroup[];
  * Migre une sauvegarde native validée vers le format actuel.
  * 2 → 3 : ajout du cardio, champ facultatif des séances ; rien d'autre ne change.
  * 3 → 4 : ajout des activités habituelles (aucune dans une sauvegarde antérieure).
+ * 4 sans `plan` (avant la version 1.23.0) : aucune séance prévue.
  * Toutes versions : une performance « += » enregistrée avec un autre ressenti que Moyen est corrigée (§7.3).
  */
 export function migrateBackup(data: Obj): Backup {
@@ -111,6 +117,7 @@ export function migrateBackup(data: Obj): Backup {
     exercises: redefineSeedExercises(backup.exercises),
     sessions: backup.sessions.map((s) => fixed.get(s.id) ?? s),
     activities: backup.activities ?? [],
+    plan: backup.plan ?? null,
     schemaVersion: SCHEMA_VERSION,
   };
 }
@@ -431,18 +438,9 @@ function validateSession(s: unknown, path: string, errors: string[]): void {
   else s.performances.forEach((p, i) => validatePerformanceShape(p, `${path}.performances[${i}]`, errors));
   if (s.cardio !== undefined) {
     if (!Array.isArray(s.cardio)) errors.push(`${path}.cardio invalide.`);
-    else s.cardio.forEach((b, i) => validateCardioShape(b, `${path}.cardio[${i}]`, errors));
+    else s.cardio.forEach((b, i) => errors.push(...cardioBlockErrors(b, `${path}.cardio[${i}]`)));
   }
-}
-
-function validateCardioShape(b: unknown, path: string, errors: string[]): void {
-  if (!isObj(b)) return void errors.push(`${path} : bloc de cardio invalide.`);
-  if (!isStr(b.id) || !b.id) errors.push(`${path}.id manquant.`);
-  if (!isStr(b.machineId) || !b.machineId) errors.push(`${path}.machineId manquant.`);
-  if (!isStr(b.machine) || !b.machine.trim()) errors.push(`${path}.machine manquant.`);
-  if (b.incline !== undefined && !INCLINES.includes(b.incline as Incline)) errors.push(`${path}.incline inconnue.`);
-  if (!isValidMinutes(b.minutes)) errors.push(`${path}.minutes invalide.`);
-  if (b.distanceKm !== undefined && !isValidDistance(b.distanceKm)) errors.push(`${path}.distanceKm invalide.`);
+  if (s.fromPlan !== undefined) errors.push(...planOriginErrors(s.fromPlan, `${path}.fromPlan`));
 }
 
 /** Validation stricte d'une sauvegarde native. Liste vide = valide. */
@@ -480,6 +478,7 @@ export function validateBackup(data: Obj): string[] {
       if (new Set(ids).size !== ids.length) errors.push('activities : plusieurs réponses avec le même identifiant.');
     }
   }
+  if (data.plan !== undefined && data.plan !== null) errors.push(...planErrors(data.plan));
   if (errors.length > 0) return errors;
 
   // Cohérence : identifiants uniques, séances rattachées à des variantes existantes.
@@ -509,6 +508,9 @@ export function validateBackup(data: Obj): string[] {
     }
   }
   if (active > 1) errors.push('Plusieurs séances en cours.');
+  for (const e of (data.plan as SessionPlan | null | undefined)?.exercises ?? []) {
+    if (!variantIds.has(e.variantId)) errors.push(`Séance prévue : exercice inconnu ${e.variantId}.`);
+  }
   return errors;
 }
 

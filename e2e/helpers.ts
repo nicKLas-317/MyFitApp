@@ -76,7 +76,7 @@ export function exerciseCard(page: Page, name: string): Locator {
 
 /** Valide `count` séries à la valeur préremplie (la cible). */
 export async function validateSets(card: Locator, count: number): Promise<void> {
-  for (let i = 0; i < count; i++) await card.getByRole('button', { name: 'Valider' }).click();
+  for (let i = 0; i < count; i++) await card.getByRole('button', { name: 'Valider', exact: true }).click();
 }
 
 /** Onglet de chaque écran ouvert depuis un onglet (§3.4). */

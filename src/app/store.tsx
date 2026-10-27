@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { CardioMachine, Exercise, Session } from '../domain/types';
+import type { CardioMachine, Exercise, Session, SessionPlan } from '../domain/types';
 import { CARDIO_MACHINES_VERSION, sanitizeCardioMachines, upgradeCardioMachines } from '../cardio/model';
 import { rebuildProfile, resolveConfig, type EngineSettings, type ReplayResult } from '../engine';
 import { buildEngineSettings, indexVariants, type VariantRef } from '../library/catalog';
@@ -9,6 +9,7 @@ import { DEFAULT_REPORT_SETTINGS, markSeen, sanitizeReportSeen, sanitizeReportSe
 import { computeRecords, type Records } from '../analysis/records';
 import { answer, sanitizeActivities, sanitizeHabits, type ActivityRecord, type Habit, type Occurrence } from '../activities/model';
 import type { RemovedPerformance, VariantContext } from '../session/ops';
+import { currentPlan, sanitizePlan } from '../plan/model';
 import { openAppDb, Repository, requestPersistence, type PersistState } from '../storage/db';
 import { PendingWrites } from '../storage/pending';
 
@@ -61,6 +62,10 @@ interface AppValue {
   addActivity(record: ActivityRecord): Promise<boolean>;
   /** Supprime une activité confirmée (historique) : la question ne revient pas pour ce jour. */
   removeActivity(id: string): Promise<boolean>;
+  /** Séance prévue (§5.9), tant qu'elle n'a pas été réalisée ; null sans plan. */
+  plan: SessionPlan | null;
+  /** Enregistre la séance prévue (null : la supprime) ; l'état n'est mis à jour qu'en cas de succès. */
+  savePlan(next: SessionPlan | null): Promise<boolean>;
   /** Machines de cardio proposées à la saisie, modifiables dans les réglages. */
   cardioMachines: CardioMachine[];
   setCardioMachines(next: CardioMachine[]): Promise<boolean>;
@@ -89,6 +94,8 @@ export interface ImportData {
   exercises: readonly Exercise[];
   /** Liste complète des activités habituelles après l'import (fusion déjà faite par l'appelant). */
   activities?: readonly ActivityRecord[];
+  /** Séance prévue après l'import (null : aucune) ; absente : inchangée. */
+  plan?: SessionPlan | null;
   /** Remplacement global, après confirmation explicite uniquement. */
   replace?: boolean;
 }
@@ -139,6 +146,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [habits, setHabitsState] = useState<Habit[]>(() => sanitizeHabits(undefined));
   const [activities, setActivitiesState] = useState<ActivityRecord[]>([]);
   const activitiesRef = useRef<ActivityRecord[]>([]);
+  const [storedPlan, setStoredPlan] = useState<SessionPlan | null>(null);
 
   const sessionsRef = useRef<Session[]>([]);
   const pending = useRef(new PendingWrites<Session>());
@@ -159,7 +167,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           // Sans gravité : la correction sera refaite au prochain lancement.
           console.error('[MyFitApp] correction des ressentis « += » non appliquée', error);
         }
-        const [loadedSessions, loadedExercises, exportedAt, recap, machines, machinesVersion, reports, seen, loadedHabits, loadedActivities] = await Promise.all([
+        const [loadedSessions, loadedExercises, exportedAt, recap, machines, machinesVersion, reports, seen, loadedHabits, loadedActivities, loadedPlan] = await Promise.all([
           repo.loadSessions(),
           repo.loadExercises(),
           repo.getMeta<number>('lastExportAt'),
@@ -170,6 +178,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           repo.getMeta<unknown>('reportsSeen'),
           repo.getMeta<unknown>('habits'),
           repo.getMeta<unknown>('activities'),
+          repo.getMeta<unknown>('plan'),
         ]);
         // Installation antérieure au cardio : aucune liste enregistrée, la liste par défaut s'applique.
         // Liste enregistrée par une version antérieure : les nouvelles machines sont ajoutées une seule fois.
@@ -197,6 +206,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setHabitsState(sanitizeHabits(loadedHabits));
         activitiesRef.current = sanitizeActivities(loadedActivities);
         setActivitiesState(activitiesRef.current);
+        setStoredPlan(sanitizePlan(loadedPlan));
         setLoad({ kind: 'ready', repo });
 
         // §12 : stockage persistant demandé au premier lancement, état affiché ensuite.
@@ -235,8 +245,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     let loadedSessions: Session[];
     let loadedExercises: Exercise[];
     let loadedActivities: unknown;
+    let loadedPlan: unknown;
     try {
-      [loadedSessions, loadedExercises, loadedActivities] = await Promise.all([repo.loadSessions(), repo.loadExercises(), repo.getMeta<unknown>('activities')]);
+      [loadedSessions, loadedExercises, loadedActivities, loadedPlan] = await Promise.all([
+        repo.loadSessions(),
+        repo.loadExercises(),
+        repo.getMeta<unknown>('activities'),
+        repo.getMeta<unknown>('plan'),
+      ]);
     } catch (error) {
       console.error('[MyFitApp] relecture de la base impossible', error);
       return;
@@ -258,6 +274,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       activitiesRef.current = nextActivities;
       setActivitiesState(nextActivities);
     }
+    const nextPlan = sanitizePlan(loadedPlan);
+    setStoredPlan((current) => (JSON.stringify(current) === JSON.stringify(nextPlan) ? current : nextPlan));
   }, [repo]);
 
   useEffect(() => {
@@ -372,6 +390,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         activitiesRef.current = [...data.activities];
         setActivitiesState(activitiesRef.current);
       }
+      if (data.plan !== undefined) setStoredPlan(data.plan);
       const list = data.replace ? [...data.sessions] : upsert(sessionsRef.current, data.sessions);
       if (data.replace) pending.current.clear();
       localChanges.current++;
@@ -540,6 +559,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [writeActivities],
   );
 
+  const savePlan = useCallback(
+    async (next: SessionPlan | null): Promise<boolean> => {
+      if (!repo) return false;
+      try {
+        await repo.setMeta('plan', next);
+      } catch (error) {
+        console.error('[MyFitApp] séance prévue non enregistrée', error);
+        return false;
+      }
+      setStoredPlan(next);
+      localChanges.current++;
+      announce();
+      return true;
+    },
+    [repo, announce],
+  );
+
   const markReportSeen = useCallback(
     async (period: ReportPeriod): Promise<void> => {
       const next = markSeen(reportSeenRef.current, period, Date.now());
@@ -580,6 +616,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const replay = useMemo(() => rebuildProfile(sessions, settings), [sessions, settings]);
   const records = useMemo(() => computeRecords(sessions, settings), [sessions, settings]);
   const active = useMemo(() => sessions.find((s) => s.state === 'active'), [sessions]);
+  const plan = useMemo(() => currentPlan(storedPlan, sessions), [storedPlan, sessions]);
+
+  // Plan réalisé (séance démarrée à partir de lui, terminée) : retiré de la base, pour qu'il ne revienne pas si cette
+  // séance est supprimée ensuite de l'historique.
+  useEffect(() => {
+    if (!repo || !storedPlan || plan) return;
+    repo.setMeta('plan', null).then(
+      () => setStoredPlan((current) => (current?.id === storedPlan.id ? null : current)),
+      // Sans gravité : le plan réalisé n'est plus proposé ; le retrait sera refait au prochain lancement.
+      (error) => console.error('[MyFitApp] séance prévue réalisée non retirée', error),
+    );
+  }, [repo, storedPlan, plan]);
 
   const ctxFor = useCallback(
     (variantId: string): VariantContext => ({
@@ -614,6 +662,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     answerActivity,
     addActivity,
     removeActivity,
+    plan,
+    savePlan,
     cardioMachines,
     setCardioMachines,
     generalSettings,

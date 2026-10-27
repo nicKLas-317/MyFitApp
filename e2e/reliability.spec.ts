@@ -16,7 +16,7 @@ test.describe('Fiabilité de l’enregistrement (§12)', () => {
     await expect(page.getByText('Enregistré', { exact: true })).toBeVisible();
     for (const expected of [[8], [8, 8], [8, 8, 8]]) {
       // Aucune attente entre le clic et la fermeture : comme une appli tuée par Android aussitôt la série validée.
-      await page.locator('article[aria-label="Leg curl"]').getByRole('button', { name: 'Valider' }).click({ noWaitAfter: true });
+      await page.locator('article[aria-label="Leg curl"]').getByRole('button', { name: 'Valider', exact: true }).click({ noWaitAfter: true });
       await page.close({ runBeforeUnload: false });
       page = await context.newPage();
       await page.goto('./#/seance');
@@ -40,7 +40,7 @@ test.describe('Fiabilité de l’enregistrement (§12)', () => {
         throw new DOMException('Indisponible', 'UnknownError');
       };
     });
-    await card.getByRole('button', { name: 'Valider' }).click();
+    await card.getByRole('button', { name: 'Valider', exact: true }).click();
     await expect(page.getByRole('alert')).toContainText('Échec de l’enregistrement');
     expect((await activeSession(page)).performances[0]?.reps).toEqual([]);
     await page.evaluate(() => {

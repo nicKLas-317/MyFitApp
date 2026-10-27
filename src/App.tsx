@@ -25,6 +25,7 @@ import { kindOfSegment, PeriodReport } from './ui/screens/PeriodReport';
 import { GroupProgress, groupOfSegment } from './ui/screens/GroupProgress';
 import { Recap } from './ui/screens/Recap';
 import { SessionScreen } from './ui/screens/SessionScreen';
+import { PlanScreen } from './ui/screens/PlanScreen';
 import { Settings } from './ui/screens/Settings';
 
 function Router() {
@@ -58,6 +59,8 @@ function Screen({ page, param, extra }: { page: string; param: string | undefine
       return <More />;
     case 'seance':
       return <SessionScreen openVariantId={param} />;
+    case 'seance-prevue':
+      return param === 'ajouter' ? <ExercisePicker key={`prevue-${extra ?? ''}`} variantId={extra} forPlan /> : <PlanScreen />;
     case 'ajouter':
       return <ExercisePicker key={param ?? ''} variantId={param} />;
     case 'bibliotheque':
@@ -67,7 +70,7 @@ function Screen({ page, param, extra }: { page: string; param: string | undefine
     case 'modifier':
       return param ? <ExerciseEdit key={param} exerciseId={param} /> : <Library />;
     case 'nouvel-exercice':
-      return <ExerciseEdit key={`new-${param ?? ''}`} initialName={param} forSession={extra === 'seance'} />;
+      return <ExerciseEdit key={`new-${param ?? ''}`} initialName={param} forSession={extra === 'seance'} forPlan={extra === 'prevue'} />;
     case 'recap':
       return param ? <Recap key={param} sessionId={param} /> : <Home />;
     case 'reglages':

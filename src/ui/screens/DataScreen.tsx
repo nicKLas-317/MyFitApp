@@ -15,6 +15,7 @@ import { sanitizeRecapSettings } from '../../analysis/weekly';
 import { sanitizeReportSettings } from '../../analysis/report';
 import { sanitizeCardioMachines, upgradeCardioMachines } from '../../cardio/model';
 import { doneActivities, mergeActivities, sanitizeHabits } from '../../activities/model';
+import { currentPlan, mergePlan } from '../../plan/model';
 import { useBody } from '../../body/store';
 import { downloadBackup } from '../download';
 import { checkImportFile } from '../../transfer/file';
@@ -29,7 +30,7 @@ type Outcome = { kind: 'ok' | 'error'; text: string };
 
 /** Import et export des données (§11, §12). */
 export function DataScreen() {
-  const { sessions, exercises, lastExportAt, markExported, generalSettings, cardioMachines, activities } = useApp();
+  const { sessions, exercises, lastExportAt, markExported, generalSettings, cardioMachines, activities, plan } = useApp();
   const body = useBody();
   const [text, setText] = useState('');
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
@@ -38,7 +39,7 @@ export function DataScreen() {
 
   async function exportNow() {
     const bodyTracking = await body.snapshot();
-    const at = downloadBackup({ sessions, exercises, bodyTracking: bodyTracking ?? undefined, settings: generalSettings, activities });
+    const at = downloadBackup({ sessions, exercises, bodyTracking: bodyTracking ?? undefined, settings: generalSettings, activities, plan });
     const ok = await markExported(at);
     setOutcome(ok ? { kind: 'ok', text: 'Sauvegarde téléchargée.' } : { kind: 'error', text: 'Sauvegarde téléchargée, mais sa date n’a pas pu être enregistrée.' });
   }
@@ -258,8 +259,19 @@ function DraftsPreview({ initial, notes, onDone }: { initial: DraftSession[]; no
 
 /** Aperçu d'une sauvegarde MyFitApp : fusion par défaut, remplacement sur confirmation explicite. */
 function BackupPreview({ backup, onDone }: { backup: Backup; onDone(outcome: Outcome): void }) {
-  const { sessions, exercises, importData, markExported, generalSettings, setRecapSettings, setCardioMachines, setReportSettings, activities, setHabits } =
-    useApp();
+  const {
+    sessions,
+    exercises,
+    importData,
+    markExported,
+    generalSettings,
+    setRecapSettings,
+    setCardioMachines,
+    setReportSettings,
+    activities,
+    setHabits,
+    plan: localPlan,
+  } = useApp();
   const body = useBody();
   const [includeDuplicates, setIncludeDuplicates] = useState(false);
   const [replaceConfirmed, setReplaceConfirmed] = useState(false);
@@ -275,12 +287,22 @@ function BackupPreview({ backup, onDone }: { backup: Backup; onDone(outcome: Out
   const mergedActivities = useMemo(() => mergeActivities(activities, backup.activities), [activities, backup.activities]);
   const newActivities = doneActivities(mergedActivities).length - doneActivities(activities).length;
   const activityChanges = mergedActivities.length !== activities.length;
+  // Séance prévue : celle de l'appareil est gardée ; sans plan ici, celle de la sauvegarde est reprise.
+  const planMerge = useMemo(
+    () => mergePlan(localPlan, backup.plan, [...sessions, ...plan.sessions]),
+    [localPlan, backup.plan, sessions, plan.sessions],
+  );
   const exportedAt = Date.parse(backup.exportedAt);
   const failed: Outcome = { kind: 'error', text: 'L’import a échoué : aucune donnée n’a été modifiée. Réessaie.' };
 
   async function merge() {
     setBusy(true);
-    const ok = await importData({ sessions: plan.sessions, exercises: plan.exercises, ...(activityChanges ? { activities: mergedActivities } : {}) });
+    const ok = await importData({
+      sessions: plan.sessions,
+      exercises: plan.exercises,
+      ...(activityChanges ? { activities: mergedActivities } : {}),
+      ...(planMerge.added ? { plan: planMerge.plan } : {}),
+    });
     // Suivi corporel : base séparée, importé après les séances ; un échec ici n'annule pas les séances.
     const bodyOk = !ok || !bodyChanges || (await body.applyImport(bodyPlan));
     setBusy(false);
@@ -290,7 +312,7 @@ function BackupPreview({ backup, onDone }: { backup: Backup; onDone(outcome: Out
             kind: bodyOk ? 'ok' : 'error',
             text: `Import terminé : ${plural(plan.sessions.length, 'séance ajoutée', 'séances ajoutées')}${
               newActivities > 0 ? `, ${plural(newActivities, 'activité ajoutée', 'activités ajoutées')}` : ''
-            }${
+            }${planMerge.added ? ', séance prévue ajoutée' : ''}${
               bodyPlan.weighIns.length > 0 ? `, ${plural(bodyPlan.weighIns.length, 'pesée ajoutée', 'pesées ajoutées')}` : ''
             }.${bodyOk ? '' : ' Les pesées n’ont pas pu être importées.'}`,
           }
@@ -302,8 +324,14 @@ function BackupPreview({ backup, onDone }: { backup: Backup; onDone(outcome: Out
     setBusy(true);
     // Les données actuelles sont sauvegardées avant d'être remplacées.
     const currentBody = await body.snapshot();
-    await markExported(downloadBackup({ sessions, exercises, bodyTracking: currentBody ?? undefined, settings: generalSettings, activities }));
-    const ok = await importData({ sessions: backup.sessions, exercises: backup.exercises, activities: backup.activities, replace: true });
+    await markExported(downloadBackup({ sessions, exercises, bodyTracking: currentBody ?? undefined, settings: generalSettings, activities, plan: localPlan }));
+    const ok = await importData({
+      sessions: backup.sessions,
+      exercises: backup.exercises,
+      activities: backup.activities,
+      plan: currentPlan(backup.plan, backup.sessions),
+      replace: true,
+    });
     // Remplacement global : les réglages de la sauvegarde remplacent aussi ceux de l'appareil.
     if (ok && backup.settings.weeklyRecap !== undefined) await setRecapSettings(sanitizeRecapSettings(backup.settings.weeklyRecap));
     if (ok && backup.settings.reports !== undefined) await setReportSettings(sanitizeReportSettings(backup.settings.reports));
@@ -348,6 +376,10 @@ function BackupPreview({ backup, onDone }: { backup: Backup; onDone(outcome: Out
           <ul className="plan">
             <li data-testid="plan-new">{plural(plan.sessions.length, 'séance à ajouter', 'séances à ajouter')}</li>
             {newActivities > 0 && <li data-testid="plan-activities">{plural(newActivities, 'activité à ajouter', 'activités à ajouter')}</li>}
+            {planMerge.added && planMerge.plan && (
+              <li data-testid="plan-session-plan">Séance prévue à ajouter ({plural(planMerge.plan.exercises.length, 'exercice', 'exercices')})</li>
+            )}
+            {planMerge.keptLocal && <li>Séance prévue différente : celle de l’appareil est conservée</li>}
             {plan.identical.length > 0 && <li>{plural(plan.identical.length, 'séance déjà présente', 'séances déjà présentes')} (ignorées)</li>}
             {plan.exercises.length > 0 && <li>{plural(plan.exercises.length, 'exercice nouveau ou complété', 'exercices nouveaux ou complétés')}</li>}
             {plan.conflicts.length > 0 && (
@@ -378,7 +410,7 @@ function BackupPreview({ backup, onDone }: { backup: Backup; onDone(outcome: Out
               </span>
             </label>
           )}
-          {plan.sessions.length === 0 && plan.exercises.length === 0 && !bodyChanges && !activityChanges ? (
+          {plan.sessions.length === 0 && plan.exercises.length === 0 && !bodyChanges && !activityChanges && !planMerge.added ? (
             <p className="banner info">Rien de nouveau à importer.</p>
           ) : (
             <button type="button" className="btn primary big" disabled={busy} onClick={() => void merge()}>
@@ -391,7 +423,7 @@ function BackupPreview({ backup, onDone }: { backup: Backup; onDone(outcome: Out
       <details className="replace">
         <summary>Remplacer toutes mes données par cette sauvegarde</summary>
         <p className="small">
-          Toutes les séances, activités et tous les exercices de cet appareil, y compris une séance en cours, seront remplacés. Une sauvegarde des
+          Toutes les séances, activités et tous les exercices de cet appareil, y compris une séance en cours et la séance prévue, seront remplacés. Une sauvegarde des
           données actuelles sera d’abord téléchargée.
         </p>
         <label className="check-line warn">
