@@ -56,6 +56,8 @@ export interface WeeklyRecap {
   end: Date;
   /** Séances terminées de la semaine, y compris celles qui ne contiennent que du cardio. */
   sessionCount: number;
+  /** Séances à la maison de la semaine (version 1.26.0), comprises dans `sessionCount` ; absent s'il n'y en a pas. */
+  homeCount?: number;
   /** Activités habituelles confirmées de la semaine : ce ne sont pas des séances de salle. */
   activityCount: number;
   /** Total des blocs de cardio des séances de la semaine, en minutes. */
@@ -197,10 +199,12 @@ export function weeklyRecap(
 
   const inWeek = (t: number) => t >= start.getTime() && t < next.getTime();
   let sessionCount = 0;
+  let homeCount = 0;
   let cardio = 0;
   for (const s of sessions) {
     if (s.state !== 'done' || !inWeek(sessionStartTime(s))) continue;
     sessionCount++;
+    if (s.location === 'maison') homeCount++;
     cardio += cardioMinutes(s);
   }
   const activityCount = doneActivities(activities).filter((a) => inWeek(activityStart(a))).length;
@@ -224,7 +228,7 @@ export function weeklyRecap(
       a.score - b.score ||
       order.get(a.group)! - order.get(b.group)!,
   );
-  return { start, end, sessionCount, activityCount, cardioMinutes: cardio, cells };
+  return { start, end, sessionCount, ...(homeCount > 0 ? { homeCount } : {}), activityCount, cardioMinutes: cardio, cells };
 }
 
 /**
@@ -254,10 +258,10 @@ const MONTH = new Intl.DateTimeFormat('fr-FR', { month: 'short' });
 
 /**
  * « Semaine du lun. 12 au dim. 18 oct. : 2 séances » (mois répété si la semaine change de mois),
- * suivi de « · 1 activité » et de « · 45 min de cardio » quand la semaine en contient.
+ * suivi de « · dont 1 maison », « · 1 activité » et « · 45 min de cardio » quand la semaine en contient.
  */
 export function recapTitle(recap: WeeklyRecap): string {
-  const { start, end, sessionCount, activityCount, cardioMinutes: minutes } = recap;
+  const { start, end, sessionCount, homeCount, activityCount, cardioMinutes: minutes } = recap;
   const sameMonth = start.getMonth() === end.getMonth();
   // Espaces insécables : « 2 séances » ou « dim. 18 oct. » ne sont jamais coupés en fin de ligne.
   const nb = '\u00a0';
@@ -265,5 +269,6 @@ export function recapTitle(recap: WeeklyRecap): string {
   const to = `dim.${nb}${DAY.format(end)}${nb}${MONTH.format(end)}`;
   const cardio = minutes > 0 ? ` · ${formatMinutes(minutes).replace(/ /g, nb)}${nb}de cardio` : '';
   const activities = activityCount > 0 ? ` · ${activityCount}${nb}activité${activityCount > 1 ? 's' : ''}` : '';
-  return `Semaine du ${from} au ${to}${nb}: ${sessionCount}${nb}séance${sessionCount > 1 ? 's' : ''}${activities}${cardio}`;
+  const home = homeCount ? ` · dont${nb}${homeCount}${nb}maison` : '';
+  return `Semaine du ${from} au ${to}${nb}: ${sessionCount}${nb}séance${sessionCount > 1 ? 's' : ''}${home}${activities}${cardio}`;
 }

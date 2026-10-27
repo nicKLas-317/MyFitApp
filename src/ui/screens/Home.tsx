@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useApp } from '../../app/store';
 import { navigate, useNow } from '../../app/hooks';
 import { elapsedMs, newId, startSession } from '../../session/ops';
@@ -17,6 +18,8 @@ export function Home() {
   const now = useNow();
   const remind = needsBackupReminder(sessions, lastExportAt, now);
   const body = useBody();
+  // Lieu de la séance libre (version 1.26.0) : toujours la salle par défaut, jamais mémorisé.
+  const [home, setHome] = useState(false);
 
   async function exportNow() {
     const bodyTracking = (await body.snapshot()) ?? undefined;
@@ -24,12 +27,26 @@ export function Home() {
   }
 
   async function start() {
-    const session = startSession(Date.now());
+    const session = startSession(Date.now(), newId(), home);
     await commit(session);
     navigate('seance');
   }
 
-  /** Séance prévue (§5.9) : exercices dans l'ordre du plan, charge et cible recalculées par le moteur maintenant. */
+  /** Choix du lieu, sous le bouton de la séance libre : Salle (par défaut) ou Maison. */
+  const placeChoice = (
+    <div className="place-choice" role="group" aria-label="Lieu de la séance libre">
+      {(['Salle', 'Maison'] as const).map((label) => (
+        <button key={label} type="button" className="chip" aria-pressed={home === (label === 'Maison')} onClick={() => setHome(label === 'Maison')}>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+
+  /**
+   * Séance prévue (§5.9) : exercices dans l'ordre du plan, charge et cible recalculées par le moteur maintenant ;
+   * toujours à la salle.
+   */
   async function startPlanned() {
     if (!plan) return;
     const available = (id: string) => {
@@ -48,7 +65,8 @@ export function Home() {
       {active ? (
         <button type="button" className="btn primary huge" onClick={() => navigate('seance')}>
           Reprendre la séance
-          <span className="chrono-inline">{formatDuration(elapsedMs(active, now))}</span>
+          {/* À la maison, pas de chronomètre : la durée n'a pas d'importance. */}
+          <span className="chrono-inline">{active.location === 'maison' ? 'à la maison' : formatDuration(elapsedMs(active, now))}</span>
         </button>
       ) : plan ? (
         <>
@@ -56,8 +74,9 @@ export function Home() {
             Démarrer la séance prévue
           </button>
           <button type="button" className="btn big free-session" onClick={() => void start()}>
-            Séance libre
+            {home ? 'Séance libre à la maison' : 'Séance libre'}
           </button>
+          {placeChoice}
           <section className="card plan-summary" aria-label="Séance prévue">
             <p className="plan-names" data-testid="plan-summary">
               {plan.items.map((e) => (e.kind === 'cardio' ? formatCardio(e.block) : displayName(variants.get(e.variantId)))).join(' · ')}
@@ -70,8 +89,9 @@ export function Home() {
       ) : (
         <>
           <button type="button" className="btn primary huge" onClick={() => void start()}>
-            Démarrer une séance
+            {home ? 'Démarrer une séance à la maison' : 'Démarrer une séance'}
           </button>
+          {placeChoice}
           <button type="button" className="link prepare-plan" onClick={() => navigate('seance-prevue')}>
             Préparer ma prochaine séance
           </button>

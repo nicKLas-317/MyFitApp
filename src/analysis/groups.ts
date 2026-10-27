@@ -105,7 +105,8 @@ export interface GroupIndex {
 /**
  * Indice de progression d'un groupe : moyenne des indices de ses exercices-variantes (groupe principal seulement),
  * chacun gardant sa dernière valeur connue. Un point par date de séance. Les pesées de « Mon poids » servent aux
- * exercices assistés (charge réelle = poids du corps − aide) ; sans pesée, l'aide est inversée.
+ * exercices assistés (charge réelle = poids du corps − aide) ; sans pesée, l'aide est inversée. Les séances à la maison
+ * n'y entrent pas (charges non comparables, version 1.26.0) ; leurs séries comptent dans les séries par semaine.
  */
 export function groupIndex(
   sessions: readonly Session[],
@@ -122,7 +123,7 @@ export function groupIndex(
   const weeks = new Set<string>();
   let sessionCount = 0;
   let hasAssisted = false;
-  for (const s of sortSessions(sessions.filter((x) => x.state === 'done'))) {
+  for (const s of sortSessions(sessions.filter((x) => x.state === 'done' && x.location !== 'maison'))) {
     const perfs = s.performances.filter((p) => primary.get(p.variantId) === group && usable(p));
     if (perfs.length === 0) continue;
     sessionCount++;

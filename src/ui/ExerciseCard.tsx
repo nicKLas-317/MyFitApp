@@ -3,7 +3,7 @@ import type { Performance, Session } from '../domain/types';
 import { useApp } from '../app/store';
 import { displayName } from '../library/catalog';
 import { formatKg, formatReps } from '../session/format';
-import { repStep } from '../engine';
+import { repStep, trackKey } from '../engine';
 import {
   correctSet,
   deleteLastSet,
@@ -40,9 +40,11 @@ interface Props {
 }
 
 export function ExerciseCard({ session, performance: p, open, onToggle, onFinished }: Props) {
-  const { variants, ctxFor, commit, sessions, records } = useApp();
+  const { variants, ctxFor, commit, sessions, records, settings } = useApp();
   const ref = variants.get(p.variantId);
-  const ctx = ctxFor(p.variantId);
+  // À la maison, un exercice à charge suit sa progression de la maison (version 1.26.0).
+  const home = session.location === 'maison';
+  const ctx = ctxFor(p.variantId, home);
   const { state } = ctx;
   const target = p.targetReps ?? 0;
   const planned = p.plannedSets ?? 0;
@@ -68,7 +70,7 @@ export function ExerciseCard({ session, performance: p, open, onToggle, onFinish
 
   const name = displayName(ref);
   // Toutes les séries faites à la cible et mieux que le record des séances précédentes (jamais pour une première fois).
-  const newRecord = beatsRecord(p, records.current.get(p.variantId), ctx.cfg.assisted);
+  const newRecord = beatsRecord(p, records.current.get(trackKey(settings, p.variantId, home)), ctx.cfg.assisted);
   const nextValue = Math.min(draft ?? target, target);
 
   return (

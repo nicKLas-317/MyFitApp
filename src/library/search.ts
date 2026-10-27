@@ -292,11 +292,17 @@ export function searchExercises(index: readonly SearchEntry[], query: string): S
 }
 
 /** Exercices-variantes récemment utilisés, du plus récent au plus ancien. */
-export function recentVariantIds(sessions: readonly Session[], limit = 6): string[] {
+export function recentVariantIds(sessions: readonly Session[], limit = 6, homeFirst = false): string[] {
   const ids: string[] = [];
+  // À la maison (version 1.26.0), les exercices des séances à la maison d'abord, puis ceux de la salle.
+  const rank = (s: Session) => (homeFirst && s.location !== 'maison' ? 1 : 0);
   const done = sessions
     .filter((s) => s.state === 'done')
-    .sort((a, b) => (b.date === a.date ? (b.startedAt ?? b.createdAt) - (a.startedAt ?? a.createdAt) : b.date < a.date ? -1 : 1));
+    .sort(
+      (a, b) =>
+        rank(a) - rank(b) ||
+        (b.date === a.date ? (b.startedAt ?? b.createdAt) - (a.startedAt ?? a.createdAt) : b.date < a.date ? -1 : 1),
+    );
   for (const s of done) for (const p of s.performances) if (!ids.includes(p.variantId)) ids.push(p.variantId);
   return ids.slice(0, limit);
 }

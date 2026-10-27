@@ -72,6 +72,16 @@ export function setSessionDate(session: Session, date: string, now: number): Ses
   return { ...session, date, updatedAt: now };
 }
 
+/**
+ * Change le lieu d'une séance passée (version 1.26.0) : à la maison ou à la salle (champ retiré). Ses exercices à
+ * charge passent d'un suivi à l'autre : les deux suivis sont recalculés au rejeu (§7.9).
+ */
+export function setSessionLocation(session: Session, home: boolean, now: number): Session {
+  if ((session.location === 'maison') === home) return session;
+  const { location: _previous, ...rest } = session;
+  return home ? { ...rest, location: 'maison', updatedAt: now } : { ...rest, updatedAt: now };
+}
+
 /** Nombre total de répétitions réalisées dans une séance. */
 export function totalReps(session: Session): number {
   return session.performances.reduce((n, p) => n + p.reps.reduce((a, b) => a + b, 0), 0);

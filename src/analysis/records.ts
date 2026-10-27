@@ -5,10 +5,11 @@
  *
  * Une performance compte si toutes les séries prévues ont été faites à la cible. La meilleure : charge la plus
  * élevée (aide la plus basse pour un exercice assisté), puis à charge égale le plus de répétitions par série, puis
- * le plus de séries. Un record n'est battu que par une performance strictement meilleure.
+ * le plus de séries. Un record n'est battu que par une performance strictement meilleure. Un exercice à charge a ses
+ * records de la salle et ses records de la maison (un suivi chacun, version 1.26.0).
  */
 import type { Performance, Session } from '../domain/types';
-import { compareDifficulty, resolveConfig, sortSessions, type EngineSettings } from '../engine';
+import { compareDifficulty, resolveConfig, sortSessions, trackKey, type EngineSettings } from '../engine';
 import { formatKg, formatSetsReps, formatShortDay } from '../session/format';
 
 export interface PersonalRecord {
@@ -22,6 +23,8 @@ export interface PersonalRecord {
   assisted: boolean;
   /** Exercice en secondes (gainage) : « reps » est une durée par série. */
   seconds?: boolean;
+  /** Record du suivi de la maison (exercice à charge, version 1.26.0). */
+  home?: true;
 }
 
 export interface RecordBreak extends PersonalRecord {
@@ -30,7 +33,7 @@ export interface RecordBreak extends PersonalRecord {
 }
 
 export interface Records {
-  /** Record actuel de chaque exercice-variante. */
+  /** Record actuel de chaque suivi : l'exercice-variante (salle), ou « <variante>@maison » (exercice à charge). */
   current: Map<string, PersonalRecord>;
   /**
    * Records battus, dans l'ordre chronologique. La toute première performance qui compte devient le record sans
@@ -66,18 +69,20 @@ export function computeRecords(sessions: readonly Session[], settings: EngineSet
     for (const p of s.performances) {
       if (seen.has(p.variantId) || !countsForRecord(p)) continue;
       seen.add(p.variantId);
-      const cfg = resolveConfig(settings, p.variantId);
+      const track = trackKey(settings, p.variantId, s.location === 'maison');
+      const cfg = resolveConfig(settings, track);
       const record: PersonalRecord = {
         variantId: p.variantId,
         sessionId: s.id,
         date: s.date,
         ...markOf(p, cfg.assisted),
         ...(cfg.seconds ? { seconds: true } : {}),
+        ...(track !== p.variantId ? { home: true as const } : {}),
       };
-      const previous = current.get(p.variantId);
-      if (!previous) current.set(p.variantId, record);
+      const previous = current.get(track);
+      if (!previous) current.set(track, record);
       else if (compareMarks(record, previous) > 0) {
-        current.set(p.variantId, record);
+        current.set(track, record);
         breaks.push({ ...record, previous });
       }
     }

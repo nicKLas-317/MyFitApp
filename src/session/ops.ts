@@ -17,7 +17,8 @@ export function newId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-export function startSession(now: number, id: string = newId()): Session {
+/** Nouvelle séance libre, à la salle par défaut ou à la maison (version 1.26.0). */
+export function startSession(now: number, id: string = newId(), home = false): Session {
   return {
     id,
     name: defaultSessionName(now),
@@ -29,6 +30,7 @@ export function startSession(now: number, id: string = newId()): Session {
     origin: 'app',
     state: 'active',
     performances: [],
+    ...(home ? { location: 'maison' as const } : {}),
   };
 }
 

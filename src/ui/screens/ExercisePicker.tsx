@@ -19,6 +19,7 @@ export function ExercisePicker({ variantId, forPlan = false }: { variantId?: str
   const [startWeight, setStartWeight] = useState('');
   const [startError, setStartError] = useState(false);
   const handled = useRef<string | null>(null);
+  const home = !forPlan && active?.location === 'maison';
 
   async function pick(ref: VariantRef, startKg?: number) {
     if (forPlan) return pickForPlan(ref, startKg);
@@ -28,7 +29,8 @@ export function ExercisePicker({ variantId, forPlan = false }: { variantId?: str
       navigateBack('seance', id);
       return;
     }
-    const ctx = ctxFor(id);
+    // À la maison, un exercice à charge suit sa progression de la maison (poids de départ demandé la première fois).
+    const ctx = ctxFor(id, home);
     // Poids du corps : rien à demander, même la première fois.
     if (!ctx.state && !ctx.cfg.bodyweight && startKg === undefined) {
       setStartFor(id);
@@ -96,7 +98,7 @@ export function ExercisePicker({ variantId, forPlan = false }: { variantId?: str
           submitStart(ref);
         }}
       >
-        <label htmlFor={`start-${ref.variant.id}`}>{ctxFor(ref.variant.id).cfg.assisted ? 'Aide de départ (kg)' : 'Poids de départ (kg)'}</label>
+        <label htmlFor={`start-${ref.variant.id}`}>{ctxFor(ref.variant.id, home).cfg.assisted ? 'Aide de départ (kg)' : 'Poids de départ (kg)'}</label>
         <div className="row">
           <input
             id={`start-${ref.variant.id}`}
@@ -163,6 +165,7 @@ export function ExercisePicker({ variantId, forPlan = false }: { variantId?: str
             forPlan ? (inPlan(plan, ref.variant.id) ? 'déjà prévu' : null) : active && findPerformance(active, ref.variant.id) ? 'dans la séance' : null
           }
           createHref={(q) => `#/nouvel-exercice/${encodeURIComponent(q)}/${forPlan ? 'prevue' : 'seance'}`}
+          home={home}
         />
       )}
     </main>

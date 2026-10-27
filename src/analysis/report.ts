@@ -7,7 +7,7 @@ import type { WeighIn } from '../body/model';
 import { activityMinutes, activityStart, doneActivities, type ActivityRecord } from '../activities/model';
 import { cardioOf, formatMinutes } from '../cardio/model';
 import type { Exercise, MuscleGroup, Session } from '../domain/types';
-import { resolveConfig, type EngineSettings, type Evaluation, type Palier } from '../engine';
+import { evaluationTrack, HOME_SUFFIX, resolveConfig, type EngineSettings, type Evaluation, type Palier } from '../engine';
 import { MUSCLE_GROUP_LABELS } from '../library/seed';
 import { formatDurationLong, formatKg, localDate } from '../session/format';
 import { isPalierValidated } from './progress';
@@ -101,9 +101,14 @@ export function mailSubject(period: ReportPeriod): string {
 
 export interface PeriodTotals {
   sessionCount: number;
-  /** Durée totale des séances dont le début et la fin sont connus. */
+  /**
+   * Séances à la maison (version 1.26.0), comprises dans `sessionCount` ; absent s'il n'y en a pas. Leur durée n'a pas
+   * d'importance : elles n'entrent pas dans la durée en salle et ne sont jamais « sans durée ».
+   */
+  homeCount?: number;
+  /** Durée totale des séances à la salle dont le début et la fin sont connus. */
   durationMs: number;
-  /** Séances sans heure de début ou de fin (import) : durée inconnue, jamais comptée pour 0 min. */
+  /** Séances à la salle sans heure de début ou de fin (import) : durée inconnue, jamais comptée pour 0 min. */
   unknownDuration: number;
 }
 
@@ -146,6 +151,8 @@ export interface ReportProgression {
   assisted: boolean;
   /** Exercice en secondes (gainage) : cibles en secondes. */
   seconds?: boolean;
+  /** Suivi de la maison (version 1.26.0). */
+  home?: true;
 }
 
 export interface ReportDecrease {
@@ -157,6 +164,7 @@ export interface ReportDecrease {
   /** Exercice au poids du corps : la baisse recommandée est « cible −1 rép. » (« cible −5 s » en secondes). */
   bodyweight?: boolean;
   seconds?: boolean;
+  home?: true;
 }
 
 export interface ReportReds {
@@ -167,6 +175,7 @@ export interface ReportReds {
   streak: number;
   weightKg: number;
   assisted: boolean;
+  home?: true;
 }
 
 export interface PeriodReport {
@@ -215,11 +224,14 @@ function totalsOf(sessions: readonly Session[], period: Pick<ReportPeriod, 'star
   const list = sessions.filter(inPeriod(period));
   let durationMs = 0;
   let unknownDuration = 0;
+  let homeCount = 0;
   for (const s of list) {
-    if (s.startedAt !== null && s.endedAt !== null) durationMs += Math.max(0, s.endedAt - s.startedAt);
+    // À la maison, la durée n'a pas d'importance : ni durée en salle, ni « sans durée ».
+    if (s.location === 'maison') homeCount++;
+    else if (s.startedAt !== null && s.endedAt !== null) durationMs += Math.max(0, s.endedAt - s.startedAt);
     else unknownDuration++;
   }
-  return { sessionCount: list.length, durationMs, unknownDuration };
+  return { sessionCount: list.length, ...(homeCount > 0 ? { homeCount } : {}), durationMs, unknownDuration };
 }
 
 export function buildReport(period: ReportPeriod, input: ReportInput): PeriodReport {
@@ -246,14 +258,17 @@ export function buildReport(period: ReportPeriod, input: ReportInput): PeriodRep
   const decreases: ReportDecrease[] = [];
   const decreasing = new Set<string>();
   for (const ev of evaluations) {
-    const wasDecreasing = decreasing.has(ev.variantId);
+    // Par suivi : la salle et la maison d'un exercice à charge sont rapportées séparément (version 1.26.0).
+    const track = evaluationTrack(ev);
+    const home = ev.home ? { home: ev.home } : {};
+    const wasDecreasing = decreasing.has(track);
     // Baisse recommandée : poids inférieur, ou cible −1 pour un exercice au poids du corps.
     const lowering = ev.recommendation.kind === 'weight_down' || ev.recommendation.kind === 'reps_down';
-    if (lowering) decreasing.add(ev.variantId);
-    else decreasing.delete(ev.variantId);
+    if (lowering) decreasing.add(track);
+    else decreasing.delete(track);
     const date = dateOf.get(ev.sessionId);
     if (date === undefined) continue;
-    const { assisted, bodyweight, seconds } = resolveConfig(settings, ev.variantId);
+    const { assisted, bodyweight, seconds } = resolveConfig(settings, track);
     if (isPalierValidated(ev) && (ev.recommendation.kind === 'reps_up' || ev.recommendation.kind === 'weight_up')) {
       progressions.push({
         variantId: ev.variantId,
@@ -264,21 +279,32 @@ export function buildReport(period: ReportPeriod, input: ReportInput): PeriodRep
         toReps: ev.recommendation.targetReps,
         assisted,
         ...(seconds ? { seconds } : {}),
+        ...home,
       });
     }
-    const red = reds.get(ev.variantId);
+    const red = reds.get(track);
     if (ev.status === 'rouge' || red) {
       // Série de rouges en cours à la dernière séance de la période.
-      reds.set(ev.variantId, {
+      reds.set(track, {
         variantId: ev.variantId,
         count: (red?.count ?? 0) + (ev.status === 'rouge' ? 1 : 0),
         streak: ev.redStreak,
         weightKg: ev.palier.weightKg,
         assisted,
+        ...home,
       });
     }
     if (lowering && !wasDecreasing) {
-      decreases.push({ variantId: ev.variantId, date, weightKg: ev.palier.weightKg, reds: ev.redStreak, assisted, ...(bodyweight ? { bodyweight } : {}), ...(seconds ? { seconds } : {}) });
+      decreases.push({
+        variantId: ev.variantId,
+        date,
+        weightKg: ev.palier.weightKg,
+        reds: ev.redStreak,
+        assisted,
+        ...(bodyweight ? { bodyweight } : {}),
+        ...(seconds ? { seconds } : {}),
+        ...home,
+      });
     }
   }
 
@@ -286,8 +312,9 @@ export function buildReport(period: ReportPeriod, input: ReportInput): PeriodRep
   const lastBreak = new Map<string, RecordBreak>();
   for (const b of computeRecords(sessions, settings).breaks) {
     if (!dateOf.has(b.sessionId)) continue;
-    lastBreak.delete(b.variantId);
-    lastBreak.set(b.variantId, b);
+    const track = b.home ? `${b.variantId}${HOME_SUFFIX}` : b.variantId;
+    lastBreak.delete(track);
+    lastBreak.set(track, b);
   }
 
   const first = localDate(period.start.getTime());
@@ -364,18 +391,23 @@ function signed(diff: number, format: (n: number) => string): string | null {
 }
 
 /** Sections du bilan, communes à l'écran et au texte du mail. `name` donne le nom affiché d'un exercice-variante. */
-export function reportSections(report: PeriodReport, name: (variantId: string) => string): ReportSection[] {
+export function reportSections(report: PeriodReport, variantName: (variantId: string) => string): ReportSection[] {
   const { totals, previous } = report;
+  // Nom d'un suivi : « Curl biceps haltères (maison) » pour le suivi de la maison d'un exercice à charge.
+  const name = (variantId: string, home?: true) => `${variantName(variantId)}${home ? ' (maison)' : ''}`;
   const week = report.period.kind === 'week';
   const target = comparedTo(report);
   const compare = (diff: string | null) => (diff ? `${diff} par rapport ${target.with}` : `autant que ${target.same}`);
 
-  const sessionsLines: ReportLine[] = [[`${plural(totals.sessionCount, 'séance')}, `, em(compare(signed(totals.sessionCount - previous.sessionCount, String)))]];
-  if (totals.sessionCount > 0 || previous.sessionCount > 0) {
-    // Durée en salle : séances à heures connues seulement ; une séance importée sans heure ne compte jamais pour 0 min.
-    const known = totals.sessionCount - totals.unknownDuration;
+  const atHome = totals.homeCount ? ` (dont ${totals.homeCount} à la maison)` : '';
+  const sessionsLines: ReportLine[] = [[`${plural(totals.sessionCount, 'séance')}${atHome}, `, em(compare(signed(totals.sessionCount - previous.sessionCount, String)))]];
+  // Durée en salle : séances à la salle seulement (la durée à la maison n'a pas d'importance).
+  const gym = totals.sessionCount - (totals.homeCount ?? 0);
+  if (gym > 0 || previous.sessionCount - (previous.homeCount ?? 0) > 0) {
+    // Séances à heures connues seulement ; une séance importée sans heure ne compte jamais pour 0 min.
+    const known = gym - totals.unknownDuration;
     const unknown = totals.unknownDuration > 0 ? ` (${plural(totals.unknownDuration, 'séance sans durée', 'séances sans durée')})` : '';
-    const line: ReportLine = [`Durée en salle : ${known > 0 || totals.sessionCount === 0 ? formatDurationLong(totals.durationMs) : 'inconnue'}${unknown}`];
+    const line: ReportLine = [`Durée en salle : ${known > 0 || gym === 0 ? formatDurationLong(totals.durationMs) : 'inconnue'}${unknown}`];
     // Comparaison seulement si toutes les durées des deux périodes sont connues.
     if (totals.unknownDuration === 0 && previous.unknownDuration === 0) {
       line.push(', ', em(compare(signed(Math.round((totals.durationMs - previous.durationMs) / 60_000), formatMinutes))));
@@ -417,24 +449,24 @@ export function reportSections(report: PeriodReport, name: (variantId: string) =
                 p.kind === 'reps_up'
                   ? [em(`${from} → ${p.sets}×${p.toReps}${unit}${load(p.from.weightKg, p.assisted)}`)]
                   : [`${from}${load(p.from.weightKg, p.assisted)} validé → `, em(`${p.assisted ? 'moins d’aide' : 'poids supérieur'}, ${p.sets}×${p.toReps}`)];
-              return [`${name(p.variantId)} : `, ...change, ` (${shortDay(p.date)})`];
+              return [`${name(p.variantId, p.home)} : `, ...change, ` (${shortDay(p.date)})`];
             })
           : [['Aucun palier validé.']],
     });
 
     sections.push({
       title: 'Records',
-      lines: report.records.length > 0 ? report.records.map((r): ReportLine => [`👑 ${name(r.variantId)} : `, em(formatRecord(r))]) : [['Aucun nouveau record.']],
+      lines: report.records.length > 0 ? report.records.map((r): ReportLine => [`👑 ${name(r.variantId, r.home)} : `, em(formatRecord(r))]) : [['Aucun nouveau record.']],
     });
 
     // Une ligne par exercice : son passage en « poids inférieur » s'il a eu lieu pendant la période, sinon ses séances
     // rouges de la période, avec la série en cours quand elle a commencé avant.
     const inThisPeriod = week ? 'cette semaine' : 'ce mois-ci';
     const difficulty = report.reds.map((r): ReportLine => {
-      const decreases = report.decreases.filter((x) => x.variantId === r.variantId);
+      const decreases = report.decreases.filter((x) => x.variantId === r.variantId && x.home === r.home);
       if (decreases.length > 0) {
         return [
-          `${name(r.variantId)} : `,
+          `${name(r.variantId, r.home)} : `,
           ...decreases.flatMap((d, i): ReportPart[] => [
             ...(i > 0 ? [' ; '] : []),
             `${d.reds}ᵉ séance rouge de suite${load(d.weightKg, d.assisted)} → `,
@@ -444,7 +476,7 @@ export function reportSections(report: PeriodReport, name: (variantId: string) =
         ];
       }
       const ongoing = r.streak > r.count ? ` (${r.streak} de suite${load(r.weightKg, r.assisted)})` : '';
-      return [`${name(r.variantId)} : `, em(`${plural(r.count, 'séance rouge', 'séances rouges')} ${inThisPeriod}`), ongoing];
+      return [`${name(r.variantId, r.home)} : `, em(`${plural(r.count, 'séance rouge', 'séances rouges')} ${inThisPeriod}`), ongoing];
     });
     sections.push({ title: 'En difficulté', lines: difficulty.length > 0 ? difficulty : [['Aucun exercice en difficulté.']] });
   }

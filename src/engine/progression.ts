@@ -57,6 +57,8 @@ export type Decision = 'first' | 'follow' | 'refusal' | 'manual_weight' | 'manua
 export interface Evaluation {
   sessionId: string;
   variantId: string;
+  /** Performance du suivi à la maison d'un exercice à charge (version 1.26.0) ; absent = suivi de la salle. */
+  home?: true;
   status: Status;
   standard: boolean;
   /** La séance compte comme validation (verte et standard). */

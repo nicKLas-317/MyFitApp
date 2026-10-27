@@ -1,5 +1,5 @@
 import type { Performance, Session } from '../domain/types';
-import { resolveConfig, type EngineSettings } from './config';
+import { resolveConfig, trackKey, type EngineSettings } from './config';
 import { expectedTarget, recommend, type Recommendation } from './progression';
 import type { Profile } from './replay';
 
@@ -19,7 +19,8 @@ export interface NewSessionParams {
 /**
  * Crée une nouvelle séance à partir d'une séance historique (§10).
  * L'originale n'est jamais modifiée ; poids et cibles viennent du profil actuel, pas du modèle.
- * Aucune répétition n'est préremplie comme réalisée : la nouvelle séance part vide.
+ * Aucune répétition n'est préremplie comme réalisée : la nouvelle séance part vide. Elle garde le lieu du modèle
+ * (une séance à la maison réutilisée est à la maison, avec le suivi de la maison).
  */
 export function createSessionFromTemplate(
   template: Session,
@@ -33,8 +34,9 @@ export function createSessionFromTemplate(
   for (const source of template.performances) {
     if (seen.has(source.variantId)) continue;
     seen.add(source.variantId);
-    const cfg = resolveConfig(settings, source.variantId);
-    const state = profile.variants[source.variantId];
+    const track = trackKey(settings, source.variantId, template.location === 'maison');
+    const cfg = resolveConfig(settings, track);
+    const state = profile.variants[track];
     // Le poids prérempli est celui du palier actuel : en cas de « poids supérieur/inférieur »,
     // c'est à l'utilisateur de saisir la nouvelle charge, et la cible suit expectedTarget.
     const weightKg = state ? state.palier.weightKg : source.weightKg;
@@ -62,6 +64,7 @@ export function createSessionFromTemplate(
     origin: 'app',
     state: 'active',
     performances: planned.map((p) => p.performance),
+    ...(template.location === 'maison' ? { location: 'maison' as const } : {}),
   };
   return { session, planned };
 }

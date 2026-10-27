@@ -3,7 +3,7 @@
  * du moteur (seule source de vérité). Aucun score inventé ; jamais de conclusion sur une seule séance.
  */
 import type { Session, Status } from '../domain/types';
-import { GREEN_STREAK_TO_PROGRESS, sortSessions, type Evaluation, type Palier, type Profile } from '../engine';
+import { evaluationTrack, GREEN_STREAK_TO_PROGRESS, sortSessions, type Evaluation, type Palier, type Profile } from '../engine';
 
 /** Fenêtre d'analyse : les 6 dernières séances de l'exercice-variante (§19.3). */
 export const ANALYSIS_WINDOW = 6;
@@ -22,6 +22,8 @@ export type ProgressCategory =
 
 export interface VariantProgress {
   variantId: string;
+  /** Suivi de la maison d'un exercice à charge (version 1.26.0), classé à part. */
+  home?: true;
   category: ProgressCategory;
   /** Séances évaluées prises en compte (au plus 6). */
   sessions: number;
@@ -36,29 +38,34 @@ export function isPalierValidated(ev: Evaluation): boolean {
 }
 
 export function analyzeProgress(evaluations: readonly Evaluation[], profile: Profile): VariantProgress[] {
-  const byVariant = new Map<string, Evaluation[]>();
+  // Par suivi : la salle et la maison d'un exercice à charge sont analysées séparément.
+  const byTrack = new Map<string, Evaluation[]>();
   for (const ev of evaluations) {
-    const list = byVariant.get(ev.variantId) ?? [];
+    const track = evaluationTrack(ev);
+    const list = byTrack.get(track) ?? [];
     list.push(ev);
-    byVariant.set(ev.variantId, list);
+    byTrack.set(track, list);
   }
   const out: VariantProgress[] = [];
-  for (const [variantId, list] of byVariant) {
+  for (const [track, list] of byTrack) {
+    const { variantId, home } = list[0]!;
     const window = list.slice(-ANALYSIS_WINDOW);
     const validated = window.filter(isPalierValidated).length;
-    const redStreak = profile.variants[variantId]?.redStreak ?? 0;
+    const redStreak = profile.variants[track]?.redStreak ?? 0;
     let category: ProgressCategory;
     if (list.length < 2) category = 'new';
     else if (redStreak >= DIFFICULTY_RED_STREAK) category = 'difficulty';
     else if (validated > 0) category = 'progressing';
     else category = 'stable';
-    out.push({ variantId, category, sessions: window.length, validated, redStreak });
+    out.push({ variantId, ...(home ? { home } : {}), category, sessions: window.length, validated, redStreak });
   }
   return out;
 }
 
 export interface PalierChange {
   variantId: string;
+  /** Suivi de la maison (version 1.26.0). */
+  home?: true;
   sessionId: string;
   date: string;
   from: Palier;
@@ -71,11 +78,19 @@ export function recentChanges(evaluations: readonly Evaluation[], sessions: read
   const last = new Map<string, Palier>();
   const changes: PalierChange[] = [];
   for (const ev of evaluations) {
-    const prev = last.get(ev.variantId);
+    const track = evaluationTrack(ev);
+    const prev = last.get(track);
     if (prev && (prev.weightKg !== ev.palier.weightKg || prev.targetReps !== ev.palier.targetReps)) {
-      changes.push({ variantId: ev.variantId, sessionId: ev.sessionId, date: dates.get(ev.sessionId) ?? '', from: prev, to: ev.palier });
+      changes.push({
+        variantId: ev.variantId,
+        ...(ev.home ? { home: ev.home } : {}),
+        sessionId: ev.sessionId,
+        date: dates.get(ev.sessionId) ?? '',
+        from: prev,
+        to: ev.palier,
+      });
     }
-    last.set(ev.variantId, ev.palier);
+    last.set(track, ev.palier);
   }
   return changes.reverse().slice(0, limit);
 }
@@ -90,10 +105,18 @@ export interface ChartPoint {
   status: Status | null;
 }
 
-/** Points du graphique d'évolution d'un exercice-variante (§19.2), dans l'ordre chronologique. */
-export function chartSeries(variantId: string, sessions: readonly Session[], evaluations: readonly Evaluation[]): ChartPoint[] {
+/**
+ * Points du graphique d'évolution d'un exercice-variante (§19.2), dans l'ordre chronologique ; `include` limite les
+ * séances (un exercice à charge : celles de la salle, version 1.26.0).
+ */
+export function chartSeries(
+  variantId: string,
+  sessions: readonly Session[],
+  evaluations: readonly Evaluation[],
+  include: (s: Session) => boolean = () => true,
+): ChartPoint[] {
   const points: ChartPoint[] = [];
-  for (const s of sortSessions(sessions.filter((x) => x.state === 'done'))) {
+  for (const s of sortSessions(sessions.filter((x) => x.state === 'done' && include(x)))) {
     const p = s.performances.find((x) => x.variantId === variantId);
     if (!p) continue;
     const ev = evaluations.find((e) => e.sessionId === s.id && e.variantId === variantId);

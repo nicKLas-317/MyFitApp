@@ -1,5 +1,5 @@
 import type { Session } from '../domain/types';
-import { resolveConfig, type EngineSettings } from './config';
+import { HOME_SUFFIX, resolveConfig, trackKey, type EngineSettings } from './config';
 import { applyPerformance, type Evaluation, type ProgressState } from './progression';
 import { isEvaluable, validatePerformance, type PerformanceError } from './status';
 
@@ -8,6 +8,7 @@ export type SessionKey = Pick<Session, 'id' | 'date' | 'startedAt' | 'createdAt'
 
 /** Profil global de progression (§9) : donnée dérivée, reconstructible à tout moment. */
 export interface Profile {
+  /** État de chaque suivi : l'exercice-variante (salle), ou « <variante>@maison » pour un exercice à charge à la maison. */
   variants: Record<string, ProgressState>;
   appliedSessionIds: string[];
   lastSessionKey: SessionKey | null;
@@ -27,6 +28,11 @@ export interface ReplayResult {
   evaluations: Evaluation[];
   /** Performances non prises en compte par le moteur, avec la raison. */
   ignored: IgnoredPerformance[];
+}
+
+/** Suivi d'une évaluation : clé de son état dans le profil. */
+export function evaluationTrack(ev: Pick<Evaluation, 'variantId' | 'home'>): string {
+  return ev.home ? `${ev.variantId}${HOME_SUFFIX}` : ev.variantId;
 }
 
 export const EMPTY_PROFILE: Profile = { variants: {}, appliedSessionIds: [], lastSessionKey: null };
@@ -73,7 +79,9 @@ function foldSession(profile: Profile, session: Session, settings: EngineSetting
     }
     seenVariants.add(perf.variantId);
 
-    const cfg = resolveConfig(settings, perf.variantId);
+    // Suivi : à la maison, un exercice à charge a le sien (version 1.26.0).
+    const track = trackKey(settings, perf.variantId, session.location === 'maison');
+    const cfg = resolveConfig(settings, track);
     const errors = validatePerformance(perf, cfg.bodyweight);
     if (errors.length > 0) {
       ignored.push({ ...base, reasons: errors });
@@ -83,9 +91,9 @@ function foldSession(profile: Profile, session: Session, settings: EngineSetting
       ignored.push({ ...base, reasons: ['partial'] });
       continue;
     }
-    const { state, evaluation } = applyPerformance(variants[perf.variantId], perf, session.id, cfg);
-    variants[perf.variantId] = state;
-    evaluations.push(evaluation);
+    const { state, evaluation } = applyPerformance(variants[track], perf, session.id, cfg);
+    variants[track] = state;
+    evaluations.push(track === perf.variantId ? evaluation : { ...evaluation, home: true });
   }
 
   return {

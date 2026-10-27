@@ -24,6 +24,8 @@ interface Props {
   note?(ref: VariantRef): string | null;
   /** Lien de création proposé quand rien ne correspond. */
   createHref(query: string): string;
+  /** Séance à la maison (version 1.26.0) : récents de la maison d'abord, charge et statut du suivi de la maison. */
+  home?: boolean;
 }
 
 /** Exercice-variante d'une liste, avec le champ qui l'a fait trouver. */
@@ -39,13 +41,13 @@ const memory: { group: MuscleGroup | null } = { group: null };
  * Liste des exercices : résultats de recherche, ou puces de filtre par groupe, récents, favoris et bibliothèque par
  * groupe (§4.2). Les prises d'un même exercice sont regroupées en une entrée.
  */
-export function ExerciseBrowser({ query, onPick, below, aside, note, createHref }: Props) {
+export function ExerciseBrowser({ query, onPick, below, aside, note, createHref, home = false }: Props) {
   const { exercises, sessions, variants } = useApp();
   const index = useMemo(() => buildSearchIndex(exercises), [exercises]);
   const { results, ignored } = useMemo(() => searchWithInfo(index, query), [index, query]);
   const [chosen, setChosen] = useState<MuscleGroup | null>(memory.group);
   const trimmed = query.trim();
-  const shared = { onPick, below, aside, note };
+  const shared = { onPick, below, aside, note, home };
 
   const list = (items: Listed[], label?: string) => (
     <ul className="pick-list" aria-label={label}>
@@ -88,7 +90,7 @@ export function ExerciseBrowser({ query, onPick, below, aside, note, createHref 
   };
   const inGroup = (r: VariantRef) => !group || r.exercise.primaryGroup === group;
   const favorites = visible.filter((r) => r.variant.favorite && inGroup(r));
-  const recent = recentVariantIds(sessions)
+  const recent = recentVariantIds(sessions, undefined, home)
     .map((id) => variants.get(id))
     .filter((r): r is VariantRef => !!r && !r.exercise.archived && !r.variant.archived && inGroup(r));
 
@@ -138,15 +140,16 @@ interface ItemProps {
   below?(ref: VariantRef): ReactNode;
   aside?(ref: VariantRef): ReactNode;
   note?(ref: VariantRef): string | null;
+  home: boolean;
 }
 
 const secondaryOf = (exercise: Exercise, via?: MatchField) =>
   via === 'secondary' ? exercise.secondaryGroups.map((g) => MUSCLE_GROUP_LABELS[g]).join(', ') : null;
 
 /** Un exercice-variante : pictogramme, nom, variante, groupe principal, dernier poids et statut. */
-function ExerciseItem({ ref_: ref, via, onPick, below, aside, note }: ItemProps) {
-  const { replay } = useApp();
-  const state = replay.profile.variants[ref.variant.id];
+function ExerciseItem({ ref_: ref, via, onPick, below, aside, note, home }: ItemProps) {
+  const { ctxFor } = useApp();
+  const { state } = ctxFor(ref.variant.id, home);
   const extra = note?.(ref);
   const secondary = secondaryOf(ref.exercise, via);
   return (
@@ -185,8 +188,8 @@ function gripLabel(ref: VariantRef): string {
  * Prises d'un même exercice, en une seule entrée (§4.3.1) : nom et groupe une fois, puis une puce par prise (dernier
  * poids et statut de la variante). Un appui sur une puce agit sur cette variante (fiche, ou ajout à la séance).
  */
-function GripItem({ exercise, items, onPick, below, note }: { exercise: Exercise; items: Listed[] } & Omit<ItemProps, 'ref_' | 'via'>) {
-  const { replay } = useApp();
+function GripItem({ exercise, items, onPick, below, note, home }: { exercise: Exercise; items: Listed[] } & Omit<ItemProps, 'ref_' | 'via'>) {
+  const { ctxFor } = useApp();
   const secondary = secondaryOf(exercise, items.find((i) => i.via === 'secondary')?.via);
   return (
     <li className="pick-item grip-item" data-exercise={exercise.id} {...groupColorProps(exercise.primaryGroup)}>
@@ -202,7 +205,7 @@ function GripItem({ exercise, items, onPick, below, note }: { exercise: Exercise
       </div>
       <div className="grip-chips" role="group" aria-label={`Prises : ${exercise.name}`}>
         {items.map(({ ref }) => {
-          const state = replay.profile.variants[ref.variant.id];
+          const { state } = ctxFor(ref.variant.id, home);
           const extra = note?.(ref);
           return (
             <button

@@ -40,6 +40,8 @@ export function Recap({ sessionId }: { sessionId: string }) {
   }
 
   const removed = lastFinish?.sessionId === session.id ? lastFinish.removed : [];
+  // À la maison, un exercice à charge suit sa progression de la maison (version 1.26.0).
+  const home = session.location === 'maison';
   // Records battus pendant cette séance (une toute première performance n'en fait pas partie).
   const broken = records.breaks.filter((b) => b.sessionId === session.id);
   const brokenIds = new Set(broken.map((b) => b.variantId));
@@ -55,15 +57,20 @@ export function Recap({ sessionId }: { sessionId: string }) {
   return (
     <main className="screen recap">
       <h1>Séance terminée</h1>
-      <p className="muted">
-        {session.startedAt !== null && (
-          <>
-            {formatDay(session.startedAt)} · {formatHour(session.startedAt)}
-            {session.endedAt !== null && ` – ${formatHour(session.endedAt)}`} ·{' '}
-          </>
-        )}
-        <span data-testid="duration">{formatDurationLong(elapsedMs(session, Date.now()))}</span>
-      </p>
+      {home ? (
+        // À la maison, la durée n'a pas d'importance : ni heures ni durée.
+        <p className="muted">{session.startedAt !== null && `${formatDay(session.startedAt)} · `}à la maison</p>
+      ) : (
+        <p className="muted">
+          {session.startedAt !== null && (
+            <>
+              {formatDay(session.startedAt)} · {formatHour(session.startedAt)}
+              {session.endedAt !== null && ` – ${formatHour(session.endedAt)}`} ·{' '}
+            </>
+          )}
+          <span data-testid="duration">{formatDurationLong(elapsedMs(session, Date.now()))}</span>
+        </p>
+      )}
 
       {removed.length > 0 && (
         <div className="banner info">
@@ -117,7 +124,7 @@ export function Recap({ sessionId }: { sessionId: string }) {
       <ul className="recap-list">
         {session.performances.map((p) => {
           const ev = evaluation(p.variantId);
-          const next = replay.profile.variants[p.variantId]?.recommendation;
+          const next = ctxFor(p.variantId, home).state?.recommendation;
           return (
             <li key={p.variantId} className="card recap-item" data-variant={p.variantId} {...exerciseColorProps(variants.get(p.variantId)?.exercise)}>
               <div className="recap-head">
@@ -140,7 +147,7 @@ export function Recap({ sessionId }: { sessionId: string }) {
               <div className="muted small">{FEELING_LABELS[p.feeling]}</div>
               {next && (
                 <div className="small">
-                  Prochaine cible : <strong data-testid="next-target">{formatRecommendation(next, ctxFor(p.variantId).cfg.assisted, ctxFor(p.variantId).cfg.seconds)}</strong>
+                  Prochaine cible : <strong data-testid="next-target">{formatRecommendation(next, ctxFor(p.variantId, home).cfg.assisted, ctxFor(p.variantId, home).cfg.seconds)}</strong>
                 </div>
               )}
             </li>

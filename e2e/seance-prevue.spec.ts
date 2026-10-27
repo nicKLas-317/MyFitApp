@@ -278,7 +278,7 @@ test.describe('Séance prévue (§5.9)', () => {
       id: 'plan-telephone', createdAt: legacy.createdAt, updatedAt: legacy.updatedAt,
       items: [{ kind: 'exercise', variantId: 'pec-deck' }, { kind: 'exercise', variantId: 'leg-extension', startWeightKg: 30 }, { kind: 'cardio', block: tapis }],
     };
-    expect(exported.schemaVersion).toBe(5);
+    expect(exported.schemaVersion).toBe(6);
     expect(exported.plan).toEqual(migrated);
     expect(await readPlan(page)).toEqual(legacy);
 

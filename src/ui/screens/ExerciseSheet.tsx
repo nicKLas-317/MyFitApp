@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../../app/store';
 import { navigate, navigateReplace } from '../../app/hooks';
-import { sortSessions } from '../../engine';
+import { HOME_SUFFIX, sortSessions } from '../../engine';
 import { displayName, variantLabel } from '../../library/catalog';
 import { addVariant, updateVariant, validateVariantName } from '../../library/edit';
 import { illustrationFor } from '../../library/illustrations';
@@ -59,11 +59,15 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
   const { exercise, variant } = ref;
   const ctx = ctxFor(variantId);
   const state = ctx.state;
+  // Suivi de la maison d'un exercice à charge (version 1.26.0) : affiché à part, s'il existe.
+  const homeCtx = ctxFor(variantId, true);
+  const homeState = ctx.cfg.bodyweight ? undefined : homeCtx.state;
   const archived = exercise.archived || variant.archived;
   const inSession = active ? !!findPerformance(active, variantId) : false;
   const illustration = illustrationFor(exercise.id, variant.id);
   // Graphique secondaire (§19.2) : une seule variante, jamais mélangée avec une autre.
-  const series = chartSeries(variantId, sessions, replay.evaluations);
+  // Exercice à charge : la salle seulement (les charges de la maison ne sont pas comparables).
+  const series = chartSeries(variantId, sessions, replay.evaluations, (s) => !!ctx.cfg.bodyweight || s.location !== 'maison');
   const reps = series.flatMap((p) => (p.avgReps === null ? [] : [{ date: p.date, value: p.avgReps }]));
   const broke = recordKeys(records);
 
@@ -74,7 +78,8 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
       const p = s.performances.find((x) => x.variantId === variantId);
       return p ? [{ session: s, performance: p, evaluation: replay.evaluations.find((e) => e.sessionId === s.id && e.variantId === variantId) }] : [];
     });
-  const last = history.find((h) => h.evaluation);
+  const last = history.find((h) => h.evaluation && !h.evaluation.home);
+  const lastHome = history.find((h) => h.evaluation?.home);
 
   async function toggleFavorite() {
     await saveExercises([updateVariant(exercise, variantId, { favorite: !variant.favorite })]);
@@ -112,7 +117,7 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
           state={state}
           assisted={ctx.cfg.assisted}
           lastDate={last?.session.date ?? null}
-          label="Prochaine cible"
+          label={homeState ? 'Prochaine cible à la salle' : 'Prochaine cible'}
           {...recommendedTarget(state, { sets: ctx.cfg.sets, reps: ctx.cfg.minReps }, ctx.cfg.assisted, ctx.cfg.seconds)}
           targetTestId="sheet-next"
           record={records.current.get(variantId) ?? null}
@@ -120,6 +125,19 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
           seconds={ctx.cfg.seconds}
         />
       </section>
+      {homeState && (
+        <section className="card sheet-status" aria-label="À la maison" data-testid="sheet-home">
+          <TargetSummary
+            state={homeState}
+            assisted={homeCtx.cfg.assisted}
+            lastDate={lastHome?.session.date ?? null}
+            label="Prochaine cible à la maison"
+            {...recommendedTarget(homeState, { sets: homeCtx.cfg.sets, reps: homeCtx.cfg.minReps }, homeCtx.cfg.assisted)}
+            targetTestId="sheet-next-home"
+            record={records.current.get(`${variantId}${HOME_SUFFIX}`) ?? null}
+          />
+        </section>
+      )}
 
       <div className="sheet-actions">
         {active && !archived && (
@@ -282,6 +300,7 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
                     {[
                       p.partial ? null : `cible ${formatSetsReps(p.plannedSets ?? 0, p.targetReps ?? 0, ctx.cfg.seconds)}`,
                       p.partial ? null : `${FEELING_LABELS[p.feeling]}${p.feelingSymbol ? ` (${p.feelingSymbol})` : ''}`,
+                      session.location === 'maison' ? 'maison' : null,
                       session.origin === 'import' ? 'importée' : null,
                     ]
                       .filter(Boolean)

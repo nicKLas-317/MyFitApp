@@ -104,7 +104,7 @@ export function History() {
                     href={`#/historique/${encodeURIComponent(entry.session.id)}`}
                     date={entry.date}
                     title={entry.session.name}
-                    meta={`${contentSummary(entry.session)}${entry.session.origin === 'import' ? ' · importée' : ''}`}
+                    meta={`${contentSummary(entry.session)}${entry.session.location === 'maison' ? ' · maison' : ''}${entry.session.origin === 'import' ? ' · importée' : ''}`}
                   />
                 ),
               )}

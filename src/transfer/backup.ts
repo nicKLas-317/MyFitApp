@@ -1,7 +1,9 @@
 /**
  * Export complet et import JSON (§11.9, §11.10).
- * - schemaVersion 5 : format natif complet, restauré tel quel après validation stricte (blocs de cardio dans les séances,
- *   activités habituelles hors salle et leurs réponses, séance prévue en un seul ordre, musculation et cardio mêlés).
+ * - schemaVersion 6 : format natif complet, restauré tel quel après validation stricte (blocs de cardio dans les séances,
+ *   activités habituelles hors salle et leurs réponses, séance prévue en un seul ordre, musculation et cardio mêlés,
+ *   lieu des séances : `location` « maison », absent = salle).
+ * - schemaVersion 5 : identique, sans lieu (toutes les séances sont à la salle) ; lu tel quel.
  * - schemaVersion 4 : séance prévue en deux listes (exercices, puis cardio), versions 1.23.0 et 1.23.1 ; migrée sans perte.
  * - schemaVersion 3 : format natif antérieur aux activités habituelles, migré sans perte (aucune activité).
  * - schemaVersion 2 : format natif antérieur au cardio, migré sans perte (les séances n'ont simplement pas de cardio).
@@ -25,7 +27,7 @@ import { newId } from '../session/ops';
 import { normalizeName } from '../library/text';
 
 export const APP_ID = 'MyFitApp';
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 /** Plus ancienne version du format natif, migrée à l'import. */
 const FIRST_NATIVE_VERSION = 2;
 /** Délai au-delà duquel l'accueil rappelle d'exporter (§12). */
@@ -394,6 +396,13 @@ function validateVariant(v: unknown, path: string, errors: string[]): void {
       if (v.config.seconds !== undefined && (typeof v.config.seconds !== 'boolean' || (v.config.seconds && v.config.bodyweight !== true))) {
         errors.push(`${path}.config.seconds invalide.`);
       }
+      // Plage de la maison (version 1.26.0).
+      for (const k of ['homeMinReps', 'homeMaxReps']) {
+        if (v.config[k] !== undefined && !(isInt(v.config[k]) && (v.config[k] as number) > 0)) errors.push(`${path}.config.${k} invalide.`);
+      }
+      if (isInt(v.config.homeMinReps) && isInt(v.config.homeMaxReps) && v.config.homeMinReps > v.config.homeMaxReps) {
+        errors.push(`${path}.config.homeMaxReps invalide.`);
+      }
     }
   }
 }
@@ -450,6 +459,8 @@ function validateSession(s: unknown, path: string, errors: string[]): void {
     else s.cardio.forEach((b, i) => errors.push(...cardioBlockErrors(b, `${path}.cardio[${i}]`)));
   }
   if (s.fromPlan !== undefined) errors.push(...planOriginErrors(s.fromPlan, `${path}.fromPlan`));
+  // Lieu : « maison », ou absent (salle).
+  if (s.location !== undefined && s.location !== 'maison') errors.push(`${path}.location invalide.`);
 }
 
 /** Validation stricte d'une sauvegarde native. Liste vide = valide. */

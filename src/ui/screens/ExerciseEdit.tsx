@@ -1,8 +1,8 @@
 import { useId, useState } from 'react';
-import type { Exercise, MuscleGroup, Variant } from '../../domain/types';
+import type { Exercise, MuscleGroup, Variant, VariantConfig } from '../../domain/types';
 import { useApp } from '../../app/store';
 import { navigateBack, navigateReplace } from '../../app/hooks';
-import { BODYWEIGHT_RANGE, DEFAULT_VARIANT_CONFIG, resolveConfig, SECONDS_RANGE } from '../../engine';
+import { BODYWEIGHT_RANGE, DEFAULT_VARIANT_CONFIG, homeRange, resolveConfig, SECONDS_RANGE } from '../../engine';
 import {
   createExercise,
   EQUIPMENT_OPTIONS,
@@ -31,6 +31,10 @@ interface VariantForm {
   assisted: boolean;
   bodyweight: boolean;
   seconds: boolean;
+  /** Plage à la maison (exercice à charge, version 1.26.0) ; `homeInitial` : valeurs affichées à l'ouverture. */
+  homeMinReps: string;
+  homeMaxReps: string;
+  homeInitial: { minReps: string; maxReps: string; stored: Pick<VariantConfig, 'homeMinReps' | 'homeMaxReps'> };
   archived: boolean;
   removed: boolean;
 }
@@ -85,6 +89,7 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false,
   const [variantForms, setVariantForms] = useState<VariantForm[]>(() =>
     (original?.variants ?? []).map((v) => {
       const cfg = resolveConfig(settings, v.id);
+      const home = homeRange(cfg);
       return {
         id: v.id,
         name: v.name,
@@ -95,6 +100,16 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false,
         assisted: cfg.assisted,
         bodyweight: !!cfg.bodyweight,
         seconds: !!cfg.seconds,
+        homeMinReps: String(home.minReps),
+        homeMaxReps: String(home.maxReps),
+        homeInitial: {
+          minReps: String(home.minReps),
+          maxReps: String(home.maxReps),
+          stored: {
+            ...(cfg.homeMinReps !== undefined ? { homeMinReps: cfg.homeMinReps } : {}),
+            ...(cfg.homeMaxReps !== undefined ? { homeMaxReps: cfg.homeMaxReps } : {}),
+          },
+        },
         archived: v.archived,
         removed: false,
       };
@@ -156,10 +171,17 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false,
         assisted: form.assisted,
         ...(form.bodyweight ? { bodyweight: true } : {}),
         ...(form.seconds ? { seconds: true } : {}),
+        // Plage de la maison : celle enregistrée si elle n'a pas été touchée (elle suit alors la plage de la salle).
+        ...(form.bodyweight
+          ? {}
+          : form.homeMinReps === form.homeInitial.minReps && form.homeMaxReps === form.homeInitial.maxReps
+            ? form.homeInitial.stored
+            : { homeMinReps: Number(form.homeMinReps), homeMaxReps: Number(form.homeMaxReps) }),
       };
       const cfgErrors = validateConfig(cfg);
       if (cfgErrors.includes('sets')) list.push(`${label} : nombre de séries entre 1 et 10.`);
       if (cfgErrors.includes('range')) list.push(`${label} : plage ${form.seconds ? 'de durée' : 'de répétitions'} invalide (minimum ≤ maximum).`);
+      if (cfgErrors.includes('home_range')) list.push(`${label} : plage de répétitions à la maison invalide (minimum ≤ maximum).`);
       const current = next.variants.find((v) => v.id === form.id)!;
       const patch: Partial<Variant> = { synonyms: parseList(form.synonyms), archived: form.archived };
       if (!standard) patch.name = form.name.trim().replace(/\s+/g, ' ');
@@ -286,6 +308,13 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false,
                     <NumberField label={v.seconds ? 'Durée min (s)' : 'Rép. min'} value={v.minReps} onChange={(t) => patchVariant(v.id, { minReps: t })} />
                     <NumberField label={v.seconds ? 'Durée max (s)' : 'Rép. max'} value={v.maxReps} onChange={(t) => patchVariant(v.id, { maxReps: t })} />
                   </div>
+                  {/* À la maison, un exercice à charge a sa propre progression, avec sa plage (version 1.26.0). */}
+                  {!v.bodyweight && (
+                    <div className="field-grid">
+                      <NumberField label="Maison : rép. min" value={v.homeMinReps} onChange={(t) => patchVariant(v.id, { homeMinReps: t })} />
+                      <NumberField label="Maison : rép. max" value={v.homeMaxReps} onChange={(t) => patchVariant(v.id, { homeMaxReps: t })} />
+                    </div>
+                  )}
                   <label className="check-line">
                     <input
                       type="checkbox"

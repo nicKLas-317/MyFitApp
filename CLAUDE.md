@@ -98,7 +98,7 @@ Créer une interface moderne, sobre, lisible et rapide.
 
 L'application est organisée en quatre onglets (§3.4, version 1.20.0), qui séparent l'usage « à la salle » (saisie rapide, écran épuré) de l'usage « au calme » (bilans, historique, réglages) :
 
-- **Séance** (onglet par défaut, l'accueil) : la question d'une activité habituelle en haut s'il y en a une (« Badminton lundi soir (21 h – 22 h 30) ? », §19.8), le récapitulatif de la semaine (§19.6), puis « Démarrer une séance » / « Reprendre la séance » (toujours 1 appui) avec le lien discret « Préparer ma prochaine séance », ou, quand une séance est prévue, « Démarrer la séance prévue », « Séance libre » et le résumé du plan avec « Modifier ma séance prévue » (§5.9) ; puis le lien discret « + Activité » (activité ponctuelle, §19.8) et le rappel de sauvegarde éventuel (§12).
+- **Séance** (onglet par défaut, l'accueil) : la question d'une activité habituelle en haut s'il y en a une (« Badminton lundi soir (21 h – 22 h 30) ? », §19.8), le récapitulatif de la semaine (§19.6), puis « Démarrer une séance » / « Reprendre la séance » (toujours 1 appui) et, dessous, le lieu de la séance libre (« Salle » par défaut, ou « Maison », §5.10), avec le lien discret « Préparer ma prochaine séance », ou, quand une séance est prévue, « Démarrer la séance prévue », « Séance libre » (avec son lieu) et le résumé du plan avec « Modifier ma séance prévue » (§5.9) ; puis le lien discret « + Activité » (activité ponctuelle, §19.8) et le rappel de sauvegarde éventuel (§12).
 - **Historique** : la liste des séances et des activités, regroupée par mois (§10, §3.5).
 - **Progrès** : en haut, le bandeau « Ton bilan de la semaine / du mois est prêt » quand un bilan est à voir (§19.7) ; puis le bilan de progression (§19.3), les bilans de la semaine et du mois (§19.7), le bilan par groupe musculaire (§19.10) et « Mon poids » (§20), avec une pesée rapide.
 - **Plus** : la bibliothèque d'exercices et sa recherche (§4), les réglages (§14), « Importer / exporter » (§11 ; l'écran porte le même nom).
@@ -613,7 +613,21 @@ But : préparer la prochaine séance au calme pour passer moins de temps sur le 
 - Le plan consommé est retiré de la base (il ne revient pas si la séance est ensuite supprimée de l'historique).
 - Données (version 1.23.2) : `SessionPlan` (`id`, `createdAt`, `updatedAt`, `items`) dans la méta `plan`, `items` étant la liste ordonnée des éléments, `{ kind: 'exercise', variantId, startWeightKg? }` ou `{ kind: 'cardio', block }`. La séance démarrée garde `fromPlan` (`planId`, `variantIds`, `cardio` prévu, et `order` : l'ordre prévu, `{ kind: 'exercise', variantId }` ou `{ kind: 'cardio', id }` ; absent d'une séance démarrée avant la version 1.23.2 : exercices puis cardio).
 - **Migration (précision validée, version 1.23.2)** : un plan enregistré au format des versions 1.23.0 et 1.23.1 (`exercises` puis `cardio`, deux listes) est lu sans perte ni modification : mêmes identifiant, dates, exercices, poids de départ et blocs, le cardio placé après la musculation (là où il était affiché). La base n'est pas réécrite à la lecture : le plan n'est enregistré au nouveau format qu'à sa prochaine modification (test 246).
-- Export et import (§11.10) : champ `plan` de la sauvegarde, format `schemaVersion` 5 (une sauvegarde au format 4 des versions 1.23.0 et 1.23.1 est acceptée et son plan converti de la même façon ; champ absent d'une sauvegarde antérieure = aucun plan) ; en fusion, le plan de l'appareil est gardé (écart signalé), sinon celui de la sauvegarde est repris s'il n'a pas été réalisé ; un remplacement global le remplace. Aucun effet sur le moteur.
+- Export et import (§11.10) : champ `plan` de la sauvegarde, format `schemaVersion` 5 (6 depuis la version 1.26.0 ; une sauvegarde au format 4 des versions 1.23.0 et 1.23.1 est acceptée et son plan converti de la même façon ; champ absent d'une sauvegarde antérieure = aucun plan) ; en fusion, le plan de l'appareil est gardé (écart signalé), sinon celui de la sauvegarde est repris s'il n'a pas été réalisé ; un remplacement global le remplace. Aucun effet sur le moteur.
+- La séance prévue est toujours à la salle (version 1.26.0) : ni choix de lieu à la préparation ni lieu dans le plan ; « Démarrer la séance prévue » démarre une séance à la salle.
+
+### 5.10. Salle ou maison (précision validée, version 1.26.0)
+
+But : faire de temps en temps une séance à la maison (haltères légers, abdos) sans fausser la progression de la salle.
+
+- **Choix du lieu** : seulement pour une séance libre. Sous « Démarrer une séance » (ou sous « Séance libre » quand une séance est prévue), deux puces « Salle » / « Maison » (groupe « Lieu de la séance libre ») ; **Salle par défaut**, à chaque ouverture de l'accueil (jamais mémorisé). « Maison » choisi, le bouton devient « Démarrer une séance à la maison » (« Séance libre à la maison ») : 2 appuis ; une séance à la salle reste à 1 appui.
+- **Séance à la maison** : mode salle comme d'habitude (§5.8), mais **sans chronomètre** : l'en-tête affiche « À la maison » (« Reprendre la séance · à la maison » sur l'accueil). La durée n'a pas d'importance : ni heures ni durée au récapitulatif de fin, dans l'historique ou le détail (les horodatages restent enregistrés, pour l'ordre chronologique). La proposition de terminer une séance oubliée (plus de 4 heures, §6) est gardée.
+- **Ajout d'un exercice** : rien n'est masqué ; les récents des séances à la maison d'abord, puis ceux de la salle ; charge et statut affichés : ceux du suivi de la maison.
+- **Deux suivis pour un exercice à charge** (§7.14) : à la maison, il a sa propre progression (palier, compteurs, records), distincte de la salle ; au poids du corps et en secondes (§7.13), **un seul suivi**, quel que soit le lieu.
+- **Lieu d'une séance passée** : dans son détail (§10), « Lieu de la séance » : « Salle » / « Maison », sans confirmation (réversible). Le changer fait passer ses exercices à charge d'un suivi à l'autre : les deux suivis sont recalculés en rejouant l'historique (§7.9). Revenir au lieu d'origine redonne exactement le même résultat (vérifié sur les vraies données dans `perso/`).
+- **Réutiliser** une séance à la maison crée une séance à la maison (choix signalé à l'utilisateur).
+- **Données** : champ facultatif `location: 'maison'` de la séance ; absent = salle. Aucune migration de la base : les séances enregistrées avant la version 1.26.0 (et les sauvegardes antérieures) sont à la salle. Export au format `schemaVersion` 6 ; une sauvegarde au format 5 ou antérieur est lue telle quelle (salle) ; un lieu inconnu est refusé.
+- Historique : « 3 ex. · maison » ; fiche : historique « … · maison ».
 
 ## 6. Chronomètre global de séance
 
@@ -628,6 +642,8 @@ Il doit continuer à représenter le temps écoulé pendant les repos, les chang
 Enregistrer l'horodatage de début et calculer le temps écoulé à partir de cet horodatage. Ne pas se contenter d'incrémenter un compteur en mémoire.
 
 Restaurer un chronomètre cohérent après fermeture, rechargement ou passage en arrière-plan.
+
+À la maison (§5.10), pas de chronomètre affiché : la durée n'y a pas d'importance.
 
 **Séance oubliée :** si, à la réouverture, une séance est en cours depuis plus de 4 heures, proposer de la terminer en indiquant l'heure de fin réelle (préremplie avec l'heure de la dernière modification), ou de la poursuivre. Ne jamais la terminer ni la supprimer automatiquement.
 
@@ -883,6 +899,17 @@ Réglage « Poids du corps » par exercice-variante (`bodyweight`, comme « assi
 - Affichage en secondes partout : carte, séance prévue, fiche (« Gainage : progression par la durée (20 à 60 s) », graphique « Durée par série »), historique (« 20-20-20 s », « cible 3 × 20 s »), détail et sa correction (« Secondes », « Cible (s) »), récapitulatif de fin, records (« 3 × 45 s »), bilan (« 25 → 30 s ») et bilans de la période (« 3×40 s → 3×45 s », « cible −5 s recommandée »). Jamais « 0 kg ».
 - Réglage figé dès qu'une variante a un historique ; cocher « En secondes » coche « Poids du corps » et passe une plage restée par défaut à 20–60 s. Une sauvegarde avec `seconds` sans `bodyweight` est refusée. Exercices en répétitions et à charge inchangés (instantané des vraies données identique).
 
+### 7.14. Suivi à la maison (précision validée, version 1.26.0)
+
+Les charges de la maison (haltères légers) ne sont pas comparables à celles de la salle : un exercice-variante **à charge** a deux suivis.
+
+- **Suivi de la salle** : l'exercice-variante, comme avant ; les séances à la maison n'y entrent jamais (son état est exactement celui qu'il aurait sans elles).
+- **Suivi de la maison** (clé `<variante>@maison`) : mêmes règles du §7 (statuts, deux vertes, quatre rouges, rejeu), sur les seules séances à la maison. Plage par défaut : borne basse de la salle (8) à **15** (au moins la borne haute de la salle), réglable par exercice dans Modifier (« Maison : rép. min » / « Maison : rép. max », `homeMinReps` / `homeMaxReps`, enregistrés seulement s'ils diffèrent du défaut). Séries et réglage « assisté » de la variante. Après deux vertes à 3×15, « poids supérieur » : l'utilisateur garde la charge s'il est au maximum de ses haltères (choix de l'utilisateur). Première fois à la maison : poids de départ demandé.
+- **Poids du corps et secondes** (§7.13) : un seul suivi, salle et maison mêlées.
+- **Records** (§19.9) par suivi : un record de la maison ne bat jamais celui de la salle.
+- **Fiche** : « Prochaine cible à la salle » et, s'il existe un suivi de la maison, un second bloc « Prochaine cible à la maison » (dernière fois, record, cible) ; le graphique d'un exercice à charge ne montre que la salle.
+- Bilan de progression (§19.3) et bilans de la période (§19.7) : le suivi de la maison est classé et rapporté à part, nommé « Curl biceps haltères (maison) » ; les dernières évolutions ne comparent jamais un palier de la maison à un palier de la salle.
+
 ## 8. Affichage du statut : trois couleurs uniquement
 
 Afficher trois couleurs pour indiquer l'état de progression, calculées par le moteur selon le §7.4.
@@ -956,6 +983,8 @@ Lorsqu'une séance est réutilisée :
 - L'ancienne séance n'est jamais comptée une deuxième fois comme validation.
 
 Toute modification de l'historique déclenche le recalcul des recommandations concernées.
+
+Le lieu d'une séance passée (salle ou maison) se change dans son détail (§5.10) ; heures et durée n'y sont pas affichées pour une séance à la maison.
 
 ## 11. Import de données : JSON et notes en texte brut
 
@@ -1120,6 +1149,7 @@ Prévoir un export complet de l'application au format JSON, contenant les donné
 - Activités habituelles hors salle : liste des habitudes (réglages), réponses « Oui » / « Non » et activités ponctuelles (§19.8), format `schemaVersion` 4 (5 depuis la version 1.23.2, pour la séance prévue) ; une sauvegarde au format 2, 3 ou 4 est migrée sans perte (aucune activité, habitudes par défaut).
 - Blocs de cardio des séances et liste des machines de cardio (§5.7).
 - Séance prévue (§5.9) : champ `plan` (null sans plan), et origine `fromPlan` des séances démarrées à partir d'elle ; format `schemaVersion` 5 (un seul ordre, musculation et cardio mêlés), une sauvegarde au format 4 est acceptée et son plan converti (cardio après la musculation).
+- Lieu des séances (§5.10) : `location` « maison » (absent = salle), format `schemaVersion` 6 (version 1.26.0) ; une sauvegarde au format 5 ou antérieur est lue telle quelle, toutes ses séances à la salle.
 
 Utiliser un format versionné (`schemaVersion`) pour permettre de faire évoluer la structure des données, avec des migrations testées.
 
@@ -1201,7 +1231,7 @@ Prévoir une page de réglages simple (sections repliables, toutes fermées à l
 - De personnaliser les noms d'exercices.
 - De gérer les variantes.
 - De modifier les groupes musculaires et les synonymes d'un exercice.
-- De personnaliser la plage de répétitions ou le nombre de séries d'un exercice si nécessaire, et d'indiquer un exercice au poids du corps ou en secondes (§7.13).
+- De personnaliser la plage de répétitions ou le nombre de séries d'un exercice si nécessaire, et d'indiquer un exercice au poids du corps ou en secondes (§7.13), ainsi que la plage de répétitions à la maison d'un exercice à charge (§7.14).
 - De renseigner ma taille (§20).
 - D'importer des séances depuis des notes ou du JSON.
 - D'exporter les données complètes.
@@ -1591,6 +1621,13 @@ Le test 225 contrôle aussi l'accueil avec un plan, la préparation (vide, avec 
 253. Bibliothèque version 12 : planche (groupe, matériel, réglage), « planche », « gainage », « plank », « front plank », « gainage ventral » ; 3 × 20 s sans charge, « Valider les 3 séries » ; réglage enregistré (plage par défaut non recopiée, jusqu'à 600 s) ; record « 3 × 45 s » ; bilan « 3×40 s → 3×45 s », « cible −5 s recommandée », jamais « 0 kg » ; base en version 11 : ajoutée une seule fois, jamais recréée ; sauvegarde identique, `seconds` sans `bodyweight` refusé.
 254. (bout en bout) « gainage » → planche sans poids de départ ni champ de poids, « 3 × 20 s », « Première fois » ; série 1 à « 20 s », « + » bloqué, « − » → 15 s ; « Valider les 3 séries » ; récapitulatif « 20 s · 20 s · 20 s », « Prochaine cible : 3 × 20 s » ; le lendemain « Dernière fois 20 s · 20 s · 20 s · 27/10 », puis « 3 × 25 s » ; enregistrées à 0 kg en secondes ; fiche « ↑ +5 s », record « 3 × 20 s », mention du gainage, graphique de la durée seul, historique « 20-20-20 s » ; détail « (cible 3 × 20 s) » ; carte à 360 px. Le test 225 contrôle aussi une carte de planche ouverte en séance.
 
+### Salle et maison (§5.10, §7.14, version 1.26.0)
+
+255. Suivis : à la maison, un exercice à charge a le sien (`<variante>@maison`, plage 8 à 15, réglable, assisté hérité), poids du corps et secondes un seul ; le suivi de la salle est exactement celui sans les séances à la maison ; maison : 3×12 → … → 3×15, deux vertes à 15 → poids supérieur ; crunch au sol salle puis maison : un seul suivi (+1 rép.) ; lieu d'une séance passée changé : elle passe au suivi de la maison (charge non recommandée), revenir redonne profil et évaluations identiques ; records par suivi ; bilan de progression et dernières évolutions par suivi (jamais « 12 → 6 kg ») ; réutiliser une séance à la maison : à la maison, cible de la maison ; séance libre à la salle par défaut.
+256. Récapitulatif « 3 séances · dont 1 maison », groupes comptés ; bilan « 3 séances (dont 1 à la maison) », durée en salle sans la maison (sans heures : jamais « sans durée », comparaison gardée), semaine à la maison seule sans « Durée en salle », « Curl biceps haltères (maison) : 3×12 → 3×13 à 6 kg » ; indice par groupe sans la maison, séries comptées ; récents de la maison d'abord.
+257. Sauvegarde au format 6 (lieu gardé), format 5 lu à la salle, lieu inconnu et plage de la maison invalide refusés ; plage de la maison enregistrée seulement si elle diffère du défaut, contrôlée.
+258. (bout en bout) Accueil : « Salle » choisie par défaut sous le bouton ; séance à la salle (curl 12 kg) ; le lendemain « Maison » → « Démarrer une séance à la maison », en-tête « À la maison » sans chronomètre, poids de départ demandé (6 kg), « 3 × 8 à 6 kg », récapitulatif sans durée ; accueil de nouveau sur « Salle » après relance, « 2 séances · dont 1 maison » ; séances en base (lieu) ; fiche : « 3 × 8 à 12 kg » (salle) et bloc « Prochaine cible à la maison » « 3 × 8 à 6 kg », historique « maison » ; historique « 1 ex. · maison » ; détail sans heures, lieu « Maison » ; passé à « Salle » : heures affichées, lieu retiré en base, cible de la salle « 3 × 8 à 6 kg », plus de bloc maison ; remis à « Maison » : tout comme avant ; plage de la maison 8–15 dans Modifier, 20 enregistré (`homeMaxReps`). Le test 225 contrôle aussi l'accueil avec « Maison » choisi, la séance à la maison, son récapitulatif et son détail.
+
 ### Ton de l'appli (§3.6, version 1.22.2)
 
 241. Tutoiement : aucun texte du code de l'appli (chaînes, gabarits, texte JSX ; commentaires et tests exclus) ne contient « vous », « votre », « vos » ni d'impératif en « -ez » (« assez », « chez » admis) ; le texte du mail du bilan non plus (test 192) ; le texte affiché de chaque écran et état du test 225 non plus. Contre-test : « Choisissez une activité. » remis dans le code fait échouer le test.
@@ -1704,6 +1741,7 @@ Ne jamais déclarer un exercice en stagnation sur la base d'une seule séance di
 **Précisions validées :**
 
 - Un palier est « validé » quand il atteint sa 2ᵉ validation verte consécutive (§7.5).
+- Le suivi de la maison d'un exercice à charge est classé à part, nommé « … (maison) » (§7.14, version 1.26.0).
 - Un exercice qui n'a qu'une seule séance évaluée est classé « Trop tôt » (« Trop tôt pour conclure » jusqu'à la version 1.20.0).
 - « En difficulté » (au moins 2 rouges consécutives en cours) l'emporte sur « En progression ».
 - Libellé de « Trop tôt » : « Une seule séance sur cet exercice. »
@@ -1735,7 +1773,7 @@ But : un coup d'œil de 2 secondes avant la séance pour savoir quels groupes tr
   [rouge] Épaules (2×)          [rouge] Triceps (2×) · hier
   ```
 
-- L'en-tête affiche les dates exactes de la semaine en cours (lundi et dimanche, mois répété si la semaine change de mois) et le nombre de séances (« 0 séance », « 1 séance », « 2 séances »), suivi du nombre d'activités habituelles confirmées et du total de cardio de la semaine quand il y en a (« 3 séances · 1 activité · 45 min de cardio », §5.7, §19.8). Une séance ne contenant que du cardio compte comme une séance ; le cardio n'entre dans aucun groupe. Une activité n'est pas une séance de salle.
+- L'en-tête affiche les dates exactes de la semaine en cours (lundi et dimanche, mois répété si la semaine change de mois) et le nombre de séances (« 0 séance », « 1 séance », « 2 séances »), suivi du nombre d'activités habituelles confirmées et du total de cardio de la semaine quand il y en a (« 3 séances · 1 activité · 45 min de cardio », §5.7, §19.8), et des séances à la maison quand il y en a (« 3 séances · dont 1 maison · 1 activité », version 1.26.0 ; elles comptent dans les groupes comme les autres). Une séance ne contenant que du cardio compte comme une séance ; le cardio n'entre dans aucun groupe. Une activité n'est pas une séance de salle.
 - Couleur selon le score de la semaine (voir Calcul), pour qu'un travail seulement indirect ne pèse pas autant qu'une séance directe (précision validée) : vert = score inférieur à 1 (aucune séance, ou une seule séance indirecte : la mention « +1 indirect » reste affichée) ; orange = score d'au moins 1 et inférieur au seuil du rouge ; rouge = score au moins égal au seuil. Le seuil du rouge est réglable (2 par défaut, de 2 à 7).
 - Mention « aujourd'hui » ou « hier » si le groupe a été travaillé, directement ou indirectement, il y a moins de 48 heures, même la semaine précédente. La mention suit le jour du calendrier : une séance d'avant-hier, même à moins de 48 heures, n'a pas de mention.
 - Tri (précision validée) : couleur d'abord, vert en haut, puis orange, puis rouge en bas ; à couleur égale, les groupes non travaillés depuis moins de 48 heures avant ceux travaillés « hier » ou « aujourd'hui » ; puis score croissant (un vert avec de l'indirect passe après un vert sans rien) ; puis l'ordre de la liste des groupes.
@@ -1764,6 +1802,7 @@ L'application n'a pas de serveur : aucun envoi automatique. Elle prépare le bil
 - Contenu, court et factuel, en sections :
   - **Séances** : nombre de séances et comparaison avec la période précédente (« 3 séances, +1 par rapport à la semaine précédente », « autant que… ») ; durée en salle ; minutes de cardio par machine ; activités habituelles confirmées par nom (« Activités : Badminton ×4, 6 h 00 », §19.8), qui ne sont pas des séances (ni dans le nombre de séances, ni dans la durée en salle : deux chiffres séparés).
   - **Durée en salle (précision validée, version 1.21.3)** : une séance importée sans heure de début ou de fin a une durée inconnue, jamais comptée pour 0 min. La durée n'additionne que les séances à durée connue et signale les autres (« Durée en salle : 1 h 02 (2 séances sans durée) » ; « inconnue (2 séances sans durée) » si aucune n'est connue). Elle n'est comparée (« , +22 min par rapport à… ») que si toutes les séances des deux intervalles comparés ont une durée connue ; sinon, pas de comparaison.
+  - **Séances à la maison (version 1.26.0)** : comptées dans le nombre de séances (« 3 séances (dont 1 à la maison), +1 par rapport… ») ; jamais dans la durée en salle, jamais « sans durée », jamais un obstacle à la comparaison de durée. Une période sans séance à la salle n'a pas de ligne « Durée en salle » (sauf si l'intervalle comparé en a). Leurs progressions, records et séances rouges sont rapportés à part, nommés « … (maison) » (§7.14).
   - **Période de comparaison (précision validée, version 1.21.3)** : une période terminée est comparée à la période précédente entière (« par rapport à la semaine précédente », « au mois précédent »). Une période en cours est comparée à la même portion de la précédente, jours entiers : du lundi au même jour de la semaine dernière (« par rapport à lun.–ven. de la semaine dernière », « autant que lun. de la semaine dernière »), du 1er au même jour du mois dernier (« par rapport au 1er–23 du mois dernier », « autant que le 1er du mois dernier »), sans dépasser la fin de la période précédente (le 31 octobre est comparé à tout septembre, et un dimanche à toute la semaine précédente : libellé habituel). Même règle pour le nombre de séances et la durée, à l'écran comme dans le mail.
   - **Groupes travaillés** : même calcul que le récapitulatif (§19.6, direct + indirect, activités habituelles comprises, groupes affichés seulement), en nombre de séances (« Biceps : 1× · +2 indirect ») ; puis « Non travaillés : … ».
   - **Progressions** : paliers validés pendant la période d'après les évaluations du moteur (2ᵉ validation verte consécutive) : « Curl biceps haltères : 3×8 → 3×9 à 12 kg (21 oct.) », « Leg extension : 3×12 à 40 kg validé → poids supérieur, 3×8 », « Tractions assistées : 3×12 avec 30 kg d'aide validé → moins d'aide, 3×8 » ; sinon « Aucun palier validé. ».
@@ -1843,6 +1882,7 @@ But : compter une activité faite de temps en temps (futsal…), sans en faire u
 - Calculé à partir de tout l'historique (séances terminées, saisies ou importées), dans l'ordre chronologique du moteur (§7.9) : rétroactif, et recalculé à chaque affichage, donc à jour après la correction, le changement de date ou la suppression d'une séance passée. Jamais stocké.
 - La toute première performance qui compte devient le record **sans être célébrée** : ni « Nouveau record ! », ni couronne dans l'historique, ni ligne dans les bilans. Seuls les records **battus** sont célébrés.
 - Le cardio et les activités habituelles (§19.8) n'ont pas de record. Aucun effet sur le moteur de progression.
+- Un exercice à charge a ses records de la salle et ses records de la maison, séparés (§7.14, version 1.26.0) ; au poids du corps, un seul record.
 
 **Affichage** (couronne dorée `--gold`, pictogramme SVG `Crown` ; « 👑 » dans le texte du bilan et du mail) :
 
@@ -1859,7 +1899,7 @@ Vue secondaire (`#/bilan-groupes/<groupe>`), accessible depuis l'onglet Progrès
 
 **Indice de progression (base 100)**
 
-- Pour chaque exercice-variante dont le groupe est le groupe **principal** (un groupe secondaire est ignoré) : force estimée à chaque séance par la formule d'Epley, charge × (1 + répétitions / 30), sur la **moins bonne série** ; exprimée en pourcentage de sa première séance (= 100). Historique partiel ignoré.
+- Pour chaque exercice-variante dont le groupe est le groupe **principal** (un groupe secondaire est ignoré) : force estimée à chaque séance par la formule d'Epley, charge × (1 + répétitions / 30), sur la **moins bonne série** ; exprimée en pourcentage de sa première séance (= 100). Historique partiel ignoré. Les séances à la maison n'entrent pas dans l'indice (charges non comparables, version 1.26.0).
 - Exercice assisté (§7.12) :
   - quand au moins une pesée existe dans « Mon poids » (§20) : charge réelle = poids du corps − aide, puis Epley comme pour un exercice classique (80 kg, 30 → 25 kg d'aide : 50 → 55 kg réels, 110). Poids du corps à la date de la séance (précision validée) : interpolation linéaire entre les deux pesées qui l'encadrent ; avant la première pesée, la première ; après la dernière, la dernière ; avec une seule pesée, ce poids constant. Pas de saut artificiel quand deux pesées sont espacées. Seule lecture des pesées : le suivi corporel n'en est pas modifié. Une aide au moins égale au poids du corps à la première séance (sans sens physique) revient à la méthode sans pesée ;
   - sans aucune pesée : la variation relative de l'aide est inversée, indice = 100 × (2 − aide ÷ aide de la première séance) × l'effet des répétitions (Epley) ; 30 → 25 kg d'aide donne 116,7, comme 30 → 35 kg pour un exercice classique ;
@@ -1869,7 +1909,7 @@ Vue secondaire (`#/bilan-groupes/<groupe>`), accessible depuis l'onglet Progrès
 
 **Séries par semaine**
 
-- Barres des 12 dernières semaines (lundi 0 h 00 – dimanche, heure locale, semaine en cours comprise) : séries enregistrées des exercices dont le groupe est principal, en plein ; séries des exercices où il n'est que secondaire, comptées pour moitié et empilées en plus clair. Total au-dessus de chaque barre (« 7,5 »).
+- Barres des 12 dernières semaines (lundi 0 h 00 – dimanche, heure locale, semaine en cours comprise) : séries enregistrées des exercices dont le groupe est principal, en plein ; séries des exercices où il n'est que secondaire, comptées pour moitié et empilées en plus clair. Total au-dessus de chaque barre (« 7,5 »). Les séries des séances à la maison comptent en entier, comme à la salle (version 1.26.0).
 
 **Seuils** (pour le groupe choisi) : indice = au moins 6 séances sur au moins 3 semaines différentes ; séries = au moins 3 semaines avec des séries sur le groupe parmi les 12. En dessous, à la place du graphique : « Pas encore assez de données pour analyser ta progression : 3 séances sur 6 nécessaires. » (chiffres réels ; « 2 semaines sur 3 », ou les deux : « 1 séance sur 6 et 1 semaine sur 3 nécessaires. »). Le graphique apparaît dès que le seuil est atteint.
 

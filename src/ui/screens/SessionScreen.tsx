@@ -132,9 +132,16 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
         </a>
         <div className="session-title">
           <span className="muted small">{active.name}</span>
-          <span className="chrono" role="timer" aria-label="Durée de la séance" data-testid="chrono">
-            {formatDuration(elapsedMs(active, now))}
-          </span>
+          {/* À la maison, pas de chronomètre (version 1.26.0) : la durée n'a pas d'importance. */}
+          {active.location === 'maison' ? (
+            <span className="session-place" data-testid="session-place">
+              À la maison
+            </span>
+          ) : (
+            <span className="chrono" role="timer" aria-label="Durée de la séance" data-testid="chrono">
+              {formatDuration(elapsedMs(active, now))}
+            </span>
+          )}
         </div>
         <SaveIndicator />
       </header>

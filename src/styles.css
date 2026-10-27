@@ -236,6 +236,13 @@ fieldset.frame > legend {
   margin-top: var(--space-2);
 }
 
+/* Lieu (version 1.26.0) : « Salle » ou « Maison », sous le bouton de la séance libre et dans le détail d'une séance. */
+.place-choice {
+  display: flex;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
 /* Séance prévue (§5.9) sur l'accueil : « Séance libre » en secondaire, puis le résumé du plan et « Modifier ». */
 .home .free-session,
 .home .prepare-plan {
@@ -386,6 +393,17 @@ fieldset.frame > legend {
   font-weight: 700;
   line-height: 1.2;
   font-variant-numeric: tabular-nums;
+}
+
+/* Fiche : la prochaine cible de la maison sous celle de la salle (version 1.26.0). */
+.sheet-status + .sheet-status {
+  margin-top: var(--space-1);
+}
+
+/* Séance à la maison : le lieu à la place du chronomètre. */
+.session-place {
+  font-size: var(--fs-4);
+  font-weight: 700;
 }
 
 .save-indicator {
@@ -596,6 +614,7 @@ fieldset.frame > legend {
 .weight-field label,
 .start-weight label,
 .name-form label:not(.check-line),
+.name-form .field-label,
 .dialog label:not(.check-line) {
   display: block;
   margin-bottom: var(--space-1);

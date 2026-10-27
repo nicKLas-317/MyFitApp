@@ -113,10 +113,14 @@ export function Bilan() {
             <p className="muted small">{hint}</p>
             <ul className="bilan-list">
               {list.map((p) => (
-                <li key={p.variantId}>
+                <li key={`${p.variantId}${p.home ? '@maison' : ''}`}>
                   <a className="bilan-item" href={`#/exercice/${encodeURIComponent(p.variantId)}/evolution`} {...exerciseColorProps(variants.get(p.variantId)?.exercise)}>
                     <span className="bilan-item-text">
-                      <strong>{name(p.variantId)}</strong>
+                      {/* Suivi de la maison d'un exercice à charge : classé à part (version 1.26.0). */}
+                      <strong>
+                        {name(p.variantId)}
+                        {p.home && ' (maison)'}
+                      </strong>
                       <span className="muted small">
                         {p.sessions} séance{p.sessions > 1 ? 's' : ''}
                         {p.validated > 0 && ` · ${p.validated} palier${p.validated > 1 ? 's' : ''} validé${p.validated > 1 ? 's' : ''}`}
@@ -138,12 +142,15 @@ export function Bilan() {
           <h2 className="section-title">Dernières évolutions</h2>
           <ul className="change-list">
             {changes.map((c) => (
-              <li key={`${c.sessionId}-${c.variantId}`} className="change-line">
+              <li key={`${c.sessionId}-${c.variantId}${c.home ? '@maison' : ''}`} className="change-line">
                 <span className="muted small">
                   <span aria-hidden="true">{formatNumericDay(c.date)}</span>
                   <span className="visually-hidden">{formatIsoDay(c.date)} : </span>
                 </span>
-                <span className="change-name">{name(c.variantId)}</span>
+                <span className="change-name">
+                  {name(c.variantId)}
+                  {c.home && ' (maison)'}
+                </span>
                 <span className="small change-what">{changeText(c, ctxFor(c.variantId).cfg.seconds)}</span>
               </li>
             ))}

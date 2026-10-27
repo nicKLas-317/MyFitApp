@@ -4,7 +4,7 @@
  * qui est rattaché à l'identifiant de la variante.
  */
 import type { Exercise, MuscleGroup, Session, Variant, VariantConfig } from '../domain/types';
-import { BODYWEIGHT_RANGE, DEFAULT_VARIANT_CONFIG, SECONDS_RANGE } from '../engine';
+import { BODYWEIGHT_RANGE, DEFAULT_VARIANT_CONFIG, homeRange, SECONDS_RANGE } from '../engine';
 import { GRIPS, gripOf, MEDIUM_GRIP, normalizeName } from './text';
 
 /** Matériel proposé à la saisie ; le champ reste libre pour les données importées. */
@@ -179,7 +179,7 @@ export function removeVariant(exercise: Exercise, variantId: string): Exercise {
   return { ...exercise, variants: exercise.variants.filter((v) => v.id !== variantId) };
 }
 
-export type ConfigError = 'sets' | 'range';
+export type ConfigError = 'sets' | 'range' | 'home_range';
 
 /** Réglages spécifiques (§7.2) : nombre de séries entre 1 et 10, plage de répétitions cohérente. */
 export function validateConfig(cfg: VariantConfig): ConfigError[] {
@@ -187,8 +187,12 @@ export function validateConfig(cfg: VariantConfig): ConfigError[] {
   if (!Number.isInteger(cfg.sets) || cfg.sets < 1 || cfg.sets > 10) errors.push('sets');
   // Plage en secondes (gainage) jusqu'à 10 minutes ; en répétitions jusqu'à 50.
   const ceiling = cfg.seconds ? 600 : 50;
-  if (!Number.isInteger(cfg.minReps) || !Number.isInteger(cfg.maxReps) || cfg.minReps < 1 || cfg.maxReps < cfg.minReps || cfg.maxReps > ceiling) {
-    errors.push('range');
+  const badRange = (min: number, max: number) => !Number.isInteger(min) || !Number.isInteger(max) || min < 1 || max < min || max > ceiling;
+  if (badRange(cfg.minReps, cfg.maxReps)) errors.push('range');
+  // Plage de la maison (exercice à charge, version 1.26.0).
+  if (!cfg.bodyweight && (cfg.homeMinReps !== undefined || cfg.homeMaxReps !== undefined)) {
+    const { minReps, maxReps } = homeRange(cfg);
+    if (badRange(minReps, maxReps)) errors.push('home_range');
   }
   return errors;
 }
@@ -205,6 +209,13 @@ export function compactConfig(cfg: VariantConfig): Partial<VariantConfig> | unde
   if (cfg.seconds) out.seconds = true;
   for (const k of ['sets', 'minReps', 'maxReps'] as const) if (cfg[k] !== defaults[k]) out[k] = cfg[k];
   if (cfg.assisted) out.assisted = true;
+  // Plage de la maison : gardée seulement si elle diffère de celle par défaut (exercice à charge).
+  if (!cfg.bodyweight) {
+    const byDefault = homeRange({ minReps: cfg.minReps, maxReps: cfg.maxReps });
+    const home = homeRange(cfg);
+    if (home.minReps !== byDefault.minReps) out.homeMinReps = home.minReps;
+    if (home.maxReps !== byDefault.maxReps) out.homeMaxReps = home.maxReps;
+  }
   return Object.keys(out).length > 0 ? out : undefined;
 }
 

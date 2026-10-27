@@ -261,11 +261,11 @@ test.describe('Bibliothèque et recherche', () => {
   test('Réglages par exercice : plage de répétitions personnalisée', async ({ page }) => {
     await page.goto('./#/modifier/leg-curl');
     const standard = page.getByRole('group', { name: 'Variante standard' });
-    await standard.getByLabel('Rép. max').fill('6');
+    await standard.getByLabel('Rép. max', { exact: true }).fill('6');
     await page.getByRole('button', { name: 'Enregistrer' }).click();
     await expect(page.getByRole('alert')).toContainText('plage de répétitions invalide');
-    await standard.getByLabel('Rép. min').fill('6');
-    await standard.getByLabel('Rép. max').fill('10');
+    await standard.getByLabel('Rép. min', { exact: true }).fill('6');
+    await standard.getByLabel('Rép. max', { exact: true }).fill('10');
     await page.getByRole('button', { name: 'Enregistrer' }).click();
     await expect(page.getByTestId('sheet-next')).toHaveText('3 × 6');
     expect((await readExercises(page)).find((e) => e.id === 'leg-curl')?.variants[0]?.config).toEqual({ minReps: 6, maxReps: 10 });

@@ -31,7 +31,37 @@ export function repStep(cfg: Pick<VariantConfig, 'seconds'>): number {
   return cfg.seconds ? SECONDS_STEP : 1;
 }
 
+/** Suivi à la maison d'un exercice-variante à charge (version 1.26.0) : « <variante>@maison ». */
+export const HOME_SUFFIX = '@maison';
+/** Borne haute par défaut des répétitions à la maison : 15 (charges plus légères). */
+export const HOME_MAX_REPS = 15;
+
+/**
+ * Suivi d'une performance : à la maison, un exercice à charge a son propre suivi (palier, compteurs, records), car les
+ * charges ne sont pas comparables ; au poids du corps (et en secondes), un seul suivi, quel que soit le lieu.
+ */
+export function trackKey(settings: EngineSettings, variantId: string, home: boolean): string {
+  return home && !resolveConfig(settings, variantId).bodyweight ? `${variantId}${HOME_SUFFIX}` : variantId;
+}
+
+/** Exercice-variante d'un suivi. */
+export function variantOfTrack(track: string): string {
+  return track.endsWith(HOME_SUFFIX) ? track.slice(0, -HOME_SUFFIX.length) : track;
+}
+
+/** Plage de répétitions à la maison : réglée, ou borne basse de la salle et 15 au plus haut (au moins celle de la salle). */
+export function homeRange(cfg: Pick<VariantConfig, 'minReps' | 'maxReps' | 'homeMinReps' | 'homeMaxReps'>): { minReps: number; maxReps: number } {
+  const minReps = cfg.homeMinReps ?? cfg.minReps;
+  return { minReps, maxReps: cfg.homeMaxReps ?? Math.max(HOME_MAX_REPS, cfg.maxReps, minReps) };
+}
+
 export function resolveConfig(settings: EngineSettings, variantId: string): VariantConfig {
+  if (variantId.endsWith(HOME_SUFFIX)) {
+    // Suivi à la maison : réglages de la variante, avec sa plage de la maison.
+    const full = resolveConfig(settings, variantOfTrack(variantId));
+    const { homeMinReps: _min, homeMaxReps: _max, ...base } = full;
+    return { ...base, ...homeRange(full) };
+  }
   const override = settings.overrides[variantId];
   // Un exercice en secondes est toujours au poids du corps.
   if (override?.seconds) return { ...settings.defaults, ...SECONDS_RANGE, ...override, bodyweight: true };

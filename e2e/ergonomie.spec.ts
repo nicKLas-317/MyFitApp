@@ -582,6 +582,26 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
     await expectClean(page, 'Fin de séance prévue, non faits');
     await finishSheet(page).getByRole('button', { name: 'Oui, terminer' }).click();
     await setPlan(page, null);
+    // Séance à la maison (version 1.26.0) : accueil avec « Maison » choisi, séance sans chronomètre, puis son détail
+    // avec le lieu.
+    await page.goto('./');
+    await page.getByRole('group', { name: 'Lieu de la séance libre' }).getByRole('button', { name: 'Maison' }).click();
+    await expectClean(page, 'Accueil, séance à la maison choisie');
+    await page.getByRole('button', { name: 'Démarrer une séance à la maison' }).click();
+    await expect(page.getByTestId('session-place')).toBeVisible();
+    await addExercise(page, 'crunch au sol', 'Crunch au sol');
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expectClean(page, 'Séance à la maison');
+    await page.locator('article[aria-label="Crunch au sol"]').getByRole('button', { name: 'Valider les 3 séries' }).click();
+    await page.locator('article[aria-label="Crunch au sol"]').getByRole('button', { name: 'Bien', exact: true }).click();
+    await page.getByRole('button', { name: 'Terminer la séance' }).click();
+    await finishSheet(page).getByRole('button', { name: 'Oui, terminer' }).click();
+    await expect(page.getByRole('heading', { name: 'Séance terminée' })).toBeVisible();
+    await expectClean(page, 'Récapitulatif de fin, à la maison');
+    const homeSession = (await readSessions(page)).find((x) => x.location === 'maison')!;
+    await page.goto(`./#/historique/${homeSession.id}`);
+    await expect(page.getByRole('group', { name: 'Lieu de la séance' })).toBeVisible();
+    await expectClean(page, 'Détail d’une séance à la maison');
     // Séance oubliée (ouverte depuis plus de 4 heures) : fenêtre à la réouverture.
     await startSession(page);
     await page.clock.setFixedTime(new Date('2026-10-23T01:00:00'));

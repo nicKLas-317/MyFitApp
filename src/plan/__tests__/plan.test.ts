@@ -237,7 +237,7 @@ describe('Séance prévue (§5.9)', () => {
     if (parsed.kind !== 'backup') return;
     expect(parsed.backup.plan).toEqual(plan);
     expect(parsed.backup.sessions[0]!.fromPlan).toEqual(started.fromPlan);
-    expect(parsed.backup.schemaVersion).toBe(5);
+    expect(parsed.backup.schemaVersion).toBe(6);
     // Sauvegarde antérieure (format 4 sans plan) : aucun plan.
     const { plan: _omit, ...older } = { ...buildBackup({ sessions: [], exercises: LIB }, at(23)), schemaVersion: 4 };
     const old = parseJsonImport(JSON.stringify(older), LIB, '2026-10-23');
@@ -309,7 +309,7 @@ describe('Séance prévue (§5.9)', () => {
     const parsed = parseJsonImport(JSON.stringify(v4), LIB, '2026-10-23');
     expect(parsed.kind).toBe('backup');
     if (parsed.kind !== 'backup') return;
-    expect(parsed.backup.schemaVersion).toBe(5);
+    expect(parsed.backup.schemaVersion).toBe(6);
     expect(parsed.backup.plan).toEqual(expected);
     expect(parseJsonImport(JSON.stringify({ ...v4, schemaVersion: 5 }), LIB, '2026-10-23').kind).toBe('error');
     expect(parseJsonImport(JSON.stringify({ ...v4, plan: expected }), LIB, '2026-10-23').kind).toBe('error');

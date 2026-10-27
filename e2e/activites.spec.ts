@@ -81,7 +81,7 @@ test.describe('Activités habituelles hors salle', () => {
     await page.getByLabel('Fichier à importer').setInputFiles((await (await downloading).path())!);
     const backup = JSON.parse(await page.getByLabel('Notes de séance ou JSON').inputValue());
     expect(backup).toMatchObject({
-      schemaVersion: 5,
+      schemaVersion: 6,
       activities: [{ id: 'act-badminton-2026-10-19', date: '2026-10-19', name: 'Badminton', status: 'done' }],
       settings: { habits: [{ id: 'badminton', weekday: 1, start: '21:00', end: '22:30', groups: ['epaules', 'jambes'], enabled: true }] },
     });

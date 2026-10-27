@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { CardioMachine, Exercise, Session, SessionPlan } from '../domain/types';
 import { CARDIO_MACHINES_VERSION, sanitizeCardioMachines, upgradeCardioMachines } from '../cardio/model';
-import { rebuildProfile, resolveConfig, type EngineSettings, type ReplayResult } from '../engine';
+import { rebuildProfile, resolveConfig, trackKey, type EngineSettings, type ReplayResult } from '../engine';
 import { buildEngineSettings, indexVariants, type VariantRef } from '../library/catalog';
 import { exerciseHasHistory } from '../library/edit';
 import { DEFAULT_RECAP_SETTINGS, sanitizeRecapSettings, type WeeklyRecapSettings } from '../analysis/weekly';
@@ -71,7 +71,11 @@ interface AppValue {
   setCardioMachines(next: CardioMachine[]): Promise<boolean>;
   /** Réglages généraux inclus dans l'export (§11.10). */
   generalSettings: Record<string, unknown>;
-  ctxFor(variantId: string): VariantContext;
+  /**
+   * Contexte du moteur d'un exercice-variante : son suivi à la salle, ou à la maison (`home`, version 1.26.0) pour un
+   * exercice à charge.
+   */
+  ctxFor(variantId: string, home?: boolean): VariantContext;
   /** Applique la nouvelle version d'une séance puis l'enregistre. Renvoie true si l'enregistrement a réussi. */
   commit(next: Session, undoLabel?: string): Promise<boolean>;
   retrySave(): void;
@@ -630,10 +634,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [repo, storedPlan, plan]);
 
   const ctxFor = useCallback(
-    (variantId: string): VariantContext => ({
-      state: replay.profile.variants[variantId],
-      cfg: resolveConfig(settings, variantId),
-    }),
+    (variantId: string, home = false): VariantContext => {
+      const track = trackKey(settings, variantId, home);
+      return { state: replay.profile.variants[track], cfg: resolveConfig(settings, track) };
+    },
     [replay, settings],
   );
 

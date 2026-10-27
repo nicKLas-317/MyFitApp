@@ -38,6 +38,12 @@ export interface VariantConfig {
    * durée en secondes par série, qui progresse par pas de 5 s. Absent = répétitions.
    */
   seconds?: boolean;
+  /**
+   * Plage de répétitions à la maison (version 1.26.0), réglable : absente = borne basse de la salle et 15 au plus haut
+   * (au moins la borne haute de la salle). Sans effet au poids du corps (un seul suivi, quel que soit le lieu).
+   */
+  homeMinReps?: number;
+  homeMaxReps?: number;
 }
 
 /** Exercice-variante : unité d'historique et de progression (§4.3, §7.1). */
@@ -130,6 +136,11 @@ export interface Session {
   cardio?: CardioBlock[];
   /** Séance démarrée à partir de la séance prévue (§5.9) ; absent pour une séance libre. */
   fromPlan?: PlanOrigin;
+  /**
+   * Lieu (version 1.26.0) : « maison » pour une séance à la maison ; absent = à la salle (toutes les séances
+   * enregistrées avant la version 1.26.0, et toute séance prévue).
+   */
+  location?: 'maison';
 }
 
 /**

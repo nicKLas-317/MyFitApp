@@ -4,7 +4,7 @@ import { useApp } from '../../app/store';
 import { navigateBack, routeHash } from '../../app/hooks';
 import { goTab } from '../../app/navigation';
 import { createSessionFromTemplate } from '../../engine';
-import { correctPerformance, removePastPerformance, setSessionDate, type CorrectionError } from '../../history/ops';
+import { correctPerformance, removePastPerformance, setSessionDate, setSessionLocation, type CorrectionError } from '../../history/ops';
 import { displayName } from '../../library/catalog';
 import { defaultSessionName, formatDurationLong, formatHour, formatIsoDay, formatKg, formatReps, formatSetsReps, localDate } from '../../session/format';
 import { elapsedMs, newId, parseWeight, renameSession } from '../../session/ops';
@@ -52,6 +52,7 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
   }
 
   const evaluation = (variantId: string) => replay.evaluations.find((e) => e.sessionId === session.id && e.variantId === variantId);
+  const home = session.location === 'maison';
   const broke = recordKeys(records);
 
   async function save(next: Session) {
@@ -86,8 +87,13 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
       </header>
       <p className="muted">
         {formatIsoDay(session.date)}
-        {session.startedAt !== null && ` · ${formatHour(session.startedAt)}`}
-        {session.startedAt !== null && session.endedAt !== null && ` – ${formatHour(session.endedAt)} · ${formatDurationLong(elapsedMs(session, session.endedAt))}`}
+        {/* À la maison, la durée n'a pas d'importance : ni heures ni durée (version 1.26.0). */}
+        {home && ' · à la maison'}
+        {!home && session.startedAt !== null && ` · ${formatHour(session.startedAt)}`}
+        {!home &&
+          session.startedAt !== null &&
+          session.endedAt !== null &&
+          ` – ${formatHour(session.endedAt)} · ${formatDurationLong(elapsedMs(session, session.endedAt))}`}
         {session.origin === 'import' ? ' · importée' : ' · saisie dans l’application'}
       </p>
       {failed && (
@@ -112,7 +118,7 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
               <StatusBadge status={evaluation(p.variantId)?.status} />
             </div>
             <div>
-              {ctxFor(p.variantId).cfg.assisted && 'aide '}
+              {ctxFor(p.variantId, home).cfg.assisted && 'aide '}
               {/* Poids du corps : pas de charge (0), seulement les répétitions. */}
               {p.weightKg > 0 && formatKg(p.weightKg)}
               {p.partial ? (
@@ -208,6 +214,25 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
             if (e.target.value) void save(setSessionDate(session, e.target.value, Date.now()));
           }}
         />
+      </div>
+      {/* Lieu (version 1.26.0) : le changer fait passer les exercices à charge d'un suivi à l'autre, tous deux recalculés. */}
+      <div className="name-form">
+        <p className="field-label" id={`${id}-place`}>
+          Lieu de la séance
+        </p>
+        <div className="place-choice" role="group" aria-labelledby={`${id}-place`}>
+          {(['Salle', 'Maison'] as const).map((label) => (
+            <button
+              key={label}
+              type="button"
+              className="chip"
+              aria-pressed={home === (label === 'Maison')}
+              onClick={() => void save(setSessionLocation(session, label === 'Maison', Date.now()))}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="sheet-actions">
