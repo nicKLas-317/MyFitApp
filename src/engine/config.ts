@@ -18,6 +18,11 @@ export const DEFAULT_ENGINE_SETTINGS: EngineSettings = {
   overrides: {},
 };
 
+/** Plage par défaut d'un exercice au poids du corps (réglable par exercice) : 10 à 40 répétitions. */
+export const BODYWEIGHT_RANGE = { minReps: 10, maxReps: 40 } as const;
+
 export function resolveConfig(settings: EngineSettings, variantId: string): VariantConfig {
-  return { ...settings.defaults, ...settings.overrides[variantId] };
+  const override = settings.overrides[variantId];
+  if (override?.bodyweight) return { ...settings.defaults, ...BODYWEIGHT_RANGE, ...override };
+  return { ...settings.defaults, ...override };
 }

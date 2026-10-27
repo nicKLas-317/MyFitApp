@@ -126,7 +126,7 @@ export function PlanScreen() {
                         target={{ sets: p.plannedSets ?? 0, reps: p.targetReps ?? 0, weightKg: p.weightKg }}
                         assisted={ctx.cfg.assisted}
                         hint={hint}
-                        startLabel={ctx.cfg.assisted ? 'Jamais réalisé : aide de départ' : 'Jamais réalisé : poids de départ'}
+                        startLabel={ctx.cfg.bodyweight ? 'Jamais réalisé' : ctx.cfg.assisted ? 'Jamais réalisé : aide de départ' : 'Jamais réalisé : poids de départ'}
                       />
                     ) : (
                       <p className="muted">Exercice introuvable.</p>

@@ -12,6 +12,8 @@ export interface TargetShape {
 export type ProgressMarker =
   /** Hausse de répétitions au même poids : « +1 répétition : 3×9 (au lieu de 3×8) ». */
   | { kind: 'reps_up'; added: number; from: TargetShape; to: TargetShape }
+  /** Poids du corps, après quatre rouges : « −1 répétition : 3×14 (au lieu de 3×15) ». */
+  | { kind: 'reps_down'; removed: number; from: TargetShape; to: TargetShape }
   /** Changement de charge recommandé (§7.6, §7.8). */
   | { kind: 'weight_up' | 'weight_down' };
 
@@ -25,6 +27,14 @@ export function progressMarker(state: ProgressState | undefined): ProgressMarker
     return {
       kind: 'reps_up',
       added: rec.targetReps - last.targetReps,
+      from: { plannedSets: last.plannedSets, targetReps: last.targetReps },
+      to: { plannedSets: rec.plannedSets, targetReps: rec.targetReps },
+    };
+  }
+  if (rec.kind === 'reps_down' && rec.targetReps < last.targetReps) {
+    return {
+      kind: 'reps_down',
+      removed: last.targetReps - rec.targetReps,
       from: { plannedSets: last.plannedSets, targetReps: last.targetReps },
       to: { plannedSets: rec.plannedSets, targetReps: rec.targetReps },
     };

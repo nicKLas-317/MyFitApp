@@ -15,7 +15,7 @@ const V9 = LIB.map((e) => (FLIES.includes(e.id) ? { ...e, secondaryGroups: ['epa
 
 describe('Bibliothèque version 10 : groupes secondaires réellement sollicités (§4.0, §19.6)', () => {
   it('185. Les écartés n’ont plus les épaules en secondaire ; les mouvements composés gardent leur second groupe', () => {
-    expect(SEED_VERSION).toBe(10);
+    expect(SEED_VERSION).toBeGreaterThanOrEqual(10);
     for (const id of FLIES) expect(secondary(id), id).toEqual([]);
     expect(secondary('tractions-assistees')).toEqual(['biceps']);
     expect(secondary('tirage-vertical')).toEqual(['biceps']);

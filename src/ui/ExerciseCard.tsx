@@ -80,9 +80,10 @@ export function ExerciseCard({ session, performance: p, open, onToggle, onFinish
           <span className="card-title">
             <strong>{name}</strong>
             <span className="card-summary muted small">
-              <span>{formatKg(p.weightKg)}</span>
+              {/* Poids du corps : pas de charge, seulement les séries faites. */}
+              {p.weightKg > 0 && <span>{formatKg(p.weightKg)}</span>}
               <span className="sets-count">
-                {' · '}
+                {p.weightKg > 0 && ' · '}
                 {done}/{planned}
               </span>
             </span>
@@ -124,15 +125,18 @@ export function ExerciseCard({ session, performance: p, open, onToggle, onFinish
             label="Prochaine cible"
             target={{ sets: planned, reps: target, weightKg: p.weightKg }}
             hint={hint}
+            bodyweight={ctx.cfg.bodyweight}
           />
 
-          <WeightField
-            label={ctx.cfg.assisted ? 'Aide (kg)' : 'Poids (kg)'}
-            value={p.weightKg}
-            previous={state?.palier.weightKg ?? p.weightKg}
-            highlight={weightChange !== null}
-            onCommit={(w) => void commit(setWeight(session, p.variantId, w, ctx, now()))}
-          />
+          {!ctx.cfg.bodyweight && (
+            <WeightField
+              label={ctx.cfg.assisted ? 'Aide (kg)' : 'Poids (kg)'}
+              value={p.weightKg}
+              previous={state?.palier.weightKg ?? p.weightKg}
+              highlight={weightChange !== null}
+              onCommit={(w) => void commit(setWeight(session, p.variantId, w, ctx, now()))}
+            />
+          )}
 
           {adjust && (
             <div className="adjust" role="group" aria-label="Ajuster séries et répétitions">
@@ -147,7 +151,7 @@ export function ExerciseCard({ session, performance: p, open, onToggle, onFinish
                 label="Répétitions"
                 value={target}
                 min={Math.max(1, ...p.reps)}
-                max={30}
+                max={Math.max(30, ctx.cfg.maxReps)}
                 onChange={(v) => {
                   setDraft(null);
                   void commit(setTarget(session, p.variantId, v, now()));

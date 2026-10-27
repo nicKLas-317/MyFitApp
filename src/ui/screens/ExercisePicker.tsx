@@ -29,7 +29,8 @@ export function ExercisePicker({ variantId, forPlan = false }: { variantId?: str
       return;
     }
     const ctx = ctxFor(id);
-    if (!ctx.state && startKg === undefined) {
+    // Poids du corps : rien à demander, même la première fois.
+    if (!ctx.state && !ctx.cfg.bodyweight && startKg === undefined) {
       setStartFor(id);
       setStartWeight('');
       setStartError(false);
@@ -47,7 +48,7 @@ export function ExercisePicker({ variantId, forPlan = false }: { variantId?: str
       navigateBack('seance-prevue');
       return;
     }
-    if (!ctxFor(id).state && startKg === undefined) {
+    if (!ctxFor(id).state && !ctxFor(id).cfg.bodyweight && startKg === undefined) {
       setStartFor(id);
       setStartWeight('');
       setStartError(false);

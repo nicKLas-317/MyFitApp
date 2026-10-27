@@ -16,8 +16,11 @@ export interface Palier {
  * - `weight_up` / `weight_down` : charge plus difficile / plus facile, sans valeur (§7.6, §7.8) :
  *   « poids supérieur » / « poids inférieur », ou pour un exercice assisté « moins d'aide » / « plus d'aide » (§7.12).
  *   `targetReps` est alors la cible à appliquer avec la nouvelle charge.
+ * - Exercice au poids du corps (version 1.24.0), sans charge à changer :
+ *   - `ceiling` : deux validations au plafond de la plage, la cible reste au plafond (« Plafond atteint ») ;
+ *   - `reps_down` : quatre rouges de suite, cible − 1 (jamais sous la borne basse).
  */
-export type RecommendationKind = 'start' | 'keep' | 'reps_up' | 'weight_up' | 'weight_down';
+export type RecommendationKind = 'start' | 'keep' | 'reps_up' | 'weight_up' | 'weight_down' | 'ceiling' | 'reps_down';
 
 export interface Recommendation {
   kind: RecommendationKind;
@@ -71,6 +74,17 @@ export function recommend(state: Counters | undefined, cfg: VariantConfig): Reco
   const plannedSets = cfg.sets;
   if (!state) return { kind: 'start', targetReps: cfg.minReps, plannedSets };
   const { palier } = state;
+  if (cfg.bodyweight) {
+    // Poids du corps : pas de charge à changer, seulement la cible de répétitions.
+    if (state.redStreak >= RED_STREAK_TO_DECREASE && palier.targetReps > cfg.minReps) {
+      return { kind: 'reps_down', targetReps: palier.targetReps - 1, plannedSets };
+    }
+    if (state.redStreak < RED_STREAK_TO_DECREASE && state.greenStreak >= GREEN_STREAK_TO_PROGRESS) {
+      if (palier.targetReps >= cfg.maxReps) return { kind: 'ceiling', targetReps: palier.targetReps, plannedSets };
+      return { kind: 'reps_up', targetReps: palier.targetReps + 1, plannedSets };
+    }
+    return { kind: 'keep', targetReps: palier.targetReps, plannedSets };
+  }
   if (state.redStreak >= RED_STREAK_TO_DECREASE) {
     return { kind: 'weight_down', targetReps: palier.targetReps, plannedSets };
   }
@@ -99,7 +113,7 @@ export function expectedTarget(
   if (cmp > 0) return cfg.minReps;
   if (cmp < 0) return state.palier.targetReps;
   const rec = recommend(state, cfg);
-  return rec.kind === 'reps_up' ? rec.targetReps : state.palier.targetReps;
+  return rec.kind === 'reps_up' || rec.kind === 'reps_down' ? rec.targetReps : state.palier.targetReps;
 }
 
 /**
@@ -154,8 +168,9 @@ export function applyPerformance(
       redStreak = isRed ? prev.redStreak + 1 : complete ? 0 : prev.redStreak;
 
       if (perf.targetReps === prev.palier.targetReps) {
-        // Palier actuel refait : conforme si rien d'autre n'était recommandé, sinon refus (§7.11 D).
-        decision = rec.kind === 'keep' ? 'follow' : 'refusal';
+        // Palier actuel refait : conforme si rien d'autre n'était recommandé (ou au plafond, sans autre cible
+        // possible), sinon refus (§7.11 D).
+        decision = rec.kind === 'keep' || rec.kind === 'ceiling' ? 'follow' : 'refusal';
         standard = decision === 'follow' && standardShape;
         palier = prev.palier;
         if (standard && isGreen) greenStreak = prev.greenStreak + 1;
@@ -166,6 +181,14 @@ export function applyPerformance(
         standard = standardShape;
         palier = performedPalier;
         greenStreak = standard && isGreen ? 1 : 0;
+      } else if (rec.kind === 'reps_down' && perf.targetReps === rec.targetReps) {
+        // Poids du corps : baisse de cible suivie, comme une baisse de charge (§7.8) : nouveau palier, compteurs
+        // repartant de 0 (la séance compte 1 rouge si elle est rouge).
+        decision = 'follow';
+        standard = standardShape;
+        palier = performedPalier;
+        greenStreak = standard && isGreen ? 1 : 0;
+        redStreak = isRed ? 1 : 0;
       } else {
         // §7.11 C : cible choisie manuellement.
         decision = 'manual_target';

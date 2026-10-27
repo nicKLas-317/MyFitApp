@@ -33,13 +33,15 @@ export type CorrectionError = PerformanceError | 'not_found' | 'no_sets';
 /**
  * Corrige la performance d'un exercice dans une séance passée. La performance corrigée doit rester
  * cohérente (poids positif, répétitions sans dépasser la cible…) ; sinon la séance est renvoyée inchangée
- * avec les erreurs. Une correction rend la performance complète (plus d'historique partiel).
+ * avec les erreurs. Une correction rend la performance complète (plus d'historique partiel). Un exercice au poids du
+ * corps (`bodyweight`) garde une charge nulle.
  */
 export function correctPerformance(
   session: Session,
   variantId: string,
   patch: PerformancePatch,
   now: number,
+  bodyweight = false,
 ): { session: Session; errors: CorrectionError[] } {
   const current = session.performances.find((p) => p.variantId === variantId);
   if (!current) return { session, errors: ['not_found'] };
@@ -47,7 +49,7 @@ export function correctPerformance(
   if (patch.reps || patch.targetReps !== undefined || patch.plannedSets !== undefined) delete next.partial;
   // Un ressenti choisi à la main remplace le symbole d'origine importé, qui ne correspond plus.
   if (patch.feeling !== undefined && patch.feeling !== current.feeling) delete next.feelingSymbol;
-  const errors: CorrectionError[] = [...validatePerformance(next)];
+  const errors: CorrectionError[] = [...validatePerformance(next, bodyweight)];
   if (!next.partial && next.reps.length === 0) errors.push('no_sets');
   if (errors.length > 0) return { session, errors };
   return {

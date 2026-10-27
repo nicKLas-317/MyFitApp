@@ -133,7 +133,8 @@ export function Recap({ sessionId }: { sessionId: string }) {
                 <StatusBadge status={ev?.status} />
               </div>
               <div>
-                {formatKg(p.weightKg)} · {p.reps.join(' · ')} <span className="muted">(cible {p.plannedSets} × {p.targetReps})</span>
+                {p.weightKg > 0 && `${formatKg(p.weightKg)} · `}
+                {p.reps.join(' · ')} <span className="muted">(cible {p.plannedSets} × {p.targetReps})</span>
               </div>
               <div className="muted small">{FEELING_LABELS[p.feeling]}</div>
               {next && (

@@ -40,13 +40,14 @@ export function formatRecommendation(rec: Recommendation, assisted = false): str
 
 /** Flèche du repère de progression (§5.3.1) : vers le haut pour une progression, vers le bas pour une baisse. */
 export function markerArrow(marker: ProgressMarker): '↑' | '↓' {
-  return marker.kind === 'weight_down' ? '↓' : '↑';
+  return marker.kind === 'weight_down' || marker.kind === 'reps_down' ? '↓' : '↑';
 }
 
-/** Texte court du repère, sous la cible : « +1 rép. », « +2 rép. », « Poids supérieur », « Moins d’aide »… */
+/** Texte court du repère, sous la cible : « +1 rép. », « +2 rép. », « −1 rép. », « Poids supérieur », « Moins d’aide »… */
 export function markerLabel(marker: ProgressMarker, assisted = false): string {
-  if (marker.kind !== 'reps_up') return loadChangeLabel(marker.kind, assisted);
-  return `+${marker.added} rép.`;
+  if (marker.kind === 'reps_up') return `+${marker.added} rép.`;
+  if (marker.kind === 'reps_down') return `−${marker.removed} rép.`;
+  return loadChangeLabel(marker.kind, assisted);
 }
 
 const kgNumber = (kg: number) => kg.toLocaleString('fr-FR', { maximumFractionDigits: 2 });

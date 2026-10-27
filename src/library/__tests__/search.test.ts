@@ -80,8 +80,9 @@ describe('Recherche par groupe musculaire (§4.1 B)', () => {
     const tri = LIB.filter((e) => e.primaryGroup === 'triceps').flatMap((e) => e.variants.map((v) => v.id)).sort();
     for (const q of ['triceps', 'tris']) expect(ids(q).slice(0, tri.length).sort(), q).toEqual(tri);
     expect(ids('jambes').sort()).toEqual(['abducteurs-machine', 'adducteurs-machine', 'curl-ischios', 'hack-squat', 'leg-curl', 'leg-extension', 'mollets-machine', 'mollets-machine--assis', 'presse-a-cuisses', 'squat-kettlebell']);
-    expect(ids('abdos')).toEqual(['crunch-machine']);
-    expect(ids('abdominaux')).toEqual(['crunch-machine']);
+    // Version 11 : les trois abdos au poids du corps ; le crunch machine (synonyme « Abdos ») en tête.
+    expect(ids('abdos')).toEqual(['crunch-machine', 'crunch-sol', 'crunch-oblique-touche-talons', 'releves-jambes-allonge']);
+    expect(ids('abdominaux')).toEqual(['crunch-machine', 'crunch-sol', 'crunch-oblique-touche-talons', 'releves-jambes-allonge']);
     // Lexique (§4.2.1) : les ischio-jambiers et les quadriceps sont des sous-groupes des jambes.
     expect(ids('ischios').sort()).toEqual(['curl-ischios', 'leg-curl']);
     expect(ids('quadri').sort()).toEqual(['hack-squat', 'leg-extension', 'presse-a-cuisses', 'squat-kettlebell']);

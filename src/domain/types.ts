@@ -28,6 +28,11 @@ export interface VariantConfig {
    * Le sens de la charge est inversé pour le moteur.
    */
   assisted: boolean;
+  /**
+   * Exercice au poids du corps (version 1.24.0) : aucune charge (enregistrée à 0), progression par les répétitions
+   * seulement. Absent = exercice à charge.
+   */
+  bodyweight?: boolean;
 }
 
 /** Exercice-variante : unité d'historique et de progression (§4.3, §7.1). */

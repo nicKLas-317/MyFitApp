@@ -242,7 +242,8 @@ test.describe('Filtres du bilan et cadres de section', () => {
     expect(await section('Jambes')).toEqual([GROUP_RGB.jambes]);
     expect(await section('Abdominaux')).toEqual([GROUP_RGB.abdominaux]);
     // Pictogrammes : fond de la couleur du groupe (crunch : gris clair ; squat kettlebell : blanc).
-    await page.getByRole('searchbox', { name: 'Rechercher un exercice' }).fill('crunch');
+    // « crunch » seul trouve aussi les crunchs au poids du corps (version 11) : le matériel départage.
+    await page.getByRole('searchbox', { name: 'Rechercher un exercice' }).fill('crunch machine');
     await expect(page.locator('.pick-item')).toHaveCount(1);
     expect((await look('.pick-item'))[0]!.picto).toBe(GROUP_RGB.abdominaux);
     await page.getByRole('searchbox', { name: 'Rechercher un exercice' }).fill('squat kettlebell');

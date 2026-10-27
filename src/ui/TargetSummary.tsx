@@ -9,12 +9,13 @@ import { StatusBadge } from './StatusBadge';
 
 /**
  * Mention sous la cible (§5.3.1, §5.3.2) : exercice jamais réalisé, changement recommandé (« ↑ +1 rép. »,
- * « ↑ Poids supérieur »), ou cible identique à la dernière fois. Null : rien (l'utilisateur a choisi une autre
- * charge ou une autre cible, ce n'est plus la progression recommandée).
+ * « ↑ Poids supérieur »), cible identique à la dernière fois, ou plafond atteint (poids du corps). Null : rien
+ * (l'utilisateur a choisi une autre charge ou une autre cible, ce n'est plus la progression recommandée).
  */
 export type TargetHint =
   | { kind: 'start' }
   | { kind: 'same' }
+  | { kind: 'ceiling' }
   | { kind: 'change'; arrow: '↑' | '↓'; label: string; detail?: string }
   | null;
 
@@ -39,6 +40,8 @@ interface Props {
   targetTestId?: string;
   /** Record personnel, affiché sur la fiche (couronne dorée). */
   record?: PersonalRecord | null;
+  /** Exercice au poids du corps : ni charge ni poids de départ. */
+  bodyweight?: boolean;
 }
 
 export function formatTargetLoad(weightKg: number, assisted: boolean): string {
@@ -66,7 +69,13 @@ export function recommendedTarget(state: ProgressState | undefined, start: { set
   const marker = progressMarker(state);
   return {
     target: { sets: rec.plannedSets, reps: rec.targetReps, weightKg: change ? null : state.palier.weightKg },
-    hint: change ? loadChangeHint(change, assisted) : marker ? markerHint(marker, assisted) : { kind: 'same' },
+    hint: change
+      ? loadChangeHint(change, assisted)
+      : marker
+        ? markerHint(marker, assisted)
+        : rec.kind === 'ceiling'
+          ? { kind: 'ceiling' }
+          : { kind: 'same' },
   };
 }
 
@@ -87,7 +96,7 @@ export function cardHint(
   const weightChange = rec && (rec.kind === 'weight_up' || rec.kind === 'weight_down') && samePalier ? rec.kind : null;
   // Repère de progression : il disparaît si l'utilisateur change la charge ou la cible.
   const marker = progressMarker(state);
-  const shownMarker = marker && samePalier && (marker.kind !== 'reps_up' || p.targetReps === marker.to.targetReps) ? marker : null;
+  const shownMarker = marker && samePalier && (!('to' in marker) || p.targetReps === marker.to.targetReps) ? marker : null;
   const followsRecommendation = !!rec && samePalier && p.targetReps === rec.targetReps && p.plannedSets === rec.plannedSets;
   const hint: TargetHint =
     weightChange && rec
@@ -95,7 +104,9 @@ export function cardHint(
       : shownMarker
         ? markerHint(shownMarker, assisted)
         : !marker && followsRecommendation
-          ? { kind: 'same' }
+          ? rec.kind === 'ceiling'
+            ? { kind: 'ceiling' }
+            : { kind: 'same' }
           : null;
   return { hint, weightChange };
 }
@@ -133,6 +144,11 @@ export function NextTarget({
           = Même cible : consolide
         </p>
       )}
+      {hint?.kind === 'ceiling' && (
+        <p className="next-hint" data-testid="same-target">
+          = Plafond atteint
+        </p>
+      )}
       {hint?.kind === 'change' && (
         <p className="next-hint change" role="status" data-testid="progress-marker">
           <span aria-hidden="true">{hint.arrow} </span>
@@ -149,7 +165,7 @@ export function NextTarget({
  * courte « 15/10 », retour à la ligne si l'écran est étroit) ; la cible, une seule ligne en grand dans la couleur du
  * groupe, avec la charge, puis une courte mention. Aucune couleur de statut hors de la pastille.
  */
-export function TargetSummary({ state, assisted, lastDate, label, target, hint, targetTestId = 'target', record }: Props) {
+export function TargetSummary({ state, assisted, lastDate, label, target, hint, targetTestId = 'target', record, bodyweight = false }: Props) {
   const last = state?.lastPerformance;
   return (
     <div className="target-summary" data-testid="target-summary">
@@ -160,7 +176,7 @@ export function TargetSummary({ state, assisted, lastDate, label, target, hint, 
             <span className="last-values">
               {assisted && 'aide '}
               {/* Chaque élément reste entier ; la ligne passe à la ligne entre deux éléments plutôt que d'être tronquée. */}
-              {[formatKg(last.weightKg), ...(last.reps.length ? last.reps : ['—']), ...(lastDate ? [formatNumericDay(lastDate)] : [])].map((part, i) => (
+              {[...(bodyweight ? [] : [formatKg(last.weightKg)]), ...(last.reps.length ? last.reps : ['—']), ...(lastDate ? [formatNumericDay(lastDate)] : [])].map((part, i) => (
                 <Fragment key={i}>
                   {i > 0 && ' '}
                   <span className="last-part">
@@ -184,7 +200,7 @@ export function TargetSummary({ state, assisted, lastDate, label, target, hint, 
       )}
       <div className="next-zone">
         <p className="zone-label">{label}</p>
-        <NextTarget target={target} assisted={assisted} hint={hint} targetTestId={targetTestId} />
+        <NextTarget target={target} assisted={assisted} hint={hint} targetTestId={targetTestId} {...(bodyweight ? { startLabel: 'Première fois' } : {})} />
       </div>
     </div>
   );

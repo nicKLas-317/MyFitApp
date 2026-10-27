@@ -2,7 +2,7 @@ import { useId, useState } from 'react';
 import type { Exercise, MuscleGroup, Variant } from '../../domain/types';
 import { useApp } from '../../app/store';
 import { navigateBack, navigateReplace } from '../../app/hooks';
-import { resolveConfig } from '../../engine';
+import { BODYWEIGHT_RANGE, DEFAULT_VARIANT_CONFIG, resolveConfig } from '../../engine';
 import {
   createExercise,
   EQUIPMENT_OPTIONS,
@@ -29,6 +29,7 @@ interface VariantForm {
   minReps: string;
   maxReps: string;
   assisted: boolean;
+  bodyweight: boolean;
   archived: boolean;
   removed: boolean;
 }
@@ -42,6 +43,18 @@ interface Props {
   forSession?: boolean;
   /** Création depuis l'ajout à la séance prévue (§5.9) : l'exercice créé y est ajouté. */
   forPlan?: boolean;
+}
+
+/**
+ * Passage au poids du corps (ou retour) : la plage par défaut suit (8 à 12 ↔ 10 à 40) si elle n'avait pas été
+ * changée ; un exercice au poids du corps n'est pas assisté.
+ */
+function bodyweightPatch(v: VariantForm, on: boolean): Partial<VariantForm> {
+  const [fromMin, fromMax, toMin, toMax] = on
+    ? [DEFAULT_VARIANT_CONFIG.minReps, DEFAULT_VARIANT_CONFIG.maxReps, BODYWEIGHT_RANGE.minReps, BODYWEIGHT_RANGE.maxReps]
+    : [BODYWEIGHT_RANGE.minReps, BODYWEIGHT_RANGE.maxReps, DEFAULT_VARIANT_CONFIG.minReps, DEFAULT_VARIANT_CONFIG.maxReps];
+  const defaultRange = v.minReps === String(fromMin) && v.maxReps === String(fromMax);
+  return { bodyweight: on, ...(on ? { assisted: false } : {}), ...(defaultRange ? { minReps: String(toMin), maxReps: String(toMax) } : {}) };
 }
 
 /** Création et modification d'un exercice et de ses variantes (§4.3, §14). */
@@ -66,6 +79,7 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false,
         minReps: String(cfg.minReps),
         maxReps: String(cfg.maxReps),
         assisted: cfg.assisted,
+        bodyweight: !!cfg.bodyweight,
         archived: v.archived,
         removed: false,
       };
@@ -120,7 +134,13 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false,
         const err = validateVariantName(next, form.name, form.id);
         if (err) list.push(`${label} : ${err === 'name_missing' ? 'nom manquant' : 'nom déjà utilisé'}.`);
       }
-      const cfg = { sets: Number(form.sets), minReps: Number(form.minReps), maxReps: Number(form.maxReps), assisted: form.assisted };
+      const cfg = {
+        sets: Number(form.sets),
+        minReps: Number(form.minReps),
+        maxReps: Number(form.maxReps),
+        assisted: form.assisted,
+        ...(form.bodyweight ? { bodyweight: true } : {}),
+      };
       const cfgErrors = validateConfig(cfg);
       if (cfgErrors.includes('sets')) list.push(`${label} : nombre de séries entre 1 et 10.`);
       if (cfgErrors.includes('range')) list.push(`${label} : plage de répétitions invalide (minimum ≤ maximum).`);
@@ -251,8 +271,25 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false,
                     <NumberField label="Rép. max" value={v.maxReps} onChange={(t) => patchVariant(v.id, { maxReps: t })} />
                   </div>
                   <label className="check-line">
-                    <input type="checkbox" checked={v.assisted} onChange={(e) => patchVariant(v.id, { assisted: e.target.checked })} />
+                    <input
+                      type="checkbox"
+                      checked={v.assisted}
+                      onChange={(e) => patchVariant(v.id, { assisted: e.target.checked, ...(e.target.checked ? { bodyweight: false } : {}) })}
+                    />
                     <span>Exercice assisté : la charge est une aide (moins d’aide = plus dur)</span>
+                  </label>
+                  {/* Poids du corps : sans charge enregistrée. Figé dès qu'il existe un historique (charges incompatibles). */}
+                  <label className="check-line">
+                    <input
+                      type="checkbox"
+                      checked={v.bodyweight}
+                      disabled={locked}
+                      onChange={(e) => patchVariant(v.id, bodyweightPatch(v, e.target.checked))}
+                    />
+                    <span>
+                      Poids du corps : sans charge, progression par les répétitions
+                      {locked && <span className="muted"> (déjà réalisé : non modifiable)</span>}
+                    </span>
                   </label>
                   {!standard && (
                     <div className="row">
@@ -270,7 +307,9 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false,
                 </fieldset>
               );
             })}
-            <p className="muted small">Par défaut : 3 séries de 8 à 12 répétitions. Un réglage modifié recalcule la progression de la variante.</p>
+            <p className="muted small">
+              Par défaut : 3 séries de 8 à 12 répétitions (de 10 à 40 au poids du corps). Un réglage modifié recalcule la progression de la variante.
+            </p>
           </section>
         )}
 

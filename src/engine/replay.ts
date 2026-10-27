@@ -73,7 +73,8 @@ function foldSession(profile: Profile, session: Session, settings: EngineSetting
     }
     seenVariants.add(perf.variantId);
 
-    const errors = validatePerformance(perf);
+    const cfg = resolveConfig(settings, perf.variantId);
+    const errors = validatePerformance(perf, cfg.bodyweight);
     if (errors.length > 0) {
       ignored.push({ ...base, reasons: errors });
       continue;
@@ -82,7 +83,6 @@ function foldSession(profile: Profile, session: Session, settings: EngineSetting
       ignored.push({ ...base, reasons: ['partial'] });
       continue;
     }
-    const cfg = resolveConfig(settings, perf.variantId);
     const { state, evaluation } = applyPerformance(variants[perf.variantId], perf, session.id, cfg);
     variants[perf.variantId] = state;
     evaluations.push(evaluation);

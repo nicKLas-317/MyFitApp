@@ -86,8 +86,9 @@ export function recordKeys(records: Records): Set<string> {
   return new Set(records.breaks.map((b) => `${b.sessionId}|${b.variantId}`));
 }
 
-/** « 3 × 9 à 20 kg », « 3 × 12 avec 30 kg d’aide ». */
+/** « 3 × 9 à 20 kg », « 3 × 12 avec 30 kg d’aide », « 3 × 25 » (poids du corps). */
 export function formatRecord(r: Mark): string {
+  if (r.weightKg === 0) return `${r.sets} × ${r.reps}`;
   return `${r.sets} × ${r.reps} ${r.assisted ? `avec ${formatKg(r.weightKg)} d’aide` : `à ${formatKg(r.weightKg)}`}`;
 }
 

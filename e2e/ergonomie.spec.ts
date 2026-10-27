@@ -530,7 +530,10 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
     await page.evaluate(() => window.scrollTo(0, 0));
     await expectClean(page, 'Séance, menu du cardio');
     await page.keyboard.press('Escape');
+    // Exercice au poids du corps (version 1.24.0) : carte ouverte sans champ de poids.
+    await addExercise(page, 'crunch au sol', 'Crunch au sol');
     await page.evaluate(() => window.scrollTo(0, 0));
+    await expectClean(page, 'Séance, exercice au poids du corps');
     const restore = await largeText(page);
     await expectClean(page, 'Séance, texte agrandi', 1.15);
     await restore();
@@ -539,7 +542,13 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
     await expectClean(page, 'Ajout d’un exercice');
     // Fin de séance : récapitulatif.
     await page.getByRole('link', { name: 'Retour à la séance' }).click();
+    // Le crunch au sol, ajouté en dernier, est ouvert : le chest press est rouvert ; son ressenti ouvre le crunch.
+    await card.locator('.card-header').click();
     await doExercise(card, 3, 'Bien');
+    const crunch = page.locator('article[aria-label="Crunch au sol"]');
+    await expect(crunch).toHaveClass(/open/);
+    await crunch.getByRole('button', { name: 'Valider les 3 séries' }).click();
+    await crunch.getByRole('button', { name: 'Bien', exact: true }).click();
     await page.getByRole('button', { name: 'Terminer la séance' }).click();
     await finishSheet(page).getByRole('button', { name: 'Oui, terminer' }).click();
     await expect(page.getByRole('heading', { name: 'Séance terminée' })).toBeVisible();

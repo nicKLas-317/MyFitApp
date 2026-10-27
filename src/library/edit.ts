@@ -4,7 +4,7 @@
  * qui est rattaché à l'identifiant de la variante.
  */
 import type { Exercise, MuscleGroup, Session, Variant, VariantConfig } from '../domain/types';
-import { DEFAULT_VARIANT_CONFIG } from '../engine';
+import { BODYWEIGHT_RANGE, DEFAULT_VARIANT_CONFIG } from '../engine';
 import { GRIPS, gripOf, MEDIUM_GRIP, normalizeName } from './text';
 
 /** Matériel proposé à la saisie ; le champ reste libre pour les données importées. */
@@ -191,10 +191,15 @@ export function validateConfig(cfg: VariantConfig): ConfigError[] {
   return errors;
 }
 
-/** Ne conserve que les valeurs qui diffèrent des réglages par défaut ; aucune différence = pas de réglage spécifique. */
+/**
+ * Ne conserve que les valeurs qui diffèrent des réglages par défaut ; aucune différence = pas de réglage spécifique.
+ * Exercice au poids du corps : la plage par défaut est celle du poids du corps (10 à 40).
+ */
 export function compactConfig(cfg: VariantConfig): Partial<VariantConfig> | undefined {
   const out: Partial<VariantConfig> = {};
-  for (const k of ['sets', 'minReps', 'maxReps'] as const) if (cfg[k] !== DEFAULT_VARIANT_CONFIG[k]) out[k] = cfg[k];
+  const defaults = cfg.bodyweight ? { ...DEFAULT_VARIANT_CONFIG, ...BODYWEIGHT_RANGE } : DEFAULT_VARIANT_CONFIG;
+  if (cfg.bodyweight) out.bodyweight = true;
+  for (const k of ['sets', 'minReps', 'maxReps'] as const) if (cfg[k] !== defaults[k]) out[k] = cfg[k];
   if (cfg.assisted) out.assisted = true;
   return Object.keys(out).length > 0 ? out : undefined;
 }

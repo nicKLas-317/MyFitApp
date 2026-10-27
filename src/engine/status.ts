@@ -38,10 +38,13 @@ export type PerformanceError =
   | 'reps_above_target'
   | 'too_many_sets';
 
-/** Vérifie qu'une performance respecte les invariants de saisie. Liste vide = valide. */
-export function validatePerformance(perf: Performance): PerformanceError[] {
+/**
+ * Vérifie qu'une performance respecte les invariants de saisie. Liste vide = valide. Un exercice au poids du corps n'a
+ * pas de charge (0) ; tout autre exercice a une charge strictement positive.
+ */
+export function validatePerformance(perf: Performance, bodyweight = false): PerformanceError[] {
   const errors: PerformanceError[] = [];
-  if (!Number.isFinite(perf.weightKg) || perf.weightKg <= 0) errors.push('invalid_weight');
+  if (bodyweight ? perf.weightKg !== 0 : !Number.isFinite(perf.weightKg) || perf.weightKg <= 0) errors.push('invalid_weight');
   if (!isEvaluable(perf)) return errors;
   if (!Number.isInteger(perf.targetReps) || perf.targetReps < 1) errors.push('invalid_target');
   if (!Number.isInteger(perf.plannedSets) || perf.plannedSets < 1) errors.push('invalid_planned_sets');

@@ -152,6 +152,8 @@ export interface ReportDecrease {
   weightKg: number;
   reds: number;
   assisted: boolean;
+  /** Exercice au poids du corps : la baisse recommandée est « cible −1 rép. ». */
+  bodyweight?: boolean;
 }
 
 export interface ReportReds {
@@ -242,11 +244,13 @@ export function buildReport(period: ReportPeriod, input: ReportInput): PeriodRep
   const decreasing = new Set<string>();
   for (const ev of evaluations) {
     const wasDecreasing = decreasing.has(ev.variantId);
-    if (ev.recommendation.kind === 'weight_down') decreasing.add(ev.variantId);
+    // Baisse recommandée : poids inférieur, ou cible −1 pour un exercice au poids du corps.
+    const lowering = ev.recommendation.kind === 'weight_down' || ev.recommendation.kind === 'reps_down';
+    if (lowering) decreasing.add(ev.variantId);
     else decreasing.delete(ev.variantId);
     const date = dateOf.get(ev.sessionId);
     if (date === undefined) continue;
-    const assisted = resolveConfig(settings, ev.variantId).assisted;
+    const { assisted, bodyweight } = resolveConfig(settings, ev.variantId);
     if (isPalierValidated(ev) && (ev.recommendation.kind === 'reps_up' || ev.recommendation.kind === 'weight_up')) {
       progressions.push({
         variantId: ev.variantId,
@@ -269,8 +273,8 @@ export function buildReport(period: ReportPeriod, input: ReportInput): PeriodRep
         assisted,
       });
     }
-    if (ev.recommendation.kind === 'weight_down' && !wasDecreasing) {
-      decreases.push({ variantId: ev.variantId, date, weightKg: ev.palier.weightKg, reds: ev.redStreak, assisted });
+    if (lowering && !wasDecreasing) {
+      decreases.push({ variantId: ev.variantId, date, weightKg: ev.palier.weightKg, reds: ev.redStreak, assisted, ...(bodyweight ? { bodyweight } : {}) });
     }
   }
 
@@ -328,7 +332,8 @@ const shortDay = (date: string) => {
   const [y, m, d] = date.split('-').map(Number);
   return DAY_MONTH.format(new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1));
 };
-const load = (kg: number, assisted: boolean) => (assisted ? `avec ${formatKg(kg)} d’aide` : `à ${formatKg(kg)}`);
+/** « à 20 kg », « avec 30 kg d’aide », précédé d'une espace ; rien pour un exercice au poids du corps (0). */
+const load = (kg: number, assisted: boolean) => (kg === 0 ? '' : assisted ? ` avec ${formatKg(kg)} d’aide` : ` à ${formatKg(kg)}`);
 
 /**
  * Ce à quoi la période est comparée : « à la semaine précédente », ou pour une période en cours la même portion de la
@@ -405,8 +410,8 @@ export function reportSections(report: PeriodReport, name: (variantId: string) =
               const from = `${p.sets}×${p.from.targetReps}`;
               const change: ReportPart[] =
                 p.kind === 'reps_up'
-                  ? [em(`${from} → ${p.sets}×${p.toReps} ${load(p.from.weightKg, p.assisted)}`)]
-                  : [`${from} ${load(p.from.weightKg, p.assisted)} validé → `, em(`${p.assisted ? 'moins d’aide' : 'poids supérieur'}, ${p.sets}×${p.toReps}`)];
+                  ? [em(`${from} → ${p.sets}×${p.toReps}${load(p.from.weightKg, p.assisted)}`)]
+                  : [`${from}${load(p.from.weightKg, p.assisted)} validé → `, em(`${p.assisted ? 'moins d’aide' : 'poids supérieur'}, ${p.sets}×${p.toReps}`)];
               return [`${name(p.variantId)} : `, ...change, ` (${shortDay(p.date)})`];
             })
           : [['Aucun palier validé.']],
@@ -427,13 +432,13 @@ export function reportSections(report: PeriodReport, name: (variantId: string) =
           `${name(r.variantId)} : `,
           ...decreases.flatMap((d, i): ReportPart[] => [
             ...(i > 0 ? [' ; '] : []),
-            `${d.reds}ᵉ séance rouge de suite ${load(d.weightKg, d.assisted)} → `,
-            em(d.assisted ? 'plus d’aide recommandée' : 'poids inférieur recommandé'),
+            `${d.reds}ᵉ séance rouge de suite${load(d.weightKg, d.assisted)} → `,
+            em(d.bodyweight ? 'cible −1 rép. recommandée' : d.assisted ? 'plus d’aide recommandée' : 'poids inférieur recommandé'),
             ` (${shortDay(d.date)})`,
           ]),
         ];
       }
-      const ongoing = r.streak > r.count ? ` (${r.streak} de suite ${load(r.weightKg, r.assisted)})` : '';
+      const ongoing = r.streak > r.count ? ` (${r.streak} de suite${load(r.weightKg, r.assisted)})` : '';
       return [`${name(r.variantId)} : `, em(`${plural(r.count, 'séance rouge', 'séances rouges')} ${inThisPeriod}`), ongoing];
     });
     sections.push({ title: 'En difficulté', lines: difficulty.length > 0 ? difficulty : [['Aucun exercice en difficulté.']] });

@@ -63,8 +63,9 @@ export interface VariantContext {
  * cible attendue et séries standard, aucune série faite. Null sans charge connue.
  */
 export function newPerformance(variantId: string, ctx: VariantContext, startWeightKg?: number): Performance | null {
-  const weightKg = ctx.state?.palier.weightKg ?? startWeightKg;
-  if (weightKg === undefined || !(weightKg > 0)) return null;
+  // Poids du corps : pas de charge (0), rien à demander.
+  const weightKg = ctx.cfg.bodyweight ? 0 : (ctx.state?.palier.weightKg ?? startWeightKg);
+  if (weightKg === undefined || !(weightKg > 0 || ctx.cfg.bodyweight)) return null;
   return {
     variantId,
     weightKg,

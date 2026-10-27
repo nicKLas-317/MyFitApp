@@ -97,6 +97,9 @@ export const ILLUSTRATIONS: Readonly<Record<string, Illustration>> = {
   'barre-au-front': drawn('barre-au-front', 'Lying triceps press with barbell', EVERKINETIC_DATA, [`${EK_DATA}lying-triceps-press-with-barbell-1.png`, `${EK_DATA}lying-triceps-press-with-barbell-2.png`]),
   'kickback': drawn('kickback', 'Triceps kickback with dumbbell', EVERKINETIC, [`${COMMONS}Triceps_kickback_with_dumbbell_1.svg`, `${COMMONS}Triceps_kickback_with_dumbbell_2.svg`]),
   'hack-squat': drawn('hack-squat', 'Hack squat machine', EVERKINETIC_DATA, [`${EK_DATA}hack-squat-machine-1.png`, `${EK_DATA}hack-squat-machine-2.png`]),
+  // Version 11. Crunch au sol (le seul dessin montre les pieds sur un banc, d'un autre style) et crunch oblique touche
+  // talons (aucun dessin) : pictogramme.
+  'releves-jambes-allonge': drawn('releves-jambes-allonge', 'Flat bench leg raises', EVERKINETIC_DATA, [`${EK_DATA}flat-bench-leg-raises-1.png`, `${EK_DATA}flat-bench-leg-raises-2.png`]),
 };
 
 export function illustrationFor(exerciseId: string, variantId?: string): Illustration | undefined {

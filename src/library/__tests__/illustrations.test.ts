@@ -57,7 +57,11 @@ describe('Illustrations embarquées (§4.0.1)', () => {
     for (const id of ['developpe-couche-halteres', 'tractions-assistees', 'pull-over-poulie', 'face-pull', 'oiseau', 'squat-kettlebell']) {
       expect(ILLUSTRATIONS[id], id).toBeUndefined();
     }
-    expect(Object.keys(ILLUSTRATIONS)).toHaveLength(38);
+    // Version 11 : les relevés de jambes allongé ont un dessin ; le crunch au sol et le crunch oblique, non.
+    expect(ILLUSTRATIONS['releves-jambes-allonge']?.title).toBe('Flat bench leg raises');
+    expect(ILLUSTRATIONS['crunch-sol']).toBeUndefined();
+    expect(ILLUSTRATIONS['crunch-oblique-touche-talons']).toBeUndefined();
+    expect(Object.keys(ILLUSTRATIONS)).toHaveLength(39);
   });
 
   it('une variante peut avoir son propre dessin ; sinon elle reprend celui de son exercice', () => {

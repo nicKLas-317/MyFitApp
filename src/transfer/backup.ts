@@ -389,6 +389,7 @@ function validateVariant(v: unknown, path: string, errors: string[]): void {
         if (v.config[k] !== undefined && !(isInt(v.config[k]) && (v.config[k] as number) > 0)) errors.push(`${path}.config.${k} invalide.`);
       }
       if (v.config.assisted !== undefined && typeof v.config.assisted !== 'boolean') errors.push(`${path}.config.assisted invalide.`);
+      if (v.config.bodyweight !== undefined && typeof v.config.bodyweight !== 'boolean') errors.push(`${path}.config.bodyweight invalide.`);
     }
   }
 }
@@ -411,7 +412,8 @@ function validateExercise(e: unknown, path: string, errors: string[]): void {
 function validatePerformanceShape(p: unknown, path: string, errors: string[]): void {
   if (!isObj(p)) return void errors.push(`${path} : performance invalide.`);
   if (!isStr(p.variantId)) errors.push(`${path}.variantId manquant.`);
-  if (!isNum(p.weightKg) || p.weightKg <= 0) errors.push(`${path}.weightKg invalide.`);
+  // 0 seulement pour un exercice au poids du corps (contrôlé avec la bibliothèque, plus bas).
+  if (!isNum(p.weightKg) || p.weightKg < 0) errors.push(`${path}.weightKg invalide.`);
   const partial = p.partial === true;
   if (p.partial !== undefined && typeof p.partial !== 'boolean') errors.push(`${path}.partial invalide.`);
   if (!Array.isArray(p.reps) || !p.reps.every((r) => isInt(r) && r >= 0)) errors.push(`${path}.reps invalide.`);
@@ -489,12 +491,14 @@ export function validateBackup(data: Obj): string[] {
   // Cohérence : identifiants uniques, séances rattachées à des variantes existantes.
   const ids = new Set<string>();
   const variantIds = new Set<string>();
+  const bodyweight = new Set<string>();
   for (const e of exercises as Exercise[]) {
     if (ids.has(e.id)) errors.push(`Exercice en double : ${e.id}.`);
     ids.add(e.id);
     for (const v of e.variants) {
       if (variantIds.has(v.id)) errors.push(`Variante en double : ${v.id}.`);
       variantIds.add(v.id);
+      if (v.config?.bodyweight) bodyweight.add(v.id);
     }
   }
   const sessionIds = new Set<string>();
@@ -510,6 +514,8 @@ export function validateBackup(data: Obj): string[] {
     }
     for (const p of s.performances) {
       if (!variantIds.has(p.variantId)) errors.push(`Séance ${s.id} : exercice inconnu ${p.variantId}.`);
+      // Charge nulle pour un exercice au poids du corps, et pour lui seulement.
+      else if ((p.weightKg === 0) !== bodyweight.has(p.variantId)) errors.push(`Séance ${s.id} : charge invalide pour ${p.variantId}.`);
     }
   }
   if (active > 1) errors.push('Plusieurs séances en cours.');

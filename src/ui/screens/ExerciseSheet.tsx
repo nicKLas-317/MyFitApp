@@ -116,6 +116,7 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
           {...recommendedTarget(state, { sets: ctx.cfg.sets, reps: ctx.cfg.minReps }, ctx.cfg.assisted)}
           targetTestId="sheet-next"
           record={records.current.get(variantId) ?? null}
+          bodyweight={ctx.cfg.bodyweight}
         />
       </section>
 
@@ -163,6 +164,11 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
           {ctx.cfg.assisted && (
             <p className="small assisted-note" data-testid="assisted">
               Exercice assisté : la charge est une aide (moins d’aide = plus dur)
+            </p>
+          )}
+          {ctx.cfg.bodyweight && (
+            <p className="small assisted-note" data-testid="bodyweight">
+              Poids du corps : progression par les répétitions ({ctx.cfg.minReps} à {ctx.cfg.maxReps})
             </p>
           )}
         </div>
@@ -213,8 +219,13 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
               Le graphique se complètera au fil des séances.
             </p>
           )}
-          <p className="muted small">{ctx.cfg.assisted ? 'Aide (kg)' : 'Charge (kg)'}</p>
-          <LineChart data={series.map((p) => ({ date: p.date, value: p.weightKg }))} label={ctx.cfg.assisted ? 'Évolution de l’aide' : 'Évolution de la charge'} unit="kg" testId="chart-weight" />
+          {/* Poids du corps : pas de charge, seulement les répétitions. */}
+          {!ctx.cfg.bodyweight && (
+            <>
+              <p className="muted small">{ctx.cfg.assisted ? 'Aide (kg)' : 'Charge (kg)'}</p>
+              <LineChart data={series.map((p) => ({ date: p.date, value: p.weightKg }))} label={ctx.cfg.assisted ? 'Évolution de l’aide' : 'Évolution de la charge'} unit="kg" testId="chart-weight" />
+            </>
+          )}
           {reps.length > 0 && (
             <>
               <p className="muted small">Répétitions par série (moyenne)</p>
@@ -239,14 +250,17 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
                     <span className="visually-hidden">{formatIsoDay(session.date)}</span>
                   </span>
                   <span className="sheet-history-main">
-                    {formatKg(p.weightKg)}
+                    {/* Poids du corps : pas de charge (0), seulement les répétitions. */}
+                    {p.weightKg > 0 && formatKg(p.weightKg)}
                     {p.partial ? (
                       <span className="muted"> · historique partiel</span>
-                    ) : (
+                    ) : p.weightKg > 0 ? (
                       <>
                         {' '}
                         · {p.reps.join('-')}
                       </>
+                    ) : (
+                      p.reps.join('-')
                     )}
                     {broke.has(`${session.id}|${variantId}`) && (
                       <>

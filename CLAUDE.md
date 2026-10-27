@@ -263,7 +263,13 @@ Bibliothèque version 9 (précision validée) : le « Tirage horizontal » de l'
 
 Bibliothèque version 10 (précision validée) : un groupe secondaire doit être réellement sollicité, pas anecdotique, puisqu'il compte pour ½ séance dans le récapitulatif hebdomadaire (§19.6). Les trois écartés (pec deck, écarté couché haltères, écarté à la poulie) perdent les épaules : ce sont des mouvements d'isolation des pectoraux. Les mouvements composés gardent leur second groupe : tirages, rowings et tractions assistées → biceps ; développés → triceps et épaules ; dips assistés → pectoraux ; oiseau et face pull → dos. Sur une base existante, la correction est appliquée une seule fois, seulement si les groupes n'ont pas été personnalisés ; une sauvegarde antérieure, fusionnée, ne remet pas les épaules.
 
-Volontairement non ajoutés (choix de l'utilisateur) : abdominaux (crunch à la poulie, relevés de jambes), squat à la barre, hip thrust, soulevé de terre jambes tendues, fentes. Les exercices au poids du corps (pompes, tractions et dips sans aide) et le gainage ne sont pas intégrés : l'utilisateur les fait hors application.
+Bibliothèque version 11 (précision validée, version 1.24.0) : abdominaux au poids du corps (§7.13), groupe principal abdominaux, sans groupe secondaire, matériel « poids du corps » :
+
+- **Crunch au sol** (`crunch-sol`) : crunch classique. Synonymes : crunch, crunch classique, floor crunch, crunch sol. « crunch » seul désigne le crunch au sol, en recherche (en tête) comme à l'import (sans demander) ; le **Crunch machine** (salle, pas la poulie) reste l'exercice à charge.
+- **Crunch oblique touche talons** (`crunch-oblique-touche-talons`) : répétitions comptées au total, autant à droite qu'à gauche. Synonymes : heel touches, heel touch, touche talons, touche-talons, crunch oblique, alternate heel touch.
+- **Relevés de jambes allongé** (`releves-jambes-allonge`). Synonymes : relevés de jambes, relevé de jambes, relevés de jambes au sol, lying leg raise, leg raise.
+
+Volontairement non ajoutés (choix de l'utilisateur) : crunch à la poulie, relevés de jambes suspendu, squat à la barre, hip thrust, soulevé de terre jambes tendues, fentes ; pompes, tractions et dips sans aide (faits hors application). La planche (gainage, en secondes) arrive avec la version 1.25.0.
 
 Chaque version de la bibliothèque est installée une seule fois sur une base existante, sans perte de données et sans recréer un exercice supprimé ensuite. Une variante ajoutée à un exercice existant (mollets assis, extension poulie à la barre) l'est aussi une seule fois, sauf si une variante du même nom existe déjà ; la variante standard prend son nom (« Debout », « Corde ») si elle s'appelle encore « Standard », et ses synonymes appris sont conservés.
 
@@ -276,6 +282,8 @@ Cette liste est un point de départ modifiable dans les réglages. Les exercices
 Les illustrations doivent aider à distinguer les machines et les variantes proches. Elles doivent être embarquées dans l'application et utilisables hors ligne.
 
 N'utiliser que des ressources dont la licence autorise explicitement la réutilisation (domaine public, CC0 ou licence libre compatible). Indiquer la source et la licence dans le dépôt. Ne pas télécharger d'images sans licence vérifiable.
+
+Version 11 : les relevés de jambes allongé ont un dessin (everkinetic/data, CC BY-SA 4.0) ; le crunch au sol (seul dessin trouvé : pieds sur un banc, autre style, trompeur) et le crunch oblique touche talons (aucun dessin) gardent un pictogramme (docs/illustrations.md).
 
 Si aucune illustration fiable n'est disponible, utiliser des pictogrammes SVG simples et cohérents par groupe musculaire et type de matériel, plutôt qu'une image trompeuse.
 
@@ -357,6 +365,7 @@ Les notes mélangent le français, l'anglais et l'argot de salle : « latéral r
 - Import : un mot inconnu est écarté du rapprochement quand au moins deux autres mots sont reconnus et plus nombreux (« shoulder press xyz » propose le développé épaules machine, à confirmer) ; un nom identique à un exercice une fois sa prise ou son angle retirés (« Développé couché prise serrée ») désigne cet exercice et sa variante, même si un exercice voisin partage des mots (« Développé couché haltères »).
 - Fautes de frappe : la recherche tolère une lettre de différence dans un mot inconnu (« extenzion »), mais un mot connu de la bibliothèque n'est jamais lu comme une faute de frappe d'un autre : « abducteurs » ne trouve jamais les adducteurs, ni « abduction » l'adduction.
 - « seated row », « row assis » et « tirage horizontal » trouvent le Tirage horizontal machine (appui pectoral) en premier, pas le Rowing haltère, malgré l'équivalence row → rowing (l'expression la plus longue l'emporte, et « assis » doit correspondre).
+- Version 11 : « relevé de jambes » et « leg raise » sont des expressions protégées (« leg » n'y devient pas « jambes ») ; un groupe tapé seul (« jambes », « legs ») ne trouve jamais un exercice d'un autre groupe dont le nom contient ce mot : « Relevés de jambes allongé » n'est trouvé que par son nom, pas par « jambes ». « abdos » trouve le crunch machine en tête, puis les trois abdos au poids du corps.
 - Version 9 : « tirage horizontal » et « seated row » seuls désignent la machine à appui pectoral, en recherche comme à l'import ; « poulie basse », « cable row », « câble » (« tirage horizontal câble ») désignent le tirage à la poulie basse. « row assis » convient aux deux : l'import demande de choisir. « appui pectoral » et « chest supported » sont des expressions protégées : la machine n'est jamais un résultat de « pec », « chest » ou « pectoraux ».
 
 ### 4.3. Gestion des variantes
@@ -430,7 +439,7 @@ Valeurs par défaut :
 
 Lorsque le moteur recommande un changement de charge (§7.6, §7.8), afficher clairement « Poids supérieur » ou « Poids inférieur » et mettre en évidence le champ de poids pour que je saisisse la nouvelle charge. Le moteur n'indique jamais de valeur précise : c'est moi qui saisis le poids réellement disponible sur la machine ou en poids libres.
 
-Pour un exercice jamais réalisé, demander uniquement le poids de départ ; la cible est 3×8.
+Pour un exercice jamais réalisé, demander uniquement le poids de départ ; la cible est 3×8. Exercice au poids du corps (§7.13) : rien à demander, la cible est le bas de sa plage (3×10), sans champ de poids.
 
 Ne pas demander à l'utilisateur de remplir un formulaire pour déterminer la cible.
 
@@ -460,7 +469,8 @@ Sur la fiche d'un exercice et en haut de sa carte dans l'écran de séance (au-d
 - **Prochaine cible** : zone principale. Libellé visible, puis **une seule ligne de cible**, en grand et en gras, dans la couleur du groupe de l'exercice (§3.2), **avec la charge** : « 3 × 9 à 12 kg », « 3 × 9 avec 25 kg d'aide ». Dans la carte de séance, cette ligne suit la charge et la cible réellement saisies (elle remplace l'ancienne ligne « Cible : 3 × 9 », supprimée) ; sur la fiche, c'est la cible recommandée, sans charge quand le moteur recommande d'en changer (« 3 × 8 »). Sous la cible, une courte mention :
   - quand la cible change : le repère de progression (§5.3.1) ;
   - quand la cible est identique à la dernière fois : une mention discrète « = Même cible : consolide » ;
-  - pour un exercice jamais réalisé : « Poids de départ à saisir ».
+  - pour un exercice jamais réalisé : « Poids de départ à saisir » (« Première fois » au poids du corps, §7.13) ;
+  - au poids du corps, au plafond de la plage : « = Plafond atteint » (§7.13).
 - Pendant la séance, si je saisis une autre charge ou une autre cible que celle recommandée, le repère disparaît (§5.3.1) et aucune mention ne le remplace : ce n'est plus la progression recommandée.
 - Pas de vert, d'orange ni de rouge en dehors de la pastille de statut.
 
@@ -849,6 +859,20 @@ Pour une variante assistée, le sens de la charge est inversé dans toutes les r
 
 L'interface parle d'« aide » pour ces variantes (champ « Aide (kg) », fiche marquée « exercice assisté »). À l'import, une charge signalée comme aide dans la source est rapprochée du réglage de l'exercice ; une incohérence est signalée.
 
+### 7.13. Exercices au poids du corps (précision validée, version 1.24.0)
+
+Réglage « Poids du corps » par exercice-variante (`bodyweight`, comme « assisté », §7.12 ; les deux s'excluent) : crunch au sol, crunch oblique touche talons, relevés de jambes allongé (§4.0, version 11).
+
+- **Aucune charge** : la performance est enregistrée avec une charge nulle (0), autorisée pour ces variantes seulement (moteur, correction d'une séance passée, sauvegarde : charge nulle ailleurs, ou charge au poids du corps, refusées). Pas de champ de poids ni de poids de départ ; jamais « 0 kg » affiché (carte, dernière fois, fiche, historique, détail, récapitulatif de fin, bilans, records : « 3 × 25 »). La fiche le signale (« Poids du corps : progression par les répétitions (10 à 40) ») et n'a que le graphique des répétitions.
+- **Plage par défaut : 10 à 40 répétitions**, réglable par exercice (Rép. min / Rép. max) ; 3 séries.
+- **Mêmes règles** que le §7 (statut, deux vertes consécutives, rejeu complet), sur les répétitions seulement :
+  - deux validations : cible + 1 (« ↑ +1 rép. ») ;
+  - au plafond de la plage (y compris une cible manuelle au-delà) : la cible reste au plafond, mention « = Plafond atteint » ; refaire le plafond suit la recommandation (pas un refus) et valide encore ; jamais de poids supérieur ;
+  - quatre rouges consécutives : **cible − 1** (« ↓ −1 rép. », kind `reps_down`), jamais sous la borne basse (au plancher, palier conservé). Suivie : nouveau palier, compteurs repartant de 0 (la séance compte 1 rouge si elle est rouge), comme une baisse de charge (§7.8). Refusée (palier refait) : une nouvelle rouge la maintient, une verte ou une orange complète la retire (§7.11 D).
+- Records (§19.9) : le plus de répétitions, puis le plus de séries. Bilans (§19.7) : progressions sans charge (« 3×24 → 3×25 »), « 4ᵉ séance rouge de suite → cible −1 rép. recommandée ».
+- Réglage figé dès qu'une variante a un historique (charges incompatibles) ; cocher « Poids du corps » passe une plage restée par défaut de 8–12 à 10–40 (et inversement).
+- Les exercices à charge ne changent pas : moteur, statuts et recommandations identiques (vérifié sur les vraies données de l'utilisateur, instantané de la version 1.23.2 dans `perso/`).
+
 ## 8. Affichage du statut : trois couleurs uniquement
 
 Afficher trois couleurs pour indiquer l'état de progression, calculées par le moteur selon le §7.4.
@@ -1167,7 +1191,7 @@ Prévoir une page de réglages simple (sections repliables, toutes fermées à l
 - De personnaliser les noms d'exercices.
 - De gérer les variantes.
 - De modifier les groupes musculaires et les synonymes d'un exercice.
-- De personnaliser la plage de répétitions ou le nombre de séries d'un exercice si nécessaire.
+- De personnaliser la plage de répétitions ou le nombre de séries d'un exercice si nécessaire, et d'indiquer un exercice au poids du corps (§7.13).
 - De renseigner ma taille (§20).
 - D'importer des séances depuis des notes ou du JSON.
 - D'exporter les données complètes.
@@ -1542,6 +1566,14 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 245. (bout en bout) Appuis, séance de 5 exercices, sans défilement : sans plan 23 (série par série : 33), avec plan 13 (chaque exercice déjà ouvert par le ressenti du précédent ; après le dernier, rien d'autre ne s'ouvre) ; avec plan et deux cardios, en tête et entre le 2ᵉ et le 3ᵉ exercice, 15 (chaque cardio ouvert à son tour, validé en un appui, puis l'exercice suivant ouvert).
 246. Migration : un plan des versions 1.23.0–1.23.1 avec deux cardios (format `exercises` / `cardio`) est lu sans perte (identifiant, dates, poids de départ, blocs), cardio après la musculation, sans modifier l'enregistrement lu ; un plan déjà au nouveau format est inchangé ; un ancien plan invalide reste refusé ; le plan migré se déplace comme un autre ; sauvegarde au format 4 avec ce plan acceptée et convertie (format 5), formats mélangés refusés ; séance démarrée en 1.23.1 (origine sans ordre) : exercices puis cardio. Bout en bout : plan au format 1.23.1 écrit dans la base, accueil et préparation dans l'ordre affiché jusqu'ici, base non réécrite à la lecture, export au format 5, cardio remonté (enregistré au nouveau format, même identifiant), même ordre à la salle.
 Le test 225 contrôle aussi l'accueil avec un plan, la préparation (vide, avec cardio et suppression ouverts, menu d'un exercice et menu d'un cardio ouverts, cardio placé entre deux exercices), l'ajout à la séance prévue, la séance prévue démarrée (texte à 115 % compris) et le volet de fin avec les non faits.
+
+### Abdos et poids du corps (§4.0, §7.13, version 1.24.0)
+
+247. Plage 10 à 40 (réglable ; exercices à charge inchangés) ; charge nulle valide au poids du corps seulement ; première séance dans la plage standard ; deux vertes → +1 rép. ; une verte, ou vert-orange-vert : rien ; au plafond, la cible reste (« Plafond atteint »), refaire le plafond suit et valide encore ; trois rouges : rien, quatre : cible −1 (« ↓ −1 rép. »), suivie (nouveau palier, compteurs à 0) ou refusée (rouge : maintenue, verte : retirée) ; jamais sous la borne basse ; une performance avec charge est écartée du moteur.
+248. Ajout sans poids de départ (3 × 10, charge 0), « Valider les 3 séries » ; correction d'une séance passée (charge nulle gardée, refusée ailleurs) ; réglage enregistré (« poids du corps » gardé, plage par défaut non recopiée) ; record « 3 × 25 » ; bilan : progression et « cible −1 rép. recommandée », jamais « 0 kg ».
+249. Bibliothèque version 11 : trois exercices d'abdos au poids du corps (groupe, matériel, réglage) ; crunch machine inchangé ; recherche (« crunch » → crunch au sol en tête, heel touches, leg raise, « abdos ») ; « jambes », « legs », « leg » ne trouvent pas les relevés ; import direct (« crunch » → crunch au sol, sans demander) ; récapitulatif avec les abdos.
+250. Base existante en version 10 : ajout une seule fois, séances intactes, exercice supprimé jamais recréé ; sauvegarde d'un crunch au sol sans charge identique après import ; charge nulle hors poids du corps, charge au poids du corps ou réglage invalide refusés ; sauvegarde antérieure fusionnée sans rien retirer.
+251. (bout en bout) « Abdominaux » activé dans le récapitulatif ; crunch au sol ajouté sans poids de départ, sans champ de poids, « 3 × 10 », « Première fois », « 0/3 » ; deux séances → fiche « 3 × 11 », « ↑ +1 rép. », record « 3 × 10 (27 oct.) », historique et détail sans « 0 kg » ; fiche avec la mention « Poids du corps… (10 à 40) » et le seul graphique des répétitions ; récapitulatif « Abdominaux (2×) », jambes non comptées ; carte du crunch oblique dans l'écran à 360 px. Le test 225 contrôle aussi une carte au poids du corps ouverte en séance (texte à 115 % compris).
 
 ### Ton de l'appli (§3.6, version 1.22.2)
 

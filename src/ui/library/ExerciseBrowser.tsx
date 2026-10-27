@@ -164,7 +164,7 @@ function ExerciseItem({ ref_: ref, via, onPick, below, aside, note }: ItemProps)
             </span>
           </span>
           <span className="pick-meta">
-            {state && <span className="small">{formatKg(state.palier.weightKg)}</span>}
+            {state && state.palier.weightKg > 0 && <span className="small">{formatKg(state.palier.weightKg)}</span>}
             <StatusBadge status={state?.lastStatus} />
           </span>
         </button>
@@ -214,7 +214,7 @@ function GripItem({ exercise, items, onPick, below, note }: { exercise: Exercise
               onClick={() => onPick(ref)}
             >
               <span>{gripLabel(ref)}</span>
-              {state && <span className="muted">{formatKg(state.palier.weightKg)}</span>}
+              {state && state.palier.weightKg > 0 && <span className="muted">{formatKg(state.palier.weightKg)}</span>}
               <StatusBadge status={state?.lastStatus} />
               {extra && <span aria-hidden="true">✓</span>}
             </button>

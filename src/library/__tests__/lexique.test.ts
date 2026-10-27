@@ -40,7 +40,7 @@ describe('Lexique d’équivalences (§4.2.1)', () => {
     expect(ids('pec fly')).toEqual(['pec-deck']);
     // Autres groupes du lexique.
     expect(ids('delts')).toEqual(expect.arrayContaining(['developpe-epaules-machine', 'elevations-laterales', 'elevations-laterales-machine']));
-    expect(ids('abs')).toEqual(['crunch-machine']);
+    expect(ids('abs')).toEqual(['crunch-machine', 'crunch-sol', 'crunch-oblique-touche-talons', 'releves-jambes-allonge']);
     const tri = LIB.filter((e) => e.primaryGroup === 'triceps').flatMap((e) => e.variants.map((v) => v.id)).sort();
     expect(ids('tris').slice(0, tri.length).sort()).toEqual(tri);
     expect(ids('legs').sort()).toEqual(['abducteurs-machine', 'adducteurs-machine', 'curl-ischios', 'hack-squat', 'leg-curl', 'leg-extension', 'mollets-machine', 'mollets-machine--assis', 'presse-a-cuisses', 'squat-kettlebell']);

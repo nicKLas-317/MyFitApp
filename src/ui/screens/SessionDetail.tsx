@@ -113,13 +113,14 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
             </div>
             <div>
               {ctxFor(p.variantId).cfg.assisted && 'aide '}
-              {formatKg(p.weightKg)}
+              {/* Poids du corps : pas de charge (0), seulement les répétitions. */}
+              {p.weightKg > 0 && formatKg(p.weightKg)}
               {p.partial ? (
                 <span className="muted"> · historique partiel</span>
               ) : (
                 <>
-                  {' '}
-                  · {p.reps.join(' · ')} <span className="muted small">(cible {p.plannedSets} × {p.targetReps})</span>
+                  {p.weightKg > 0 && ' · '}
+                  {p.reps.join(' · ')} <span className="muted small">(cible {p.plannedSets} × {p.targetReps})</span>
                 </>
               )}
             </div>
@@ -132,9 +133,10 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
             {editing === p.variantId ? (
               <PerformanceEditor
                 performance={p}
+                bodyweight={!!ctxFor(p.variantId).cfg.bodyweight}
                 onCancel={() => setEditing(null)}
                 onSave={(patch) => {
-                  const result = correctPerformance(session, p.variantId, patch, Date.now());
+                  const result = correctPerformance(session, p.variantId, patch, Date.now(), ctxFor(p.variantId).cfg.bodyweight);
                   if (result.errors.length === 0) {
                     setEditing(null);
                     void save(result.session);
@@ -248,13 +250,15 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
 
 interface EditorProps {
   performance: Performance;
+  /** Exercice au poids du corps : pas de champ de poids. */
+  bodyweight: boolean;
   onSave(patch: { weightKg?: number; targetReps?: number; plannedSets?: number; reps?: number[]; feeling?: Feeling }): CorrectionError[];
   onCancel(): void;
   onRemove(): void;
 }
 
 /** Correction d'une performance passée ; la performance reste cohérente (cible jamais dépassée…). */
-function PerformanceEditor({ performance: p, onSave, onCancel, onRemove }: EditorProps) {
+function PerformanceEditor({ performance: p, bodyweight, onSave, onCancel, onRemove }: EditorProps) {
   const id = useId();
   const [weight, setWeight] = useState(String(p.weightKg).replace('.', ','));
   const [reps, setReps] = useState(p.reps.join('-'));
@@ -265,7 +269,7 @@ function PerformanceEditor({ performance: p, onSave, onCancel, onRemove }: Edito
   const [confirmRemove, setConfirmRemove] = useState(false);
 
   function submit() {
-    const weightKg = parseWeight(weight);
+    const weightKg = bodyweight ? 0 : parseWeight(weight);
     const list = (reps.match(/\d+/g) ?? []).map(Number);
     if (weightKg === null) return setErrors(['Poids invalide.']);
     const result = onSave({ weightKg, reps: list, plannedSets: Number(sets), targetReps: Number(target), feeling });
@@ -281,10 +285,12 @@ function PerformanceEditor({ performance: p, onSave, onCancel, onRemove }: Edito
       }}
     >
       <div className="field-grid">
-        <div className="draft-field">
-          <label htmlFor={`${id}-w`}>Poids (kg)</label>
-          <input id={`${id}-w`} type="text" inputMode="decimal" value={weight} onChange={(e) => setWeight(e.target.value)} />
-        </div>
+        {!bodyweight && (
+          <div className="draft-field">
+            <label htmlFor={`${id}-w`}>Poids (kg)</label>
+            <input id={`${id}-w`} type="text" inputMode="decimal" value={weight} onChange={(e) => setWeight(e.target.value)} />
+          </div>
+        )}
         <div className="draft-field">
           <label htmlFor={`${id}-r`}>Répétitions</label>
           <input id={`${id}-r`} type="text" value={reps} placeholder="8-8-8" onChange={(e) => setReps(e.target.value)} />

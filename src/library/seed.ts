@@ -170,10 +170,22 @@ export const SEED_EXERCISES: readonly Exercise[] = [
   withGrips(
     exercise('tirage-horizontal-poulie-basse', 'Tirage horizontal poulie basse', ['Tirage poulie basse', 'Rowing poulie basse', 'Seated cable row', 'Cable row', 'Low row', 'Tirage horizontal poulie'], 'dos', ['biceps'], 'poulie'),
   ),
+  // Version 11. Abdominaux au poids du corps : pas de charge, progression par les répétitions (10 à 40).
+  // « crunch » seul désigne le crunch au sol ; le crunch machine reste l'exercice à charge de la salle.
+  exercise('crunch-sol', 'Crunch au sol', ['Crunch', 'Crunch classique', 'Floor crunch', 'Crunch sol'], 'abdominaux', [], 'poids du corps', {
+    bodyweight: true,
+  }),
+  // Répétitions comptées au total, autant à droite qu'à gauche.
+  exercise('crunch-oblique-touche-talons', 'Crunch oblique touche talons', ['Heel touches', 'Heel touch', 'Touche talons', 'Touche-talons', 'Crunch oblique', 'Alternate heel touch'], 'abdominaux', [], 'poids du corps', {
+    bodyweight: true,
+  }),
+  exercise('releves-jambes-allonge', 'Relevés de jambes allongé', ['Relevés de jambes', 'Relevé de jambes', 'Relevés de jambes au sol', 'Lying leg raise', 'Leg raise'], 'abdominaux', [], 'poids du corps', {
+    bodyweight: true,
+  }),
 ];
 
 /** Version de la bibliothèque initiale ; chaque version ajoute des exercices (jamais de suppression). */
-export const SEED_VERSION = 10;
+export const SEED_VERSION = 11;
 
 /**
  * Exercices devenus « à prise » à une version donnée : sur une base existante, leur variante standard prend le nom
@@ -198,6 +210,7 @@ export const SEED_ADDITIONS: Readonly<Record<number, readonly string[]>> = {
     'hack-squat', 'squat-kettlebell',
   ],
   9: ['tirage-horizontal-poulie-basse'],
+  11: ['crunch-sol', 'crunch-oblique-touche-talons', 'releves-jambes-allonge'],
 };
 
 /**

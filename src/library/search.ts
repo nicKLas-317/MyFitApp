@@ -168,6 +168,10 @@ function scoreEntry(entry: SearchEntry, words: string[], phrase: string, raw: st
   let score = 0;
   let via: MatchField = 'name';
   let viaScore = -1;
+  // Un groupe seul (« jambes ») ne trouve pas un exercice d'un autre groupe dont le nom contient ce mot
+  // (« Relevés de jambes allongé » est un exercice d'abdominaux, version 11).
+  const [only] = words;
+  if (words.length === 1 && only && GROUP_WORDS.has(only) && !entry.primary.has(only) && !entry.secondary.has(only)) return null;
   for (const w of words) {
     let wordBest = 0;
     let wordVia: MatchField = 'name';
