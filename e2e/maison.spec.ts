@@ -41,6 +41,10 @@ test.describe('Salle et maison (version 1.26.0)', () => {
     await expect(place.getByRole('button', { name: 'Salle' })).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByRole('button', { name: 'Démarrer une séance', exact: true })).toBeVisible();
     await expect(page.getByTestId('weekly-recap')).toContainText('2 séances · dont 1 maison');
+    // Biceps : 1 à la salle, ½ à la maison (« +1 maison », version 1.26.1) ; épaules (secondaire du curl) : rien.
+    await expect(page.getByTestId('weekly-recap').locator('[data-group="biceps"] .recap-count')).toHaveText(/^ \(1× · \+1\s+maison\)$/);
+    await expect(page.getByTestId('weekly-recap').locator('[data-group="biceps"]')).toHaveAttribute('data-color', 'orange');
+    await expect(page.getByTestId('weekly-recap').locator('[data-group="epaules"] .recap-count')).toHaveCount(0);
     let saved = (await readSessions(page)).sort((a, b) => (a.date < b.date ? -1 : 1));
     expect(saved.map((s) => [s.date, s.location ?? 'salle', s.performances[0]?.weightKg])).toEqual([
       ['2026-10-26', 'salle', 12],

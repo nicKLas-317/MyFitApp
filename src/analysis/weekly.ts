@@ -4,6 +4,8 @@
  * Aucun effet sur le moteur de progression. Le cardio n'entre dans aucun groupe : seul son total figure dans l'en-tête.
  * Une séance compte 1 pour un groupe travaillé en groupe principal, ½ pour un groupe seulement secondaire (travail indirect).
  * Une activité habituelle confirmée (badminton…) compte ½ pour chacun de ses groupes, comme un travail indirect.
+ * Une séance à la maison (version 1.26.1) compte ½ pour le groupe principal de chacun de ses exercices (« +1 maison ») ;
+ * ses groupes secondaires ne comptent pas.
  */
 import type { Exercise, MuscleGroup, Session } from '../domain/types';
 import { cardioMinutes, formatMinutes } from '../cardio/model';
@@ -39,9 +41,11 @@ export interface RecapCell {
   count: number;
   /** Séances de la semaine où le groupe n'a été travaillé qu'en groupe secondaire (travail indirect). */
   indirect: number;
+  /** Séances à la maison de la semaine où le groupe est groupe principal d'un exercice ; absent s'il n'y en a pas. */
+  home?: number;
   /**
-   * Score de la semaine : 1 par séance directe, ½ par séance indirecte. Il détermine la couleur et le tri :
-   * sous 1 (une seule séance indirecte), le groupe reste vert.
+   * Score de la semaine : 1 par séance directe, ½ par séance indirecte ou à la maison. Il détermine la couleur et le
+   * tri : sous 1 (une seule séance indirecte ou à la maison), le groupe reste vert.
    */
   score: number;
   color: RecapColor;
@@ -105,6 +109,8 @@ export interface GroupWork {
   counts: Map<MuscleGroup, number>;
   /** Séances de la période où le groupe n'est que groupe secondaire, et activités habituelles qui le sollicitent. */
   indirects: Map<MuscleGroup, number>;
+  /** Séances à la maison de la période où le groupe est groupe principal d'au moins un exercice (½ chacune). */
+  homes: Map<MuscleGroup, number>;
   /** Dernier moment où le groupe a été travaillé, directement ou non, toutes séances terminées confondues. */
   last: Map<MuscleGroup, number>;
 }
@@ -115,6 +121,8 @@ export interface GroupWork {
  * Une activité habituelle confirmée compte ½ (indirect) pour chacun de ses groupes, sans que le total du jour pour
  * un groupe dépasse 1 : après une séance où il était principal, elle n'ajoute rien ; après une séance où il n'était
  * que secondaire, elle ajoute ½. Elle compte toujours pour « hier » / « aujourd'hui ».
+ * Une séance à la maison compte ½ (« maison ») pour le groupe principal de chacun de ses exercices, au plus ½ par
+ * séance ; ses groupes secondaires ne comptent pas (ni score, ni « hier » / « aujourd'hui »).
  * Les sous-groupes des jambes comptent pour « jambes » quand ils ne sont pas affichés eux-mêmes.
  * `inPeriod` reçoit le début d'une séance ou d'une activité.
  */
@@ -137,6 +145,7 @@ export function groupWork(
 
   const counts = new Map<MuscleGroup, number>();
   const indirects = new Map<MuscleGroup, number>();
+  const homes = new Map<MuscleGroup, number>();
   const last = new Map<MuscleGroup, number>();
   /** Travail compté par jour et par groupe (1 ou ½ par séance), pour plafonner les activités. */
   const daily = new Map<string, number>();
@@ -159,7 +168,12 @@ export function groupWork(
       }
     }
     for (const g of direct) secondary.delete(g);
-    for (const [found, tally, value] of [[direct, counts, 1], [secondary, indirects, 0.5]] as const) {
+    // À la maison : ½ pour les groupes principaux seulement.
+    const home = s.location === 'maison';
+    const tallies = home
+      ? ([[direct, homes, 0.5]] as const)
+      : ([[direct, counts, 1], [secondary, indirects, 0.5]] as const);
+    for (const [found, tally, value] of tallies) {
       for (const g of found) {
         if (counted) {
           tally.set(g, (tally.get(g) ?? 0) + 1);
@@ -181,7 +195,7 @@ export function groupWork(
       last.set(g, Math.max(last.get(g) ?? 0, activityEnd(a)));
     }
   }
-  return { counts, indirects, last };
+  return { counts, indirects, homes, last };
 }
 
 export function weeklyRecap(
@@ -208,15 +222,16 @@ export function weeklyRecap(
     cardio += cardioMinutes(s);
   }
   const activityCount = doneActivities(activities).filter((a) => inWeek(activityStart(a))).length;
-  const { counts, indirects, last } = groupWork(sessions, exercises, settings.groups, inWeek, activities);
+  const { counts, indirects, homes, last } = groupWork(sessions, exercises, settings.groups, inWeek, activities);
 
   const cells: RecapCell[] = settings.groups.map((group) => {
     const count = counts.get(group) ?? 0;
     const indirect = indirects.get(group) ?? 0;
-    const score = count + indirect / 2;
+    const home = homes.get(group) ?? 0;
+    const score = count + indirect / 2 + home / 2;
     const color: RecapColor = score < 1 ? 'vert' : score >= settings.redThreshold ? 'rouge' : 'orange';
     const time = last.get(group);
-    return { group, count, indirect, score, color, recency: time === undefined ? null : recencyOf(time, now) };
+    return { group, count, indirect, ...(home > 0 ? { home } : {}), score, color, recency: time === undefined ? null : recencyOf(time, now) };
   });
   // Vert en haut, puis orange, puis rouge ; à couleur égale, les groupes travaillés hier ou aujourd'hui en dernier,
   // puis score croissant (un vert avec de l'indirect après un vert sans rien).
@@ -232,12 +247,20 @@ export function weeklyRecap(
 }
 
 /**
- * Nombre de séances d'une case, sans fraction : « 1× », « 1× · +1 indirect », « +2 indirect ».
+ * Nombre de séances d'une case, sans fraction : « 1× », « 1× · +1 indirect », « +2 indirect », « +1 maison ».
  * Vide sans aucun travail cette semaine ; une case verte peut afficher « +1 indirect ».
  */
 export function recapCountLabel(cell: RecapCell): string {
-  const parts = [...(cell.count > 0 ? [`${cell.count}×`] : []), ...(cell.indirect > 0 ? [`+${cell.indirect}\u00a0indirect`] : [])];
-  return parts.join(' · ');
+  return workParts(cell, '\u00a0').join(' · ');
+}
+
+/** Parties du travail d'un groupe : « 1× », « +1 indirect », « +1 maison » (récapitulatif et bilans). */
+export function workParts(w: { count: number; indirect: number; home?: number }, space = ' '): string[] {
+  return [
+    ...(w.count > 0 ? [`${w.count}×`] : []),
+    ...(w.indirect > 0 ? [`+${w.indirect}${space}indirect`] : []),
+    ...(w.home ? [`+${w.home}${space}maison`] : []),
+  ];
 }
 
 /** Réglage lu en base ou importé : valeurs inconnues écartées, défaut si invalide. */

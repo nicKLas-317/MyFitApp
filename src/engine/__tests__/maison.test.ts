@@ -3,7 +3,7 @@ import type { Exercise, Performance, Session } from '../../domain/types';
 import { buildReport, periodContaining, reportText } from '../../analysis/report';
 import { computeRecords, formatRecord } from '../../analysis/records';
 import { analyzeProgress, recentChanges } from '../../analysis/progress';
-import { recapTitle, weeklyRecap } from '../../analysis/weekly';
+import { recapCountLabel, recapTitle, weeklyRecap } from '../../analysis/weekly';
 import { groupIndex, groupWeeklySets } from '../../analysis/groups';
 import { setSessionLocation } from '../../history/ops';
 import { buildEngineSettings, displayName, indexVariants } from '../../library/catalog';
@@ -118,7 +118,8 @@ describe('Salle et maison : deux suivis pour un exercice à charge (version 1.26
     const recap = weeklyRecap(week, LIB, now);
     expect(recap).toMatchObject({ sessionCount: 3, homeCount: 1 });
     expect(recapTitle(recap)).toBe('Semaine du lun. 19 au dim. 25 oct. : 3 séances · dont 1 maison');
-    expect(recap.cells.find((c) => c.group === 'biceps')).toMatchObject({ count: 3 });
+    // Deux séances à la salle (1 chacune) et une à la maison (½) : 2,5 (version 1.26.1).
+    expect(recap.cells.find((c) => c.group === 'biceps')).toMatchObject({ count: 2, indirect: 0, home: 1, score: 2.5 });
     // Sans séance à la maison : titre inchangé.
     expect(weeklyRecap(week.filter((s) => !s.location), LIB, now)).not.toHaveProperty('homeCount');
 
@@ -179,5 +180,60 @@ describe('Salle et maison : deux suivis pour un exercice à charge (version 1.26
     expect(compactConfig({ ...DEFAULT_VARIANT_CONFIG, minReps: 10, maxReps: 15, homeMinReps: 10, homeMaxReps: 15 })).toEqual({ minReps: 10, maxReps: 15 });
     expect(validateConfig({ ...DEFAULT_VARIANT_CONFIG, homeMinReps: 16, homeMaxReps: 15 })).toEqual(['home_range']);
     expect(validateConfig({ ...DEFAULT_VARIANT_CONFIG, homeMaxReps: 20 })).toEqual([]);
+  });
+
+  it('259. Récapitulatif et bilans : une séance à la maison compte ½ pour le groupe principal de chaque exercice (« +1 maison »), rien pour les groupes secondaires', () => {
+    // Le cas de l'utilisateur : à la maison, développé incliné haltères 3 × 10 (pectoraux ; épaules et triceps en
+    // secondaire) et 2 séries d'abdos (crunch au sol).
+    const INCLINE = 'developpe-incline--halteres';
+    expect(indexVariants(LIB).get(INCLINE)?.exercise).toMatchObject({ primaryGroup: 'pectoraux', secondaryGroups: ['epaules', 'triceps'] });
+    const morning = done('maison', 27, [
+      perf(10, 10, [10, 10, 10], 'bien', { variantId: INCLINE }),
+      perf(0, 15, [15, 15], 'bien', { variantId: 'crunch-sol', plannedSets: 2 }),
+    ], true);
+    const now = new Date(2026, 9, 27, 20).getTime();
+    const withAbs = { groups: ['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes', 'abdominaux'] as const, redThreshold: 2 };
+    const recap = weeklyRecap([morning], LIB, now, { ...withAbs, groups: [...withAbs.groups] });
+    const cell = (g: string) => recap.cells.find((c) => c.group === g)!;
+    // Pectoraux et abdos : ½ chacun, verts, « +1 maison » (distinct de « +1 indirect »), « aujourd'hui ».
+    for (const g of ['pectoraux', 'abdominaux']) {
+      expect(cell(g), g).toMatchObject({ count: 0, indirect: 0, home: 1, score: 0.5, color: 'vert', recency: 'today' });
+      expect(recapCountLabel(cell(g))).toBe('+1\u00a0maison');
+    }
+    // Triceps et épaules (secondaires) : rien, ni score ni « aujourd'hui ».
+    for (const g of ['triceps', 'epaules']) {
+      expect(cell(g), g).toEqual({ group: g, count: 0, indirect: 0, score: 0, color: 'vert', recency: null });
+      expect(recapCountLabel(cell(g))).toBe('');
+    }
+    // Deux séances à la maison : 1 → orange ; avec une séance à la salle : « 1× · +1 maison ».
+    const second = { ...morning, id: 'maison2', date: '2026-10-26', startedAt: new Date(2026, 9, 26, 9).getTime() };
+    expect(weeklyRecap([morning, second], LIB, now).cells.find((c) => c.group === 'pectoraux')).toMatchObject({ home: 2, score: 1, color: 'orange' });
+    const gym = done('salle', 26, [perf(40, 10, [10, 10, 10], 'bien', { variantId: 'developpe-incline' })]);
+    const mixed = weeklyRecap([morning, gym], LIB, now).cells;
+    expect(mixed.find((c) => c.group === 'pectoraux')).toMatchObject({ count: 1, home: 1, score: 1.5, color: 'orange' });
+    expect(recapCountLabel(mixed.find((c) => c.group === 'pectoraux')!)).toBe('1× · +1\u00a0maison');
+    // La salle ne change pas : triceps et épaules en indirect (½) grâce à la séance à la salle seulement.
+    expect(mixed.find((c) => c.group === 'triceps')).toMatchObject({ count: 0, indirect: 1, score: 0.5 });
+    expect(mixed.find((c) => c.group === 'triceps')).not.toHaveProperty('home');
+
+    // Bilans de la semaine et du mois, et texte du mail : mêmes règles.
+    const name = (id: string) => displayName(indexVariants(LIB).get(id));
+    for (const kind of ['week', 'month'] as const) {
+      const report = buildReport(periodContaining(kind, now), {
+        sessions: [morning], exercises: LIB, evaluations: rebuildProfile([morning], settings).evaluations, settings, groups: [...withAbs.groups], weighIns: [], now,
+      });
+      expect(report.groups.find((g) => g.group === 'pectoraux'), kind).toEqual({ group: 'pectoraux', count: 0, indirect: 0, home: 1 });
+      const text = reportText(report, name);
+      expect(text, kind).toContain('- Pectoraux : +1 maison');
+      expect(text, kind).toContain('- Abdominaux : +1 maison');
+      expect(text, kind).toContain('- Non travaillés : Dos, Épaules, Biceps, Triceps, Jambes');
+      expect(text, kind).not.toContain('indirect');
+    }
+
+    // Inchangés : séries par semaine (la maison en entier), indice par groupe (la maison exclue), moteur.
+    expect(groupWeeklySets([morning], LIB, 'pectoraux', now).weeks.at(-1)).toMatchObject({ direct: 3 });
+    expect(groupWeeklySets([morning], LIB, 'triceps', now).weeks.at(-1)).toMatchObject({ indirect: 3 });
+    expect(groupIndex([morning], LIB, settings, 'pectoraux').sessionCount).toBe(0);
+    expect(rebuildProfile([morning], settings).profile.variants[`${INCLINE}${HOME_SUFFIX}`]).toMatchObject({ palier: { weightKg: 10, targetReps: 10 } });
   });
 });

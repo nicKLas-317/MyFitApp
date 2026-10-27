@@ -12,7 +12,7 @@ import { MUSCLE_GROUP_LABELS } from '../library/seed';
 import { formatDurationLong, formatKg, localDate } from '../session/format';
 import { isPalierValidated } from './progress';
 import { computeRecords, formatRecord, type RecordBreak } from './records';
-import { groupWork, sessionStartTime, weekStart } from './weekly';
+import { groupWork, sessionStartTime, weekStart, workParts } from './weekly';
 
 export type ReportKind = 'week' | 'month';
 
@@ -192,8 +192,8 @@ export interface PeriodReport {
   cardio: { machine: string; minutes: number }[];
   /** Activités habituelles confirmées (hors salle) par nom : nombre et durée totale, dans l'ordre de la première. */
   activities: { name: string; count: number; minutes: number }[];
-  /** Groupes affichés au récapitulatif, dans leur ordre : séances directes et indirectes. */
-  groups: { group: MuscleGroup; count: number; indirect: number }[];
+  /** Groupes affichés au récapitulatif, dans leur ordre : séances directes, indirectes et à la maison (absent sans). */
+  groups: { group: MuscleGroup; count: number; indirect: number; home?: number }[];
   progressions: ReportProgression[];
   /** Records battus pendant la période : le dernier de chaque exercice-variante, dans l'ordre chronologique. */
   records: RecordBreak[];
@@ -249,7 +249,10 @@ export function buildReport(period: ReportPeriod, input: ReportInput): PeriodRep
     const entry = activities.get(a.name) ?? { name: a.name, count: 0, minutes: 0 };
     activities.set(a.name, { ...entry, count: entry.count + 1, minutes: entry.minutes + activityMinutes(a) });
   }
-  const groups = input.groups.map((group) => ({ group, count: work.counts.get(group) ?? 0, indirect: work.indirects.get(group) ?? 0 }));
+  const groups = input.groups.map((group) => {
+    const home = work.homes.get(group) ?? 0;
+    return { group, count: work.counts.get(group) ?? 0, indirect: work.indirects.get(group) ?? 0, ...(home > 0 ? { home } : {}) };
+  });
 
   // Évaluations du moteur, dans l'ordre du rejeu : paliers validés, rouges et passages en « poids inférieur ».
   const dateOf = new Map(list.map((s) => [s.id, s.date]));
@@ -427,12 +430,9 @@ export function reportSections(report: PeriodReport, variantName: (variantId: st
   const sections: ReportSection[] = [{ title: 'Séances', lines: sessionsLines }];
 
   if (totals.sessionCount > 0 || report.activities.length > 0) {
-    const worked = report.groups.filter((g) => g.count > 0 || g.indirect > 0);
-    const idle = report.groups.filter((g) => g.count === 0 && g.indirect === 0);
-    const lines: ReportLine[] = worked.map((g) => {
-      const parts = [...(g.count > 0 ? [`${g.count}×`] : []), ...(g.indirect > 0 ? [`+${g.indirect} indirect`] : [])];
-      return [`${MUSCLE_GROUP_LABELS[g.group]} : ${parts.join(' · ')}`];
-    });
+    const worked = report.groups.filter((g) => g.count > 0 || g.indirect > 0 || !!g.home);
+    const idle = report.groups.filter((g) => g.count === 0 && g.indirect === 0 && !g.home);
+    const lines: ReportLine[] = worked.map((g) => [`${MUSCLE_GROUP_LABELS[g.group]} : ${workParts(g).join(' · ')}`]);
     if (idle.length > 0) lines.push([em(`Non travaillés : ${idle.map((g) => MUSCLE_GROUP_LABELS[g.group]).join(', ')}`)]);
     sections.push({ title: 'Groupes travaillés', lines });
   }
