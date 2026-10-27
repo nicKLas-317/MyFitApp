@@ -236,21 +236,24 @@ test.describe('Séance prévue (§5.9)', () => {
     await finish();
     expect(taps).toBe(1 + 5 * 4 + 2); // 23 (série par série, comme avant : 33)
 
-    // Avec plan, préparé au calme (non compté) : démarrer 1 ; le premier exercice est ouvert : séries 1, ressenti 1 ;
-    // les suivants : l'ouvrir 1, séries 1, ressenti 1 ; terminer 2.
+    // Avec plan, préparé au calme (non compté) : démarrer 1 ; par exercice : séries 1, ressenti 1 (le ressenti ouvre
+    // l'exercice suivant et l'amène à l'écran : 0 appui pour l'ouvrir) ; terminer 2.
     await page.goto('./#/seance-prevue');
     for (const name of names) await planExercise(page, name.toLowerCase(), name);
     await page.goto('./');
     taps = 0;
     await tap(main(page).getByRole('button', { name: 'Démarrer la séance prévue' }));
-    for (const [i, name] of names.entries()) {
+    for (const name of names) {
       const card = exerciseCard(page, name);
-      if (i > 0) await tap(card.locator('.card-header'));
+      await expect(card).toHaveClass(/open/);
       await tap(card.getByRole('button', { name: 'Valider les 3 séries' }));
       await tap(card.getByRole('button', { name: 'Bien', exact: true }));
     }
+    // Tout est terminé : rien d'autre ne s'ouvre, le dernier exercice reste ouvert.
+    await expect(page.locator('article.exercise-card.open')).toHaveCount(1);
+    await expect(exerciseCard(page, 'Curl biceps haltères')).toHaveClass(/open/);
     await finish();
-    expect(taps).toBe(1 + 2 + 4 * 3 + 2); // 17
+    expect(taps).toBe(1 + 5 * 2 + 2); // 13 (17 en 1.23.0)
     const sessions = await readSessions(page);
     expect(sessions.filter((s) => s.state === 'done' && s.date === '2026-10-20').map((s) => s.performances.length)).toEqual([5, 5]);
   });

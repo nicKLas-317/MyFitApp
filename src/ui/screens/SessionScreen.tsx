@@ -75,6 +75,28 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
   const notDone = plannedNotDone(active);
   const unsavedCardio = addingCardio && cardioDraft.kind !== 'empty' ? cardioDraft : null;
 
+  /**
+   * Ressenti donné : ouvre l'exercice suivant non terminé (séries incomplètes ou ressenti manquant), dans l'ordre de la
+   * séance, en reprenant au début après le dernier, et l'amène doucement sous l'en-tête. Tout est terminé : rien ne
+   * s'ouvre.
+   */
+  function openNext(fromId: string) {
+    if (!active) return;
+    const list = active.performances;
+    const i = list.findIndex((p) => p.variantId === fromId);
+    const unfinished = (p: (typeof list)[number]) =>
+      p.variantId !== fromId && (p.plannedSets === null || p.reps.length < p.plannedSets || p.feeling === 'inconnu');
+    const next = [...list.slice(i + 1), ...list.slice(0, Math.max(0, i))].find(unfinished);
+    if (!next) return;
+    setOpenId(next.variantId);
+    requestAnimationFrame(() => {
+      const card = document.querySelector(`article[data-variant="${CSS.escape(next.variantId)}"]`);
+      if (!card) return;
+      const header = document.querySelector('.session-header')?.getBoundingClientRect().height ?? 0;
+      window.scrollTo({ top: card.getBoundingClientRect().top + window.scrollY - header - 8, behavior: 'smooth' });
+    });
+  }
+
   function openCardio(open: boolean) {
     setAddingCardio(open);
     setCardioDraft({ kind: 'empty' });
@@ -124,6 +146,7 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
             performance={p}
             open={p.variantId === current}
             onToggle={() => setOpenId(p.variantId === current ? '' : p.variantId)}
+            onFinished={() => openNext(p.variantId)}
           />
         ))}
       </div>

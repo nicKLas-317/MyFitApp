@@ -260,6 +260,23 @@ test.describe('Barre d’onglets, mode salle et bouton retour (§3.4, §5.8)', (
     expect(await count(() => tap(pec.getByRole('button', { name: 'Bien', exact: true })))).toBe(1);
     // Six exercices : la barre reste à l'écran.
     for (const n of ['Chest press', 'Leg extension', 'Leg curl', 'Crunch machine', 'Curl biceps haltères']) await addExercise(page, n.toLowerCase(), n, '20');
+    // Passer à l'exercice suivant : 0 (avant : 1). Le ressenti du dernier ajouté (curl) ouvre le suivant non terminé dans
+    // l'ordre de la séance, en reprenant au début : le chest press (le pec deck est terminé), amené à l'écran.
+    const curl = page.locator('article[aria-label="Curl biceps haltères"]');
+    expect(
+      await count(async () => {
+        await tap(curl.getByRole('button', { name: 'Valider les 3 séries' }));
+        await tap(curl.getByRole('button', { name: 'Bien', exact: true }));
+      }),
+    ).toBe(2);
+    const chest = page.locator('article[aria-label="Chest press"]');
+    await expect(chest).toHaveClass(/open/);
+    await expect(curl).not.toHaveClass(/open/);
+    await expect(chest.getByRole('button', { name: 'Valider les 3 séries' })).toBeInViewport();
+    // Changer ensuite le ressenti du curl ne déplace rien.
+    await curl.locator('.card-header').click();
+    await curl.getByRole('button', { name: 'Très bien', exact: true }).click();
+    await expect(curl).toHaveClass(/open/);
     // Cardio : 2 et la durée (avant : 2, après défilement).
     expect(
       await count(async () => {

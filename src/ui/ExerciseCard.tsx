@@ -34,9 +34,11 @@ interface Props {
   performance: Performance;
   open: boolean;
   onToggle(): void;
+  /** Premier ressenti donné à un exercice dont toutes les séries sont faites : l'écran ouvre le suivant. */
+  onFinished?(): void;
 }
 
-export function ExerciseCard({ session, performance: p, open, onToggle }: Props) {
+export function ExerciseCard({ session, performance: p, open, onToggle, onFinished }: Props) {
   const { variants, ctxFor, commit, sessions, records } = useApp();
   const ref = variants.get(p.variantId);
   const ctx = ctxFor(p.variantId);
@@ -231,7 +233,12 @@ export function ExerciseCard({ session, performance: p, open, onToggle }: Props)
             <FeelingPicker
               legend="Ressenti global"
               value={p.feeling}
-              onChange={(f) => void commit(setFeeling(session, p.variantId, f, now()))}
+              onChange={(f) => {
+                void commit(setFeeling(session, p.variantId, f, now()));
+                // Exercice terminé (toutes les séries, premier ressenti) : on passe au suivant. Changer ensuite le
+                // ressenti ne déplace plus rien.
+                if (p.feeling === 'inconnu' && done >= planned) onFinished?.();
+              }}
             />
           )}
 
