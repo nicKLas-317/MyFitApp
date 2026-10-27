@@ -1,5 +1,5 @@
 import type { Status, VariantConfig } from '../domain/types';
-import { GREEN_STREAK_TO_PROGRESS, RED_STREAK_TO_DECREASE } from './config';
+import { GREEN_STREAK_TO_PROGRESS, RED_STREAK_TO_DECREASE, repStep } from './config';
 import { computeStatus, isComplete, type EvaluablePerformance } from './status';
 import { compareDifficulty } from './weight';
 
@@ -19,6 +19,8 @@ export interface Palier {
  * - Exercice au poids du corps (version 1.24.0), sans charge à changer :
  *   - `ceiling` : deux validations au plafond de la plage, la cible reste au plafond (« Plafond atteint ») ;
  *   - `reps_down` : quatre rouges de suite, cible − 1 (jamais sous la borne basse).
+ *   Exercice en secondes (version 1.25.0) : même chose par pas de 5 s (`reps_up` +5 s, `reps_down` −5 s), sans
+ *   dépasser les bornes de la plage.
  */
 export type RecommendationKind = 'start' | 'keep' | 'reps_up' | 'weight_up' | 'weight_down' | 'ceiling' | 'reps_down';
 
@@ -75,13 +77,14 @@ export function recommend(state: Counters | undefined, cfg: VariantConfig): Reco
   if (!state) return { kind: 'start', targetReps: cfg.minReps, plannedSets };
   const { palier } = state;
   if (cfg.bodyweight) {
-    // Poids du corps : pas de charge à changer, seulement la cible de répétitions.
+    // Poids du corps : pas de charge à changer, seulement la cible (répétitions, ou secondes par pas de 5 s).
+    const step = repStep(cfg);
     if (state.redStreak >= RED_STREAK_TO_DECREASE && palier.targetReps > cfg.minReps) {
-      return { kind: 'reps_down', targetReps: palier.targetReps - 1, plannedSets };
+      return { kind: 'reps_down', targetReps: Math.max(palier.targetReps - step, cfg.minReps), plannedSets };
     }
     if (state.redStreak < RED_STREAK_TO_DECREASE && state.greenStreak >= GREEN_STREAK_TO_PROGRESS) {
       if (palier.targetReps >= cfg.maxReps) return { kind: 'ceiling', targetReps: palier.targetReps, plannedSets };
-      return { kind: 'reps_up', targetReps: palier.targetReps + 1, plannedSets };
+      return { kind: 'reps_up', targetReps: Math.min(palier.targetReps + step, cfg.maxReps), plannedSets };
     }
     return { kind: 'keep', targetReps: palier.targetReps, plannedSets };
   }

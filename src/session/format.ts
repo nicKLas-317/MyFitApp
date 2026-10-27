@@ -40,6 +40,16 @@ export function formatDurationLong(ms: number): string {
   return h > 0 ? `${h} h ${pad(minutes % 60)}` : `${minutes} min`;
 }
 
+/** Répétitions, ou durée d'un exercice en secondes (gainage) : « 9 », « 30 s ». */
+export function formatReps(n: number, seconds = false): string {
+  return seconds ? `${n} s` : String(n);
+}
+
+/** Séries × répétitions : « 3 × 9 », « 3 × 30 s ». */
+export function formatSetsReps(sets: number, reps: number, seconds = false): string {
+  return `${sets} × ${formatReps(reps, seconds)}`;
+}
+
 /** Poids en français : « 52,5 kg ». */
 export function formatKg(kg: number): string {
   return `${kg.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} kg`;

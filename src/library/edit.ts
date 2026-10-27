@@ -4,7 +4,7 @@
  * qui est rattaché à l'identifiant de la variante.
  */
 import type { Exercise, MuscleGroup, Session, Variant, VariantConfig } from '../domain/types';
-import { BODYWEIGHT_RANGE, DEFAULT_VARIANT_CONFIG } from '../engine';
+import { BODYWEIGHT_RANGE, DEFAULT_VARIANT_CONFIG, SECONDS_RANGE } from '../engine';
 import { GRIPS, gripOf, MEDIUM_GRIP, normalizeName } from './text';
 
 /** Matériel proposé à la saisie ; le champ reste libre pour les données importées. */
@@ -185,7 +185,9 @@ export type ConfigError = 'sets' | 'range';
 export function validateConfig(cfg: VariantConfig): ConfigError[] {
   const errors: ConfigError[] = [];
   if (!Number.isInteger(cfg.sets) || cfg.sets < 1 || cfg.sets > 10) errors.push('sets');
-  if (!Number.isInteger(cfg.minReps) || !Number.isInteger(cfg.maxReps) || cfg.minReps < 1 || cfg.maxReps < cfg.minReps || cfg.maxReps > 50) {
+  // Plage en secondes (gainage) jusqu'à 10 minutes ; en répétitions jusqu'à 50.
+  const ceiling = cfg.seconds ? 600 : 50;
+  if (!Number.isInteger(cfg.minReps) || !Number.isInteger(cfg.maxReps) || cfg.minReps < 1 || cfg.maxReps < cfg.minReps || cfg.maxReps > ceiling) {
     errors.push('range');
   }
   return errors;
@@ -193,12 +195,14 @@ export function validateConfig(cfg: VariantConfig): ConfigError[] {
 
 /**
  * Ne conserve que les valeurs qui diffèrent des réglages par défaut ; aucune différence = pas de réglage spécifique.
- * Exercice au poids du corps : la plage par défaut est celle du poids du corps (10 à 40).
+ * Exercice au poids du corps : la plage par défaut est celle du poids du corps (10 à 40) ; en secondes, 20 à 60 s.
  */
 export function compactConfig(cfg: VariantConfig): Partial<VariantConfig> | undefined {
   const out: Partial<VariantConfig> = {};
-  const defaults = cfg.bodyweight ? { ...DEFAULT_VARIANT_CONFIG, ...BODYWEIGHT_RANGE } : DEFAULT_VARIANT_CONFIG;
-  if (cfg.bodyweight) out.bodyweight = true;
+  const range = cfg.seconds ? SECONDS_RANGE : cfg.bodyweight ? BODYWEIGHT_RANGE : {};
+  const defaults = { ...DEFAULT_VARIANT_CONFIG, ...range };
+  if (cfg.bodyweight || cfg.seconds) out.bodyweight = true;
+  if (cfg.seconds) out.seconds = true;
   for (const k of ['sets', 'minReps', 'maxReps'] as const) if (cfg[k] !== defaults[k]) out[k] = cfg[k];
   if (cfg.assisted) out.assisted = true;
   return Object.keys(out).length > 0 ? out : undefined;

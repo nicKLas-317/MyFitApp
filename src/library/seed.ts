@@ -182,10 +182,15 @@ export const SEED_EXERCISES: readonly Exercise[] = [
   exercise('releves-jambes-allonge', 'Relevés de jambes allongé', ['Relevés de jambes', 'Relevé de jambes', 'Relevés de jambes au sol', 'Lying leg raise', 'Leg raise'], 'abdominaux', [], 'poids du corps', {
     bodyweight: true,
   }),
+  // Version 12. Gainage en secondes : durée par série (20 à 60 s), par pas de 5 s, au poids du corps.
+  exercise('planche', 'Planche', ['Gainage', 'Gainage ventral', 'Gainage planche', 'Plank', 'Front plank'], 'abdominaux', [], 'poids du corps', {
+    bodyweight: true,
+    seconds: true,
+  }),
 ];
 
 /** Version de la bibliothèque initiale ; chaque version ajoute des exercices (jamais de suppression). */
-export const SEED_VERSION = 11;
+export const SEED_VERSION = 12;
 
 /**
  * Exercices devenus « à prise » à une version donnée : sur une base existante, leur variante standard prend le nom
@@ -211,6 +216,7 @@ export const SEED_ADDITIONS: Readonly<Record<number, readonly string[]>> = {
   ],
   9: ['tirage-horizontal-poulie-basse'],
   11: ['crunch-sol', 'crunch-oblique-touche-talons', 'releves-jambes-allonge'],
+  12: ['planche'],
 };
 
 /**

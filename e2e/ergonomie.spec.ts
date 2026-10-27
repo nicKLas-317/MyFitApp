@@ -534,7 +534,13 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
     await addExercise(page, 'crunch au sol', 'Crunch au sol');
     await page.evaluate(() => window.scrollTo(0, 0));
     await expectClean(page, 'Séance, exercice au poids du corps');
+    // Exercice en secondes (version 1.25.0) : séries « 20 s ».
+    await addExercise(page, 'planche', 'Planche');
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expectClean(page, 'Séance, exercice en secondes');
     const restore = await largeText(page);
+    // Le texte agrandi allonge la page et le navigateur garde l'élément ouvert à l'écran : retour en haut.
+    await page.evaluate(() => window.scrollTo(0, 0));
     await expectClean(page, 'Séance, texte agrandi', 1.15);
     await restore();
     await page.getByRole('link', { name: 'Ajouter un exercice' }).click();
@@ -542,13 +548,18 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
     await expectClean(page, 'Ajout d’un exercice');
     // Fin de séance : récapitulatif.
     await page.getByRole('link', { name: 'Retour à la séance' }).click();
-    // Le crunch au sol, ajouté en dernier, est ouvert : le chest press est rouvert ; son ressenti ouvre le crunch.
+    // La planche, ajoutée en dernier, est ouverte : le chest press est rouvert ; son ressenti ouvre le crunch, puis
+    // celui du crunch ouvre la planche.
     await card.locator('.card-header').click();
     await doExercise(card, 3, 'Bien');
     const crunch = page.locator('article[aria-label="Crunch au sol"]');
     await expect(crunch).toHaveClass(/open/);
     await crunch.getByRole('button', { name: 'Valider les 3 séries' }).click();
     await crunch.getByRole('button', { name: 'Bien', exact: true }).click();
+    const planche = page.locator('article[aria-label="Planche"]');
+    await expect(planche).toHaveClass(/open/);
+    await planche.getByRole('button', { name: 'Valider les 3 séries' }).click();
+    await planche.getByRole('button', { name: 'Bien', exact: true }).click();
     await page.getByRole('button', { name: 'Terminer la séance' }).click();
     await finishSheet(page).getByRole('button', { name: 'Oui, terminer' }).click();
     await expect(page.getByRole('heading', { name: 'Séance terminée' })).toBeVisible();

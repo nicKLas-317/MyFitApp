@@ -2,7 +2,8 @@ import { useState } from 'react';
 import type { Performance, Session } from '../domain/types';
 import { useApp } from '../app/store';
 import { displayName } from '../library/catalog';
-import { formatKg } from '../session/format';
+import { formatKg, formatReps } from '../session/format';
+import { repStep } from '../engine';
 import {
   correctSet,
   deleteLastSet,
@@ -59,7 +60,11 @@ export function ExerciseCard({ session, performance: p, open, onToggle, onFinish
 
   // Mention sous la cible (§5.3.1, §5.3.2) : changement de charge à saisir, repère de progression, ou cible identique.
   const assisted = ctx.cfg.assisted;
-  const { hint, weightChange } = cardHint(state, assisted, p);
+  // Exercice en secondes (gainage) : cible et séries en secondes, par pas de 5 s.
+  const seconds = !!ctx.cfg.seconds;
+  const step = repStep(ctx.cfg);
+  const unit = seconds ? ' s' : '';
+  const { hint, weightChange } = cardHint(state, assisted, p, seconds);
 
   const name = displayName(ref);
   // Toutes les séries faites à la cible et mieux que le record des séances précédentes (jamais pour une première fois).
@@ -126,6 +131,7 @@ export function ExerciseCard({ session, performance: p, open, onToggle, onFinish
             target={{ sets: planned, reps: target, weightKg: p.weightKg }}
             hint={hint}
             bodyweight={ctx.cfg.bodyweight}
+            seconds={seconds}
           />
 
           {!ctx.cfg.bodyweight && (
@@ -148,10 +154,12 @@ export function ExerciseCard({ session, performance: p, open, onToggle, onFinish
                 onChange={(v) => void commit(setPlannedSets(session, p.variantId, v, now()))}
               />
               <Stepper
-                label="Répétitions"
+                label={seconds ? 'Secondes' : 'Répétitions'}
                 value={target}
                 min={Math.max(1, ...p.reps)}
-                max={Math.max(30, ctx.cfg.maxReps)}
+                max={seconds ? Math.max(180, ctx.cfg.maxReps) : Math.max(30, ctx.cfg.maxReps)}
+                step={step}
+                unit={unit}
                 onChange={(v) => {
                   setDraft(null);
                   void commit(setTarget(session, p.variantId, v, now()));
@@ -168,11 +176,13 @@ export function ExerciseCard({ session, performance: p, open, onToggle, onFinish
               <li key={i} className="set done">
                 <span className="set-label">Série {i + 1}</span>
                 <Stepper
-                  label={`Répétitions série ${i + 1}`}
+                  label={`${seconds ? 'Secondes' : 'Répétitions'} série ${i + 1}`}
                   hideLabel
                   value={r}
                   min={0}
                   max={target}
+                  step={step}
+                  unit={unit}
                   onChange={(v) => void commit(correctSet(session, p.variantId, i, v, now()), 'Série corrigée')}
                 />
                 <span className="check" aria-label="Enregistrée">
@@ -184,11 +194,13 @@ export function ExerciseCard({ session, performance: p, open, onToggle, onFinish
               <li className="set next">
                 <span className="set-label">Série {done + 1}</span>
                 <Stepper
-                  label={`Répétitions série ${done + 1}`}
+                  label={`${seconds ? 'Secondes' : 'Répétitions'} série ${done + 1}`}
                   hideLabel
                   value={nextValue}
                   min={0}
                   max={target}
+                  step={step}
+                  unit={unit}
                   onChange={setDraft}
                 />
                 <button
@@ -206,7 +218,7 @@ export function ExerciseCard({ session, performance: p, open, onToggle, onFinish
             {Array.from({ length: Math.max(0, planned - done - 1) }, (_, k) => (
               <li key={`todo-${k}`} className="set todo" aria-hidden="true">
                 <span className="set-label">Série {done + k + 2}</span>
-                <span className="muted">{target}</span>
+                <span className="muted">{formatReps(target, seconds)}</span>
               </li>
             ))}
           </ol>
@@ -258,21 +270,27 @@ interface StepperProps {
   value: number;
   min: number;
   max: number;
+  /** Pas du − / + : 1, ou 5 pour des secondes (gainage). Jamais au-delà des bornes. */
+  step?: number;
+  /** Unité de la valeur (« s »), pour le lecteur d'écran seulement. */
+  unit?: string;
   onChange(value: number): void;
 }
 
 /** Contrôle − valeur + ; le « + » est bloqué au maximum (la cible pour une série, §5.4). */
-export function Stepper({ label, hideLabel = false, value, min, max, onChange }: StepperProps) {
+export function Stepper({ label, hideLabel = false, value, min, max, step = 1, unit = '', onChange }: StepperProps) {
   return (
     <div className="stepper" role="group" aria-label={label}>
       {!hideLabel && <span className="stepper-label">{label}</span>}
-      <button type="button" className="step" aria-label={`${label} : moins`} disabled={value <= min} onClick={() => onChange(value - 1)}>
+      <button type="button" className="step" aria-label={`${label} : moins`} disabled={value <= min} onClick={() => onChange(Math.max(min, value - step))}>
         −
       </button>
       <output className="step-value" aria-live="polite">
         {value}
+        {/* Unité lue mais pas affichée : « Valider » doit tenir sur la ligne ; la cible « 3 × 20 s » est juste au-dessus. */}
+        {unit && <span className="visually-hidden">{unit}</span>}
       </output>
-      <button type="button" className="step" aria-label={`${label} : plus`} disabled={value >= max} onClick={() => onChange(value + 1)}>
+      <button type="button" className="step" aria-label={`${label} : plus`} disabled={value >= max} onClick={() => onChange(Math.min(max, value + step))}>
         +
       </button>
     </div>

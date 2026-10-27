@@ -6,7 +6,7 @@ import { goTab } from '../../app/navigation';
 import { createSessionFromTemplate } from '../../engine';
 import { correctPerformance, removePastPerformance, setSessionDate, type CorrectionError } from '../../history/ops';
 import { displayName } from '../../library/catalog';
-import { defaultSessionName, formatDurationLong, formatHour, formatIsoDay, formatKg, localDate } from '../../session/format';
+import { defaultSessionName, formatDurationLong, formatHour, formatIsoDay, formatKg, formatReps, formatSetsReps, localDate } from '../../session/format';
 import { elapsedMs, newId, parseWeight, renameSession } from '../../session/ops';
 import { FEELING_LABELS } from '../labels';
 import { StatusBadge } from '../StatusBadge';
@@ -120,7 +120,8 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
               ) : (
                 <>
                   {p.weightKg > 0 && ' · '}
-                  {p.reps.join(' · ')} <span className="muted small">(cible {p.plannedSets} × {p.targetReps})</span>
+                  {p.reps.map((r) => formatReps(r, ctxFor(p.variantId).cfg.seconds)).join(' · ')}{' '}
+                  <span className="muted small">(cible {formatSetsReps(p.plannedSets ?? 0, p.targetReps ?? 0, ctxFor(p.variantId).cfg.seconds)})</span>
                 </>
               )}
             </div>
@@ -134,6 +135,7 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
               <PerformanceEditor
                 performance={p}
                 bodyweight={!!ctxFor(p.variantId).cfg.bodyweight}
+                seconds={!!ctxFor(p.variantId).cfg.seconds}
                 onCancel={() => setEditing(null)}
                 onSave={(patch) => {
                   const result = correctPerformance(session, p.variantId, patch, Date.now(), ctxFor(p.variantId).cfg.bodyweight);
@@ -252,13 +254,15 @@ interface EditorProps {
   performance: Performance;
   /** Exercice au poids du corps : pas de champ de poids. */
   bodyweight: boolean;
+  /** Exercice en secondes (gainage) : durées par série au lieu des répétitions. */
+  seconds: boolean;
   onSave(patch: { weightKg?: number; targetReps?: number; plannedSets?: number; reps?: number[]; feeling?: Feeling }): CorrectionError[];
   onCancel(): void;
   onRemove(): void;
 }
 
 /** Correction d'une performance passée ; la performance reste cohérente (cible jamais dépassée…). */
-function PerformanceEditor({ performance: p, bodyweight, onSave, onCancel, onRemove }: EditorProps) {
+function PerformanceEditor({ performance: p, bodyweight, seconds, onSave, onCancel, onRemove }: EditorProps) {
   const id = useId();
   const [weight, setWeight] = useState(String(p.weightKg).replace('.', ','));
   const [reps, setReps] = useState(p.reps.join('-'));
@@ -292,15 +296,15 @@ function PerformanceEditor({ performance: p, bodyweight, onSave, onCancel, onRem
           </div>
         )}
         <div className="draft-field">
-          <label htmlFor={`${id}-r`}>Répétitions</label>
-          <input id={`${id}-r`} type="text" value={reps} placeholder="8-8-8" onChange={(e) => setReps(e.target.value)} />
+          <label htmlFor={`${id}-r`}>{seconds ? 'Secondes' : 'Répétitions'}</label>
+          <input id={`${id}-r`} type="text" value={reps} placeholder={seconds ? '30-30-30' : '8-8-8'} onChange={(e) => setReps(e.target.value)} />
         </div>
         <div className="draft-field">
           <label htmlFor={`${id}-s`}>Séries prévues</label>
           <input id={`${id}-s`} type="text" inputMode="numeric" value={sets} onChange={(e) => setSets(e.target.value)} />
         </div>
         <div className="draft-field">
-          <label htmlFor={`${id}-t`}>Cible</label>
+          <label htmlFor={`${id}-t`}>{seconds ? 'Cible (s)' : 'Cible'}</label>
           <input id={`${id}-t`} type="text" inputMode="numeric" value={target} onChange={(e) => setTarget(e.target.value)} />
         </div>
       </div>

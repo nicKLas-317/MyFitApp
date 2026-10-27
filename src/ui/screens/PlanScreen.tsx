@@ -97,7 +97,7 @@ export function PlanScreen() {
             const name = displayName(ref);
             const ctx = ctxFor(item.variantId);
             const p = plannedPerformance(item, ctx);
-            const { hint } = p ? cardHint(ctx.state, ctx.cfg.assisted, p) : { hint: null };
+            const { hint } = p ? cardHint(ctx.state, ctx.cfg.assisted, p, ctx.cfg.seconds) : { hint: null };
             return (
               <li
                 key={itemKey(item)}
@@ -125,6 +125,7 @@ export function PlanScreen() {
                       <NextTarget
                         target={{ sets: p.plannedSets ?? 0, reps: p.targetReps ?? 0, weightKg: p.weightKg }}
                         assisted={ctx.cfg.assisted}
+                        seconds={ctx.cfg.seconds}
                         hint={hint}
                         startLabel={ctx.cfg.bodyweight ? 'Jamais réalisé' : ctx.cfg.assisted ? 'Jamais réalisé : aide de départ' : 'Jamais réalisé : poids de départ'}
                       />

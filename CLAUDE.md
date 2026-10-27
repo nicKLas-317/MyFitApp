@@ -269,7 +269,9 @@ Bibliothèque version 11 (précision validée, version 1.24.0) : abdominaux au p
 - **Crunch oblique touche talons** (`crunch-oblique-touche-talons`) : répétitions comptées au total, autant à droite qu'à gauche. Synonymes : heel touches, heel touch, touche talons, touche-talons, crunch oblique, alternate heel touch.
 - **Relevés de jambes allongé** (`releves-jambes-allonge`). Synonymes : relevés de jambes, relevé de jambes, relevés de jambes au sol, lying leg raise, leg raise.
 
-Volontairement non ajoutés (choix de l'utilisateur) : crunch à la poulie, relevés de jambes suspendu, squat à la barre, hip thrust, soulevé de terre jambes tendues, fentes ; pompes, tractions et dips sans aide (faits hors application). La planche (gainage, en secondes) arrive avec la version 1.25.0.
+Bibliothèque version 12 (précision validée, version 1.25.0) : **Planche** (`planche`), gainage en secondes (§7.13), abdominaux, sans groupe secondaire, matériel « poids du corps », 3 × 20 à 60 s, par pas de 5 s. Synonymes : gainage, gainage ventral, gainage planche, plank, front plank. « gainage » et « plank » la trouvent en tête ; « abdos » la trouve parmi les abdos au poids du corps, après le crunch machine.
+
+Volontairement non ajoutés (choix de l'utilisateur) : crunch à la poulie, relevés de jambes suspendu, squat à la barre, hip thrust, soulevé de terre jambes tendues, fentes ; pompes, tractions et dips sans aide (faits hors application).
 
 Chaque version de la bibliothèque est installée une seule fois sur une base existante, sans perte de données et sans recréer un exercice supprimé ensuite. Une variante ajoutée à un exercice existant (mollets assis, extension poulie à la barre) l'est aussi une seule fois, sauf si une variante du même nom existe déjà ; la variante standard prend son nom (« Debout », « Corde ») si elle s'appelle encore « Standard », et ses synonymes appris sont conservés.
 
@@ -283,7 +285,7 @@ Les illustrations doivent aider à distinguer les machines et les variantes proc
 
 N'utiliser que des ressources dont la licence autorise explicitement la réutilisation (domaine public, CC0 ou licence libre compatible). Indiquer la source et la licence dans le dépôt. Ne pas télécharger d'images sans licence vérifiable.
 
-Version 11 : les relevés de jambes allongé ont un dessin (everkinetic/data, CC BY-SA 4.0) ; le crunch au sol (seul dessin trouvé : pieds sur un banc, autre style, trompeur) et le crunch oblique touche talons (aucun dessin) gardent un pictogramme (docs/illustrations.md).
+Version 11 : les relevés de jambes allongé ont un dessin (everkinetic/data, CC BY-SA 4.0) ; le crunch au sol (seul dessin trouvé : pieds sur un banc, autre style, trompeur) et le crunch oblique touche talons (aucun dessin) gardent un pictogramme (docs/illustrations.md). Version 12 : la planche garde un pictogramme (seule la planche latérale est dessinée, un autre mouvement).
 
 Si aucune illustration fiable n'est disponible, utiliser des pictogrammes SVG simples et cohérents par groupe musculaire et type de matériel, plutôt qu'une image trompeuse.
 
@@ -439,7 +441,7 @@ Valeurs par défaut :
 
 Lorsque le moteur recommande un changement de charge (§7.6, §7.8), afficher clairement « Poids supérieur » ou « Poids inférieur » et mettre en évidence le champ de poids pour que je saisisse la nouvelle charge. Le moteur n'indique jamais de valeur précise : c'est moi qui saisis le poids réellement disponible sur la machine ou en poids libres.
 
-Pour un exercice jamais réalisé, demander uniquement le poids de départ ; la cible est 3×8. Exercice au poids du corps (§7.13) : rien à demander, la cible est le bas de sa plage (3×10), sans champ de poids.
+Pour un exercice jamais réalisé, demander uniquement le poids de départ ; la cible est 3×8. Exercice au poids du corps (§7.13) : rien à demander, la cible est le bas de sa plage (3×10 ; planche : 3 × 20 s), sans champ de poids.
 
 Ne pas demander à l'utilisateur de remplir un formulaire pour déterminer la cible.
 
@@ -471,6 +473,7 @@ Sur la fiche d'un exercice et en haut de sa carte dans l'écran de séance (au-d
   - quand la cible est identique à la dernière fois : une mention discrète « = Même cible : consolide » ;
   - pour un exercice jamais réalisé : « Poids de départ à saisir » (« Première fois » au poids du corps, §7.13) ;
   - au poids du corps, au plafond de la plage : « = Plafond atteint » (§7.13).
+  - en secondes (planche, §7.13) : la cible et la dernière fois sont en secondes (« 3 × 25 s », « 20 s · 20 s · 20 s »), le repère aussi (« ↑ +5 s », « ↓ −5 s »).
 - Pendant la séance, si je saisis une autre charge ou une autre cible que celle recommandée, le repère disparaît (§5.3.1) et aucune mention ne le remplace : ce n'est plus la progression recommandée.
 - Pas de vert, d'orange ni de rouge en dehors de la pastille de statut.
 
@@ -873,6 +876,13 @@ Réglage « Poids du corps » par exercice-variante (`bodyweight`, comme « assi
 - Réglage figé dès qu'une variante a un historique (charges incompatibles) ; cocher « Poids du corps » passe une plage restée par défaut de 8–12 à 10–40 (et inversement).
 - Les exercices à charge ne changent pas : moteur, statuts et recommandations identiques (vérifié sur les vraies données de l'utilisateur, instantané de la version 1.23.2 dans `perso/`).
 
+**Exercices en secondes (précision validée, version 1.25.0)** : réglage « En secondes (gainage) » (`seconds`, toujours avec `bodyweight`) : la planche (§4.0, version 12). La « cible de répétitions » est une durée par série, en secondes ; pas de chronomètre (choix de l'utilisateur) : la durée tenue se saisit.
+
+- Plage par défaut **20 à 60 s** (Durée min / Durée max, réglable jusqu'à 600 s), 3 séries ; mêmes règles que le poids du corps, par **pas de 5 s** : deux validations → +5 s (« ↑ +5 s », jamais au-delà du plafond : 55 → 58 s si la plage s'arrête à 58) ; au plafond, « = Plafond atteint » ; quatre rouges → −5 s (« ↓ −5 s », jamais sous la borne basse).
+- Saisie : séries préremplies à la cible, − / + par 5 s (jamais au-delà de la cible), « Valider les 3 séries » ; le compteur affiche la valeur seule (« 20 », l'unité est lue par le lecteur d'écran) pour que « Valider » tienne sur la ligne, la cible « 3 × 20 s » étant juste au-dessus ; séries à venir « 20 s ».
+- Affichage en secondes partout : carte, séance prévue, fiche (« Gainage : progression par la durée (20 à 60 s) », graphique « Durée par série »), historique (« 20-20-20 s », « cible 3 × 20 s »), détail et sa correction (« Secondes », « Cible (s) »), récapitulatif de fin, records (« 3 × 45 s »), bilan (« 25 → 30 s ») et bilans de la période (« 3×40 s → 3×45 s », « cible −5 s recommandée »). Jamais « 0 kg ».
+- Réglage figé dès qu'une variante a un historique ; cocher « En secondes » coche « Poids du corps » et passe une plage restée par défaut à 20–60 s. Une sauvegarde avec `seconds` sans `bodyweight` est refusée. Exercices en répétitions et à charge inchangés (instantané des vraies données identique).
+
 ## 8. Affichage du statut : trois couleurs uniquement
 
 Afficher trois couleurs pour indiquer l'état de progression, calculées par le moteur selon le §7.4.
@@ -1191,7 +1201,7 @@ Prévoir une page de réglages simple (sections repliables, toutes fermées à l
 - De personnaliser les noms d'exercices.
 - De gérer les variantes.
 - De modifier les groupes musculaires et les synonymes d'un exercice.
-- De personnaliser la plage de répétitions ou le nombre de séries d'un exercice si nécessaire, et d'indiquer un exercice au poids du corps (§7.13).
+- De personnaliser la plage de répétitions ou le nombre de séries d'un exercice si nécessaire, et d'indiquer un exercice au poids du corps ou en secondes (§7.13).
 - De renseigner ma taille (§20).
 - D'importer des séances depuis des notes ou du JSON.
 - D'exporter les données complètes.
@@ -1574,6 +1584,12 @@ Le test 225 contrôle aussi l'accueil avec un plan, la préparation (vide, avec 
 249. Bibliothèque version 11 : trois exercices d'abdos au poids du corps (groupe, matériel, réglage) ; crunch machine inchangé ; recherche (« crunch » → crunch au sol en tête, heel touches, leg raise, « abdos ») ; « jambes », « legs », « leg » ne trouvent pas les relevés ; import direct (« crunch » → crunch au sol, sans demander) ; récapitulatif avec les abdos.
 250. Base existante en version 10 : ajout une seule fois, séances intactes, exercice supprimé jamais recréé ; sauvegarde d'un crunch au sol sans charge identique après import ; charge nulle hors poids du corps, charge au poids du corps ou réglage invalide refusés ; sauvegarde antérieure fusionnée sans rien retirer.
 251. (bout en bout) « Abdominaux » activé dans le récapitulatif ; crunch au sol ajouté sans poids de départ, sans champ de poids, « 3 × 10 », « Première fois », « 0/3 » ; deux séances → fiche « 3 × 11 », « ↑ +1 rép. », record « 3 × 10 (27 oct.) », historique et détail sans « 0 kg » ; fiche avec la mention « Poids du corps… (10 à 40) » et le seul graphique des répétitions ; récapitulatif « Abdominaux (2×) », jambes non comptées ; carte du crunch oblique dans l'écran à 360 px. Le test 225 contrôle aussi une carte au poids du corps ouverte en séance (texte à 115 % compris).
+
+### Planche en secondes (§4.0, §7.13, version 1.25.0)
+
+252. Plage 20 à 60 s (réglable, « en secondes » implique le poids du corps), pas de 5 s (1 pour les autres) ; première séance standard ; deux vertes → +5 s (« +5 s »), suivie, elle valide ; une verte ou vert-orange-vert : rien ; jamais au-delà du plafond (55 → 58 s), au plafond « Plafond atteint » ; quatre rouges → −5 s, suivie ou refusée ; jamais sous 20 s (22 → 20 s) ; charge écartée ; textes « +1 rép. » et « 8 → 9 rép. » inchangés, « 30 → 35 s ».
+253. Bibliothèque version 12 : planche (groupe, matériel, réglage), « planche », « gainage », « plank », « front plank », « gainage ventral » ; 3 × 20 s sans charge, « Valider les 3 séries » ; réglage enregistré (plage par défaut non recopiée, jusqu'à 600 s) ; record « 3 × 45 s » ; bilan « 3×40 s → 3×45 s », « cible −5 s recommandée », jamais « 0 kg » ; base en version 11 : ajoutée une seule fois, jamais recréée ; sauvegarde identique, `seconds` sans `bodyweight` refusé.
+254. (bout en bout) « gainage » → planche sans poids de départ ni champ de poids, « 3 × 20 s », « Première fois » ; série 1 à « 20 s », « + » bloqué, « − » → 15 s ; « Valider les 3 séries » ; récapitulatif « 20 s · 20 s · 20 s », « Prochaine cible : 3 × 20 s » ; le lendemain « Dernière fois 20 s · 20 s · 20 s · 27/10 », puis « 3 × 25 s » ; enregistrées à 0 kg en secondes ; fiche « ↑ +5 s », record « 3 × 20 s », mention du gainage, graphique de la durée seul, historique « 20-20-20 s » ; détail « (cible 3 × 20 s) » ; carte à 360 px. Le test 225 contrôle aussi une carte de planche ouverte en séance.
 
 ### Ton de l'appli (§3.6, version 1.22.2)
 

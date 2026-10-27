@@ -1,7 +1,7 @@
 import type { Feeling, Status } from '../domain/types';
 import type { Palier, ProgressMarker, Recommendation } from '../engine';
 import type { RatedFeeling } from '../session/ops';
-import { formatKg } from '../session/format';
+import { formatKg, formatSetsReps } from '../session/format';
 
 export const FEELINGS: { value: RatedFeeling; label: string }[] = [
   { value: 'tres_mal', label: 'Très mal' },
@@ -31,9 +31,9 @@ export function loadChangeLabel(kind: 'weight_up' | 'weight_down', assisted: boo
   return kind === 'weight_up' ? 'Poids supérieur' : 'Poids inférieur';
 }
 
-/** Prochaine cible lisible : « 3 × 9 », « Poids supérieur · 3 × 8 », « Moins d’aide · 3 × 8 ». */
-export function formatRecommendation(rec: Recommendation, assisted = false): string {
-  const target = `${rec.plannedSets} × ${rec.targetReps}`;
+/** Prochaine cible lisible : « 3 × 9 », « Poids supérieur · 3 × 8 », « Moins d’aide · 3 × 8 », « 3 × 35 s ». */
+export function formatRecommendation(rec: Recommendation, assisted = false, seconds = false): string {
+  const target = formatSetsReps(rec.plannedSets, rec.targetReps, seconds);
   if (rec.kind === 'weight_up' || rec.kind === 'weight_down') return `${loadChangeLabel(rec.kind, assisted)} · ${target}`;
   return target;
 }
@@ -43,18 +43,25 @@ export function markerArrow(marker: ProgressMarker): '↑' | '↓' {
   return marker.kind === 'weight_down' || marker.kind === 'reps_down' ? '↓' : '↑';
 }
 
-/** Texte court du repère, sous la cible : « +1 rép. », « +2 rép. », « −1 rép. », « Poids supérieur », « Moins d’aide »… */
-export function markerLabel(marker: ProgressMarker, assisted = false): string {
-  if (marker.kind === 'reps_up') return `+${marker.added} rép.`;
-  if (marker.kind === 'reps_down') return `−${marker.removed} rép.`;
+/**
+ * Texte court du repère, sous la cible : « +1 rép. », « +2 rép. », « −1 rép. », « +5 s » (exercice en secondes),
+ * « Poids supérieur », « Moins d’aide »…
+ */
+export function markerLabel(marker: ProgressMarker, assisted = false, seconds = false): string {
+  const unit = seconds ? 's' : 'rép.';
+  if (marker.kind === 'reps_up') return `+${marker.added} ${unit}`;
+  if (marker.kind === 'reps_down') return `−${marker.removed} ${unit}`;
   return loadChangeLabel(marker.kind, assisted);
 }
 
 const kgNumber = (kg: number) => kg.toLocaleString('fr-FR', { maximumFractionDigits: 2 });
 
-/** Évolution d'un palier en quelques mots (bilan, §19.3) : « 8 → 9 rép. », « 40 → 45 kg, 12 → 8 rép. », « 30 → 27,5 kg ». */
-export function changeText(c: { from: Palier; to: Palier }): string {
-  const reps = `${c.from.targetReps} → ${c.to.targetReps} rép.`;
+/**
+ * Évolution d'un palier en quelques mots (bilan, §19.3) : « 8 → 9 rép. », « 40 → 45 kg, 12 → 8 rép. », « 30 → 27,5 kg »,
+ * « 25 → 30 s » (exercice en secondes).
+ */
+export function changeText(c: { from: Palier; to: Palier }, seconds = false): string {
+  const reps = `${c.from.targetReps} → ${c.to.targetReps} ${seconds ? 's' : 'rép.'}`;
   if (c.from.weightKg === c.to.weightKg) return reps;
   const weight = `${kgNumber(c.from.weightKg)} → ${formatKg(c.to.weightKg)}`;
   return c.from.targetReps === c.to.targetReps ? weight : `${weight}, ${reps}`;

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useApp } from '../../app/store';
 import { navigate } from '../../app/hooks';
 import { displayName } from '../../library/catalog';
-import { formatDay, formatDurationLong, formatHour, formatKg } from '../../session/format';
+import { formatDay, formatDurationLong, formatHour, formatKg, formatReps, formatSetsReps } from '../../session/format';
 import { elapsedMs, renameSession, restoreRemoved } from '../../session/ops';
 import { FEELING_LABELS, formatRecommendation } from '../labels';
 import { StatusBadge } from '../StatusBadge';
@@ -134,12 +134,13 @@ export function Recap({ sessionId }: { sessionId: string }) {
               </div>
               <div>
                 {p.weightKg > 0 && `${formatKg(p.weightKg)} · `}
-                {p.reps.join(' · ')} <span className="muted">(cible {p.plannedSets} × {p.targetReps})</span>
+                {p.reps.map((r) => formatReps(r, ctxFor(p.variantId).cfg.seconds)).join(' · ')}{' '}
+                <span className="muted">(cible {formatSetsReps(p.plannedSets ?? 0, p.targetReps ?? 0, ctxFor(p.variantId).cfg.seconds)})</span>
               </div>
               <div className="muted small">{FEELING_LABELS[p.feeling]}</div>
               {next && (
                 <div className="small">
-                  Prochaine cible : <strong data-testid="next-target">{formatRecommendation(next, ctxFor(p.variantId).cfg.assisted)}</strong>
+                  Prochaine cible : <strong data-testid="next-target">{formatRecommendation(next, ctxFor(p.variantId).cfg.assisted, ctxFor(p.variantId).cfg.seconds)}</strong>
                 </div>
               )}
             </li>

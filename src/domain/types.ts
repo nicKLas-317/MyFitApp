@@ -33,6 +33,11 @@ export interface VariantConfig {
    * seulement. Absent = exercice à charge.
    */
   bodyweight?: boolean;
+  /**
+   * Exercice en secondes (gainage, version 1.25.0) : toujours au poids du corps ; la « cible de répétitions » est une
+   * durée en secondes par série, qui progresse par pas de 5 s. Absent = répétitions.
+   */
+  seconds?: boolean;
 }
 
 /** Exercice-variante : unité d'historique et de progression (§4.3, §7.1). */

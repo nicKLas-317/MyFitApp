@@ -144,6 +144,8 @@ export interface ReportProgression {
   /** Nouvelle cible de répétitions. */
   toReps: number;
   assisted: boolean;
+  /** Exercice en secondes (gainage) : cibles en secondes. */
+  seconds?: boolean;
 }
 
 export interface ReportDecrease {
@@ -152,8 +154,9 @@ export interface ReportDecrease {
   weightKg: number;
   reds: number;
   assisted: boolean;
-  /** Exercice au poids du corps : la baisse recommandée est « cible −1 rép. ». */
+  /** Exercice au poids du corps : la baisse recommandée est « cible −1 rép. » (« cible −5 s » en secondes). */
   bodyweight?: boolean;
+  seconds?: boolean;
 }
 
 export interface ReportReds {
@@ -250,7 +253,7 @@ export function buildReport(period: ReportPeriod, input: ReportInput): PeriodRep
     else decreasing.delete(ev.variantId);
     const date = dateOf.get(ev.sessionId);
     if (date === undefined) continue;
-    const { assisted, bodyweight } = resolveConfig(settings, ev.variantId);
+    const { assisted, bodyweight, seconds } = resolveConfig(settings, ev.variantId);
     if (isPalierValidated(ev) && (ev.recommendation.kind === 'reps_up' || ev.recommendation.kind === 'weight_up')) {
       progressions.push({
         variantId: ev.variantId,
@@ -260,6 +263,7 @@ export function buildReport(period: ReportPeriod, input: ReportInput): PeriodRep
         from: ev.palier,
         toReps: ev.recommendation.targetReps,
         assisted,
+        ...(seconds ? { seconds } : {}),
       });
     }
     const red = reds.get(ev.variantId);
@@ -274,7 +278,7 @@ export function buildReport(period: ReportPeriod, input: ReportInput): PeriodRep
       });
     }
     if (lowering && !wasDecreasing) {
-      decreases.push({ variantId: ev.variantId, date, weightKg: ev.palier.weightKg, reds: ev.redStreak, assisted, ...(bodyweight ? { bodyweight } : {}) });
+      decreases.push({ variantId: ev.variantId, date, weightKg: ev.palier.weightKg, reds: ev.redStreak, assisted, ...(bodyweight ? { bodyweight } : {}), ...(seconds ? { seconds } : {}) });
     }
   }
 
@@ -407,10 +411,11 @@ export function reportSections(report: PeriodReport, name: (variantId: string) =
       lines:
         report.progressions.length > 0
           ? report.progressions.map((p): ReportLine => {
-              const from = `${p.sets}×${p.from.targetReps}`;
+              const unit = p.seconds ? ' s' : '';
+              const from = `${p.sets}×${p.from.targetReps}${unit}`;
               const change: ReportPart[] =
                 p.kind === 'reps_up'
-                  ? [em(`${from} → ${p.sets}×${p.toReps}${load(p.from.weightKg, p.assisted)}`)]
+                  ? [em(`${from} → ${p.sets}×${p.toReps}${unit}${load(p.from.weightKg, p.assisted)}`)]
                   : [`${from}${load(p.from.weightKg, p.assisted)} validé → `, em(`${p.assisted ? 'moins d’aide' : 'poids supérieur'}, ${p.sets}×${p.toReps}`)];
               return [`${name(p.variantId)} : `, ...change, ` (${shortDay(p.date)})`];
             })
@@ -433,7 +438,7 @@ export function reportSections(report: PeriodReport, name: (variantId: string) =
           ...decreases.flatMap((d, i): ReportPart[] => [
             ...(i > 0 ? [' ; '] : []),
             `${d.reds}ᵉ séance rouge de suite${load(d.weightKg, d.assisted)} → `,
-            em(d.bodyweight ? 'cible −1 rép. recommandée' : d.assisted ? 'plus d’aide recommandée' : 'poids inférieur recommandé'),
+            em(d.seconds ? 'cible −5 s recommandée' : d.bodyweight ? 'cible −1 rép. recommandée' : d.assisted ? 'plus d’aide recommandée' : 'poids inférieur recommandé'),
             ` (${shortDay(d.date)})`,
           ]),
         ];

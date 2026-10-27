@@ -9,7 +9,7 @@ import { chartSeries } from '../../analysis/progress';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { LineChart } from '../LineChart';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
-import { formatIsoDay, formatKg, formatNumericDay } from '../../session/format';
+import { formatIsoDay, formatKg, formatNumericDay, formatSetsReps } from '../../session/format';
 import { findPerformance } from '../../session/ops';
 import { FEELING_LABELS } from '../labels';
 import { groupColorProps } from '../groupColors';
@@ -113,10 +113,11 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
           assisted={ctx.cfg.assisted}
           lastDate={last?.session.date ?? null}
           label="Prochaine cible"
-          {...recommendedTarget(state, { sets: ctx.cfg.sets, reps: ctx.cfg.minReps }, ctx.cfg.assisted)}
+          {...recommendedTarget(state, { sets: ctx.cfg.sets, reps: ctx.cfg.minReps }, ctx.cfg.assisted, ctx.cfg.seconds)}
           targetTestId="sheet-next"
           record={records.current.get(variantId) ?? null}
           bodyweight={ctx.cfg.bodyweight}
+          seconds={ctx.cfg.seconds}
         />
       </section>
 
@@ -168,7 +169,9 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
           )}
           {ctx.cfg.bodyweight && (
             <p className="small assisted-note" data-testid="bodyweight">
-              Poids du corps : progression par les répétitions ({ctx.cfg.minReps} à {ctx.cfg.maxReps})
+              {ctx.cfg.seconds
+                ? `Gainage : progression par la durée (${ctx.cfg.minReps} à ${ctx.cfg.maxReps} s)`
+                : `Poids du corps : progression par les répétitions (${ctx.cfg.minReps} à ${ctx.cfg.maxReps})`}
             </p>
           )}
         </div>
@@ -228,8 +231,13 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
           )}
           {reps.length > 0 && (
             <>
-              <p className="muted small">Répétitions par série (moyenne)</p>
-              <LineChart data={reps} label="Évolution des répétitions" unit="répétitions" testId="chart-reps" />
+              <p className="muted small">{ctx.cfg.seconds ? 'Durée par série (moyenne, s)' : 'Répétitions par série (moyenne)'}</p>
+              <LineChart
+                data={reps}
+                label={ctx.cfg.seconds ? 'Évolution de la durée' : 'Évolution des répétitions'}
+                unit={ctx.cfg.seconds ? 'secondes' : 'répétitions'}
+                testId="chart-reps"
+              />
             </>
           )}
         </section>
@@ -260,7 +268,7 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
                         · {p.reps.join('-')}
                       </>
                     ) : (
-                      p.reps.join('-')
+                      `${p.reps.join('-')}${ctx.cfg.seconds ? ' s' : ''}`
                     )}
                     {broke.has(`${session.id}|${variantId}`) && (
                       <>
@@ -272,7 +280,7 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
                   <StatusBadge status={evaluation?.status} />
                   <span className="muted small sheet-history-sub">
                     {[
-                      p.partial ? null : `cible ${p.plannedSets} × ${p.targetReps}`,
+                      p.partial ? null : `cible ${formatSetsReps(p.plannedSets ?? 0, p.targetReps ?? 0, ctx.cfg.seconds)}`,
                       p.partial ? null : `${FEELING_LABELS[p.feeling]}${p.feelingSymbol ? ` (${p.feelingSymbol})` : ''}`,
                       session.origin === 'import' ? 'importée' : null,
                     ]

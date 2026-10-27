@@ -2,7 +2,7 @@ import { useId, useState } from 'react';
 import type { Exercise, MuscleGroup, Variant } from '../../domain/types';
 import { useApp } from '../../app/store';
 import { navigateBack, navigateReplace } from '../../app/hooks';
-import { BODYWEIGHT_RANGE, DEFAULT_VARIANT_CONFIG, resolveConfig } from '../../engine';
+import { BODYWEIGHT_RANGE, DEFAULT_VARIANT_CONFIG, resolveConfig, SECONDS_RANGE } from '../../engine';
 import {
   createExercise,
   EQUIPMENT_OPTIONS,
@@ -30,6 +30,7 @@ interface VariantForm {
   maxReps: string;
   assisted: boolean;
   bodyweight: boolean;
+  seconds: boolean;
   archived: boolean;
   removed: boolean;
 }
@@ -45,16 +46,29 @@ interface Props {
   forPlan?: boolean;
 }
 
+type Mode = 'load' | 'bodyweight' | 'seconds';
+
+const RANGES: Record<Mode, { minReps: number; maxReps: number }> = {
+  load: DEFAULT_VARIANT_CONFIG,
+  bodyweight: BODYWEIGHT_RANGE,
+  seconds: SECONDS_RANGE,
+};
+
+const modeOf = (v: VariantForm): Mode => (v.seconds ? 'seconds' : v.bodyweight ? 'bodyweight' : 'load');
+
 /**
- * Passage au poids du corps (ou retour) : la plage par défaut suit (8 à 12 ↔ 10 à 40) si elle n'avait pas été
- * changée ; un exercice au poids du corps n'est pas assisté.
+ * Passage à charge, au poids du corps ou en secondes : la plage par défaut suit (8 à 12, 10 à 40, 20 à 60 s) si elle
+ * n'avait pas été changée ; un exercice en secondes est au poids du corps, et aucun des deux n'est assisté.
  */
-function bodyweightPatch(v: VariantForm, on: boolean): Partial<VariantForm> {
-  const [fromMin, fromMax, toMin, toMax] = on
-    ? [DEFAULT_VARIANT_CONFIG.minReps, DEFAULT_VARIANT_CONFIG.maxReps, BODYWEIGHT_RANGE.minReps, BODYWEIGHT_RANGE.maxReps]
-    : [BODYWEIGHT_RANGE.minReps, BODYWEIGHT_RANGE.maxReps, DEFAULT_VARIANT_CONFIG.minReps, DEFAULT_VARIANT_CONFIG.maxReps];
-  const defaultRange = v.minReps === String(fromMin) && v.maxReps === String(fromMax);
-  return { bodyweight: on, ...(on ? { assisted: false } : {}), ...(defaultRange ? { minReps: String(toMin), maxReps: String(toMax) } : {}) };
+function modePatch(v: VariantForm, to: Mode): Partial<VariantForm> {
+  const from = RANGES[modeOf(v)];
+  const defaultRange = v.minReps === String(from.minReps) && v.maxReps === String(from.maxReps);
+  return {
+    bodyweight: to !== 'load',
+    seconds: to === 'seconds',
+    ...(to !== 'load' ? { assisted: false } : {}),
+    ...(defaultRange ? { minReps: String(RANGES[to].minReps), maxReps: String(RANGES[to].maxReps) } : {}),
+  };
 }
 
 /** Création et modification d'un exercice et de ses variantes (§4.3, §14). */
@@ -80,6 +94,7 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false,
         maxReps: String(cfg.maxReps),
         assisted: cfg.assisted,
         bodyweight: !!cfg.bodyweight,
+        seconds: !!cfg.seconds,
         archived: v.archived,
         removed: false,
       };
@@ -140,10 +155,11 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false,
         maxReps: Number(form.maxReps),
         assisted: form.assisted,
         ...(form.bodyweight ? { bodyweight: true } : {}),
+        ...(form.seconds ? { seconds: true } : {}),
       };
       const cfgErrors = validateConfig(cfg);
       if (cfgErrors.includes('sets')) list.push(`${label} : nombre de séries entre 1 et 10.`);
-      if (cfgErrors.includes('range')) list.push(`${label} : plage de répétitions invalide (minimum ≤ maximum).`);
+      if (cfgErrors.includes('range')) list.push(`${label} : plage ${form.seconds ? 'de durée' : 'de répétitions'} invalide (minimum ≤ maximum).`);
       const current = next.variants.find((v) => v.id === form.id)!;
       const patch: Partial<Variant> = { synonyms: parseList(form.synonyms), archived: form.archived };
       if (!standard) patch.name = form.name.trim().replace(/\s+/g, ' ');
@@ -267,14 +283,14 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false,
                   </div>
                   <div className="field-grid three">
                     <NumberField label="Séries" value={v.sets} onChange={(t) => patchVariant(v.id, { sets: t })} />
-                    <NumberField label="Rép. min" value={v.minReps} onChange={(t) => patchVariant(v.id, { minReps: t })} />
-                    <NumberField label="Rép. max" value={v.maxReps} onChange={(t) => patchVariant(v.id, { maxReps: t })} />
+                    <NumberField label={v.seconds ? 'Durée min (s)' : 'Rép. min'} value={v.minReps} onChange={(t) => patchVariant(v.id, { minReps: t })} />
+                    <NumberField label={v.seconds ? 'Durée max (s)' : 'Rép. max'} value={v.maxReps} onChange={(t) => patchVariant(v.id, { maxReps: t })} />
                   </div>
                   <label className="check-line">
                     <input
                       type="checkbox"
                       checked={v.assisted}
-                      onChange={(e) => patchVariant(v.id, { assisted: e.target.checked, ...(e.target.checked ? { bodyweight: false } : {}) })}
+                      onChange={(e) => patchVariant(v.id, { assisted: e.target.checked, ...(e.target.checked ? { bodyweight: false, seconds: false } : {}) })}
                     />
                     <span>Exercice assisté : la charge est une aide (moins d’aide = plus dur)</span>
                   </label>
@@ -284,10 +300,23 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false,
                       type="checkbox"
                       checked={v.bodyweight}
                       disabled={locked}
-                      onChange={(e) => patchVariant(v.id, bodyweightPatch(v, e.target.checked))}
+                      onChange={(e) => patchVariant(v.id, modePatch(v, e.target.checked ? 'bodyweight' : 'load'))}
                     />
                     <span>
                       Poids du corps : sans charge, progression par les répétitions
+                      {locked && <span className="muted"> (déjà réalisé : non modifiable)</span>}
+                    </span>
+                  </label>
+                  {/* En secondes (gainage) : durée par série, au poids du corps. Figé dès qu'il existe un historique. */}
+                  <label className="check-line">
+                    <input
+                      type="checkbox"
+                      checked={v.seconds}
+                      disabled={locked}
+                      onChange={(e) => patchVariant(v.id, modePatch(v, e.target.checked ? 'seconds' : 'bodyweight'))}
+                    />
+                    <span>
+                      En secondes (gainage) : durée par série, par pas de 5 s
                       {locked && <span className="muted"> (déjà réalisé : non modifiable)</span>}
                     </span>
                   </label>
@@ -308,7 +337,7 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false,
               );
             })}
             <p className="muted small">
-              Par défaut : 3 séries de 8 à 12 répétitions (de 10 à 40 au poids du corps). Un réglage modifié recalcule la progression de la variante.
+              Par défaut : 3 séries de 8 à 12 répétitions (de 10 à 40 au poids du corps, de 20 à 60 s en secondes). Un réglage modifié recalcule la progression de la variante.
             </p>
           </section>
         )}

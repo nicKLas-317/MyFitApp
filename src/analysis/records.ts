@@ -9,7 +9,7 @@
  */
 import type { Performance, Session } from '../domain/types';
 import { compareDifficulty, resolveConfig, sortSessions, type EngineSettings } from '../engine';
-import { formatKg, formatShortDay } from '../session/format';
+import { formatKg, formatSetsReps, formatShortDay } from '../session/format';
 
 export interface PersonalRecord {
   variantId: string;
@@ -20,6 +20,8 @@ export interface PersonalRecord {
   sets: number;
   reps: number;
   assisted: boolean;
+  /** Exercice en secondes (gainage) : « reps » est une durée par série. */
+  seconds?: boolean;
 }
 
 export interface RecordBreak extends PersonalRecord {
@@ -44,7 +46,7 @@ export function countsForRecord(p: Performance): boolean {
   return !p.partial && sets > 0 && target > 0 && p.reps.length >= sets && p.reps.every((r) => r >= target);
 }
 
-type Mark = Pick<PersonalRecord, 'weightKg' | 'sets' | 'reps' | 'assisted'>;
+type Mark = Pick<PersonalRecord, 'weightKg' | 'sets' | 'reps' | 'assisted' | 'seconds'>;
 
 /** Positif si `a` est meilleure que `b`. */
 export function compareMarks(a: Mark, b: Mark): number {
@@ -64,7 +66,14 @@ export function computeRecords(sessions: readonly Session[], settings: EngineSet
     for (const p of s.performances) {
       if (seen.has(p.variantId) || !countsForRecord(p)) continue;
       seen.add(p.variantId);
-      const record: PersonalRecord = { variantId: p.variantId, sessionId: s.id, date: s.date, ...markOf(p, resolveConfig(settings, p.variantId).assisted) };
+      const cfg = resolveConfig(settings, p.variantId);
+      const record: PersonalRecord = {
+        variantId: p.variantId,
+        sessionId: s.id,
+        date: s.date,
+        ...markOf(p, cfg.assisted),
+        ...(cfg.seconds ? { seconds: true } : {}),
+      };
       const previous = current.get(p.variantId);
       if (!previous) current.set(p.variantId, record);
       else if (compareMarks(record, previous) > 0) {
@@ -86,9 +95,9 @@ export function recordKeys(records: Records): Set<string> {
   return new Set(records.breaks.map((b) => `${b.sessionId}|${b.variantId}`));
 }
 
-/** « 3 × 9 à 20 kg », « 3 × 12 avec 30 kg d’aide », « 3 × 25 » (poids du corps). */
+/** « 3 × 9 à 20 kg », « 3 × 12 avec 30 kg d’aide », « 3 × 25 » (poids du corps), « 3 × 45 s » (en secondes). */
 export function formatRecord(r: Mark): string {
-  if (r.weightKg === 0) return `${r.sets} × ${r.reps}`;
+  if (r.weightKg === 0) return formatSetsReps(r.sets, r.reps, r.seconds);
   return `${r.sets} × ${r.reps} ${r.assisted ? `avec ${formatKg(r.weightKg)} d’aide` : `à ${formatKg(r.weightKg)}`}`;
 }
 

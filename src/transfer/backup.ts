@@ -390,6 +390,10 @@ function validateVariant(v: unknown, path: string, errors: string[]): void {
       }
       if (v.config.assisted !== undefined && typeof v.config.assisted !== 'boolean') errors.push(`${path}.config.assisted invalide.`);
       if (v.config.bodyweight !== undefined && typeof v.config.bodyweight !== 'boolean') errors.push(`${path}.config.bodyweight invalide.`);
+      // En secondes (gainage) : toujours au poids du corps.
+      if (v.config.seconds !== undefined && (typeof v.config.seconds !== 'boolean' || (v.config.seconds && v.config.bodyweight !== true))) {
+        errors.push(`${path}.config.seconds invalide.`);
+      }
     }
   }
 }

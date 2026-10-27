@@ -41,7 +41,7 @@ function saveFilter(filter: BilanFilter): void {
  * (pictogramme, titre, nombre d'exercices), en cadres neutres ; chaque exercice à la couleur de son groupe (§3.2) ; un exercice ouvre sa fiche sur son graphique.
  */
 export function Bilan() {
-  const { replay, sessions, variants } = useApp();
+  const { replay, sessions, variants, ctxFor } = useApp();
   const progress = useMemo(() => analyzeProgress(replay.evaluations, replay.profile), [replay]);
   const changes = useMemo(() => recentChanges(replay.evaluations, sessions), [replay, sessions]);
   const name = (id: string) => displayName(variants.get(id));
@@ -144,7 +144,7 @@ export function Bilan() {
                   <span className="visually-hidden">{formatIsoDay(c.date)} : </span>
                 </span>
                 <span className="change-name">{name(c.variantId)}</span>
-                <span className="small change-what">{changeText(c)}</span>
+                <span className="small change-what">{changeText(c, ctxFor(c.variantId).cfg.seconds)}</span>
               </li>
             ))}
           </ul>
