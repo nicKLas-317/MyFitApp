@@ -2,9 +2,9 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useApp } from '../../app/store';
 import { navigateReplace, useNow } from '../../app/hooks';
 import { elapsedMs, finishSession, missingFeelings, newId } from '../../session/ops';
-import { addCardio, cardioOf, formatCardio, removeCardio, updateCardio } from '../../cardio/model';
-import { CardioForm, CardioLine, CardioList, type CardioDraft, type CardioFormMemory } from '../CardioForm';
-import { pendingPlanCardio, plannedNotDone } from '../../plan/model';
+import { addCardio, formatCardio, removeCardio, updateCardio } from '../../cardio/model';
+import { CardioForm, CardioItem, CardioLine, type CardioDraft, type CardioFormMemory } from '../CardioForm';
+import { plannedNotDone, sessionSteps, unfinishedStep } from '../../plan/model';
 import { displayName } from '../../library/catalog';
 import { formatDuration } from '../../session/format';
 import { ExerciseCard } from '../ExerciseCard';
@@ -13,7 +13,8 @@ import { SaveIndicator } from '../SaveIndicator';
 
 /**
  * État d'écran de la séance gardé en mémoire le temps de l'ouverture de l'appli : quitter le mode salle (fiche,
- * onglet Séance, bouton retour) puis revenir retrouve l'exercice ouvert et le cardio en cours de saisie.
+ * onglet Séance, bouton retour) puis revenir retrouve l'élément ouvert (exercice-variante, ou « cardio:<bloc> » pour
+ * un cardio prévu) et le cardio en cours de saisie.
  */
 const memory: { sessionId: string | null; openId: string | undefined; cardio: CardioFormMemory } = {
   sessionId: null,
@@ -68,29 +69,31 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
 
   // Par défaut : le dernier exercice ajouté ; dans une séance prévue, le premier exercice pas encore fait, qui reste
   // ouvert une fois ses séries validées (le ressenti est encore à choisir).
+  const steps = sessionSteps(active);
   if (active.fromPlan && openId === undefined && memory.openId === undefined) {
-    memory.openId = active.performances.find((p) => p.plannedSets === null || p.reps.length < p.plannedSets)?.variantId;
+    // Séance prévue : le premier élément à faire, dans l'ordre du plan (un cardio prévu placé en tête compris).
+    memory.openId = steps.find((step) =>
+      step.kind === 'cardio' ? step.pending : step.performance.plannedSets === null || step.performance.reps.length < step.performance.plannedSets,
+    )?.key;
   }
   const current = openId ?? memory.openId ?? active.performances.at(-1)?.variantId;
   const notDone = plannedNotDone(active);
   const unsavedCardio = addingCardio && cardioDraft.kind !== 'empty' ? cardioDraft : null;
 
   /**
-   * Ressenti donné : ouvre l'exercice suivant non terminé (séries incomplètes ou ressenti manquant), dans l'ordre de la
-   * séance, en reprenant au début après le dernier, et l'amène doucement sous l'en-tête. Tout est terminé : rien ne
-   * s'ouvre.
+   * Ressenti donné ou cardio prévu validé : ouvre l'élément suivant non terminé (exercice aux séries incomplètes ou
+   * sans ressenti, cardio prévu pas encore validé), dans l'ordre de la séance, en reprenant au début après le dernier,
+   * et l'amène doucement sous l'en-tête. Tout est terminé : rien ne s'ouvre.
    */
-  function openNext(fromId: string) {
-    if (!active) return;
-    const list = active.performances;
-    const i = list.findIndex((p) => p.variantId === fromId);
-    const unfinished = (p: (typeof list)[number]) =>
-      p.variantId !== fromId && (p.plannedSets === null || p.reps.length < p.plannedSets || p.feeling === 'inconnu');
-    const next = [...list.slice(i + 1), ...list.slice(0, Math.max(0, i))].find(unfinished);
+  function openNext(fromKey: string) {
+    const i = steps.findIndex((step) => step.key === fromKey);
+    const next = [...steps.slice(i + 1), ...steps.slice(0, Math.max(0, i))].find((step) => step.key !== fromKey && unfinishedStep(step));
     if (!next) return;
-    setOpenId(next.variantId);
+    setOpenId(next.key);
     requestAnimationFrame(() => {
-      const card = document.querySelector(`article[data-variant="${CSS.escape(next.variantId)}"]`);
+      const card = document.querySelector(
+        next.kind === 'cardio' ? `[data-cardio="${CSS.escape(next.block.id)}"]` : `article[data-variant="${CSS.escape(next.key)}"]`,
+      );
       if (!card) return;
       const header = document.querySelector('.session-header')?.getBoundingClientRect().height ?? 0;
       window.scrollTo({ top: card.getBoundingClientRect().top + window.scrollY - header - 8, behavior: 'smooth' });
@@ -136,49 +139,65 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
         <SaveIndicator />
       </header>
 
-      {active.performances.length === 0 && cardioOf(active).length === 0 && <p className="empty muted">Ajoute un premier exercice.</p>}
+      {steps.length === 0 && <p className="empty muted">Ajoute un premier exercice.</p>}
 
       <div className="cards">
-        {active.performances.map((p) => (
-          <ExerciseCard
-            key={p.variantId}
-            session={active}
-            performance={p}
-            open={p.variantId === current}
-            onToggle={() => setOpenId(p.variantId === current ? '' : p.variantId)}
-            onFinished={() => openNext(p.variantId)}
-          />
-        ))}
-      </div>
-
-      <CardioList
-        blocks={cardioOf(active)}
-        machines={cardioMachines}
-        newId={newId}
-        onSave={(block) => void commit(updateCardio(active, block, Date.now()))}
-        onRemove={(block) => void commit(removeCardio(active, block.id, Date.now()), 'Cardio retiré')}
-      />
-
-      {pendingPlanCardio(active).length > 0 && (
-        <ul className="recap-list cardio-list planned-cardio" aria-label="Cardio prévu">
-          {pendingPlanCardio(active).map((b) => (
-            <li key={b.id} className="card recap-item cardio-item" data-cardio={b.id}>
+        {steps.map((step) => {
+          if (step.kind === 'exercise') {
+            const p = step.performance;
+            return (
+              <ExerciseCard
+                key={step.key}
+                session={active}
+                performance={p}
+                open={step.key === current}
+                onToggle={() => setOpenId(step.key === current ? '' : step.key)}
+                onFinished={() => openNext(step.key)}
+              />
+            );
+          }
+          const b = step.block;
+          if (!step.pending) {
+            return (
+              <CardioItem
+                key={step.key}
+                as="div"
+                block={b}
+                machines={cardioMachines}
+                newId={newId}
+                onSave={(block) => void commit(updateCardio(active, block, Date.now()))}
+                onRemove={(block) => void commit(removeCardio(active, block.id, Date.now()), 'Cardio retiré')}
+              />
+            );
+          }
+          // Cardio prévu : « Valider » l'enregistre en un appui. Ouvert (élément en cours), c'est l'action principale, et
+          // l'élément suivant non terminé s'ouvre ensuite.
+          const open = step.key === current;
+          return (
+            <div
+              key={step.key}
+              className={`card recap-item cardio-item planned-cardio${open ? ' open' : ''}`}
+              data-cardio={b.id}
+              aria-current={open ? 'step' : undefined}
+            >
               <div className="card-line">
                 <CardioLine block={b} prefix="Prévu" />
-                {/* Le cardio prévu s'enregistre en un appui ; « Corriger » dans son menu une fois validé. */}
                 <button
                   type="button"
-                  className="btn primary"
+                  className={`btn${open ? ' primary' : ''}`}
                   aria-label={`Valider le cardio prévu : ${formatCardio(b)}`}
-                  onClick={() => void commit(addCardio(active, b, Date.now()))}
+                  onClick={() => {
+                    void commit(addCardio(active, b, Date.now()));
+                    if (open) openNext(step.key);
+                  }}
                 >
                   Valider
                 </button>
               </div>
-            </li>
-          ))}
-        </ul>
-      )}
+            </div>
+          );
+        })}
+      </div>
 
       {addingCardio && (
         <CardioForm

@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import type { CardioBlock, CardioMachine, Incline } from '../domain/types';
 import { ActionMenu, ConfirmRemove } from './ActionMenu';
 import { cardioErrors, formatCardio, INCLINE_LABELS, INCLINES, makeCardioBlock, parseDistance, parseMinutes } from '../cardio/model';
@@ -144,52 +144,84 @@ interface ListProps {
 }
 
 /** Blocs de cardio d'une séance : « Corriger » et « Retirer » (après confirmation) dans le menu « ⋯ » de chaque bloc. */
-export function CardioList({ blocks, machines, newId, onSave, onRemove }: ListProps) {
-  const [editing, setEditing] = useState<string | null>(null);
-  const [removing, setRemoving] = useState<string | null>(null);
+export function CardioList({ blocks, ...props }: ListProps) {
   if (blocks.length === 0) return null;
   return (
     <ul className="recap-list cardio-list" aria-label="Cardio">
-      {blocks.map((b) =>
-        editing === b.id ? (
-          <li key={b.id}>
-            <CardioForm
-              machines={machines}
-              initial={b}
-              newId={newId}
-              onCancel={() => setEditing(null)}
-              onSave={(next) => {
-                setEditing(null);
-                onSave(next);
-              }}
-            />
-          </li>
-        ) : (
-          <li key={b.id} className="card recap-item cardio-item" data-cardio={b.id}>
-            <div className="card-line">
-              <CardioLine block={b} />
-              <ActionMenu
-                label={`cardio ${formatCardio(b)}`}
-                actions={[
-                  { label: 'Corriger', onSelect: () => setEditing(b.id) },
-                  { label: 'Retirer', danger: true, onSelect: () => setRemoving(b.id) },
-                ]}
-              />
-            </div>
-            {removing === b.id && (
-              <ConfirmRemove
-                question="Retirer ce cardio de la séance ?"
-                onCancel={() => setRemoving(null)}
-                onConfirm={() => {
-                  setRemoving(null);
-                  onRemove(b);
-                }}
-              />
-            )}
-          </li>
-        ),
-      )}
+      {blocks.map((b) => (
+        <CardioItem key={b.id} block={b} {...props} />
+      ))}
     </ul>
+  );
+}
+
+interface ItemProps extends Omit<ListProps, 'blocks'> {
+  block: CardioBlock;
+  /** Élément de liste (par défaut) ou bloc dans la liste de la séance, entre deux cartes d'exercice. */
+  as?: 'li' | 'div';
+  className?: string;
+  /** Mention avant le bloc (« Cardio » par défaut). */
+  prefix?: string;
+  removeQuestion?: string;
+  /** Sous le bloc (flèches de la séance prévue). */
+  children?: ReactNode;
+}
+
+/** Un bloc de cardio enregistré : « Corriger » et « Retirer » (après confirmation) dans son menu « ⋯ ». */
+export function CardioItem({
+  block: b,
+  machines,
+  newId,
+  onSave,
+  onRemove,
+  as: Tag = 'li',
+  className = '',
+  prefix,
+  removeQuestion = 'Retirer ce cardio de la séance ?',
+  children,
+}: ItemProps) {
+  const [editing, setEditing] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  if (editing) {
+    return (
+      <Tag>
+        <CardioForm
+          machines={machines}
+          initial={b}
+          newId={newId}
+          onCancel={() => setEditing(false)}
+          onSave={(next) => {
+            setEditing(false);
+            onSave(next);
+          }}
+        />
+      </Tag>
+    );
+  }
+  return (
+    <Tag className={`card recap-item cardio-item${className ? ` ${className}` : ''}`} data-cardio={b.id}>
+      <div className="card-line">
+        <CardioLine block={b} prefix={prefix} />
+        <ActionMenu
+          label={`cardio ${formatCardio(b)}`}
+          actions={[
+            { label: 'Corriger', onSelect: () => setEditing(true) },
+            { label: 'Retirer', danger: true, onSelect: () => setRemoving(true) },
+          ]}
+        />
+      </div>
+      {children}
+      {removing && (
+        <ConfirmRemove
+          question={removeQuestion}
+          onCancel={() => setRemoving(false)}
+          onConfirm={() => {
+            setRemoving(false);
+            onRemove(b);
+          }}
+        />
+      )}
+    </Tag>
   );
 }
 

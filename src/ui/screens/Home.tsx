@@ -60,7 +60,7 @@ export function Home() {
           </button>
           <section className="card plan-summary" aria-label="Séance prévue">
             <p className="plan-names" data-testid="plan-summary">
-              {[...plan.exercises.map((e) => displayName(variants.get(e.variantId))), ...plan.cardio.map(formatCardio)].join(' · ')}
+              {plan.items.map((e) => (e.kind === 'cardio' ? formatCardio(e.block) : displayName(variants.get(e.variantId)))).join(' · ')}
             </p>
             <button type="button" className="link" onClick={() => navigate('seance-prevue')}>
               Modifier ma séance prévue

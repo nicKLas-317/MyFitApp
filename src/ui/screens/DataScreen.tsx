@@ -15,7 +15,7 @@ import { sanitizeRecapSettings } from '../../analysis/weekly';
 import { sanitizeReportSettings } from '../../analysis/report';
 import { sanitizeCardioMachines, upgradeCardioMachines } from '../../cardio/model';
 import { doneActivities, mergeActivities, sanitizeHabits } from '../../activities/model';
-import { currentPlan, mergePlan } from '../../plan/model';
+import { currentPlan, mergePlan, planExercises } from '../../plan/model';
 import { useBody } from '../../body/store';
 import { downloadBackup } from '../download';
 import { checkImportFile } from '../../transfer/file';
@@ -377,7 +377,7 @@ function BackupPreview({ backup, onDone }: { backup: Backup; onDone(outcome: Out
             <li data-testid="plan-new">{plural(plan.sessions.length, 'séance à ajouter', 'séances à ajouter')}</li>
             {newActivities > 0 && <li data-testid="plan-activities">{plural(newActivities, 'activité à ajouter', 'activités à ajouter')}</li>}
             {planMerge.added && planMerge.plan && (
-              <li data-testid="plan-session-plan">Séance prévue à ajouter ({plural(planMerge.plan.exercises.length, 'exercice', 'exercices')})</li>
+              <li data-testid="plan-session-plan">Séance prévue à ajouter ({plural(planExercises(planMerge.plan).length, 'exercice', 'exercices')})</li>
             )}
             {planMerge.keptLocal && <li>Séance prévue différente : celle de l’appareil est conservée</li>}
             {plan.identical.length > 0 && <li>{plural(plan.identical.length, 'séance déjà présente', 'séances déjà présentes')} (ignorées)</li>}

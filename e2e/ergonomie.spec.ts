@@ -9,11 +9,15 @@ const ACCENT = 'rgb(91, 157, 255)';
 const NEUTRAL = 'rgb(74, 81, 99)';
 const CYAN = 'rgb(62, 230, 238)';
 
-/** Séance prévue (§5.9) : trois exercices (un jamais réalisé) et un cardio. */
+/** Séance prévue (§5.9) : trois exercices (un jamais réalisé) et un cardio placé entre deux exercices. */
 const PLAN: SessionPlan = {
   id: 'plan-test', createdAt: 0, updatedAt: 0,
-  exercises: [{ variantId: 'chest-press', startWeightKg: 40 }, { variantId: 'pec-deck', startWeightKg: 30 }, { variantId: 'crunch-machine', startWeightKg: 25 }],
-  cardio: [{ id: 'prevu-tapis', machineId: 'tapis', machine: 'Tapis de marche', incline: 'neutre', minutes: 15 }],
+  items: [
+    { kind: 'exercise', variantId: 'chest-press', startWeightKg: 40 },
+    { kind: 'cardio', block: { id: 'prevu-tapis', machineId: 'tapis', machine: 'Tapis de marche', incline: 'neutre', minutes: 15 } },
+    { kind: 'exercise', variantId: 'pec-deck', startWeightKg: 30 },
+    { kind: 'exercise', variantId: 'crunch-machine', startWeightKg: 25 },
+  ],
 };
 
 /** Enregistre (ou supprime) la séance prévue dans la base, puis recharge l'appli. */
@@ -467,6 +471,10 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
       ['Séance prévue, menu ouvert', async () => {
         await page.goto('./#/seance-prevue');
         await page.getByRole('button', { name: 'Actions : Pec deck' }).click();
+      }],
+      ['Séance prévue, menu du cardio ouvert', async () => {
+        await page.goto('./#/seance-prevue');
+        await page.getByRole('button', { name: /^Actions : cardio Tapis de marche/ }).click();
       }],
       ['Ajout à la séance prévue', () => page.goto('./#/seance-prevue/ajouter').then(() => undefined)],
       ['Séance prévue vide', async () => {

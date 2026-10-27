@@ -168,7 +168,7 @@ describe('Activités habituelles hors salle', () => {
     const no = badminton('2026-10-12', false);
     const tennis: Habit = { id: 'habitude-tennis', name: 'Tennis', weekday: 3, start: '18:00', end: '19:00', groups: ['epaules'], enabled: false };
     const backup = buildBackup({ sessions: [], exercises: LIB, activities: [yes, no], settings: { habits: [BADMINTON, tennis] } }, at(25));
-    expect(backup.schemaVersion).toBe(4);
+    expect(backup.schemaVersion).toBe(SCHEMA_VERSION);
     const parsed = parseJsonImport(JSON.stringify(backup), LIB, '2026-10-25');
     if (parsed.kind !== 'backup') throw new Error(parsed.kind);
     expect(parsed.backup.activities).toEqual([yes, no]);

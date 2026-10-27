@@ -126,22 +126,33 @@ export interface Session {
  * Exercice d'une séance prévue (§5.9). Charge et cible ne sont jamais figées : le moteur les donne à la préparation
  * puis les recalcule au démarrage.
  */
-export interface PlanItem {
+export interface PlanExercise {
+  kind: 'exercise';
   variantId: string;
   /** Poids de départ d'un exercice jamais réalisé, saisi à la préparation ; ignoré dès qu'il a un historique. */
   startWeightKg?: number;
 }
+
+/** Cardio d'une séance prévue, à valider en un appui pendant la séance. */
+export interface PlanCardio {
+  kind: 'cardio';
+  block: CardioBlock;
+}
+
+/** Élément d'une séance prévue : musculation et cardio dans un seul ordre (version 1.23.2). */
+export type PlanItem = PlanExercise | PlanCardio;
 
 /** Séance prévue (§5.9) : une seule à la fois, proposée jusqu'à ce qu'une séance démarrée à partir d'elle soit terminée. */
 export interface SessionPlan {
   id: string;
   createdAt: number;
   updatedAt: number;
-  /** Dans l'ordre prévu. Un seul exemplaire par exercice-variante. */
-  exercises: PlanItem[];
-  /** Cardio prévu, à valider en un appui pendant la séance. */
-  cardio: CardioBlock[];
+  /** Dans l'ordre prévu, musculation et cardio mêlés. Un seul exemplaire par exercice-variante et par bloc. */
+  items: PlanItem[];
 }
+
+/** Place d'un élément prévu dans l'ordre de la séance démarrée. */
+export type PlanStep = { kind: 'exercise'; variantId: string } | { kind: 'cardio'; id: string };
 
 /** Origine d'une séance démarrée à partir de la séance prévue. */
 export interface PlanOrigin {
@@ -150,4 +161,9 @@ export interface PlanOrigin {
   variantIds: string[];
   /** Cardio prévu ; un bloc validé est enregistré dans `cardio` sous le même identifiant. */
   cardio?: CardioBlock[];
+  /**
+   * Ordre prévu, musculation et cardio mêlés (depuis la version 1.23.2) : les mêmes exercices et blocs que `variantIds`
+   * et `cardio`. Absent d'une séance antérieure : les exercices, puis le cardio.
+   */
+  order?: PlanStep[];
 }

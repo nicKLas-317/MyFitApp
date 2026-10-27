@@ -1,7 +1,8 @@
 /**
  * Export complet et import JSON (§11.9, §11.10).
- * - schemaVersion 4 : format natif complet, restauré tel quel après validation stricte (blocs de cardio dans les séances,
- *   activités habituelles hors salle et leurs réponses).
+ * - schemaVersion 5 : format natif complet, restauré tel quel après validation stricte (blocs de cardio dans les séances,
+ *   activités habituelles hors salle et leurs réponses, séance prévue en un seul ordre, musculation et cardio mêlés).
+ * - schemaVersion 4 : séance prévue en deux listes (exercices, puis cardio), versions 1.23.0 et 1.23.1 ; migrée sans perte.
  * - schemaVersion 3 : format natif antérieur aux activités habituelles, migré sans perte (aucune activité).
  * - schemaVersion 2 : format natif antérieur au cardio, migré sans perte (les séances n'ont simplement pas de cardio).
  * - schemaVersion 1 : format simple (ex. `docs/exemples/seance-exemple-1.json`), adapté en brouillons à vérifier.
@@ -13,7 +14,7 @@ import { cardioBlockErrors, DEFAULT_CARDIO_MACHINES, INCLINES } from '../cardio/
 import { MUSCLE_GROUP_LABELS, SEED_EXERCISES, redefineSeedExercises, sameGroups, sameNaming, seedNamings, seedSecondaryGroups } from '../library/seed';
 import { EMPTY_BODY, isValidHeight, isValidWeighIn, type BodyTracking } from '../body/model';
 import { activityErrors, type ActivityRecord } from '../activities/model';
-import { planErrors, planOriginErrors } from '../plan/model';
+import { legacyPlanErrors, migratePlan, planErrors, planExercises, planOriginErrors } from '../plan/model';
 
 export { EMPTY_BODY, type BodyTracking };
 import { importedSessionName, isIsoDate, localDate } from '../session/format';
@@ -24,7 +25,7 @@ import { newId } from '../session/ops';
 import { normalizeName } from '../library/text';
 
 export const APP_ID = 'MyFitApp';
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 /** Plus ancienne version du format natif, migrée à l'import. */
 const FIRST_NATIVE_VERSION = 2;
 /** Délai au-delà duquel l'accueil rappelle d'exporter (§12). */
@@ -106,6 +107,8 @@ const MUSCLE_GROUPS = Object.keys(MUSCLE_GROUP_LABELS) as MuscleGroup[];
  * 2 → 3 : ajout du cardio, champ facultatif des séances ; rien d'autre ne change.
  * 3 → 4 : ajout des activités habituelles (aucune dans une sauvegarde antérieure).
  * 4 sans `plan` (avant la version 1.23.0) : aucune séance prévue.
+ * 4 → 5 : la séance prévue passe en un seul ordre (`items`), la musculation d'abord puis le cardio, comme elle était
+ * affichée ; identifiant, dates, exercices et blocs inchangés.
  * Toutes versions : une performance « += » enregistrée avec un autre ressenti que Moyen est corrigée (§7.3).
  */
 export function migrateBackup(data: Obj): Backup {
@@ -117,7 +120,7 @@ export function migrateBackup(data: Obj): Backup {
     exercises: redefineSeedExercises(backup.exercises),
     sessions: backup.sessions.map((s) => fixed.get(s.id) ?? s),
     activities: backup.activities ?? [],
-    plan: backup.plan ?? null,
+    plan: migratePlan(backup.plan),
     schemaVersion: SCHEMA_VERSION,
   };
 }
@@ -478,7 +481,9 @@ export function validateBackup(data: Obj): string[] {
       if (new Set(ids).size !== ids.length) errors.push('activities : plusieurs réponses avec le même identifiant.');
     }
   }
-  if (data.plan !== undefined && data.plan !== null) errors.push(...planErrors(data.plan));
+  if (data.plan !== undefined && data.plan !== null) {
+    errors.push(...(isInt(data.schemaVersion) && data.schemaVersion < 5 ? legacyPlanErrors(data.plan) : planErrors(data.plan)));
+  }
   if (errors.length > 0) return errors;
 
   // Cohérence : identifiants uniques, séances rattachées à des variantes existantes.
@@ -508,7 +513,8 @@ export function validateBackup(data: Obj): string[] {
     }
   }
   if (active > 1) errors.push('Plusieurs séances en cours.');
-  for (const e of (data.plan as SessionPlan | null | undefined)?.exercises ?? []) {
+  const plan = migratePlan(data.plan);
+  for (const e of plan ? planExercises(plan) : []) {
     if (!variantIds.has(e.variantId)) errors.push(`Séance prévue : exercice inconnu ${e.variantId}.`);
   }
   return errors;

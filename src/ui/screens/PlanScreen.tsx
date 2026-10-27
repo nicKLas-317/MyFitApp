@@ -4,10 +4,12 @@ import { useApp } from '../../app/store';
 import { navigate } from '../../app/hooks';
 import { displayName } from '../../library/catalog';
 import { newId } from '../../session/ops';
+import { formatCardio } from '../../cardio/model';
 import {
   addPlanCardio,
   isEmptyPlan,
-  movePlanExercise,
+  itemKey,
+  movePlanItem,
   newPlan,
   plannedPerformance,
   removeFromPlan,
@@ -15,15 +17,15 @@ import {
   updatePlanCardio,
 } from '../../plan/model';
 import { ActionMenu, ConfirmRemove } from '../ActionMenu';
-import { CardioForm, CardioList } from '../CardioForm';
+import { CardioForm, CardioItem } from '../CardioForm';
 import { groupColorProps } from '../groupColors';
 import { ExercisePicto } from '../Pictogram';
 import { cardHint, NextTarget } from '../TargetSummary';
 
 /**
- * Préparation de la prochaine séance (§5.9), au calme : exercices dans l'ordre (réordonnables), chacun avec la charge
- * et la cible que le moteur donne aujourd'hui, comme la carte en séance ; cardio prévu. Rien n'est saisi : charge et
- * cible sont recalculées au démarrage. Chaque modification est enregistrée aussitôt ; un plan vidé est supprimé.
+ * Préparation de la prochaine séance (§5.9), au calme : exercices et cardio dans un seul ordre (réordonnable), chaque
+ * exercice avec la charge et la cible que le moteur donne aujourd'hui, comme la carte en séance. Rien n'est saisi :
+ * charge et cible sont recalculées au démarrage. Chaque modification est enregistrée aussitôt ; un plan vidé est supprimé.
  */
 export function PlanScreen() {
   const { plan, savePlan, variants, ctxFor, cardioMachines } = useApp();
@@ -36,7 +38,25 @@ export function PlanScreen() {
   }
 
   const now = () => Date.now();
-  const exercises = plan?.exercises ?? [];
+  const items = plan?.items ?? [];
+
+  /** « ↑ » / « ↓ » : pas de « ↑ » sur le premier élément ni de « ↓ » sur le dernier. */
+  function moveButtons(i: number, key: string, name: string) {
+    return (
+      <div className="plan-move">
+        {i > 0 && (
+          <button type="button" className="btn move" aria-label={`Monter : ${name}`} onClick={() => void save(plan && movePlanItem(plan, key, -1, now()))}>
+            ↑
+          </button>
+        )}
+        {i < items.length - 1 && (
+          <button type="button" className="btn move" aria-label={`Descendre : ${name}`} onClick={() => void save(plan && movePlanItem(plan, key, 1, now()))}>
+            ↓
+          </button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <main className="screen tab-screen plan-screen">
@@ -53,9 +73,26 @@ export function PlanScreen() {
       )}
       {!plan && <p className="muted">Ajoute les exercices de ta prochaine séance : tu la démarreras en un appui à la salle.</p>}
 
-      {exercises.length > 0 && (
-        <ol className="plan-list" aria-label="Exercices prévus">
-          {exercises.map((item, i) => {
+      {items.length > 0 && (
+        <ol className="plan-list" aria-label="Exercices et cardio prévus">
+          {items.map((item, i) => {
+            if (item.kind === 'cardio') {
+              const name = `Cardio ${formatCardio(item.block)}`;
+              return (
+                <CardioItem
+                  key={itemKey(item)}
+                  block={item.block}
+                  className="plan-item"
+                  machines={cardioMachines}
+                  newId={newId}
+                  removeQuestion="Retirer ce cardio de la séance prévue ?"
+                  onSave={(block) => void save(plan && updatePlanCardio(plan, block, now()))}
+                  onRemove={(block) => void save(plan && removePlanCardio(plan, block.id, now()))}
+                >
+                  {moveButtons(i, itemKey(item), name)}
+                </CardioItem>
+              );
+            }
             const ref = variants.get(item.variantId);
             const name = displayName(ref);
             const ctx = ctxFor(item.variantId);
@@ -63,7 +100,7 @@ export function PlanScreen() {
             const { hint } = p ? cardHint(ctx.state, ctx.cfg.assisted, p) : { hint: null };
             return (
               <li
-                key={item.variantId}
+                key={itemKey(item)}
                 className="card plan-item"
                 data-variant={item.variantId}
                 aria-label={name}
@@ -95,42 +132,13 @@ export function PlanScreen() {
                       <p className="muted">Exercice introuvable.</p>
                     )}
                   </div>
-                  <div className="plan-move">
-                    {i > 0 && (
-                      <button
-                        type="button"
-                        className="btn move"
-                        aria-label={`Monter : ${name}`}
-                        onClick={() => void save(plan && movePlanExercise(plan, item.variantId, -1, now()))}
-                      >
-                        ↑
-                      </button>
-                    )}
-                    {i < exercises.length - 1 && (
-                      <button
-                        type="button"
-                        className="btn move"
-                        aria-label={`Descendre : ${name}`}
-                        onClick={() => void save(plan && movePlanExercise(plan, item.variantId, 1, now()))}
-                      >
-                        ↓
-                      </button>
-                    )}
-                  </div>
+                  {moveButtons(i, itemKey(item), name)}
                 </div>
               </li>
             );
           })}
         </ol>
       )}
-
-      <CardioList
-        blocks={plan?.cardio ?? []}
-        machines={cardioMachines}
-        newId={newId}
-        onSave={(block) => void save(plan && updatePlanCardio(plan, block, now()))}
-        onRemove={(block) => void save(plan && removePlanCardio(plan, block.id, now()))}
-      />
 
       {addingCardio && (
         <CardioForm
