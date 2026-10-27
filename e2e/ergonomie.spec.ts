@@ -169,6 +169,15 @@ function auditScreen(page: Page, scale = 1) {
   }, scale);
 }
 
+/**
+ * Haut de la page : après deux images, pour passer après l'écran qui amène un exercice ajouté à l'écran
+ * (`requestAnimationFrame` + `scrollIntoView`), sinon la page peut se retrouver défilée sous l'en-tête collant.
+ */
+async function toTop(page: Page): Promise<void> {
+  await page.evaluate(() => new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => (window.scrollTo(0, 0), done())))));
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+}
+
 async function expectClean(page: Page, screen: string, scale = 1): Promise<void> {
   const r = await auditScreen(page, scale);
   expect(r.badFonts, `${screen} : tailles de police`).toEqual([]);
@@ -293,12 +302,12 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
     const names = ['Pec deck', 'Chest press', 'Leg extension', 'Leg curl', 'Crunch machine'];
     for (const n of names) await doExercise(await addExercise(page, n.toLowerCase(), n, '30'), 3, 'Bien');
     await validateSets(await addExercise(page, 'curl haltères', 'Curl biceps haltères', '12'), 2);
-    await page.evaluate(() => window.scrollTo(0, 0));
+    await toTop(page);
 
     for (const [width, big] of [[412, false], [360, false], [360, true]] as const) {
       await page.setViewportSize({ width, height: width === 412 ? 915 : 800 });
       const restore = big ? await largeText(page) : null;
-      await page.evaluate(() => window.scrollTo(0, 0));
+      await toTop(page);
       await page.getByRole('button', { name: 'Terminer la séance' }).click();
       const sheet = finishSheet(page);
       await expect(sheet).toBeVisible();
@@ -489,7 +498,7 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
         await open();
         await expect(page.locator('main').first()).toBeVisible();
         const restore = scale > 1 ? await largeText(page) : null;
-        await page.evaluate(() => window.scrollTo(0, 0));
+        await toTop(page);
         await page.waitForTimeout(200);
         await expectClean(page, `${screen} à ${width} px${scale > 1 ? ', texte à 115 %' : ''}`, scale);
         await restore?.();
@@ -509,7 +518,7 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
     await page.getByRole('form', { name: 'Cardio' }).getByLabel('Durée (min)').fill('10');
     await page.getByRole('form', { name: 'Cardio' }).getByRole('button', { name: 'Valider', exact: true }).click();
     // Le formulaire de cardio a été amené à l'écran : la page revient en haut (sinon la carte passe sous l'en-tête collant).
-    await page.evaluate(() => window.scrollTo(0, 0));
+    await toTop(page);
     await expectClean(page, 'Séance à 360 px');
     await card.getByRole('button', { name: 'Actions : Chest press' }).click();
     await expectClean(page, 'Séance, menu ouvert');
@@ -527,20 +536,20 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
     await expectClean(page, 'Séance, confirmation du poids');
     await card.getByRole('alertdialog', { name: 'Confirmer le poids' }).getByRole('button', { name: 'Corriger' }).click();
     await page.locator('.cardio-item').getByRole('button', { name: /^Actions : / }).click();
-    await page.evaluate(() => window.scrollTo(0, 0));
+    await toTop(page);
     await expectClean(page, 'Séance, menu du cardio');
     await page.keyboard.press('Escape');
     // Exercice au poids du corps (version 1.24.0) : carte ouverte sans champ de poids.
     await addExercise(page, 'crunch au sol', 'Crunch au sol');
-    await page.evaluate(() => window.scrollTo(0, 0));
+    await toTop(page);
     await expectClean(page, 'Séance, exercice au poids du corps');
     // Exercice en secondes (version 1.25.0) : séries « 20 s ».
     await addExercise(page, 'planche', 'Planche');
-    await page.evaluate(() => window.scrollTo(0, 0));
+    await toTop(page);
     await expectClean(page, 'Séance, exercice en secondes');
     const restore = await largeText(page);
-    // Le texte agrandi allonge la page et le navigateur garde l'élément ouvert à l'écran : retour en haut.
-    await page.evaluate(() => window.scrollTo(0, 0));
+    // Le texte agrandi allonge la page : retour en haut.
+    await toTop(page);
     await expectClean(page, 'Séance, texte agrandi', 1.15);
     await restore();
     await page.getByRole('link', { name: 'Ajouter un exercice' }).click();
@@ -563,7 +572,7 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
     await page.getByRole('button', { name: 'Terminer la séance' }).click();
     await finishSheet(page).getByRole('button', { name: 'Oui, terminer' }).click();
     await expect(page.getByRole('heading', { name: 'Séance terminée' })).toBeVisible();
-    await page.evaluate(() => window.scrollTo(0, 0));
+    await toTop(page);
     await expectClean(page, 'Récapitulatif de fin');
     const larger = await largeText(page);
     await expectClean(page, 'Récapitulatif de fin, texte agrandi', 1.15);
@@ -590,7 +599,7 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
     await page.getByRole('button', { name: 'Démarrer une séance à la maison' }).click();
     await expect(page.getByTestId('session-place')).toBeVisible();
     await addExercise(page, 'crunch au sol', 'Crunch au sol');
-    await page.evaluate(() => window.scrollTo(0, 0));
+    await toTop(page);
     await expectClean(page, 'Séance à la maison');
     await page.locator('article[aria-label="Crunch au sol"]').getByRole('button', { name: 'Valider les 3 séries' }).click();
     await page.locator('article[aria-label="Crunch au sol"]').getByRole('button', { name: 'Bien', exact: true }).click();
