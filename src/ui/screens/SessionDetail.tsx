@@ -7,7 +7,7 @@ import { createSessionFromTemplate } from '../../engine';
 import { correctPerformance, removePastPerformance, setSessionDate, setSessionLocation, type CorrectionError } from '../../history/ops';
 import { displayName } from '../../library/catalog';
 import { defaultSessionName, formatDurationLong, formatHour, formatIsoDay, formatKg, formatReps, formatSetsReps, localDate } from '../../session/format';
-import { elapsedMs, newId, parseWeight, renameSession } from '../../session/ops';
+import { canComplete, elapsedMs, newId, parseWeight, renameSession, reopenSession } from '../../session/ops';
 import { FEELING_LABELS } from '../labels';
 import { StatusBadge } from '../StatusBadge';
 import { addCardio, cardioOf, removeCardio, updateCardio } from '../../cardio/model';
@@ -53,6 +53,8 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
 
   const evaluation = (variantId: string) => replay.evaluations.find((e) => e.sessionId === session.id && e.variantId === variantId);
   const home = session.location === 'maison';
+  // Séance du jour saisie dans l'appli : elle peut être complétée (version 1.28.0).
+  const completable = canComplete(session, Date.now());
   const broke = recordKeys(records);
 
   async function save(next: Session) {
@@ -69,6 +71,13 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
       now,
     });
     if (await commit(created)) goTab(routeHash('seance'));
+    else setFailed(true);
+  }
+
+  /** Compléter la séance du jour (version 1.28.0) : elle se rouvre, ce qui était fait restant fermé. */
+  async function complete() {
+    if (!session || active) return;
+    if (await commit(reopenSession(session, Date.now()))) goTab(routeHash('seance'));
     else setFailed(true);
   }
 
@@ -242,9 +251,16 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
             <a href="#/seance">Reprendre la séance</a>
           </p>
         ) : (
-          <button type="button" className="btn primary big" onClick={() => void reuse()}>
-            Nouvelle séance à partir de celle-ci
-          </button>
+          <>
+            {completable && (
+              <button type="button" className="btn primary big" onClick={() => void complete()}>
+                Compléter cette séance
+              </button>
+            )}
+            <button type="button" className={`btn big${completable ? '' : ' primary'}`} onClick={() => void reuse()}>
+              Nouvelle séance à partir de celle-ci
+            </button>
+          </>
         )}
         {confirmDelete ? (
           <div className="confirm-box" role="group" aria-label="Supprimer la séance">

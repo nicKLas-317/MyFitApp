@@ -1,8 +1,10 @@
 /**
  * Export complet et import JSON (§11.9, §11.10).
- * - schemaVersion 6 : format natif complet, restauré tel quel après validation stricte (blocs de cardio dans les séances,
+ * - schemaVersion 7 : format natif complet, restauré tel quel après validation stricte (blocs de cardio dans les séances,
  *   activités habituelles hors salle et leurs réponses, séance prévue en un seul ordre, musculation et cardio mêlés,
- *   lieu des séances : `location` « maison », absent = salle).
+ *   lieu des séances : `location` « maison », absent = salle ; séance complétée le jour même : `pauseMs`, et `locked`
+ *   tant qu'elle est en cours).
+ * - schemaVersion 6 : identique, sans séance complétée ; lu tel quel.
  * - schemaVersion 5 : identique, sans lieu (toutes les séances sont à la salle) ; lu tel quel.
  * - schemaVersion 4 : séance prévue en deux listes (exercices, puis cardio), versions 1.23.0 et 1.23.1 ; migrée sans perte.
  * - schemaVersion 3 : format natif antérieur aux activités habituelles, migré sans perte (aucune activité).
@@ -27,7 +29,7 @@ import { newId } from '../session/ops';
 import { normalizeName } from '../library/text';
 
 export const APP_ID = 'MyFitApp';
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 /** Plus ancienne version du format natif, migrée à l'import. */
 const FIRST_NATIVE_VERSION = 2;
 /** Délai au-delà duquel l'accueil rappelle d'exporter (§12). */
@@ -461,6 +463,15 @@ function validateSession(s: unknown, path: string, errors: string[]): void {
   if (s.fromPlan !== undefined) errors.push(...planOriginErrors(s.fromPlan, `${path}.fromPlan`));
   // Lieu : « maison », ou absent (salle).
   if (s.location !== undefined && s.location !== 'maison') errors.push(`${path}.location invalide.`);
+  // Séance complétée (version 1.28.0) : pause en millisecondes ; partie fermée seulement pendant la séance.
+  if (s.pauseMs !== undefined && !(isInt(s.pauseMs) && s.pauseMs >= 0)) errors.push(`${path}.pauseMs invalide.`);
+  if (s.locked !== undefined) {
+    const l = s.locked;
+    const ids = (v: unknown) => Array.isArray(v) && v.every(isStr);
+    if (s.state !== 'active' || !isObj(l) || !ids(l.variantIds) || !ids(l.cardioIds) || !isNum(l.endedAt) || !(isInt(l.pauseMs) && l.pauseMs >= 0)) {
+      errors.push(`${path}.locked invalide.`);
+    }
+  }
 }
 
 /** Validation stricte d'une sauvegarde native. Liste vide = valide. */

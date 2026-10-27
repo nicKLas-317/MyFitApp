@@ -16,7 +16,6 @@ import {
   recordSet,
   removeExercise,
   renameSession,
-  restoreRemoved,
   setFeeling,
   setPlannedSets,
   setTarget,
@@ -177,7 +176,7 @@ describe('Ressenti global (§5.5)', () => {
 });
 
 describe('Séance : fin et nom (§5.6)', () => {
-  it('74. Exercice sans série retiré à la fin ; « Annuler » le rétablit comme séance incomplète', () => {
+  it('74. Exercice sans série toujours retiré à la fin (plus d’« Annuler », version 1.28.0) ; resté en base, il ne compte jamais', () => {
     // Historique : une validation verte au palier 45 kg / 3×8.
     const past = history([green(45, 8)]);
     const { profile } = rebuildProfile(past, DEFAULT_ENGINE_SETTINGS);
@@ -200,13 +199,13 @@ describe('Séance : fin et nom (§5.6)', () => {
     const after = rebuildProfile([...past, done], DEFAULT_ENGINE_SETTINGS);
     expect(after.profile.variants[V]?.greenStreak).toBe(1);
 
-    // Annulation : rétabli à sa place, compte comme incomplète (orange, compteur à 0).
-    const restored = restoreRemoved(done, removed, T0 + 3600_001);
-    expect(restored.performances.map((p) => p.variantId)).toEqual([W, V, 'leg-curl']);
-    const undone = rebuildProfile([...past, restored], DEFAULT_ENGINE_SETTINGS);
-    const ev = undone.evaluations.find((e) => e.sessionId === 'today' && e.variantId === V);
-    expect(ev?.status).toBe('orange');
-    expect(undone.profile.variants[V]?.greenStreak).toBe(0);
+    // Une séance terminée qui l'aurait gardé (« Annuler » des versions précédentes) : ignoré par le moteur, comme si
+    // l'exercice n'y était pas (pas de séance incomplète, compteur toujours à 1).
+    const kept = { ...done, performances: [done.performances[0]!, { ...s.performances[1]!, reps: [] }, done.performances[1]!] };
+    const replayed = rebuildProfile([...past, kept], DEFAULT_ENGINE_SETTINGS);
+    expect(replayed.evaluations.find((e) => e.sessionId === 'today' && e.variantId === V)).toBeUndefined();
+    expect(replayed.ignored).toContainEqual({ sessionId: 'today', variantId: V, reasons: ['no_sets'] });
+    expect(replayed.profile).toEqual(after.profile);
   });
 
   it('l’heure de fin ne peut pas précéder le début', () => {

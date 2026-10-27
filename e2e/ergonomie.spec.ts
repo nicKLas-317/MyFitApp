@@ -633,6 +633,28 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
     await page.goto(`./#/historique/${homeSession.id}`);
     await expect(page.getByRole('group', { name: 'Lieu de la séance' })).toBeVisible();
     await expectClean(page, 'Détail d’une séance à la maison');
+    // Compléter la séance du jour (version 1.28.0) : bouton principal du détail, lien discret de l'accueil, séance
+    // rouverte avec ce qui était fait fermé (texte agrandi compris), puis « Annuler les ajouts ».
+    await expect(page.getByRole('button', { name: 'Compléter cette séance' })).toBeVisible();
+    await page.goto('./');
+    const completeLink = page.getByRole('button', { name: /^Compléter la séance de / });
+    await expect(completeLink).toBeVisible();
+    await expectClean(page, 'Accueil, compléter la séance');
+    // Plusieurs séances finies à la même heure (horloge figée) : celle à la maison, depuis son détail.
+    await page.goto(`./#/historique/${homeSession.id}`);
+    await page.getByRole('button', { name: 'Compléter cette séance' }).click();
+    await expect(page.getByTestId('locked').first()).toBeVisible();
+    await toTop(page);
+    await expectClean(page, 'Séance complétée, déjà fait');
+    const largerLocked = await largeText(page);
+    await expectClean(page, 'Séance complétée, texte agrandi', 1.15);
+    await largerLocked();
+    await page.getByRole('button', { name: 'Actions : Séance' }).click();
+    await page.getByRole('menuitem', { name: 'Annuler les ajouts' }).click();
+    await expect(page.getByTestId('cancel-loss')).toHaveText('Rien n’a été saisi. La séance terminée reste enregistrée.');
+    await expectClean(page, 'Annuler les ajouts');
+    await page.getByRole('button', { name: 'Oui, annuler les ajouts' }).click();
+    await expect.poll(async () => (await readSessions(page)).find((x) => x.id === homeSession.id)?.state).toBe('done');
     // Séance oubliée (ouverte depuis plus de 4 heures) : fenêtre à la réouverture.
     await startSession(page);
     await page.clock.setFixedTime(new Date('2026-10-23T01:00:00'));

@@ -156,7 +156,7 @@ describe('Séance prévue (§5.9)', () => {
     expect(pendingKeys()).toEqual(['cardio:prevu-tapis', 'leg-curl']);
     // Cardio prévu validé : à sa place, plus « prévu » ; retiré, il le redevient.
     s = addCardio(s, TAPIS, at(23, 18));
-    expect(sessionSteps(s)[1]).toEqual({ kind: 'cardio', key: 'cardio:prevu-tapis', block: TAPIS, pending: false });
+    expect(sessionSteps(s)[1]).toEqual({ kind: 'cardio', key: 'cardio:prevu-tapis', block: TAPIS, pending: false, locked: false });
     expect(pendingKeys()).toEqual(['leg-curl']);
     // Ajoutés en séance : exercices puis cardio, après le plan.
     const velo: CardioBlock = { id: 'velo-libre', machineId: 'velo', machine: 'Vélo', minutes: 5 };
@@ -237,7 +237,7 @@ describe('Séance prévue (§5.9)', () => {
     if (parsed.kind !== 'backup') return;
     expect(parsed.backup.plan).toEqual(plan);
     expect(parsed.backup.sessions[0]!.fromPlan).toEqual(started.fromPlan);
-    expect(parsed.backup.schemaVersion).toBe(6);
+    expect(parsed.backup.schemaVersion).toBe(7);
     // Sauvegarde antérieure (format 4 sans plan) : aucun plan.
     const { plan: _omit, ...older } = { ...buildBackup({ sessions: [], exercises: LIB }, at(23)), schemaVersion: 4 };
     const old = parseJsonImport(JSON.stringify(older), LIB, '2026-10-23');
@@ -309,7 +309,7 @@ describe('Séance prévue (§5.9)', () => {
     const parsed = parseJsonImport(JSON.stringify(v4), LIB, '2026-10-23');
     expect(parsed.kind).toBe('backup');
     if (parsed.kind !== 'backup') return;
-    expect(parsed.backup.schemaVersion).toBe(6);
+    expect(parsed.backup.schemaVersion).toBe(7);
     expect(parsed.backup.plan).toEqual(expected);
     expect(parseJsonImport(JSON.stringify({ ...v4, schemaVersion: 5 }), LIB, '2026-10-23').kind).toBe('error');
     expect(parseJsonImport(JSON.stringify({ ...v4, plan: expected }), LIB, '2026-10-23').kind).toBe('error');

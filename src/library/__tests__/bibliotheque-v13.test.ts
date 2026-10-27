@@ -60,10 +60,11 @@ describe('Bibliothèque version 13 : pompes au poids du corps (version 1.27.0)',
     expect(rebuildProfile([done('x', 19, 'pompes', 12, 3)], settings).evaluations[0]).toMatchObject({ standard: false, validation: false });
     expect(formatRecord(computeRecords(sessions, settings).current.get('pompes')!)).toBe('2 × 12');
 
-    // Récapitulatif à la maison : pectoraux ½ (« +1 maison »), triceps et épaules non comptés ; à la salle : 1 et ½.
+    // Récapitulatif à la maison : pectoraux 2 séries (1/6, « +2 séries maison », version 1.28.0), triceps et épaules
+    // non comptés ; à la salle : 1 et ½.
     const now = new Date(2026, 9, 21, 20).getTime();
     const home = weeklyRecap([done('m', 21, 'pompes', 12, 2, true)], LIB, now).cells;
-    expect(home.find((c) => c.group === 'pectoraux')).toMatchObject({ count: 0, indirect: 0, home: 1, score: 0.5 });
+    expect(home.find((c) => c.group === 'pectoraux')).toMatchObject({ count: 0, indirect: 0, home: 2, score: 2 / 12, color: 'vert' });
     for (const g of ['triceps', 'epaules']) expect(home.find((c) => c.group === g), g).toMatchObject({ count: 0, indirect: 0, score: 0 });
     const gym = weeklyRecap([done('s', 21, 'pompes', 12)], LIB, now).cells;
     expect(gym.find((c) => c.group === 'pectoraux')).toMatchObject({ count: 1, score: 1 });

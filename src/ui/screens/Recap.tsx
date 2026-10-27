@@ -3,7 +3,7 @@ import { useApp } from '../../app/store';
 import { navigate } from '../../app/hooks';
 import { displayName } from '../../library/catalog';
 import { formatDay, formatDurationLong, formatHour, formatKg, formatReps, formatSetsReps } from '../../session/format';
-import { elapsedMs, renameSession, restoreRemoved } from '../../session/ops';
+import { elapsedMs, renameSession } from '../../session/ops';
 import { FEELING_LABELS, formatRecommendation } from '../labels';
 import { StatusBadge } from '../StatusBadge';
 import { cardioOf } from '../../cardio/model';
@@ -14,7 +14,7 @@ import { formatRecord } from '../../analysis/records';
 
 /** Récapitulatif de fin de séance (§5.6) : la séance est déjà enregistrée, le nom est facultatif. */
 export function Recap({ sessionId }: { sessionId: string }) {
-  const { sessions, variants, replay, records, commit, lastFinish, setLastFinish, ctxFor } = useApp();
+  const { sessions, variants, replay, records, commit, lastFinish, ctxFor } = useApp();
   const session = sessions.find((s) => s.id === sessionId);
   const [name, setName] = useState(session?.name ?? '');
   // Écran quitté sans enregistrer le nom (bouton retour, onglet) : le nom saisi est enregistré au passage.
@@ -72,22 +72,13 @@ export function Recap({ sessionId }: { sessionId: string }) {
         </p>
       )}
 
+      {/* Exercices sans série : toujours retirés (version 1.28.0), seulement signalés. */}
       {removed.length > 0 && (
-        <div className="banner info">
+        <div className="banner info" role="status">
           <span>
             {removed.length === 1 ? 'Exercice sans série retiré' : `${removed.length} exercices sans série retirés`} :{' '}
             {removed.map((r) => displayName(variants.get(r.performance.variantId))).join(', ')}
           </span>
-          <button
-            type="button"
-            className="btn"
-            onClick={() => {
-              setLastFinish(null);
-              void commit(restoreRemoved(session, removed, Date.now()));
-            }}
-          >
-            Annuler
-          </button>
         </div>
       )}
 

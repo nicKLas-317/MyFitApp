@@ -143,7 +143,7 @@ test.describe('Séance, persistance et chronomètre', () => {
     expect(done?.performances).toHaveLength(1);
   });
 
-  test('74. Exercice sans série retiré à la fin, « Annuler » le rétablit', async ({ page }) => {
+  test('74. Exercice sans série toujours retiré à la fin, signalé sans « Annuler » (version 1.28.0)', async ({ page }) => {
     await startSession(page);
     const curl = await addExercise(page, 'curl', 'Curl biceps haltères', '12');
     await doExercise(curl, 3, 'Bien');
@@ -151,16 +151,10 @@ test.describe('Séance, persistance et chronomètre', () => {
     await finishSession(page);
 
     await expect(page.getByText('Exercice sans série retiré : Presse à cuisses')).toBeVisible();
-    let [done] = await readSessions(page);
+    await expect(page.locator('.banner.info').getByRole('button')).toHaveCount(0);
+    await expect(page.locator('.recap-item')).toHaveCount(1);
+    const [done] = await readSessions(page);
     expect(done?.performances.map((p) => p.variantId)).toEqual(['curl-biceps-halteres']);
-
-    await expect(page.locator('.toast')).toBeHidden();
-    await page.locator('.banner.info').getByRole('button', { name: 'Annuler' }).click();
-    await expect(page.locator('.recap-item')).toHaveCount(2);
-    await expect.poll(async () => (await readSessions(page))[0]?.performances.length).toBe(2);
-    [done] = await readSessions(page);
-    expect(done?.performances[1]).toMatchObject({ variantId: 'presse-a-cuisses', reps: [] });
-    await expect(page.locator('.recap-item[data-variant="presse-a-cuisses"] [data-status]')).toHaveAttribute('data-status', 'orange');
   });
 
   test('Échec d’enregistrement signalé, jamais annoncé comme enregistré, puis relance', async ({ page }) => {

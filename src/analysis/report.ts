@@ -228,7 +228,8 @@ function totalsOf(sessions: readonly Session[], period: Pick<ReportPeriod, 'star
   for (const s of list) {
     // À la maison, la durée n'a pas d'importance : ni durée en salle, ni « sans durée ».
     if (s.location === 'maison') homeCount++;
-    else if (s.startedAt !== null && s.endedAt !== null) durationMs += Math.max(0, s.endedAt - s.startedAt);
+    // Séance complétée (version 1.28.0) : la somme de ses périodes, sans la pause.
+    else if (s.startedAt !== null && s.endedAt !== null) durationMs += Math.max(0, s.endedAt - s.startedAt - (s.pauseMs ?? 0));
     else unknownDuration++;
   }
   return { sessionCount: list.length, ...(homeCount > 0 ? { homeCount } : {}), durationMs, unknownDuration };

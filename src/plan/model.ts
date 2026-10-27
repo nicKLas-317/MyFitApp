@@ -118,9 +118,10 @@ export function startFromPlan(
 }
 
 /** Élément affiché dans la séance : un exercice, ou un bloc de cardio (enregistré, ou prévu et pas encore validé). */
+/** `locked` : déjà fait dans une séance complétée (version 1.28.0), fermé, corrigé depuis l'historique. */
 export type SessionStep =
-  | { kind: 'exercise'; key: string; performance: Performance }
-  | { kind: 'cardio'; key: string; block: CardioBlock; pending: boolean };
+  | { kind: 'exercise'; key: string; performance: Performance; locked: boolean }
+  | { kind: 'cardio'; key: string; block: CardioBlock; pending: boolean; locked: boolean };
 
 /** Ordre prévu d'une séance démarrée à partir du plan ; une séance antérieure à la version 1.23.2 : exercices, puis cardio. */
 function originOrder(origin: PlanOrigin): PlanStep[] {
@@ -135,11 +136,18 @@ function originOrder(origin: PlanOrigin): PlanStep[] {
 /**
  * Ordre d'affichage de la séance. Séance prévue : l'ordre du plan, musculation et cardio mêlés (un cardio prévu validé
  * reste à sa place, retiré il redevient « prévu »), puis ce qui a été ajouté en séance (exercices dans l'ordre d'ajout,
- * puis cardio). Séance libre : les exercices dans l'ordre d'ajout, puis le cardio.
+ * puis cardio). Séance libre : les exercices dans l'ordre d'ajout, puis le cardio. Séance complétée : ce qui était
+ * fait est fermé, et le cardio prévu non fait n'est plus proposé.
  */
 export function sessionSteps(session: Session): SessionStep[] {
-  const exercise = (performance: Performance): SessionStep => ({ kind: 'exercise', key: performance.variantId, performance });
-  const cardio = (block: CardioBlock, pending: boolean): SessionStep => ({ kind: 'cardio', key: `cardio:${block.id}`, block, pending });
+  const lockedExercises = new Set(session.locked?.variantIds);
+  const lockedCardio = new Set(session.locked?.cardioIds);
+  const exercise = (performance: Performance): SessionStep => ({
+    kind: 'exercise', key: performance.variantId, performance, locked: lockedExercises.has(performance.variantId),
+  });
+  const cardio = (block: CardioBlock, pending: boolean): SessionStep => ({
+    kind: 'cardio', key: `cardio:${block.id}`, block, pending, locked: lockedCardio.has(block.id),
+  });
   const blocks = cardioOf(session);
   if (!session.fromPlan) return [...session.performances.map(exercise), ...blocks.map((b) => cardio(b, false))];
   const planned = new Map((session.fromPlan.cardio ?? []).map((b) => [b.id, b]));
@@ -152,7 +160,7 @@ export function sessionSteps(session: Session): SessionStep[] {
       const doneBlock = blocks.find((b) => b.id === step.id);
       const plannedBlock = planned.get(step.id);
       if (doneBlock) steps.push(cardio(doneBlock, false));
-      else if (plannedBlock) steps.push(cardio(plannedBlock, true));
+      else if (plannedBlock && !session.locked) steps.push(cardio(plannedBlock, true));
     }
   }
   const shown = new Set(steps.map((s) => s.key));
@@ -165,13 +173,15 @@ export function sessionSteps(session: Session): SessionStep[] {
 
 /** Élément pas encore terminé : exercice aux séries incomplètes ou sans ressenti, cardio prévu pas encore validé. */
 export function unfinishedStep(step: SessionStep): boolean {
+  if (step.locked) return false;
   if (step.kind === 'cardio') return step.pending;
   const p = step.performance;
   return p.plannedSets === null || p.reps.length < p.plannedSets || p.feeling === 'inconnu';
 }
 
-/** Cardio prévu pas encore validé dans la séance. */
+/** Cardio prévu pas encore validé dans la séance (aucun dans une séance complétée : il n'a pas été fait). */
 export function pendingPlanCardio(session: Session): CardioBlock[] {
+  if (session.locked) return [];
   const done = new Set(cardioOf(session).map((b) => b.id));
   return (session.fromPlan?.cardio ?? []).filter((b) => !done.has(b.id));
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { Performance, Session } from '../domain/types';
 import { useApp } from '../app/store';
 import { displayName } from '../library/catalog';
@@ -34,12 +34,14 @@ interface Props {
   session: Session;
   performance: Performance;
   open: boolean;
+  /** Déjà fait dans une séance complétée (version 1.28.0) : fermé, sans menu ; il se corrige depuis l'historique. */
+  locked?: boolean;
   onToggle(): void;
   /** Premier ressenti donné à un exercice dont toutes les séries sont faites : l'écran ouvre le suivant. */
   onFinished?(): void;
 }
 
-export function ExerciseCard({ session, performance: p, open, onToggle, onFinished }: Props) {
+export function ExerciseCard({ session, performance: p, open, locked = false, onToggle, onFinished }: Props) {
   const { variants, ctxFor, commit, sessions, records, settings } = useApp();
   const ref = variants.get(p.variantId);
   // À la maison, un exercice à charge suit sa progression de la maison (version 1.26.0).
@@ -81,7 +83,7 @@ export function ExerciseCard({ session, performance: p, open, onToggle, onFinish
       {...(ref ? groupColorProps(ref.exercise.primaryGroup) : {})}
     >
       <div className="card-head">
-        <button type="button" className="card-header" onClick={onToggle} aria-expanded={open}>
+        <HeaderTag locked={locked} open={open} onToggle={onToggle}>
           {ref && <ExercisePicto exercise={ref.exercise} variantId={ref.variant.id} />}
           {/* Liste compacte du mode salle : nom sur toute la largeur, charge et séries faites dessous. */}
           <span className="card-title">
@@ -93,6 +95,7 @@ export function ExerciseCard({ session, performance: p, open, onToggle, onFinish
                 {p.weightKg > 0 && ' · '}
                 {done}/{planned}
               </span>
+              {locked && <span data-testid="locked"> · déjà fait</span>}
             </span>
             {newRecord && (
               <span className="record-new" data-testid="new-record">
@@ -100,7 +103,7 @@ export function ExerciseCard({ session, performance: p, open, onToggle, onFinish
               </span>
             )}
           </span>
-        </button>
+        </HeaderTag>
         {open && (
           <ActionMenu
             label={name}
@@ -296,5 +299,15 @@ export function Stepper({ label, hideLabel = false, value, min, max, step = 1, u
         +
       </button>
     </div>
+  );
+}
+
+/** En-tête de la carte : un bouton qui l'ouvre ou la ferme ; une simple ligne pour un exercice déjà fait (fermé). */
+function HeaderTag({ locked, open, onToggle, children }: { locked: boolean; open: boolean; onToggle(): void; children: ReactNode }) {
+  if (locked) return <div className="card-header">{children}</div>;
+  return (
+    <button type="button" className="card-header" onClick={onToggle} aria-expanded={open}>
+      {children}
+    </button>
   );
 }

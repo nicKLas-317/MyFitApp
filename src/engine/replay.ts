@@ -14,7 +14,7 @@ export interface Profile {
   lastSessionKey: SessionKey | null;
 }
 
-export type IgnoredReason = 'partial' | 'duplicate_variant' | PerformanceError;
+export type IgnoredReason = 'partial' | 'no_sets' | 'duplicate_variant' | PerformanceError;
 
 export interface IgnoredPerformance {
   sessionId: string;
@@ -89,6 +89,11 @@ function foldSession(profile: Profile, session: Session, settings: EngineSetting
     }
     if (!isEvaluable(perf)) {
       ignored.push({ ...base, reasons: ['partial'] });
+      continue;
+    }
+    // Exercice sans aucune série (version 1.28.0) : jamais compté, même s'il est resté dans une séance terminée.
+    if (perf.reps.length === 0) {
+      ignored.push({ ...base, reasons: ['no_sets'] });
       continue;
     }
     const { state, evaluation } = applyPerformance(variants[track], perf, session.id, cfg);

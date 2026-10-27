@@ -245,6 +245,7 @@ fieldset.frame > legend {
 
 /* Séance prévue (§5.9) sur l'accueil : « Séance libre » en secondaire, puis le résumé du plan et « Modifier ». */
 .home .free-session,
+.home .complete-session,
 .home .prepare-plan {
   margin-top: var(--space-1);
 }
@@ -455,6 +456,11 @@ fieldset.frame > legend {
   border: none;
   text-align: left;
   cursor: pointer;
+}
+
+/* Exercice déjà fait d'une séance complétée : une simple ligne, qui ne s'ouvre pas. */
+div.card-header {
+  cursor: default;
 }
 
 .card-title {

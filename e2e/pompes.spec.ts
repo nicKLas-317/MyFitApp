@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { addExercise, finishSession, readSessions } from './helpers';
 
 test.describe('Pompes au poids du corps (§4.0, version 1.27.0)', () => {
-  test('262. Pompes classiques : 2 séries par défaut, sans charge, +1 rép. après deux vertes ; sur les genoux à part ; à la maison, pectoraux « +1 maison »', async ({ page }) => {
+  test('262. Pompes classiques : 2 séries par défaut, sans charge, +1 rép. après deux vertes ; sur les genoux à part ; à la maison, pectoraux « +2 séries maison »', async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-10-26T18:00:00'));
     await page.goto('./');
     await page.getByRole('button', { name: 'Démarrer une séance', exact: true }).click();
@@ -37,10 +37,10 @@ test.describe('Pompes au poids du corps (§4.0, version 1.27.0)', () => {
       ['maison', [['pompes', 0, 2, [10, 10]]]],
     ]);
 
-    // Récapitulatif : pectoraux 1 (salle) + ½ (maison) ; triceps « +1 indirect » de la salle seulement.
+    // Récapitulatif : pectoraux 1 (salle) + 2 séries à la maison (version 1.28.0) ; triceps « +1 indirect » de la salle seulement.
     await page.goto('./');
     const recap = page.getByTestId('weekly-recap');
-    await expect(recap.locator('[data-group="pectoraux"] .recap-count')).toHaveText(/^ \(1× · \+1\s+maison\)$/);
+    await expect(recap.locator('[data-group="pectoraux"] .recap-count')).toHaveText(/^ \(1× · \+2\s+séries\s+maison\)$/);
     await expect(recap.locator('[data-group="triceps"] .recap-count')).toHaveText(/^ \(\+1\s+indirect\)$/);
 
     // Fiche : 2 × 11, « ↑ +1 rép. », dessin des pompes classiques ; les genoux : pictogramme.

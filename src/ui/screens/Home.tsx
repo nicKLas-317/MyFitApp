@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../../app/store';
 import { navigate, useNow } from '../../app/hooks';
-import { elapsedMs, newId, startSession } from '../../session/ops';
+import { completableSession, completeLabel, elapsedMs, newId, reopenSession, startSession } from '../../session/ops';
 import { displayName } from '../../library/catalog';
 import { formatCardio } from '../../cardio/model';
 import { startFromPlan } from '../../plan/model';
@@ -31,6 +31,21 @@ export function Home() {
     await commit(session);
     navigate('seance');
   }
+
+  /**
+   * Compléter la dernière séance terminée du jour (version 1.28.0) : lien discret sous le choix du lieu ; la séance
+   * se rouvre, à son lieu, ce qui était fait restant fermé.
+   */
+  const completable = active ? undefined : completableSession(sessions, now);
+  async function complete() {
+    if (!completable) return;
+    if (await commit(reopenSession(completable, Date.now()))) navigate('seance');
+  }
+  const completeLink = completable && (
+    <button type="button" className="link complete-session" onClick={() => void complete()}>
+      {completeLabel(completable)}
+    </button>
+  );
 
   /** Choix du lieu, sous le bouton de la séance libre : Salle (par défaut) ou Maison. */
   const placeChoice = (
@@ -77,6 +92,7 @@ export function Home() {
             {home ? 'Séance libre à la maison' : 'Séance libre'}
           </button>
           {placeChoice}
+          {completeLink}
           <section className="card plan-summary" aria-label="Séance prévue">
             <p className="plan-names" data-testid="plan-summary">
               {plan.items.map((e) => (e.kind === 'cardio' ? formatCardio(e.block) : displayName(variants.get(e.variantId)))).join(' · ')}
@@ -92,6 +108,7 @@ export function Home() {
             {home ? 'Démarrer une séance à la maison' : 'Démarrer une séance'}
           </button>
           {placeChoice}
+          {completeLink}
           <button type="button" className="link prepare-plan" onClick={() => navigate('seance-prevue')}>
             Préparer ma prochaine séance
           </button>

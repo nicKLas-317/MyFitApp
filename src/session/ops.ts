@@ -178,9 +178,13 @@ export function setFeeling(session: Session, variantId: string, feeling: RatedFe
   return updatePerformance(session, variantId, now, (p) => (p.feeling === feeling ? p : { ...p, feeling }));
 }
 
-/** Exercices réalisés (au moins une série) sans ressenti, à signaler avant de terminer (§5.5). */
+/**
+ * Exercices réalisés (au moins une série) sans ressenti, à signaler avant de terminer (§5.5). Ceux déjà faits d'une
+ * séance complétée (version 1.28.0) sont fermés : ils ne sont pas relevés.
+ */
 export function missingFeelings(session: Session): Performance[] {
-  return session.performances.filter((p) => p.reps.length > 0 && p.feeling === 'inconnu');
+  const locked = new Set(session.locked?.variantIds);
+  return session.performances.filter((p) => p.reps.length > 0 && p.feeling === 'inconnu' && !locked.has(p.variantId));
 }
 
 /** Retire l'exercice de la séance en cours, sans toucher à son historique (§13). */
@@ -198,9 +202,12 @@ export interface RemovedPerformance {
  * Ce que l'annulation d'une séance en cours ferait perdre (version 1.27.0) : séries validées et blocs de cardio validés.
  * « Rien n'a été saisi. », « 4 séries et 1 cardio seront perdus. »
  */
-export function cancelLoss(session: Pick<Session, 'performances' | 'cardio'>): string {
-  const sets = session.performances.reduce((n, p) => n + p.reps.length, 0);
-  const cardio = session.cardio?.length ?? 0;
+export function cancelLoss(session: Pick<Session, 'performances' | 'cardio' | 'locked'>): string {
+  // Séance complétée (version 1.28.0) : seuls les ajouts seraient perdus, la partie déjà terminée reste.
+  const lockedExercises = new Set(session.locked?.variantIds);
+  const lockedCardio = new Set(session.locked?.cardioIds);
+  const sets = session.performances.filter((p) => !lockedExercises.has(p.variantId)).reduce((n, p) => n + p.reps.length, 0);
+  const cardio = (session.cardio ?? []).filter((b) => !lockedCardio.has(b.id)).length;
   if (sets === 0 && cardio === 0) return 'Rien n’a été saisi.';
   const setsText = sets === 1 ? '1 série' : `${sets} séries`;
   const cardioText = cardio === 1 ? '1 cardio' : `${cardio} cardios`;
@@ -210,8 +217,9 @@ export function cancelLoss(session: Pick<Session, 'performances' | 'cardio'>): s
 }
 
 /**
- * Termine la séance (§5.6) : chronomètre arrêté, heure de fin enregistrée, exercices sans
- * aucune série retirés et renvoyés pour permettre l'annulation.
+ * Termine la séance (§5.6) : chronomètre arrêté, heure de fin enregistrée, exercices sans aucune série retirés
+ * (toujours : version 1.28.0, plus d'« Annuler ») et renvoyés pour être signalés au récapitulatif. Une séance
+ * complétée perd sa partie fermée : elle redevient une séance terminée comme une autre.
  */
 export function finishSession(session: Session, endedAt: number): { session: Session; removed: RemovedPerformance[] } {
   const removed: RemovedPerformance[] = [];
@@ -221,21 +229,76 @@ export function finishSession(session: Session, endedAt: number): { session: Ses
     else kept.push(performance);
   });
   const end = session.startedAt !== null ? Math.max(endedAt, session.startedAt) : endedAt;
+  const { locked: _locked, ...rest } = session;
   return {
-    session: { ...session, state: 'done', endedAt: end, performances: kept, updatedAt: endedAt },
+    session: { ...rest, state: 'done', endedAt: end, performances: kept, updatedAt: endedAt },
     removed,
   };
 }
 
-/** Annule le retrait automatique : les exercices reprennent leur place d'origine. */
-export function restoreRemoved(session: Session, removed: readonly RemovedPerformance[], now: number): Session {
-  if (removed.length === 0) return session;
-  const performances = [...session.performances];
-  for (const { index, performance } of [...removed].sort((a, b) => a.index - b.index)) {
-    if (performances.some((p) => p.variantId === performance.variantId)) continue;
-    performances.splice(Math.min(index, performances.length), 0, performance);
-  }
-  return { ...session, performances, updatedAt: now };
+/**
+ * Séance terminée qui peut être complétée (version 1.28.0) : saisie dans l'appli, avec ses heures, et du jour même.
+ */
+export function canComplete(session: Session, now: number): boolean {
+  return (
+    session.state === 'done' &&
+    session.origin === 'app' &&
+    session.startedAt !== null &&
+    session.endedAt !== null &&
+    session.date === localDate(now)
+  );
+}
+
+/** La dernière séance terminée du jour qui peut être complétée, s'il y en a une. */
+export function completableSession(sessions: readonly Session[], now: number): Session | undefined {
+  return sessions.filter((s) => canComplete(s, now)).sort((a, b) => (b.endedAt ?? 0) - (a.endedAt ?? 0))[0];
+}
+
+/** « Compléter la séance de ce matin » (avant midi), « de cet après-midi » (avant 18 h), « de ce soir ». */
+export function completeLabel(session: Session): string {
+  const hour = new Date(session.startedAt ?? 0).getHours();
+  return `Compléter la séance ${hour < 12 ? 'de ce matin' : hour < 18 ? 'de cet après-midi' : 'de ce soir'}`;
+}
+
+/**
+ * Rouvre une séance terminée du jour pour la compléter (version 1.28.0) : elle redevient la séance en cours, avec son
+ * lieu ; la pause depuis sa fin est retirée de sa durée ; ses exercices et son cardio restent fermés.
+ */
+export function reopenSession(session: Session, now: number): Session {
+  const endedAt = session.endedAt ?? now;
+  const pauseMs = session.pauseMs ?? 0;
+  return {
+    ...session,
+    state: 'active',
+    endedAt: null,
+    pauseMs: pauseMs + Math.max(0, now - endedAt),
+    locked: {
+      variantIds: session.performances.map((p) => p.variantId),
+      cardioIds: (session.cardio ?? []).map((b) => b.id),
+      endedAt,
+      pauseMs,
+    },
+    updatedAt: now,
+  };
+}
+
+/** « Annuler les ajouts » d'une séance complétée : elle redevient exactement la séance terminée d'avant. */
+export function cancelAdditions(session: Session, now: number): Session {
+  const { locked, pauseMs: _pause, ...rest } = session;
+  if (!locked) return session;
+  const variantIds = new Set(locked.variantIds);
+  const cardioIds = new Set(locked.cardioIds);
+  const cardio = (session.cardio ?? []).filter((b) => cardioIds.has(b.id));
+  const { cardio: _cardio, ...base } = rest;
+  return {
+    ...base,
+    state: 'done',
+    endedAt: locked.endedAt,
+    performances: session.performances.filter((p) => variantIds.has(p.variantId)),
+    ...(cardio.length > 0 ? { cardio } : {}),
+    ...(locked.pauseMs > 0 ? { pauseMs: locked.pauseMs } : {}),
+    updatedAt: now,
+  };
 }
 
 /** Renomme la séance ; un nom vide rétablit le nom par défaut. */
@@ -245,14 +308,17 @@ export function renameSession(session: Session, name: string, now: number): Sess
   return next === session.name ? session : { ...session, name: next, updatedAt: now };
 }
 
-/** Temps écoulé calculé depuis l'horodatage de début, jamais par incrément (§6). */
+/**
+ * Temps écoulé calculé depuis l'horodatage de début, jamais par incrément (§6) ; une séance complétée ne compte pas
+ * la pause entre ses périodes (version 1.28.0).
+ */
 export function elapsedMs(session: Session, now: number): number {
   if (session.startedAt === null) return 0;
-  return Math.max(0, (session.endedAt ?? now) - session.startedAt);
+  return Math.max(0, (session.endedAt ?? now) - session.startedAt - (session.pauseMs ?? 0));
 }
 
 export function isForgotten(session: Session, now: number): boolean {
-  return session.state === 'active' && session.startedAt !== null && now - session.startedAt > FORGOTTEN_AFTER_MS;
+  return session.state === 'active' && session.startedAt !== null && elapsedMs(session, now) > FORGOTTEN_AFTER_MS;
 }
 
 /** Lit un poids saisi en français : « 52,5 », « 52.5 », « 52,5 kg ». */

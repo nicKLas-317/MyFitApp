@@ -141,6 +141,25 @@ export interface Session {
    * enregistrées avant la version 1.26.0, et toute séance prévue).
    */
   location?: 'maison';
+  /**
+   * Pause entre les périodes d'une séance complétée le jour même (version 1.28.0), en millisecondes : la durée est
+   * la somme des périodes, sans la pause. Absent = aucune pause.
+   */
+  pauseMs?: number;
+  /**
+   * Séance terminée rouverte pour être complétée (version 1.28.0), seulement tant qu'elle est en cours : ce qui était
+   * déjà fait reste fermé (corrigé depuis l'historique), et « Annuler les ajouts » la rend telle qu'elle était.
+   */
+  locked?: LockedPart;
+}
+
+/** Partie déjà terminée d'une séance rouverte, et sa fin et sa pause d'origine pour « Annuler les ajouts ». */
+export interface LockedPart {
+  variantIds: string[];
+  cardioIds: string[];
+  endedAt: number;
+  /** Pause de la séance avant sa réouverture (0 si aucune). */
+  pauseMs: number;
 }
 
 /**

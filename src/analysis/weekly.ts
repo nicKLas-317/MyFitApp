@@ -4,8 +4,9 @@
  * Aucun effet sur le moteur de progression. Le cardio n'entre dans aucun groupe : seul son total figure dans l'en-tête.
  * Une séance compte 1 pour un groupe travaillé en groupe principal, ½ pour un groupe seulement secondaire (travail indirect).
  * Une activité habituelle confirmée (badminton…) compte ½ pour chacun de ses groupes, comme un travail indirect.
- * Une séance à la maison (version 1.26.1) compte ½ pour le groupe principal de chacun de ses exercices (« +1 maison ») ;
- * ses groupes secondaires ne comptent pas.
+ * Une séance à la maison (version 1.28.0) compte selon son volume : 1/12 par série validée d'un exercice dont le groupe
+ * est le groupe principal (« +5 séries maison »), au plus ½ par semaine et par groupe ; ses groupes secondaires ne
+ * comptent pas. Un exercice sans aucune série ne compte jamais.
  */
 import type { Exercise, MuscleGroup, Session } from '../domain/types';
 import { cardioMinutes, formatMinutes } from '../cardio/model';
@@ -41,11 +42,14 @@ export interface RecapCell {
   count: number;
   /** Séances de la semaine où le groupe n'a été travaillé qu'en groupe secondaire (travail indirect). */
   indirect: number;
-  /** Séances à la maison de la semaine où le groupe est groupe principal d'un exercice ; absent s'il n'y en a pas. */
+  /**
+   * Séries validées à la maison dans la semaine sur des exercices dont le groupe est le groupe principal (version
+   * 1.28.0) ; absent s'il n'y en a pas.
+   */
   home?: number;
   /**
-   * Score de la semaine : 1 par séance directe, ½ par séance indirecte ou à la maison. Il détermine la couleur et le
-   * tri : sous 1 (une seule séance indirecte ou à la maison), le groupe reste vert.
+   * Score de la semaine : 1 par séance directe, ½ par séance indirecte, 1/12 par série à la maison (au plus ½ pour la
+   * semaine). Il détermine la couleur et le tri : sous 1, le groupe reste vert ; la maison seule ne le rend jamais orange.
    */
   score: number;
   color: RecapColor;
@@ -102,6 +106,9 @@ function recencyOf(time: number, now: number): Recency {
   return dayKey(time) === dayKey(yesterday.getTime()) ? 'yesterday' : null;
 }
 
+/** Poids maximal de la maison dans la semaine, pour un groupe (version 1.28.0). */
+export const HOME_WEEK_CAP = 0.5;
+
 const COLOR_RANK: Record<RecapColor, number> = { vert: 0, orange: 1, rouge: 2 };
 
 export interface GroupWork {
@@ -109,8 +116,10 @@ export interface GroupWork {
   counts: Map<MuscleGroup, number>;
   /** Séances de la période où le groupe n'est que groupe secondaire, et activités habituelles qui le sollicitent. */
   indirects: Map<MuscleGroup, number>;
-  /** Séances à la maison de la période où le groupe est groupe principal d'au moins un exercice (½ chacune). */
+  /** Séries validées à la maison dans la période, sur des exercices dont le groupe est le groupe principal. */
   homes: Map<MuscleGroup, number>;
+  /** Poids de ces séries : 1/12 chacune, sans dépasser 1 par jour avec la salle et les activités (pas encore plafonné à ½). */
+  homeScores: Map<MuscleGroup, number>;
   /** Dernier moment où le groupe a été travaillé, directement ou non, toutes séances terminées confondues. */
   last: Map<MuscleGroup, number>;
 }
@@ -121,11 +130,14 @@ export interface GroupWork {
  * Une activité habituelle confirmée compte ½ (indirect) pour chacun de ses groupes, sans que le total du jour pour
  * un groupe dépasse 1 : après une séance où il était principal, elle n'ajoute rien ; après une séance où il n'était
  * que secondaire, elle ajoute ½. Elle compte toujours pour « hier » / « aujourd'hui ».
- * Une séance à la maison compte ½ (« maison ») pour le groupe principal de chacun de ses exercices, au plus ½ par
- * séance ; ses groupes secondaires ne comptent pas (ni score, ni « hier » / « aujourd'hui »). Elle est plafonnée
- * comme une activité (version 1.26.2) : le jour d'une séance à la salle où le groupe était principal, elle n'ajoute
- * rien ; quel que soit l'ordre des séances dans la journée, la salle est comptée d'abord, puis la maison, puis les
- * activités.
+ * Une séance à la maison compte ses séries (version 1.28.0) : 1/12 par série validée d'un exercice dont le groupe
+ * est le groupe principal ; ses groupes secondaires ne comptent pas (ni score, ni « hier » / « aujourd'hui »). Elle
+ * est plafonnée comme une activité (version 1.26.2) : le jour d'une séance à la salle où le groupe était principal,
+ * elle n'ajoute rien (ses séries ne sont pas comptées) ; sinon, le total du jour ne dépasse pas 1. Quel que soit
+ * l'ordre des séances dans la journée, la salle est comptée d'abord, puis la maison, puis les activités. Le plafond
+ * de ½ par semaine est appliqué par le récapitulatif.
+ * Un exercice sans aucune série (resté dans une séance terminée) ne compte jamais ; une performance partielle
+ * importée (poids sans répétitions) compte comme avant.
  * Les sous-groupes des jambes comptent pour « jambes » quand ils ne sont pas affichés eux-mêmes.
  * `inPeriod` reçoit le début d'une séance ou d'une activité.
  */
@@ -149,6 +161,7 @@ export function groupWork(
   const counts = new Map<MuscleGroup, number>();
   const indirects = new Map<MuscleGroup, number>();
   const homes = new Map<MuscleGroup, number>();
+  const homeScores = new Map<MuscleGroup, number>();
   const last = new Map<MuscleGroup, number>();
   /** Travail compté par jour et par groupe (1 ou ½ par séance), pour plafonner la maison et les activités. */
   const daily = new Map<string, number>();
@@ -164,26 +177,41 @@ export function groupWork(
     // secondaire dans un autre, il compte comme principal (jamais plus de 1 par séance).
     const direct = new Set<MuscleGroup>();
     const secondary = new Set<MuscleGroup>();
+    /** À la maison : séries validées par groupe principal. */
+    const homeSets = new Map<MuscleGroup, number>();
     for (const p of s.performances) {
       const e = exerciseOfVariant.get(p.variantId);
-      if (!e) continue;
+      if (!e || (p.reps.length === 0 && !p.partial)) continue;
       const g = recapGroup(e.primaryGroup);
-      if (g) direct.add(g);
+      if (g) {
+        direct.add(g);
+        homeSets.set(g, (homeSets.get(g) ?? 0) + p.reps.length);
+      }
       for (const sg of e.secondaryGroups) {
         const r = recapGroup(sg);
         if (r) secondary.add(r);
       }
     }
     for (const g of direct) secondary.delete(g);
-    // À la maison : ½ pour les groupes principaux seulement.
-    const home = s.location === 'maison';
-    const tallies = home
-      ? ([[direct, homes, 0.5]] as const)
-      : ([[direct, counts, 1], [secondary, indirects, 0.5]] as const);
     const day = dayKey(sessionStartTime(s));
-    for (const [found, tally, value] of tallies) {
+    if (s.location === 'maison') {
+      // À la maison : les séries des groupes principaux seulement, 1/12 chacune, sans dépasser 1 pour la journée.
+      for (const g of direct) {
+        const room = 1 - (daily.get(`${day}|${g}`) ?? 0);
+        const sets = homeSets.get(g) ?? 0;
+        if (counted && room > 0 && sets > 0) {
+          const value = Math.min(room, sets / 12);
+          homes.set(g, (homes.get(g) ?? 0) + sets);
+          homeScores.set(g, (homeScores.get(g) ?? 0) + value);
+          add(day, g, value);
+        }
+        last.set(g, Math.max(last.get(g) ?? 0, sessionLastTime(s)));
+      }
+      continue;
+    }
+    for (const [found, tally, value] of [[direct, counts, 1], [secondary, indirects, 0.5]] as const) {
       for (const g of found) {
-        if (counted && (!home || fits(day, g))) {
+        if (counted) {
           tally.set(g, (tally.get(g) ?? 0) + 1);
           add(day, g, value);
         }
@@ -203,7 +231,7 @@ export function groupWork(
       last.set(g, Math.max(last.get(g) ?? 0, activityEnd(a)));
     }
   }
-  return { counts, indirects, homes, last };
+  return { counts, indirects, homes, homeScores, last };
 }
 
 export function weeklyRecap(
@@ -230,13 +258,14 @@ export function weeklyRecap(
     cardio += cardioMinutes(s);
   }
   const activityCount = doneActivities(activities).filter((a) => inWeek(activityStart(a))).length;
-  const { counts, indirects, homes, last } = groupWork(sessions, exercises, settings.groups, inWeek, activities);
+  const { counts, indirects, homes, homeScores, last } = groupWork(sessions, exercises, settings.groups, inWeek, activities);
 
   const cells: RecapCell[] = settings.groups.map((group) => {
     const count = counts.get(group) ?? 0;
     const indirect = indirects.get(group) ?? 0;
     const home = homes.get(group) ?? 0;
-    const score = count + indirect / 2 + home / 2;
+    // La maison : au plus ½ pour la semaine, jamais le niveau d'une séance à la salle (version 1.28.0).
+    const score = count + indirect / 2 + Math.min(HOME_WEEK_CAP, homeScores.get(group) ?? 0);
     const color: RecapColor = score < 1 ? 'vert' : score >= settings.redThreshold ? 'rouge' : 'orange';
     const time = last.get(group);
     return { group, count, indirect, ...(home > 0 ? { home } : {}), score, color, recency: time === undefined ? null : recencyOf(time, now) };
@@ -255,19 +284,20 @@ export function weeklyRecap(
 }
 
 /**
- * Nombre de séances d'une case, sans fraction : « 1× », « 1× · +1 indirect », « +2 indirect », « +1 maison ».
+ * Nombre de séances d'une case, sans fraction : « 1× », « 1× · +1 indirect », « +2 indirect », puis les séries faites
+ * à la maison : « +5 séries maison ».
  * Vide sans aucun travail cette semaine ; une case verte peut afficher « +1 indirect ».
  */
 export function recapCountLabel(cell: RecapCell): string {
   return workParts(cell, '\u00a0').join(' · ');
 }
 
-/** Parties du travail d'un groupe : « 1× », « +1 indirect », « +1 maison » (récapitulatif et bilans). */
+/** Parties du travail d'un groupe : « 1× », « +1 indirect », « +5 séries maison » (récapitulatif et bilans). */
 export function workParts(w: { count: number; indirect: number; home?: number }, space = ' '): string[] {
   return [
     ...(w.count > 0 ? [`${w.count}×`] : []),
     ...(w.indirect > 0 ? [`+${w.indirect}${space}indirect`] : []),
-    ...(w.home ? [`+${w.home}${space}maison`] : []),
+    ...(w.home ? [`+${w.home}${space}${w.home > 1 ? 'séries' : 'série'}${space}maison`] : []),
   ];
 }
 

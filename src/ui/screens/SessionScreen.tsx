@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useApp } from '../../app/store';
 import { navigate, navigateReplace, useNow } from '../../app/hooks';
-import { cancelLoss, elapsedMs, finishSession, missingFeelings, newId } from '../../session/ops';
+import { cancelAdditions, cancelLoss, elapsedMs, finishSession, missingFeelings, newId } from '../../session/ops';
 import { setSessionActive } from '../../app/navigation';
 import { ActionMenu } from '../ActionMenu';
 import { addCardio, formatCardio, removeCardio, updateCardio } from '../../cardio/model';
@@ -77,11 +77,15 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
   const steps = sessionSteps(active);
   if (active.fromPlan && openId === undefined && memory.openId === undefined) {
     // Séance prévue : le premier élément à faire, dans l'ordre du plan (un cardio prévu placé en tête compris).
-    memory.openId = steps.find((step) =>
-      step.kind === 'cardio' ? step.pending : step.performance.plannedSets === null || step.performance.reps.length < step.performance.plannedSets,
+    memory.openId = steps.find(
+      (step) =>
+        !step.locked &&
+        (step.kind === 'cardio' ? step.pending : step.performance.plannedSets === null || step.performance.reps.length < step.performance.plannedSets),
     )?.key;
   }
-  const current = openId ?? memory.openId ?? active.performances.at(-1)?.variantId;
+  // Séance complétée (version 1.28.0) : ce qui était déjà fait reste fermé.
+  const completing = !!active.locked;
+  const current = openId ?? memory.openId ?? steps.filter((step) => step.kind === 'exercise' && !step.locked).at(-1)?.key;
   const notDone = plannedNotDone(active);
   const unsavedCardio = addingCardio && cardioDraft.kind !== 'empty' ? cardioDraft : null;
 
@@ -132,11 +136,13 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
   /**
    * Annuler la séance (version 1.27.0) : elle est supprimée entièrement, sans récapitulatif ni historique ; retour à
    * l'onglet Séance. Une séance prévue reste proposée (elle n'est consommée que par une séance terminée).
+   * Séance complétée (version 1.28.0) : « Annuler les ajouts » la rend telle qu'elle était terminée.
    */
   async function cancel() {
     if (!active) return;
     openCardio(false);
-    if (!(await deleteSession(active.id))) {
+    const ok = active.locked ? await commit(cancelAdditions(active, Date.now())) : await deleteSession(active.id);
+    if (!ok) {
       setCancelFailed(true);
       return;
     }
@@ -171,7 +177,7 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
           label="Séance"
           actions={[
             {
-              label: 'Annuler la séance',
+              label: completing ? 'Annuler les ajouts' : 'Annuler la séance',
               danger: true,
               onSelect: () => {
                 setCancelFailed(false);
@@ -193,13 +199,24 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
                 key={step.key}
                 session={active}
                 performance={p}
-                open={step.key === current}
+                locked={step.locked}
+                open={!step.locked && step.key === current}
                 onToggle={() => setOpenId(step.key === current ? '' : step.key)}
                 onFinished={() => openNext(step.key)}
               />
             );
           }
           const b = step.block;
+          if (step.locked) {
+            // Cardio déjà fait d'une séance complétée : fermé, corrigé depuis l'historique.
+            return (
+              <div key={step.key} className="card recap-item cardio-item locked" data-cardio={b.id}>
+                <div className="card-line">
+                  <CardioLine block={b} prefix="Déjà fait" />
+                </div>
+              </div>
+            );
+          }
           if (!step.pending) {
             return (
               <CardioItem
@@ -275,8 +292,11 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
       </nav>
 
       {confirmCancel && (
-        <BottomSheet title={'Annuler cette séance\u00a0?'} onClose={() => setConfirmCancel(false)}>
-          <p data-testid="cancel-loss">{cancelLoss(active)}</p>
+        <BottomSheet title={completing ? 'Annuler les ajouts\u00a0?' : 'Annuler cette séance\u00a0?'} onClose={() => setConfirmCancel(false)}>
+          <p data-testid="cancel-loss">
+            {cancelLoss(active)}
+            {completing && ' La séance terminée reste enregistrée.'}
+          </p>
           {cancelFailed && (
             <p className="field-error" role="alert">
               Annulation impossible : réessaie.
@@ -287,7 +307,7 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
               Non, continuer
             </button>
             <button type="button" className="btn big danger" onClick={() => void cancel()}>
-              Oui, annuler la séance
+              {completing ? 'Oui, annuler les ajouts' : 'Oui, annuler la séance'}
             </button>
           </div>
         </BottomSheet>
