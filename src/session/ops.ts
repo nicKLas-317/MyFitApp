@@ -187,10 +187,13 @@ export function missingFeelings(session: Session): Performance[] {
   return session.performances.filter((p) => p.reps.length > 0 && p.feeling === 'inconnu' && !locked.has(p.variantId));
 }
 
-/** Retire l'exercice de la séance en cours, sans toucher à son historique (§13). */
+/** Retire l'exercice de la séance en cours, sans toucher à son historique (§13) ; il n'est plus « remis à plus tard ». */
 export function removeExercise(session: Session, variantId: string, now: number): Session {
   const performances = session.performances.filter((p) => p.variantId !== variantId);
-  return performances.length === session.performances.length ? session : { ...session, performances, updatedAt: now };
+  if (performances.length === session.performances.length) return session;
+  const { later: _later, ...rest } = session;
+  const later = (session.later ?? []).filter((key) => key !== variantId);
+  return { ...rest, performances, ...(later.length > 0 ? { later } : {}), updatedAt: now };
 }
 
 export interface RemovedPerformance {
@@ -219,7 +222,8 @@ export function cancelLoss(session: Pick<Session, 'performances' | 'cardio' | 'l
 /**
  * Termine la séance (§5.6) : chronomètre arrêté, heure de fin enregistrée, exercices sans aucune série retirés
  * (toujours : version 1.28.0, plus d'« Annuler ») et renvoyés pour être signalés au récapitulatif. Une séance
- * complétée perd sa partie fermée : elle redevient une séance terminée comme une autre.
+ * complétée perd sa partie fermée : elle redevient une séance terminée comme une autre. Les exercices remis à plus
+ * tard (version 1.29.0) sont enregistrés à leur place de fin de liste, dans l'ordre où ils ont été faits.
  */
 export function finishSession(session: Session, endedAt: number): { session: Session; removed: RemovedPerformance[] } {
   const removed: RemovedPerformance[] = [];
@@ -228,10 +232,15 @@ export function finishSession(session: Session, endedAt: number): { session: Ses
     if (performance.reps.length === 0) removed.push({ index, performance });
     else kept.push(performance);
   });
+  const later = new Map((session.later ?? []).map((key, i) => [key, i]));
+  const ordered = [
+    ...kept.filter((p) => !later.has(p.variantId)),
+    ...kept.filter((p) => later.has(p.variantId)).sort((a, b) => later.get(a.variantId)! - later.get(b.variantId)!),
+  ];
   const end = session.startedAt !== null ? Math.max(endedAt, session.startedAt) : endedAt;
-  const { locked: _locked, ...rest } = session;
+  const { locked: _locked, later: _later, ...rest } = session;
   return {
-    session: { ...rest, state: 'done', endedAt: end, performances: kept, updatedAt: endedAt },
+    session: { ...rest, state: 'done', endedAt: end, performances: ordered, updatedAt: endedAt },
     removed,
   };
 }
@@ -284,7 +293,7 @@ export function reopenSession(session: Session, now: number): Session {
 
 /** « Annuler les ajouts » d'une séance complétée : elle redevient exactement la séance terminée d'avant. */
 export function cancelAdditions(session: Session, now: number): Session {
-  const { locked, pauseMs: _pause, ...rest } = session;
+  const { locked, pauseMs: _pause, later: _later, ...rest } = session;
   if (!locked) return session;
   const variantIds = new Set(locked.variantIds);
   const cardioIds = new Set(locked.cardioIds);

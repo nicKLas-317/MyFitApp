@@ -6,7 +6,7 @@ import { setSessionActive } from '../../app/navigation';
 import { ActionMenu } from '../ActionMenu';
 import { addCardio, formatCardio, removeCardio, updateCardio } from '../../cardio/model';
 import { CardioForm, CardioItem, CardioLine, type CardioDraft, type CardioFormMemory } from '../CardioForm';
-import { plannedNotDone, sessionSteps, unfinishedStep } from '../../plan/model';
+import { canPostpone, nextUnfinished, plannedNotDone, postponeStep, sessionSteps } from '../../plan/model';
 import { displayName } from '../../library/catalog';
 import { formatDuration } from '../../session/format';
 import { ExerciseCard } from '../ExerciseCard';
@@ -95,8 +95,7 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
    * et l'amène doucement sous l'en-tête. Tout est terminé : rien ne s'ouvre.
    */
   function openNext(fromKey: string) {
-    const i = steps.findIndex((step) => step.key === fromKey);
-    const next = [...steps.slice(i + 1), ...steps.slice(0, Math.max(0, i))].find((step) => step.key !== fromKey && unfinishedStep(step));
+    const next = nextUnfinished(steps, fromKey);
     if (!next) return;
     setOpenId(next.key);
     requestAnimationFrame(() => {
@@ -108,6 +107,17 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
       window.scrollTo({ top: card.getBoundingClientRect().top + window.scrollY - header - 8, behavior: 'smooth' });
     });
   }
+
+  /**
+   * « Plus tard » (version 1.29.0) : l'élément passe en fin de liste et le suivant non terminé s'ouvre (machine
+   * occupée, plus de place, pas la forme maintenant). Le plan n'est pas modifié.
+   */
+  function postpone(key: string) {
+    if (!active) return;
+    void commit(postponeStep(active, key, Date.now()));
+    openNext(key);
+  }
+  const laterFor = (key: string) => (canPostpone(steps, key) ? () => postpone(key) : undefined);
 
   function openCardio(open: boolean) {
     setAddingCardio(open);
@@ -203,6 +213,7 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
                 open={!step.locked && step.key === current}
                 onToggle={() => setOpenId(step.key === current ? '' : step.key)}
                 onFinished={() => openNext(step.key)}
+                onLater={laterFor(step.key)}
               />
             );
           }
@@ -231,8 +242,9 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
             );
           }
           // Cardio prévu : « Valider » l'enregistre en un appui. Ouvert (élément en cours), c'est l'action principale, et
-          // l'élément suivant non terminé s'ouvre ensuite.
+          // l'élément suivant non terminé s'ouvre ensuite. Menu « ⋯ » : « Plus tard », quand un autre élément reste à faire.
           const open = step.key === current;
+          const later = laterFor(step.key);
           return (
             <div
               key={step.key}
@@ -253,6 +265,7 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
                 >
                   Valider
                 </button>
+                {later && <ActionMenu label={`cardio prévu ${formatCardio(b)}`} actions={[{ label: 'Plus tard', onSelect: later }]} />}
               </div>
             </div>
           );

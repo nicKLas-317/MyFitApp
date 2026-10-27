@@ -586,6 +586,17 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
     const largerPlan = await largeText(page);
     await expectClean(page, 'Séance prévue démarrée, texte agrandi', 1.15);
     await largerPlan();
+    // « Plus tard » (version 1.29.0) : menu d'un exercice non terminé et menu d'un cardio prévu.
+    const plannedCard = page.locator('article.exercise-card.open');
+    await plannedCard.getByRole('button', { name: /^Actions : / }).click();
+    await expect(plannedCard.getByRole('menuitem', { name: 'Plus tard' })).toBeVisible();
+    await expectClean(page, 'Séance prévue, menu d’un exercice avec « Plus tard »');
+    await page.keyboard.press('Escape');
+    const plannedCardio = page.locator('[data-cardio="prevu-tapis"]');
+    await plannedCardio.getByRole('button', { name: /^Actions : cardio prévu/ }).click();
+    await expect(plannedCardio.getByRole('menuitem', { name: 'Plus tard' })).toBeVisible();
+    await expectClean(page, 'Séance prévue, menu d’un cardio prévu');
+    await page.keyboard.press('Escape');
     await page.getByRole('button', { name: 'Terminer la séance' }).click();
     await expect(finishSheet(page).getByTestId('planned-not-done')).toBeVisible();
     await expectClean(page, 'Fin de séance prévue, non faits');

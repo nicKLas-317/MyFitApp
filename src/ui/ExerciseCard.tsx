@@ -39,9 +39,11 @@ interface Props {
   onToggle(): void;
   /** Premier ressenti donné à un exercice dont toutes les séries sont faites : l'écran ouvre le suivant. */
   onFinished?(): void;
+  /** « Plus tard » (version 1.29.0) : proposé seulement s'il reste des séries à faire et un autre élément à faire. */
+  onLater?(): void;
 }
 
-export function ExerciseCard({ session, performance: p, open, locked = false, onToggle, onFinished }: Props) {
+export function ExerciseCard({ session, performance: p, open, locked = false, onToggle, onFinished, onLater }: Props) {
   const { variants, ctxFor, commit, sessions, records, settings } = useApp();
   const ref = variants.get(p.variantId);
   // À la maison, un exercice à charge suit sa progression de la maison (version 1.26.0).
@@ -108,6 +110,7 @@ export function ExerciseCard({ session, performance: p, open, locked = false, on
           <ActionMenu
             label={name}
             actions={[
+              ...(onLater ? [{ label: 'Plus tard', onSelect: onLater }] : []),
               { label: adjust ? 'Masquer l’ajustement' : 'Ajuster séries et répétitions', onSelect: () => setAdjust(!adjust) },
               { label: 'Voir la fiche de l’exercice', href: `#/exercice/${encodeURIComponent(p.variantId)}` },
               { label: 'Retirer de la séance', danger: true, onSelect: () => setConfirmRemove(true) },

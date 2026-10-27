@@ -3,7 +3,7 @@
  * - schemaVersion 7 : format natif complet, restauré tel quel après validation stricte (blocs de cardio dans les séances,
  *   activités habituelles hors salle et leurs réponses, séance prévue en un seul ordre, musculation et cardio mêlés,
  *   lieu des séances : `location` « maison », absent = salle ; séance complétée le jour même : `pauseMs`, et `locked`
- *   tant qu'elle est en cours).
+ *   tant qu'elle est en cours ; éléments remis à plus tard : `later`, pendant la séance seulement, version 1.29.0).
  * - schemaVersion 6 : identique, sans séance complétée ; lu tel quel.
  * - schemaVersion 5 : identique, sans lieu (toutes les séances sont à la salle) ; lu tel quel.
  * - schemaVersion 4 : séance prévue en deux listes (exercices, puis cardio), versions 1.23.0 et 1.23.1 ; migrée sans perte.
@@ -471,6 +471,10 @@ function validateSession(s: unknown, path: string, errors: string[]): void {
     if (s.state !== 'active' || !isObj(l) || !ids(l.variantIds) || !ids(l.cardioIds) || !isNum(l.endedAt) || !(isInt(l.pauseMs) && l.pauseMs >= 0)) {
       errors.push(`${path}.locked invalide.`);
     }
+  }
+  // Éléments remis à plus tard (version 1.29.0) : seulement pendant la séance.
+  if (s.later !== undefined && (s.state !== 'active' || !Array.isArray(s.later) || !s.later.every(isStr))) {
+    errors.push(`${path}.later invalide.`);
   }
 }
 

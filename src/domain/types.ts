@@ -151,6 +151,11 @@ export interface Session {
    * déjà fait reste fermé (corrigé depuis l'historique), et « Annuler les ajouts » la rend telle qu'elle était.
    */
   locked?: LockedPart;
+  /**
+   * Éléments remis à plus tard (version 1.29.0), clés d'étape (« <variante> » ou « cardio:<bloc> ») dans l'ordre où ils
+   * l'ont été : ils passent en fin de liste. Seulement pendant la séance ; à la fin, l'ordre des exercices le reflète.
+   */
+  later?: string[];
 }
 
 /** Partie déjà terminée d'une séance rouverte, et sa fin et sa pause d'origine pour « Annuler les ajouts ». */

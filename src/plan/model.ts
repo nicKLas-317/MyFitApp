@@ -137,9 +137,20 @@ function originOrder(origin: PlanOrigin): PlanStep[] {
  * Ordre d'affichage de la séance. Séance prévue : l'ordre du plan, musculation et cardio mêlés (un cardio prévu validé
  * reste à sa place, retiré il redevient « prévu »), puis ce qui a été ajouté en séance (exercices dans l'ordre d'ajout,
  * puis cardio). Séance libre : les exercices dans l'ordre d'ajout, puis le cardio. Séance complétée : ce qui était
- * fait est fermé, et le cardio prévu non fait n'est plus proposé.
+ * fait est fermé, et le cardio prévu non fait n'est plus proposé. Les éléments remis à plus tard (version 1.29.0)
+ * passent en fin de liste, dans l'ordre où ils y ont été remis.
  */
 export function sessionSteps(session: Session): SessionStep[] {
+  const steps = baseSteps(session);
+  const later = new Map((session.later ?? []).map((key, i) => [key, i]));
+  if (later.size === 0) return steps;
+  return [
+    ...steps.filter((st) => !later.has(st.key)),
+    ...steps.filter((st) => later.has(st.key)).sort((a, b) => later.get(a.key)! - later.get(b.key)!),
+  ];
+}
+
+function baseSteps(session: Session): SessionStep[] {
   const lockedExercises = new Set(session.locked?.variantIds);
   const lockedCardio = new Set(session.locked?.cardioIds);
   const exercise = (performance: Performance): SessionStep => ({
@@ -177,6 +188,31 @@ export function unfinishedStep(step: SessionStep): boolean {
   if (step.kind === 'cardio') return step.pending;
   const p = step.performance;
   return p.plannedSets === null || p.reps.length < p.plannedSets || p.feeling === 'inconnu';
+}
+
+/**
+ * Élément suivant non terminé après `fromKey`, dans l'ordre de la séance, en reprenant au début après le dernier ;
+ * jamais `fromKey` lui-même. Ressenti donné, cardio prévu validé ou élément remis à plus tard : c'est lui qui s'ouvre.
+ */
+export function nextUnfinished(steps: readonly SessionStep[], fromKey: string): SessionStep | undefined {
+  const i = steps.findIndex((step) => step.key === fromKey);
+  return [...steps.slice(i + 1), ...steps.slice(0, Math.max(0, i))].find((step) => step.key !== fromKey && unfinishedStep(step));
+}
+
+/**
+ * « Plus tard » (version 1.29.0) : proposé pour un exercice dont les séries ne sont pas toutes faites ou un cardio
+ * prévu pas encore validé, quand un autre élément reste à faire (il s'ouvrira à sa place).
+ */
+export function canPostpone(steps: readonly SessionStep[], key: string): boolean {
+  const step = steps.find((st) => st.key === key);
+  if (!step || step.locked) return false;
+  const todo = step.kind === 'cardio' ? step.pending : step.performance.plannedSets === null || step.performance.reps.length < step.performance.plannedSets;
+  return todo && nextUnfinished(steps, key) !== undefined;
+}
+
+/** Remet un élément à plus tard : il passe en fin de liste. Le plan (et l'origine `fromPlan`) n'est pas modifié. */
+export function postponeStep(session: Session, key: string, now: number): Session {
+  return { ...session, later: [...(session.later ?? []).filter((k) => k !== key), key], updatedAt: now };
 }
 
 /** Cardio prévu pas encore validé dans la séance (aucun dans une séance complétée : il n'a pas été fait). */
