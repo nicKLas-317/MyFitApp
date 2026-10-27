@@ -100,8 +100,17 @@ export const ILLUSTRATIONS: Readonly<Record<string, Illustration>> = {
   // Version 11. Crunch au sol (le seul dessin montre les pieds sur un banc, d'un autre style) et crunch oblique touche
   // talons (aucun dessin) : pictogramme.
   'releves-jambes-allonge': drawn('releves-jambes-allonge', 'Flat bench leg raises', EVERKINETIC_DATA, [`${EK_DATA}flat-bench-leg-raises-1.png`, `${EK_DATA}flat-bench-leg-raises-2.png`]),
+  // Version 13. Pompes classiques (variante standard) ; les pompes sur les genoux n'ont aucun dessin (voir plus bas).
+  'pompes': drawn('pompes', 'Push ups', EVERKINETIC_DATA, [`${EK_DATA}push-ups-1.png`, `${EK_DATA}push-ups-2.png`]),
 };
 
+/**
+ * Variantes qui gardent leur pictogramme bien que leur exercice ait un dessin : le dessin de l'exercice serait
+ * trompeur (pompes sur les genoux : le dessin montre des pompes classiques, en appui sur les pieds).
+ */
+export const WITHOUT_DRAWING: ReadonlySet<string> = new Set(['pompes--genoux']);
+
 export function illustrationFor(exerciseId: string, variantId?: string): Illustration | undefined {
+  if (variantId && WITHOUT_DRAWING.has(variantId)) return undefined;
   return (variantId ? ILLUSTRATIONS[variantId] : undefined) ?? ILLUSTRATIONS[exerciseId];
 }

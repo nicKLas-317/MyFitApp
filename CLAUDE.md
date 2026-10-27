@@ -271,7 +271,9 @@ Bibliothèque version 11 (précision validée, version 1.24.0) : abdominaux au p
 
 Bibliothèque version 12 (précision validée, version 1.25.0) : **Planche** (`planche`), gainage en secondes (§7.13), abdominaux, sans groupe secondaire, matériel « poids du corps », 3 × 20 à 60 s, par pas de 5 s. Synonymes : gainage, gainage ventral, gainage planche, plank, front plank. « gainage » et « plank » la trouvent en tête ; « abdos » la trouve parmi les abdos au poids du corps, après le crunch machine.
 
-Volontairement non ajoutés (choix de l'utilisateur) : crunch à la poulie, relevés de jambes suspendu, squat à la barre, hip thrust, soulevé de terre jambes tendues, fentes ; pompes, tractions et dips sans aide (faits hors application).
+Bibliothèque version 13 (précision validée, version 1.27.0) : **Pompes** (`pompes`), au poids du corps (§7.13), groupe principal pectoraux, groupes secondaires triceps et épaules, matériel « poids du corps ». Deux variantes seulement, chacune avec son suivi : **Classiques** (variante standard, `pompes`, affichée « Pompes — Classiques ») et **Sur les genoux** (`pompes--genoux`, « Pompes — Sur les genoux ») ; pas d'autre variante (diamant, frappées…). Plage 10 à 40 rép. ; **2 séries par défaut** (réglable comme les autres, Modifier › Séries). Synonymes : pompes (nom), push-up, pushups ; classiques : pompes classiques, push-up classique ; genoux : pompes genoux, pompes sur les genoux, knee push-up. « pompes », « push-up » trouvent les deux variantes, classiques d'abord ; « pompes genoux », « knee push-up » les genoux seuls ; « pectoraux » les trouve aussi.
+
+Volontairement non ajoutés (choix de l'utilisateur) : crunch à la poulie, relevés de jambes suspendu, squat à la barre, hip thrust, soulevé de terre jambes tendues, fentes ; tractions et dips sans aide (faits hors application).
 
 Chaque version de la bibliothèque est installée une seule fois sur une base existante, sans perte de données et sans recréer un exercice supprimé ensuite. Une variante ajoutée à un exercice existant (mollets assis, extension poulie à la barre) l'est aussi une seule fois, sauf si une variante du même nom existe déjà ; la variante standard prend son nom (« Debout », « Corde ») si elle s'appelle encore « Standard », et ses synonymes appris sont conservés.
 
@@ -285,7 +287,7 @@ Les illustrations doivent aider à distinguer les machines et les variantes proc
 
 N'utiliser que des ressources dont la licence autorise explicitement la réutilisation (domaine public, CC0 ou licence libre compatible). Indiquer la source et la licence dans le dépôt. Ne pas télécharger d'images sans licence vérifiable.
 
-Version 11 : les relevés de jambes allongé ont un dessin (everkinetic/data, CC BY-SA 4.0) ; le crunch au sol (seul dessin trouvé : pieds sur un banc, autre style, trompeur) et le crunch oblique touche talons (aucun dessin) gardent un pictogramme (docs/illustrations.md). Version 12 : la planche garde un pictogramme (seule la planche latérale est dessinée, un autre mouvement).
+Version 11 : les relevés de jambes allongé ont un dessin (everkinetic/data, CC BY-SA 4.0) ; le crunch au sol (seul dessin trouvé : pieds sur un banc, autre style, trompeur) et le crunch oblique touche talons (aucun dessin) gardent un pictogramme (docs/illustrations.md). Version 12 : la planche garde un pictogramme (seule la planche latérale est dessinée, un autre mouvement). Version 13 : les pompes classiques ont un dessin (everkinetic/data, « Push Up: Body Weight », CC BY-SA 4.0) ; les pompes sur les genoux gardent un pictogramme (aucun dessin) et, par exception, ne reprennent pas le dessin de leur exercice, qui serait trompeur (`WITHOUT_DRAWING`).
 
 Si aucune illustration fiable n'est disponible, utiliser des pictogrammes SVG simples et cohérents par groupe musculaire et type de matériel, plutôt qu'une image trompeuse.
 
@@ -586,6 +588,7 @@ Pendant la saisie d'une séance (écran de séance, ajout d'un exercice), l'écr
 - En haut, l'en-tête collant (flèche « ‹ », nom de la séance, chronomètre, « Enregistré »), puis la liste compacte des exercices : nom, charge et séries faites (« 30 kg · 0/3 »), avec la couronne d'un nouveau record ; un seul exercice ouvert à la fois, comme avant. Les blocs de cardio suivent.
 - En bas, une barre fixe dans la zone du pouce, au-dessus de la zone système : « + Exercice » (bouton principal, un peu plus large), « + Cardio » (ouvre le formulaire et l'amène à l'écran), « Terminer » (ouvre le volet de fin, §5.6). Libellés en 15 px sur une ligne, même à 360 px avec le texte agrandi.
 - La flèche « ‹ » ramène à l'onglet Séance sans terminer la séance, qui reste enregistrée et se reprend en un appui (« Reprendre la séance »), sur l'exercice qui était ouvert.
+- Menu « ⋯ » de l'en-tête, à côté du chronomètre (ou de « À la maison ») : « Annuler la séance » (§5.11, version 1.27.0).
 
 ### 5.9. Séance prévue (précision validée, versions 1.23.0 et 1.23.2)
 
@@ -629,6 +632,16 @@ But : faire de temps en temps une séance à la maison (haltères légers, abdos
 - **Données** : champ facultatif `location: 'maison'` de la séance ; absent = salle. Aucune migration de la base : les séances enregistrées avant la version 1.26.0 (et les sauvegardes antérieures) sont à la salle. Export au format `schemaVersion` 6 ; une sauvegarde au format 5 ou antérieur est lue telle quelle (salle) ; un lieu inconnu est refusé.
 - Historique : « 3 ex. · maison » ; fiche : historique « … · maison ».
 - **Récapitulatif et bilans (précision validée, version 1.26.1)** : une séance à la maison compte **½** pour le groupe principal de chacun de ses exercices (abdos compris), au plus ½ par séance et par groupe ; ses groupes secondaires ne comptent pas (ni score, ni « hier » / « aujourd'hui »). Mention distincte : « Pectoraux (+1 maison) », « Biceps (1× · +1 maison) » (§19.6, §19.7). Plafond de 1 par jour et par groupe (version 1.26.2) : le même jour qu'une séance à la salle où le groupe est principal, la séance à la maison n'ajoute rien (1, pas 1,5). Les séances à la salle, les séries par semaine (la maison en entier), l'indice par groupe (la maison exclue) et le moteur ne changent pas.
+
+### 5.11. Annuler une séance en cours (précision validée, version 1.27.0)
+
+But : une séance démarrée par erreur ne doit plus être terminée puis supprimée de l'historique.
+
+- En mode salle (§5.8), à la salle comme à la maison : « Annuler la séance » dans le menu « ⋯ » de l'en-tête, à côté du chronomètre ; jamais dans la barre du pouce (appui par erreur).
+- **Confirmation obligatoire**, en volet fixé en bas de l'écran (comme la fin, §5.6) : « Annuler cette séance ? », puis ce qui serait perdu, d'après les séries validées et les blocs de cardio validés : « Rien n'a été saisi. » (aucune série ni cardio, même avec des exercices ajoutés), « 1 série sera perdue. », « 4 séries seront perdues. », « 1 cardio sera perdu. », « 4 séries et 1 cardio seront perdus. ». « Non, continuer » est le bouton principal (bleu, en premier) ; « Oui, annuler la séance » est rouge, dessous (choix signalé à l'utilisateur). Le fond assombri ou Échap referment le volet.
+- Après confirmation, la séance est **supprimée entièrement** (base, toutes fenêtres), sans récapitulatif ni historique, et l'appli revient à l'onglet Séance (sans entrée de garde : plus de séance en cours). Si la suppression échoue : « Annulation impossible : réessaie. », la séance reste.
+- **Séance prévue** : une séance démarrée depuis le plan puis annulée ne le consomme pas (§5.9 : seule une séance terminée le consomme) ; le plan reste intact et toujours proposé.
+- Rien d'autre ne change : une séance en cours n'entre ni dans le moteur, ni dans le récapitulatif, ni dans les bilans, ni dans les records ; annulée, elle n'y laisse aucune trace.
 
 ## 6. Chronomètre global de séance
 
@@ -1216,6 +1229,7 @@ Permettre :
 - De corriger rapidement une série.
 - D'annuler la dernière action de saisie pendant la séance en cours (bouton « Annuler » visible quelques secondes après une action : modification de série, retrait d'exercice ou de cardio, ce retrait étant d'abord confirmé, §5.3).
 - De retirer un exercice de la séance actuelle sans supprimer son historique.
+- D'annuler une séance démarrée par erreur, après confirmation (§5.11).
 - De corriger une séance passée.
 - De recalculer les recommandations concernées après une correction.
 
@@ -1629,6 +1643,13 @@ Le test 225 contrôle aussi l'accueil avec un plan, la préparation (vide, avec 
 257. Sauvegarde au format 6 (lieu gardé), format 5 lu à la salle, lieu inconnu et plage de la maison invalide refusés ; plage de la maison enregistrée seulement si elle diffère du défaut, contrôlée.
 258. (bout en bout) Accueil : « Salle » choisie par défaut sous le bouton ; séance à la salle (curl 12 kg) ; le lendemain « Maison » → « Démarrer une séance à la maison », en-tête « À la maison » sans chronomètre, poids de départ demandé (6 kg), « 3 × 8 à 6 kg », récapitulatif sans durée ; accueil de nouveau sur « Salle » après relance, « 2 séances · dont 1 maison » ; séances en base (lieu) ; fiche : « 3 × 8 à 12 kg » (salle) et bloc « Prochaine cible à la maison » « 3 × 8 à 6 kg », historique « maison » ; historique « 1 ex. · maison » ; détail sans heures, lieu « Maison » ; passé à « Salle » : heures affichées, lieu retiré en base, cible de la salle « 3 × 8 à 6 kg », plus de bloc maison ; remis à « Maison » : tout comme avant ; plage de la maison 8–15 dans Modifier, 20 enregistré (`homeMaxReps`). Le test 225 contrôle aussi l'accueil avec « Maison » choisi, la séance à la maison, son récapitulatif et son détail.
 259. (version 1.26.1) Le cas de l'utilisateur : à la maison, développé incliné haltères 3 × 10 (pectoraux ; épaules et triceps secondaires) et 2 séries de crunch au sol → pectoraux et abdominaux ½ chacun, verts, « +1 maison », « aujourd'hui » ; triceps et épaules : rien. Deux séances à la maison : 1, orange ; avec une séance à la salle un autre jour : « 1× · +1 maison » (1,5), la salle inchangée (triceps « +1 indirect »). Même jour (version 1.26.2) : « Pectoraux (1×) », 1 et non 1,5, la salle le matin comme le soir ; les abdos gardent leur ½ ; dips assistés à la salle (pectoraux secondaires, ½) et maison le même jour : 1 ; deux séances à la maison le même jour : 1. Bilans de la semaine et du mois et mail : « Pectoraux : +1 maison », « Abdominaux : +1 maison », triceps et épaules dans « Non travaillés », aucun « indirect ». Inchangés : séries par semaine (3 séries en plein), indice par groupe (0 séance), suivi de la maison du moteur. Le test 256 compte le biceps à 2,5 (deux séances à la salle, une à la maison) ; le test 258 vérifie « Biceps (1× · +1 maison) » orange sur l'accueil.
+
+### Pompes et annulation d'une séance (§4.0, §5.11, version 1.27.0)
+
+260. Bibliothèque version 13 : pompes (pectoraux ; triceps, épaules ; poids du corps), deux variantes seulement, « Pompes — Classiques » et « Pompes — Sur les genoux », 2 séries de 10 à 40 ; 2 × 10 sans charge ; recherche (« pompes », « push-up », « pushups », « push up » : les deux, classiques d'abord ; « pompes genoux », « knee push-up » : les genoux seuls ; « pectoraux ») ; deux vertes à 2 séries → +1 rép., suivis séparés, 3 séries non standard ; record « 2 × 12 » ; récapitulatif à la maison : pectoraux ½ (« +1 maison »), triceps et épaules rien ; à la salle 1 et ½ ; un seul suivi quel que soit le lieu ; dessin des classiques, pictogramme des genoux ; base en version 12 : ajoutées une seule fois, jamais recréées ; sauvegarde identique.
+261. Texte de la confirmation : « Rien n'a été saisi. » (exercice sans série compris), « 1 série sera perdue. », « 4 séries seront perdues. », « 1 cardio sera perdu. », « 2 cardios seront perdus. », « 4 séries et 1 cardio seront perdus. » ; supprimer une séance en cours (démarrée depuis le plan) laisse moteur, records, récapitulatif et plan identiques.
+262. (bout en bout) « pompes » → « Pompes — Classiques » sans poids de départ ni champ de poids, « 2 × 10 », « 0/2 », « Valider les 2 séries » ; le lendemain à la maison (« push-up ») : « Dernière fois 10 · 10 · 26/10 », deuxième verte → « Prochaine cible : 2 × 11 » ; « pompes genoux » : autre suivi, jamais réalisé ; enregistrées à 0 kg, 2 séries ; récapitulatif « Pectoraux (1× · +1 maison) », « Triceps (+1 indirect) » ; fiche « 2 × 11 », « ↑ +1 rép. », dessin ; genoux sans dessin.
+263. (bout en bout) Rien de saisi : menu « ⋯ » de l'en-tête → « Rien n'a été saisi. », rien dans la barre du pouce, « Non, continuer » principal (garde la séance), « Oui, annuler la séance » rouge → onglet Séance, aucune séance en base, pas de récapitulatif ; avec 4 séries et 1 cardio : texte exact, puis rien dans la base, le récapitulatif (« 0 séance »), l'historique ni la fiche ; démarrée depuis le plan : « 1 série sera perdue. », plan toujours proposé, même après relance ; à la maison : « 2 séries seront perdues. ». Le test 225 contrôle aussi le menu de l'en-tête, le volet d'annulation (rien de saisi, séries perdues, texte agrandi) et une carte de pompes.
 
 ### Ton de l'appli (§3.6, version 1.22.2)
 

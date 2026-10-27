@@ -598,11 +598,33 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
     await expectClean(page, 'Accueil, séance à la maison choisie');
     await page.getByRole('button', { name: 'Démarrer une séance à la maison' }).click();
     await expect(page.getByTestId('session-place')).toBeVisible();
+    // Menu « ⋯ » de l'en-tête et annulation (version 1.27.0) : rien de saisi.
+    await page.getByRole('button', { name: 'Actions : Séance' }).click();
+    await expectClean(page, 'Séance, menu de l’en-tête');
+    await page.getByRole('menuitem', { name: 'Annuler la séance' }).click();
+    await expect(page.getByTestId('cancel-loss')).toHaveText('Rien n’a été saisi.');
+    await expectClean(page, 'Annuler la séance, rien de saisi');
+    await page.getByRole('button', { name: 'Non, continuer' }).click();
     await addExercise(page, 'crunch au sol', 'Crunch au sol');
     await toTop(page);
     await expectClean(page, 'Séance à la maison');
     await page.locator('article[aria-label="Crunch au sol"]').getByRole('button', { name: 'Valider les 3 séries' }).click();
     await page.locator('article[aria-label="Crunch au sol"]').getByRole('button', { name: 'Bien', exact: true }).click();
+    // Pompes (version 1.27.0) : 2 séries, « Valider les 2 séries ».
+    const pushUps = await addExercise(page, 'pompes', 'Pompes — Classiques');
+    await toTop(page);
+    await expectClean(page, 'Séance, pompes');
+    await pushUps.getByRole('button', { name: 'Valider les 2 séries' }).click();
+    await pushUps.getByRole('button', { name: 'Bien', exact: true }).click();
+    // Annulation avec saisie : séries perdues annoncées (texte agrandi compris) ; « Non, continuer ».
+    await page.getByRole('button', { name: 'Actions : Séance' }).click();
+    await page.getByRole('menuitem', { name: 'Annuler la séance' }).click();
+    await expect(page.getByTestId('cancel-loss')).toHaveText('5 séries seront perdues.');
+    await expectClean(page, 'Annuler la séance, séries perdues');
+    const largerCancel = await largeText(page);
+    await expectClean(page, 'Annuler la séance, texte agrandi', 1.15);
+    await largerCancel();
+    await page.getByRole('button', { name: 'Non, continuer' }).click();
     await page.getByRole('button', { name: 'Terminer la séance' }).click();
     await finishSheet(page).getByRole('button', { name: 'Oui, terminer' }).click();
     await expect(page.getByRole('heading', { name: 'Séance terminée' })).toBeVisible();

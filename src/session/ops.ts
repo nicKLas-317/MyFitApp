@@ -195,6 +195,21 @@ export interface RemovedPerformance {
 }
 
 /**
+ * Ce que l'annulation d'une séance en cours ferait perdre (version 1.27.0) : séries validées et blocs de cardio validés.
+ * « Rien n'a été saisi. », « 4 séries et 1 cardio seront perdus. »
+ */
+export function cancelLoss(session: Pick<Session, 'performances' | 'cardio'>): string {
+  const sets = session.performances.reduce((n, p) => n + p.reps.length, 0);
+  const cardio = session.cardio?.length ?? 0;
+  if (sets === 0 && cardio === 0) return 'Rien n’a été saisi.';
+  const setsText = sets === 1 ? '1 série' : `${sets} séries`;
+  const cardioText = cardio === 1 ? '1 cardio' : `${cardio} cardios`;
+  if (cardio === 0) return `${setsText} ${sets === 1 ? 'sera perdue' : 'seront perdues'}.`;
+  if (sets === 0) return `${cardioText} ${cardio === 1 ? 'sera perdu' : 'seront perdus'}.`;
+  return `${setsText} et ${cardioText} seront perdus.`;
+}
+
+/**
  * Termine la séance (§5.6) : chronomètre arrêté, heure de fin enregistrée, exercices sans
  * aucune série retirés et renvoyés pour permettre l'annulation.
  */

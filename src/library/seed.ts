@@ -50,16 +50,17 @@ interface SeedVariant {
 
 /**
  * Exercice à variantes non comparables en charge (version 8) : la variante standard prend un nom (« Debout »,
- * « Barre »…) et ses synonymes, les autres variantes ont chacune leur historique.
+ * « Barre »…) et ses synonymes, les autres variantes ont chacune leur historique ; `config` : réglages des variantes
+ * ajoutées (ceux de la variante standard viennent de l'exercice).
  */
-function withVariants(e: Exercise, standard: { name: string; synonyms: string[] }, others: SeedVariant[]): Exercise {
+function withVariants(e: Exercise, standard: { name: string; synonyms: string[] }, others: SeedVariant[], config?: Partial<VariantConfig>): Exercise {
   const [first, ...rest] = e.variants;
   return {
     ...e,
     variants: [
       { ...first!, name: standard.name, synonyms: [...standard.synonyms] },
       ...rest,
-      ...others.map((v) => ({ id: `${e.id}--${v.suffix}`, name: v.name, synonyms: [...v.synonyms], archived: false })),
+      ...others.map((v) => ({ id: `${e.id}--${v.suffix}`, name: v.name, synonyms: [...v.synonyms], archived: false, ...(config ? { config } : {}) })),
     ],
   };
 }
@@ -187,10 +188,17 @@ export const SEED_EXERCISES: readonly Exercise[] = [
     bodyweight: true,
     seconds: true,
   }),
+  // Version 13. Pompes au poids du corps (10 à 40), 2 séries par défaut ; classiques et sur les genoux : deux suivis.
+  withVariants(
+    exercise('pompes', 'Pompes', ['Push-up', 'Pushups'], 'pectoraux', ['triceps', 'epaules'], 'poids du corps', { bodyweight: true, sets: 2 }),
+    { name: 'Classiques', synonyms: ['Pompes classiques', 'Push-up classique'] },
+    [{ suffix: 'genoux', name: 'Sur les genoux', synonyms: ['Pompes genoux', 'Pompes sur les genoux', 'Knee push-up'] }],
+    { bodyweight: true, sets: 2 },
+  ),
 ];
 
 /** Version de la bibliothèque initiale ; chaque version ajoute des exercices (jamais de suppression). */
-export const SEED_VERSION = 12;
+export const SEED_VERSION = 13;
 
 /**
  * Exercices devenus « à prise » à une version donnée : sur une base existante, leur variante standard prend le nom
@@ -217,6 +225,7 @@ export const SEED_ADDITIONS: Readonly<Record<number, readonly string[]>> = {
   9: ['tirage-horizontal-poulie-basse'],
   11: ['crunch-sol', 'crunch-oblique-touche-talons', 'releves-jambes-allonge'],
   12: ['planche'],
+  13: ['pompes'],
 };
 
 /**

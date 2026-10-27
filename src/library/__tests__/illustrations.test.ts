@@ -61,7 +61,10 @@ describe('Illustrations embarquées (§4.0.1)', () => {
     expect(ILLUSTRATIONS['releves-jambes-allonge']?.title).toBe('Flat bench leg raises');
     expect(ILLUSTRATIONS['crunch-sol']).toBeUndefined();
     expect(ILLUSTRATIONS['crunch-oblique-touche-talons']).toBeUndefined();
-    expect(Object.keys(ILLUSTRATIONS)).toHaveLength(39);
+    // Version 13 : pompes classiques dessinées ; pompes sur les genoux sans dessin (pas celui des classiques).
+    expect(illustrationFor('pompes', 'pompes')?.title).toBe('Push ups');
+    expect(illustrationFor('pompes', 'pompes--genoux')).toBeUndefined();
+    expect(Object.keys(ILLUSTRATIONS)).toHaveLength(40);
   });
 
   it('une variante peut avoir son propre dessin ; sinon elle reprend celui de son exercice', () => {

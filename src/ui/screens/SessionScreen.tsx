@@ -1,7 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useApp } from '../../app/store';
-import { navigateReplace, useNow } from '../../app/hooks';
-import { elapsedMs, finishSession, missingFeelings, newId } from '../../session/ops';
+import { navigate, navigateReplace, useNow } from '../../app/hooks';
+import { cancelLoss, elapsedMs, finishSession, missingFeelings, newId } from '../../session/ops';
+import { setSessionActive } from '../../app/navigation';
+import { ActionMenu } from '../ActionMenu';
 import { addCardio, formatCardio, removeCardio, updateCardio } from '../../cardio/model';
 import { CardioForm, CardioItem, CardioLine, type CardioDraft, type CardioFormMemory } from '../CardioForm';
 import { plannedNotDone, sessionSteps, unfinishedStep } from '../../plan/model';
@@ -28,7 +30,7 @@ const memory: { sessionId: string | null; openId: string | undefined; cardio: Ca
  * « Terminer ». La flèche « ‹ » ramène à l'onglet Séance sans terminer la séance.
  */
 export function SessionScreen({ openVariantId }: { openVariantId: string | undefined }) {
-  const { active, commit, setLastFinish, cardioMachines, variants } = useApp();
+  const { active, commit, setLastFinish, cardioMachines, variants, deleteSession } = useApp();
   const now = useNow();
   if (active && memory.sessionId !== active.id) {
     memory.sessionId = active.id;
@@ -42,6 +44,9 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
   };
   /** Confirmation de fin ouverte : exercices sans ressenti relevés à l'ouverture. */
   const [confirmFinish, setConfirmFinish] = useState<string[] | null>(null);
+  /** Confirmation de l'annulation de la séance ouverte ; échec de la suppression. */
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [cancelFailed, setCancelFailed] = useState(false);
   const [addingCardio, setAddingCardio] = useState(memory.cardio.current !== null);
   /** Saisie du formulaire de cardio ouvert, proposée à l'enregistrement si la séance est terminée sans « Valider ». */
   const [cardioDraft, setCardioDraft] = useState<CardioDraft>({ kind: 'empty' });
@@ -124,6 +129,23 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
     await commit(session);
   }
 
+  /**
+   * Annuler la séance (version 1.27.0) : elle est supprimée entièrement, sans récapitulatif ni historique ; retour à
+   * l'onglet Séance. Une séance prévue reste proposée (elle n'est consommée que par une séance terminée).
+   */
+  async function cancel() {
+    if (!active) return;
+    openCardio(false);
+    if (!(await deleteSession(active.id))) {
+      setCancelFailed(true);
+      return;
+    }
+    memory.sessionId = null;
+    // Plus de séance en cours : pas d'entrée de garde en revenant sur l'onglet Séance.
+    setSessionActive(false);
+    navigate('');
+  }
+
   return (
     <main className="screen session gym-mode">
       <header className="session-header">
@@ -144,6 +166,20 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
           )}
         </div>
         <SaveIndicator />
+        {/* Annuler la séance : dans un menu, jamais dans la barre du pouce (appui par erreur). */}
+        <ActionMenu
+          label="Séance"
+          actions={[
+            {
+              label: 'Annuler la séance',
+              danger: true,
+              onSelect: () => {
+                setCancelFailed(false);
+                setConfirmCancel(true);
+              },
+            },
+          ]}
+        />
       </header>
 
       {steps.length === 0 && <p className="empty muted">Ajoute un premier exercice.</p>}
@@ -238,8 +274,27 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
         </button>
       </nav>
 
+      {confirmCancel && (
+        <BottomSheet title={'Annuler cette séance\u00a0?'} onClose={() => setConfirmCancel(false)}>
+          <p data-testid="cancel-loss">{cancelLoss(active)}</p>
+          {cancelFailed && (
+            <p className="field-error" role="alert">
+              Annulation impossible : réessaie.
+            </p>
+          )}
+          <div className="sheet-buttons">
+            <button type="button" className="btn big primary" onClick={() => setConfirmCancel(false)}>
+              Non, continuer
+            </button>
+            <button type="button" className="btn big danger" onClick={() => void cancel()}>
+              Oui, annuler la séance
+            </button>
+          </div>
+        </BottomSheet>
+      )}
+
       {confirmFinish && (
-        <FinishSheet onClose={() => setConfirmFinish(null)}>
+        <BottomSheet title="Terminer la séance ?" onClose={() => setConfirmFinish(null)}>
           <MissingFeelings session={active} variantIds={confirmFinish} />
           {(notDone.exercises.length > 0 || notDone.cardio.length > 0) && (
             <p className="planned-not-done" data-testid="planned-not-done">
@@ -277,17 +332,17 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
               Non, continuer la séance
             </button>
           </div>
-        </FinishSheet>
+        </BottomSheet>
       )}
     </main>
   );
 }
 
 /**
- * Confirmation de fin de séance (§5.6), en volet fixé en bas de l'écran : toujours visible sans défiler, quelle que
- * soit la longueur de la séance. Le fond assombri ferme le volet (comme « Non »).
+ * Confirmation de fin de séance (§5.6), ou d'annulation, en volet fixé en bas de l'écran : toujours visible sans
+ * défiler, quelle que soit la longueur de la séance. Le fond assombri ferme le volet (comme « Non »).
  */
-function FinishSheet({ onClose, children }: { onClose(): void; children: ReactNode }) {
+function BottomSheet({ title, onClose, children }: { title: string; onClose(): void; children: ReactNode }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     document.addEventListener('keydown', onKey);
@@ -298,7 +353,7 @@ function FinishSheet({ onClose, children }: { onClose(): void; children: ReactNo
       <div className="sheet-backdrop" aria-hidden="true" onClick={onClose} />
       <div className="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="finish-title">
         <h2 id="finish-title" className="sheet-title">
-          Terminer la séance ?
+          {title}
         </h2>
         {children}
       </div>

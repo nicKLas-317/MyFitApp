@@ -21,7 +21,7 @@ const choiceOf = (name: string) => {
   const c = imported(name).choice;
   return c?.kind === 'variant' ? c.variantId : null;
 };
-const PECS = ['chest-press', 'pec-deck', 'developpe-couche', 'ecarte-couche-halteres', 'developpe-incline', 'developpe-couche-halteres', 'ecarte-poulie'];
+const PECS = ['chest-press', 'pec-deck', 'developpe-couche', 'ecarte-couche-halteres', 'developpe-incline', 'developpe-couche-halteres', 'ecarte-poulie', 'pompes'];
 
 describe('Lexique d’équivalences (§4.2.1)', () => {
   it('125. Recherche : saisies en français, anglais et argot de salle', () => {
