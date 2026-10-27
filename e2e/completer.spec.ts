@@ -14,6 +14,8 @@ test.describe('Compléter une séance terminée le même jour (version 1.28.0)',
     await page.clock.setFixedTime(new Date('2026-10-27T08:30:00'));
     await finishSession(page);
     await page.getByRole('button', { name: 'Retour à l’accueil' }).click();
+    // La fin de séance est écrite en base avant de recharger.
+    await expect.poll(async () => (await readSessions(page))[0]?.state).toBe('done');
 
     // Accueil : un lien discret (pas un bouton plein), sous le choix du lieu, au style de « Préparer ma prochaine séance ».
     await page.clock.setFixedTime(new Date('2026-10-27T09:00:00'));
@@ -34,6 +36,7 @@ test.describe('Compléter une séance terminée le même jour (version 1.28.0)',
     await expect(incline.getByTestId('locked')).toHaveText(' · déjà fait');
     await expect(incline.locator('button.card-header')).toHaveCount(0);
     await expect(incline.getByRole('button', { name: /^Actions : / })).toHaveCount(0);
+    await expect.poll(async () => (await readSessions(page))[0]?.state).toBe('active');
     const before = (await readSessions(page))[0]!;
     expect(before).toMatchObject({ state: 'active', locked: { variantIds: ['developpe-incline--halteres'], cardioIds: [] } });
     await page.getByRole('button', { name: 'Actions : Séance' }).click();
@@ -42,6 +45,7 @@ test.describe('Compléter une séance terminée le même jour (version 1.28.0)',
     await expect(sheet.getByTestId('cancel-loss')).toHaveText('Rien n’a été saisi. La séance terminée reste enregistrée.');
     await sheet.getByRole('button', { name: 'Oui, annuler les ajouts' }).click();
     await expect(link).toBeVisible();
+    await expect.poll(async () => (await readSessions(page))[0]?.state).toBe('done');
     let saved = await readSessions(page);
     expect(saved).toHaveLength(1);
     expect(saved[0]).toMatchObject({ state: 'done', endedAt: new Date('2026-10-27T08:30:00').getTime(), location: 'maison' });
@@ -54,6 +58,8 @@ test.describe('Compléter une séance terminée le même jour (version 1.28.0)',
     await expect(incline.getByTestId('locked')).toBeVisible();
     await finishSession(page);
     await expect(page.locator('.recap-item')).toHaveCount(2);
+    await expect.poll(async () => (await readSessions(page))[0]?.performances.length).toBe(2);
+    await expect.poll(async () => (await readSessions(page))[0]?.state).toBe('done');
     saved = await readSessions(page);
     expect(saved).toHaveLength(1);
     expect(saved[0]).toMatchObject({ state: 'done', location: 'maison' });
@@ -79,6 +85,7 @@ test.describe('Compléter une séance terminée le même jour (version 1.28.0)',
     await page.clock.setFixedTime(new Date('2026-10-27T18:00:00'));
     await page.goto('./');
     await expect(page.getByRole('button', { name: 'Compléter la séance de cet après-midi' })).toBeVisible();
+    await expect.poll(async () => (await readSessions(page)).find((s) => !s.location)?.state).toBe('done');
     const gym = (await readSessions(page)).find((s) => !s.location)!;
     await page.goto(`./#/historique/${gym.id}`);
     const complete = page.getByRole('button', { name: 'Compléter cette séance' });
@@ -94,6 +101,7 @@ test.describe('Compléter une séance terminée le même jour (version 1.28.0)',
     await page.clock.setFixedTime(new Date('2026-10-27T18:15:00'));
     await finishSession(page);
     await expect(page.getByTestId('duration')).toHaveText('45 min');
+    await expect.poll(async () => (await readSessions(page)).find((s) => s.id === gym.id)?.endedAt).toBe(new Date('2026-10-27T18:15:00').getTime());
     const after = (await readSessions(page)).find((s) => s.id === gym.id)!;
     expect(after).toMatchObject({ state: 'done', endedAt: new Date('2026-10-27T18:15:00').getTime(), pauseMs: 330 * 60_000 });
     await page.goto(`./#/historique/${gym.id}`);
