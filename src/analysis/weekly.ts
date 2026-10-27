@@ -122,7 +122,10 @@ export interface GroupWork {
  * un groupe dépasse 1 : après une séance où il était principal, elle n'ajoute rien ; après une séance où il n'était
  * que secondaire, elle ajoute ½. Elle compte toujours pour « hier » / « aujourd'hui ».
  * Une séance à la maison compte ½ (« maison ») pour le groupe principal de chacun de ses exercices, au plus ½ par
- * séance ; ses groupes secondaires ne comptent pas (ni score, ni « hier » / « aujourd'hui »).
+ * séance ; ses groupes secondaires ne comptent pas (ni score, ni « hier » / « aujourd'hui »). Elle est plafonnée
+ * comme une activité (version 1.26.2) : le jour d'une séance à la salle où le groupe était principal, elle n'ajoute
+ * rien ; quel que soit l'ordre des séances dans la journée, la salle est comptée d'abord, puis la maison, puis les
+ * activités.
  * Les sous-groupes des jambes comptent pour « jambes » quand ils ne sont pas affichés eux-mêmes.
  * `inPeriod` reçoit le début d'une séance ou d'une activité.
  */
@@ -147,10 +150,14 @@ export function groupWork(
   const indirects = new Map<MuscleGroup, number>();
   const homes = new Map<MuscleGroup, number>();
   const last = new Map<MuscleGroup, number>();
-  /** Travail compté par jour et par groupe (1 ou ½ par séance), pour plafonner les activités. */
+  /** Travail compté par jour et par groupe (1 ou ½ par séance), pour plafonner la maison et les activités. */
   const daily = new Map<string, number>();
   const add = (day: string, g: MuscleGroup, value: number) => daily.set(`${day}|${g}`, (daily.get(`${day}|${g}`) ?? 0) + value);
-  for (const s of sessions) {
+  /** ½ de plus pour un groupe ce jour-là, sans dépasser 1. */
+  const fits = (day: string, g: MuscleGroup) => (daily.get(`${day}|${g}`) ?? 0) + 0.5 <= 1;
+  // La salle d'abord, puis la maison (plafonnée au jour) ; à lieu égal, l'ordre des séances.
+  const ordered = [...sessions].sort((a, b) => Number(a.location === 'maison') - Number(b.location === 'maison'));
+  for (const s of ordered) {
     if (s.state !== 'done') continue;
     const counted = inPeriod(sessionStartTime(s));
     // Un groupe travaillé deux fois dans la même séance compte pour une ; principal dans un exercice et
@@ -173,11 +180,12 @@ export function groupWork(
     const tallies = home
       ? ([[direct, homes, 0.5]] as const)
       : ([[direct, counts, 1], [secondary, indirects, 0.5]] as const);
+    const day = dayKey(sessionStartTime(s));
     for (const [found, tally, value] of tallies) {
       for (const g of found) {
-        if (counted) {
+        if (counted && (!home || fits(day, g))) {
           tally.set(g, (tally.get(g) ?? 0) + 1);
-          add(dayKey(sessionStartTime(s)), g, value);
+          add(day, g, value);
         }
         last.set(g, Math.max(last.get(g) ?? 0, sessionLastTime(s)));
       }
@@ -188,7 +196,7 @@ export function groupWork(
     const day = dayKey(activityStart(a));
     const found = new Set(a.groups.map(recapGroup).filter((g): g is MuscleGroup => g !== null));
     for (const g of found) {
-      if (counted && (daily.get(`${day}|${g}`) ?? 0) + 0.5 <= 1) {
+      if (counted && fits(day, g)) {
         indirects.set(g, (indirects.get(g) ?? 0) + 1);
         add(day, g, 0.5);
       }

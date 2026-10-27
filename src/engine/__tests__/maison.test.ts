@@ -205,7 +205,7 @@ describe('Salle et maison : deux suivis pour un exercice à charge (version 1.26
       expect(cell(g), g).toEqual({ group: g, count: 0, indirect: 0, score: 0, color: 'vert', recency: null });
       expect(recapCountLabel(cell(g))).toBe('');
     }
-    // Deux séances à la maison : 1 → orange ; avec une séance à la salle : « 1× · +1 maison ».
+    // Deux séances à la maison : 1 → orange ; avec une séance à la salle un autre jour : « 1× · +1 maison ».
     const second = { ...morning, id: 'maison2', date: '2026-10-26', startedAt: new Date(2026, 9, 26, 9).getTime() };
     expect(weeklyRecap([morning, second], LIB, now).cells.find((c) => c.group === 'pectoraux')).toMatchObject({ home: 2, score: 1, color: 'orange' });
     const gym = done('salle', 26, [perf(40, 10, [10, 10, 10], 'bien', { variantId: 'developpe-incline' })]);
@@ -215,6 +215,27 @@ describe('Salle et maison : deux suivis pour un exercice à charge (version 1.26
     // La salle ne change pas : triceps et épaules en indirect (½) grâce à la séance à la salle seulement.
     expect(mixed.find((c) => c.group === 'triceps')).toMatchObject({ count: 0, indirect: 1, score: 0.5 });
     expect(mixed.find((c) => c.group === 'triceps')).not.toHaveProperty('home');
+
+    // Plafond de 1 par jour et par groupe (version 1.26.2) : salle et maison le même jour, pas 1,5. Quel que soit
+    // l'ordre des séances : la maison le matin et la salle le soir comptent comme l'inverse.
+    for (const at of [9, 20]) {
+      const sameDay = { ...gym, id: `salle-${at}`, date: '2026-10-27', startedAt: new Date(2026, 9, 27, at).getTime() };
+      const cells = weeklyRecap([morning, sameDay], LIB, now, { ...withAbs, groups: [...withAbs.groups] }).cells;
+      expect(cells.find((c) => c.group === 'pectoraux'), `salle à ${at} h`).toEqual({
+        group: 'pectoraux', count: 1, indirect: 0, score: 1, color: 'orange', recency: 'today',
+      });
+      expect(recapCountLabel(cells.find((c) => c.group === 'pectoraux')!)).toBe('1×');
+      // Les abdos, pas travaillés à la salle ce jour-là, gardent leur ½ de la maison ; la salle reste comptée en entier.
+      expect(cells.find((c) => c.group === 'abdominaux')).toMatchObject({ home: 1, score: 0.5 });
+      expect(cells.find((c) => c.group === 'triceps')).toMatchObject({ count: 0, indirect: 1, score: 0.5 });
+    }
+    // Groupe seulement secondaire à la salle (½, dips assistés) et principal à la maison (½) le même jour : 1.
+    const dips = done('dips', 27, [perf(30, 10, [10, 10, 10], 'bien', { variantId: 'dips-assistes' })]);
+    expect(indexVariants(LIB).get('dips-assistes')?.exercise).toMatchObject({ primaryGroup: 'triceps', secondaryGroups: ['pectoraux'] });
+    expect(weeklyRecap([morning, dips], LIB, now).cells.find((c) => c.group === 'pectoraux')).toMatchObject({ count: 0, indirect: 1, home: 1, score: 1 });
+    // Deux séances à la maison le même jour : ½ + ½ = 1, sans dépasser le plafond.
+    const evening = { ...morning, id: 'maison-soir', startedAt: new Date(2026, 9, 27, 19).getTime() };
+    expect(weeklyRecap([morning, evening], LIB, now).cells.find((c) => c.group === 'pectoraux')).toMatchObject({ home: 2, score: 1 });
 
     // Bilans de la semaine et du mois, et texte du mail : mêmes règles.
     const name = (id: string) => displayName(indexVariants(LIB).get(id));
