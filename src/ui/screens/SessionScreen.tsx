@@ -1,7 +1,17 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useApp } from '../../app/store';
 import { navigate, navigateReplace, useNow } from '../../app/hooks';
-import { cancelAdditions, cancelLoss, elapsedMs, finishSession, missingFeelings, newId } from '../../session/ops';
+import {
+  canSwitchLocation,
+  cancelAdditions,
+  cancelLoss,
+  elapsedMs,
+  finishSession,
+  missingFeelings,
+  newId,
+  switchKept,
+  switchLocation,
+} from '../../session/ops';
 import { setSessionActive } from '../../app/navigation';
 import { ActionMenu } from '../ActionMenu';
 import { addCardio, formatCardio, removeCardio, updateCardio } from '../../cardio/model';
@@ -30,7 +40,7 @@ const memory: { sessionId: string | null; openId: string | undefined; cardio: Ca
  * « Terminer ». La flèche « ‹ » ramène à l'onglet Séance sans terminer la séance.
  */
 export function SessionScreen({ openVariantId }: { openVariantId: string | undefined }) {
-  const { active, commit, setLastFinish, cardioMachines, variants, deleteSession } = useApp();
+  const { active, commit, setLastFinish, cardioMachines, variants, deleteSession, ctxFor } = useApp();
   const now = useNow();
   if (active && memory.sessionId !== active.id) {
     memory.sessionId = active.id;
@@ -47,6 +57,8 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
   /** Confirmation de l'annulation de la séance ouverte ; échec de la suppression. */
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [cancelFailed, setCancelFailed] = useState(false);
+  /** Confirmation du changement de lieu ouverte (séries ou cardio déjà validés). */
+  const [confirmSwitch, setConfirmSwitch] = useState(false);
   const [addingCardio, setAddingCardio] = useState(memory.cardio.current !== null);
   /** Saisie du formulaire de cardio ouvert, proposée à l'enregistrement si la séance est terminée sans « Valider ». */
   const [cardioDraft, setCardioDraft] = useState<CardioDraft>({ kind: 'empty' });
@@ -85,6 +97,10 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
   }
   // Séance complétée (version 1.28.0) : ce qui était déjà fait reste fermé.
   const completing = !!active.locked;
+  // Changement de lieu (version 1.30.0) : ni séance prévue (toujours à la salle), ni séance complétée.
+  const home = active.location === 'maison';
+  const switchable = canSwitchLocation(active);
+  const switchLabel = home ? 'Passer à la salle' : 'Passer à la maison';
   const current = openId ?? memory.openId ?? steps.filter((step) => step.kind === 'exercise' && !step.locked).at(-1)?.key;
   const notDone = plannedNotDone(active);
   const unsavedCardio = addingCardio && cardioDraft.kind !== 'empty' ? cardioDraft : null;
@@ -148,6 +164,16 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
    * l'onglet Séance. Une séance prévue reste proposée (elle n'est consommée que par une séance terminée).
    * Séance complétée (version 1.28.0) : « Annuler les ajouts » la rend telle qu'elle était terminée.
    */
+  /**
+   * « Passer à la salle » / « Passer à la maison » (version 1.30.0) : les exercices pas commencés prennent la charge
+   * et la cible du suivi du nouveau lieu ; ce qui est déjà fait reste tel quel.
+   */
+  function switchPlace() {
+    if (!active) return;
+    setConfirmSwitch(false);
+    void commit(switchLocation(active, !home, (variantId) => ctxFor(variantId, !home), Date.now()));
+  }
+
   async function cancel() {
     if (!active) return;
     openCardio(false);
@@ -186,6 +212,8 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
         <ActionMenu
           label="Séance"
           actions={[
+            // Confirmation seulement si des séries ou du cardio sont déjà validés.
+            ...(switchable ? [{ label: switchLabel, onSelect: () => (switchKept(active) ? setConfirmSwitch(true) : switchPlace()) }] : []),
             {
               label: completing ? 'Annuler les ajouts' : 'Annuler la séance',
               danger: true,
@@ -321,6 +349,20 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
             </button>
             <button type="button" className="btn big danger" onClick={() => void cancel()}>
               {completing ? 'Oui, annuler les ajouts' : 'Oui, annuler la séance'}
+            </button>
+          </div>
+        </BottomSheet>
+      )}
+
+      {confirmSwitch && (
+        <BottomSheet title={`${switchLabel} ?`} onClose={() => setConfirmSwitch(false)}>
+          <p data-testid="switch-kept">{switchKept(active)}</p>
+          <div className="sheet-buttons">
+            <button type="button" className="btn big primary" onClick={switchPlace}>
+              {home ? 'Oui, passer à la salle' : 'Oui, passer à la maison'}
+            </button>
+            <button type="button" className="btn big" onClick={() => setConfirmSwitch(false)}>
+              {home ? 'Non, rester à la maison' : 'Non, rester à la salle'}
             </button>
           </div>
         </BottomSheet>

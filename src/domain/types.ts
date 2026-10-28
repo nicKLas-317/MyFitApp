@@ -138,7 +138,8 @@ export interface Session {
   fromPlan?: PlanOrigin;
   /**
    * Lieu (version 1.26.0) : « maison » pour une séance à la maison ; absent = à la salle (toutes les séances
-   * enregistrées avant la version 1.26.0, et toute séance prévue).
+   * enregistrées avant la version 1.26.0, et toute séance prévue). Changé en cours de séance depuis la version 1.30.0
+   * (ni séance prévue, ni séance complétée).
    */
   location?: 'maison';
   /**

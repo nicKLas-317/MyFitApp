@@ -220,6 +220,44 @@ export function cancelLoss(session: Pick<Session, 'performances' | 'cardio' | 'l
 }
 
 /**
+ * Le lieu d'une séance en cours se change (version 1.30.0) sauf pour une séance prévue (toujours à la salle) et une
+ * séance complétée (sa partie fermée changerait de lieu).
+ */
+export function canSwitchLocation(session: Session): boolean {
+  return session.state === 'active' && !session.fromPlan && !session.locked;
+}
+
+/**
+ * Change le lieu d'une séance en cours (version 1.30.0) : les exercices sans série validée prennent la charge et la
+ * cible du suivi du nouveau lieu (`ctxFor`, comme au démarrage d'une séance prévue) ; jamais réalisé dans ce suivi, la
+ * charge saisie sert de poids de départ. Les exercices commencés et le cardio restent tels quels : ils seront évalués
+ * dans le suivi du nouveau lieu. L'heure de début est gardée.
+ */
+export function switchLocation(session: Session, home: boolean, ctxFor: (variantId: string) => VariantContext, now: number): Session {
+  if (!canSwitchLocation(session) || (session.location === 'maison') === home) return session;
+  const performances = session.performances.map((p) =>
+    p.reps.length > 0 ? p : (newPerformance(p.variantId, ctxFor(p.variantId), p.weightKg) ?? p),
+  );
+  const { location: _previous, ...rest } = session;
+  return { ...rest, ...(home ? { location: 'maison' as const } : {}), performances, updatedAt: now };
+}
+
+/**
+ * Ce qui reste tel quel quand le lieu change (version 1.30.0) : séries et cardio déjà validés ; null s'il n'y en a
+ * pas (pas de confirmation). « 4 séries déjà faites resteront telles quelles. »
+ */
+export function switchKept(session: Pick<Session, 'performances' | 'cardio'>): string | null {
+  const sets = session.performances.reduce((n, p) => n + p.reps.length, 0);
+  const cardio = (session.cardio ?? []).length;
+  if (sets === 0 && cardio === 0) return null;
+  const setsText = sets === 1 ? '1 série' : `${sets} séries`;
+  const cardioText = cardio === 1 ? '1 cardio' : `${cardio} cardios`;
+  if (cardio === 0) return sets === 1 ? '1 série déjà faite restera telle quelle.' : `${setsText} déjà faites resteront telles quelles.`;
+  if (sets === 0) return cardio === 1 ? '1 cardio déjà fait restera tel quel.' : `${cardioText} déjà faits resteront tels quels.`;
+  return `${setsText} et ${cardioText} déjà faits resteront tels quels.`;
+}
+
+/**
  * Termine la séance (§5.6) : chronomètre arrêté, heure de fin enregistrée, exercices sans aucune série retirés
  * (toujours : version 1.28.0, plus d'« Annuler ») et renvoyés pour être signalés au récapitulatif. Une séance
  * complétée perd sa partie fermée : elle redevient une séance terminée comme une autre. Les exercices remis à plus

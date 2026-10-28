@@ -636,6 +636,17 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
     await expectClean(page, 'Annuler la séance, texte agrandi', 1.15);
     await largerCancel();
     await page.getByRole('button', { name: 'Non, continuer' }).click();
+    // Changement de lieu (version 1.30.0) : menu de l'en-tête et confirmation (séries déjà faites), texte agrandi compris.
+    await page.getByRole('button', { name: 'Actions : Séance' }).click();
+    await expect(page.getByRole('menuitem', { name: 'Passer à la salle' })).toBeVisible();
+    await expectClean(page, 'Séance à la maison, menu « Passer à la salle »');
+    await page.getByRole('menuitem', { name: 'Passer à la salle' }).click();
+    await expect(page.getByTestId('switch-kept')).toHaveText('5 séries déjà faites resteront telles quelles.');
+    await expectClean(page, 'Passer à la salle, confirmation');
+    const largerSwitch = await largeText(page);
+    await expectClean(page, 'Passer à la salle, texte agrandi', 1.15);
+    await largerSwitch();
+    await page.getByRole('button', { name: 'Non, rester à la maison' }).click();
     await page.getByRole('button', { name: 'Terminer la séance' }).click();
     await finishSheet(page).getByRole('button', { name: 'Oui, terminer' }).click();
     await expect(page.getByRole('heading', { name: 'Séance terminée' })).toBeVisible();
