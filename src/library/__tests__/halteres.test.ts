@@ -5,6 +5,11 @@ import { SEED_EXERCISES } from '../seed';
 import { perDumbbell } from '../search';
 import { formatKg, kgUnit } from '../../session/format';
 import { formatRecord, formatRecordWithDate, type PersonalRecord } from '../../analysis/records';
+import { buildReport, lineText, periodContaining, reportSections, reportText } from '../../analysis/report';
+import { DEFAULT_RECAP_SETTINGS } from '../../analysis/weekly';
+import { changeText } from '../../ui/labels';
+import { displayName } from '../catalog';
+import { rebuildProfile } from '../../engine';
 import { GROUP_VIEW_GROUPS, groupIndex, groupWeeklySets } from '../../analysis/groups';
 import { simulatedHistory } from '../../analysis/__tests__/simulation';
 
@@ -63,5 +68,56 @@ describe('Charges aux haltères : poids d’un haltère (version 1.30.1)', () =>
       b.points.forEach((p, i) => expect(p.value, `${group} ${p.date}`).toBeCloseTo(a.points[i]!.value, 9));
       expect(groupWeeklySets(doubled, LIB, group, now)).toEqual(groupWeeklySets(sessions, LIB, group, now));
     }
+  });
+
+  it('273. Bilans de la semaine et du mois, texte du mail et dernières évolutions en « kg / haltère » (version 1.30.2) ; « kg » pour les autres exercices', () => {
+    const at = (d: number) => new Date(2026, 9, d, 18).getTime();
+    const session = (d: number, perfs: [string, number, number[]][]): Session => ({
+      id: `s${d}`, name: `s${d}`, date: `2026-10-${String(d).padStart(2, '0')}`, startedAt: at(d), endedAt: at(d) + 1_800_000, createdAt: at(d), updatedAt: at(d),
+      origin: 'app', state: 'done',
+      performances: perfs.map(([variantId, weightKg, reps]) => ({ variantId, weightKg, targetReps: Math.max(...reps), plannedSets: 3, reps, feeling: 'bien' })),
+    });
+    const red = [8, 6, 6];
+    // Curl aux haltères : deux vertes à 3 × 8 (+1 rép. le 19), record battu le 21 ; élévations latérales : quatrième
+    // rouge de suite le 23 ; pec deck (machine) : +1 rép. le 19.
+    const sessions = [
+      session(12, [['curl-biceps-halteres', 12, [8, 8, 8]], ['elevations-laterales', 6, red], ['pec-deck', 40, [8, 8, 8]]]),
+      session(19, [['curl-biceps-halteres', 12, [8, 8, 8]], ['elevations-laterales', 6, red], ['pec-deck', 40, [8, 8, 8]]]),
+      session(21, [['curl-biceps-halteres', 12, [9, 9, 9]], ['elevations-laterales', 6, red]]),
+      session(23, [['elevations-laterales', 6, red]]),
+    ];
+    const settings = buildEngineSettings(LIB);
+    const report = buildReport(periodContaining('week', at(20)), {
+      sessions, exercises: LIB, evaluations: rebuildProfile(sessions, settings).evaluations, settings,
+      groups: DEFAULT_RECAP_SETTINGS.groups, weighIns: [], now: at(26),
+    });
+    const name = (id: string) => displayName(refs.get(id));
+    const lines = (title: string) => reportSections(report, name, dumbbell).find((s) => s.title === title)!.lines.map(lineText);
+    expect(lines('Progressions')).toEqual(['Curl biceps haltères : 3×8 → 3×9 à 12 kg / haltère (19 oct.)', 'Pec deck : 3×8 → 3×9 à 40 kg (19 oct.)']);
+    expect(lines('Records')).toEqual(['👑 Curl biceps haltères : 3 × 9 à 12 kg / haltère']);
+    expect(lines('En difficulté')).toEqual(['Élévations latérales haltères : 4ᵉ séance rouge de suite à 6 kg / haltère → poids inférieur recommandé (23 oct.)']);
+    // Série de rouges commencée avant la période, sans baisse : « (3 de suite à 6 kg / haltère) ».
+    const before = buildReport(periodContaining('week', at(20)), {
+      sessions: sessions.slice(0, 3), exercises: LIB, evaluations: rebuildProfile(sessions.slice(0, 3), settings).evaluations, settings,
+      groups: DEFAULT_RECAP_SETTINGS.groups, weighIns: [], now: at(22),
+    });
+    expect(reportSections(before, name, dumbbell).find((s) => s.title === 'En difficulté')!.lines.map(lineText)).toEqual([
+      'Élévations latérales haltères : 2 séances rouges cette semaine (3 de suite à 6 kg / haltère)',
+    ]);
+    // Texte du mail : la même chose.
+    const text = reportText(report, name, dumbbell);
+    expect(text).toContain('\n- Curl biceps haltères : 3×8 → 3×9 à 12 kg / haltère (19 oct.)\n- Pec deck : 3×8 → 3×9 à 40 kg (19 oct.)\n');
+    expect(text).toContain('\n- 👑 Curl biceps haltères : 3 × 9 à 12 kg / haltère\n');
+    expect(text).toContain('à 6 kg / haltère → poids inférieur recommandé');
+    // Sans l'information, « kg » (comportement des versions antérieures).
+    expect(reportText(report, name)).not.toContain('haltère :');
+    expect(reportText(report, name)).not.toContain('kg / haltère');
+
+    // Dernières évolutions (une ligne, forme courte) : « 11,5 → 12,5 kg/haltère, 12 → 8 rép. ».
+    const palier = (weightKg: number, targetReps: number) => ({ weightKg, targetReps });
+    expect(changeText({ from: palier(11.5, 12), to: palier(12.5, 8) }, false, true)).toBe('11,5 → 12,5 kg/haltère, 12 → 8 rép.');
+    expect(changeText({ from: palier(12, 9), to: palier(10, 9) }, false, true)).toBe('12 → 10 kg/haltère');
+    expect(changeText({ from: palier(12, 8), to: palier(12, 9) }, false, true)).toBe('8 → 9 rép.');
+    expect(changeText({ from: palier(40, 12), to: palier(45, 8) })).toBe('40 → 45 kg, 12 → 8 rép.');
   });
 });

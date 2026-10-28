@@ -6,7 +6,8 @@ import { goTab } from '../../app/navigation';
 import { createSessionFromTemplate } from '../../engine';
 import { correctPerformance, removePastPerformance, setSessionDate, setSessionLocation, type CorrectionError } from '../../history/ops';
 import { displayName } from '../../library/catalog';
-import { defaultSessionName, formatDurationLong, formatHour, formatIsoDay, formatKg, formatReps, formatSetsReps, localDate } from '../../session/format';
+import { perDumbbell } from '../../library/search';
+import { defaultSessionName, formatDurationLong, formatHour, formatIsoDay, formatKg, formatReps, formatSetsReps, kgUnit, localDate } from '../../session/format';
 import { canComplete, elapsedMs, newId, parseWeight, renameSession, reopenSession } from '../../session/ops';
 import { FEELING_LABELS } from '../labels';
 import { StatusBadge } from '../StatusBadge';
@@ -129,7 +130,7 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
             <div>
               {ctxFor(p.variantId, home).cfg.assisted && 'aide '}
               {/* Poids du corps : pas de charge (0), seulement les répétitions. */}
-              {p.weightKg > 0 && formatKg(p.weightKg)}
+              {p.weightKg > 0 && formatKg(p.weightKg, perDumbbell(variants.get(p.variantId)))}
               {p.partial ? (
                 <span className="muted"> · historique partiel</span>
               ) : (
@@ -151,6 +152,7 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
                 performance={p}
                 bodyweight={!!ctxFor(p.variantId).cfg.bodyweight}
                 seconds={!!ctxFor(p.variantId).cfg.seconds}
+                dumbbell={perDumbbell(variants.get(p.variantId))}
                 onCancel={() => setEditing(null)}
                 onSave={(patch) => {
                   const result = correctPerformance(session, p.variantId, patch, Date.now(), ctxFor(p.variantId).cfg.bodyweight);
@@ -297,13 +299,15 @@ interface EditorProps {
   bodyweight: boolean;
   /** Exercice en secondes (gainage) : durées par série au lieu des répétitions. */
   seconds: boolean;
+  /** Exercice aux haltères : poids d'un haltère, « kg / haltère » (§4.4). */
+  dumbbell: boolean;
   onSave(patch: { weightKg?: number; targetReps?: number; plannedSets?: number; reps?: number[]; feeling?: Feeling }): CorrectionError[];
   onCancel(): void;
   onRemove(): void;
 }
 
 /** Correction d'une performance passée ; la performance reste cohérente (cible jamais dépassée…). */
-function PerformanceEditor({ performance: p, bodyweight, seconds, onSave, onCancel, onRemove }: EditorProps) {
+function PerformanceEditor({ performance: p, bodyweight, seconds, dumbbell, onSave, onCancel, onRemove }: EditorProps) {
   const id = useId();
   const [weight, setWeight] = useState(String(p.weightKg).replace('.', ','));
   const [reps, setReps] = useState(p.reps.join('-'));
@@ -332,7 +336,7 @@ function PerformanceEditor({ performance: p, bodyweight, seconds, onSave, onCanc
       <div className="field-grid">
         {!bodyweight && (
           <div className="draft-field">
-            <label htmlFor={`${id}-w`}>Poids (kg)</label>
+            <label htmlFor={`${id}-w`}>Poids ({kgUnit(dumbbell)})</label>
             <input id={`${id}-w`} type="text" inputMode="decimal" value={weight} onChange={(e) => setWeight(e.target.value)} />
           </div>
         )}

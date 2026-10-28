@@ -9,7 +9,10 @@ const ACCENT = 'rgb(91, 157, 255)';
 const NEUTRAL = 'rgb(74, 81, 99)';
 const CYAN = 'rgb(62, 230, 238)';
 
-/** Séance prévue (§5.9) : trois exercices (un jamais réalisé) et un cardio placé entre deux exercices. */
+/**
+ * Séance prévue (§5.9) : quatre exercices (un jamais réalisé, un aux haltères en « kg / haltère », version 1.30.2) et
+ * un cardio placé entre deux exercices.
+ */
 const PLAN: SessionPlan = {
   id: 'plan-test', createdAt: 0, updatedAt: 0,
   items: [
@@ -17,6 +20,7 @@ const PLAN: SessionPlan = {
     { kind: 'cardio', block: { id: 'prevu-tapis', machineId: 'tapis', machine: 'Tapis de marche', incline: 'neutre', minutes: 15 } },
     { kind: 'exercise', variantId: 'pec-deck', startWeightKg: 30 },
     { kind: 'exercise', variantId: 'crunch-machine', startWeightKg: 25 },
+    { kind: 'exercise', variantId: 'curl-biceps-halteres' },
   ],
 };
 
@@ -471,7 +475,10 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
         await page.goto('./');
         await setPlan(page, PLAN);
       }],
-      ['Séance prévue', () => page.goto('./#/seance-prevue').then(() => undefined)],
+      ['Séance prévue', async () => {
+        await page.goto('./#/seance-prevue');
+        await expect(page.locator('.plan-item[data-variant="curl-biceps-halteres"] .per-dumbbell')).toHaveText('/ haltère');
+      }],
       ['Séance prévue, cardio et suppression ouverts', async () => {
         await page.goto('./#/seance-prevue');
         await page.getByRole('main').getByRole('button', { name: '+ Cardio' }).click();

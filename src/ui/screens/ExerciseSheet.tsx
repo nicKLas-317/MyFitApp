@@ -249,7 +249,7 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
           {!ctx.cfg.bodyweight && (
             <>
               <p className="muted small">{ctx.cfg.assisted ? 'Aide (kg)' : `Charge (${kgUnit(dumbbell)})`}</p>
-              <LineChart data={series.map((p) => ({ date: p.date, value: p.weightKg }))} label={ctx.cfg.assisted ? 'Évolution de l’aide' : 'Évolution de la charge'} unit="kg" testId="chart-weight" />
+              <LineChart data={series.map((p) => ({ date: p.date, value: p.weightKg }))} label={ctx.cfg.assisted ? 'Évolution de l’aide' : 'Évolution de la charge'} unit={ctx.cfg.assisted ? 'kg' : kgUnit(dumbbell)} testId="chart-weight" />
             </>
           )}
           {reps.length > 0 && (

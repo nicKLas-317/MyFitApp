@@ -18,6 +18,7 @@ import {
   type ReportKind,
 } from '../../analysis/report';
 import { displayName } from '../../library/catalog';
+import { perDumbbell } from '../../library/search';
 import { copyText, openMailto, sendByMail } from '../share';
 
 const KIND_SEGMENTS: Record<ReportKind, string> = { week: 'semaine', month: 'mois' };
@@ -26,9 +27,12 @@ const TABS: { kind: ReportKind; label: string }[] = [
   { kind: 'month', label: 'Mois' },
 ];
 
-/** À l'écran seulement : un nombre n'est jamais séparé de son unité en fin de ligne (« 30 min », « 12 kg », « 21 oct. »). */
+/**
+ * À l'écran seulement : un nombre n'est jamais séparé de son unité en fin de ligne (« 30 min », « 12 kg », « 21 oct. »,
+ * « 12 kg / haltère » d'un bloc).
+ */
 function keepUnits(line: string): string {
-  return line.replace(/(\d) (min|kg|h|séances?|[a-zéû]+\.)/g, '$1\u00a0$2');
+  return line.replace(/ \/ haltère/g, '\u00a0/\u00a0haltère').replace(/(\d) (min|kg|h|séances?|[a-zéû]+\.)/g, '$1\u00a0$2');
 }
 
 export function kindOfSegment(segment: string | undefined): ReportKind {
@@ -52,9 +56,11 @@ export function PeriodReport({ kind, periodParam }: { kind: ReportKind; periodPa
     [key, kind, sessions, exercises, replay, settings, recapSettings, weighIns, activities],
   );
   const name = (id: string) => displayName(variants.get(id));
-  const sections = reportSections(report, name);
+  // Exercice aux haltères : charges en « kg / haltère » (§4.4), à l'écran comme dans le mail.
+  const dumbbell = (id: string) => perDumbbell(variants.get(id));
+  const sections = reportSections(report, name, dumbbell);
   const subject = mailSubject(period);
-  const text = reportText(report, name);
+  const text = reportText(report, name, dumbbell);
   const note = inProgressNote(report);
   const first = firstPeriod(kind, sessions);
   const hasPrevious = first !== null && first.start.getTime() < period.start.getTime();

@@ -58,11 +58,12 @@ const kgNumber = (kg: number) => kg.toLocaleString('fr-FR', { maximumFractionDig
 
 /**
  * Évolution d'un palier en quelques mots (bilan, §19.3) : « 8 → 9 rép. », « 40 → 45 kg, 12 → 8 rép. », « 30 → 27,5 kg »,
- * « 25 → 30 s » (exercice en secondes).
+ * « 25 → 30 s » (exercice en secondes) ; « 11,5 → 12,5 kg/haltère » pour un exercice aux haltères (forme courte : la
+ * ligne ne passe jamais à la ligne, version 1.30.2).
  */
-export function changeText(c: { from: Palier; to: Palier }, seconds = false): string {
+export function changeText(c: { from: Palier; to: Palier }, seconds = false, perDumbbell = false): string {
   const reps = `${c.from.targetReps} → ${c.to.targetReps} ${seconds ? 's' : 'rép.'}`;
   if (c.from.weightKg === c.to.weightKg) return reps;
-  const weight = `${kgNumber(c.from.weightKg)} → ${formatKg(c.to.weightKg)}`;
+  const weight = `${kgNumber(c.from.weightKg)} → ${perDumbbell ? `${kgNumber(c.to.weightKg)} kg/haltère` : formatKg(c.to.weightKg)}`;
   return c.from.targetReps === c.to.targetReps ? weight : `${weight}, ${reps}`;
 }

@@ -2,7 +2,7 @@ import { Fragment, useMemo, useState, type ReactNode } from 'react';
 import type { Exercise, MuscleGroup } from '../../domain/types';
 import { useApp } from '../../app/store';
 import { displayName, groupGrips, variantLabel, type VariantRef } from '../../library/catalog';
-import { buildSearchIndex, recentVariantIds, searchWithInfo, type MatchField } from '../../library/search';
+import { buildSearchIndex, perDumbbell, recentVariantIds, searchWithInfo, type MatchField } from '../../library/search';
 import { gripOf } from '../../library/text';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
 import { formatKg } from '../../session/format';
@@ -167,7 +167,18 @@ function ExerciseItem({ ref_: ref, via, onPick, below, aside, note, home }: Item
             </span>
           </span>
           <span className="pick-meta">
-            {state && state.palier.weightKg > 0 && <span className="small">{formatKg(state.palier.weightKg)}</span>}
+            {state && state.palier.weightKg > 0 && (
+              <span className="small pick-load">
+                {formatKg(state.palier.weightKg)}
+                {/* Aux haltères (§4.4) : « / haltère » sous la charge, pour laisser la place au nom. */}
+                {perDumbbell(ref) && (
+                  <>
+                    {' '}
+                    <span>/ haltère</span>
+                  </>
+                )}
+              </span>
+            )}
             <StatusBadge status={state?.lastStatus} />
           </span>
         </button>
@@ -217,7 +228,7 @@ function GripItem({ exercise, items, onPick, below, note, home }: { exercise: Ex
               onClick={() => onPick(ref)}
             >
               <span>{gripLabel(ref)}</span>
-              {state && state.palier.weightKg > 0 && <span className="muted">{formatKg(state.palier.weightKg)}</span>}
+              {state && state.palier.weightKg > 0 && <span className="muted">{formatKg(state.palier.weightKg, perDumbbell(ref))}</span>}
               <StatusBadge status={state?.lastStatus} />
               {extra && <span aria-hidden="true">✓</span>}
             </button>

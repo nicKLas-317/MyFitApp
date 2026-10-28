@@ -120,7 +120,9 @@ test.describe('Bilans de la semaine et du mois (§19.7)', () => {
     await expect(section('En difficulté')).toContainText('Presse à cuisses : 4ᵉ séance rouge de suite à 100\u00a0kg → poids inférieur recommandé (21\u00a0oct.)');
     await expect(section('Poids')).toContainText('80,2 kg le 19 oct. → 79,6 kg le 25 oct.');
     // Éléments importants mis en évidence (gras), le reste en texte simple.
-    await expect(section('Progressions').locator('.report-em').first()).toHaveText('3×8 → 3×9 à 12\u00a0kg');
+    await expect(section('Progressions').locator('.report-em').first()).toHaveText('3×8 → 3×9 à 12\u00a0kg\u00a0/\u00a0haltère');
+    // Curl aux haltères (version 1.30.2) : « kg / haltère », dans le texte du mail aussi.
+    await expect(page.getByTestId('report-text')).toContainText('3×8 → 3×9 à 12 kg / haltère');
     await expect(section('Groupes travaillés').locator('.report-em')).toHaveText(['Non travaillés : Épaules, Triceps']);
     expect(await section('Séances').locator('.report-em').first().evaluate((e) => getComputedStyle(e).fontWeight)).toBe('700');
     await test.info().attach('bilan-semaine', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });

@@ -132,7 +132,7 @@ export function Recap({ sessionId }: { sessionId: string }) {
                 <StatusBadge status={ev?.status} />
               </div>
               <div>
-                {p.weightKg > 0 && `${formatKg(p.weightKg)} · `}
+                {p.weightKg > 0 && `${formatKg(p.weightKg, perDumbbell(variants.get(p.variantId)))} · `}
                 {p.reps.map((r) => formatReps(r, ctxFor(p.variantId).cfg.seconds)).join(' · ')}{' '}
                 <span className="muted">(cible {formatSetsReps(p.plannedSets ?? 0, p.targetReps ?? 0, ctxFor(p.variantId).cfg.seconds)})</span>
               </div>

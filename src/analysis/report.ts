@@ -367,8 +367,12 @@ const shortDay = (date: string) => {
   const [y, m, d] = date.split('-').map(Number);
   return DAY_MONTH.format(new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1));
 };
-/** « à 20 kg », « avec 30 kg d’aide », précédé d'une espace ; rien pour un exercice au poids du corps (0). */
-const load = (kg: number, assisted: boolean) => (kg === 0 ? '' : assisted ? ` avec ${formatKg(kg)} d’aide` : ` à ${formatKg(kg)}`);
+/**
+ * « à 20 kg », « avec 30 kg d’aide », « à 12 kg / haltère » (exercice aux haltères, version 1.30.2), précédé d'une
+ * espace ; rien pour un exercice au poids du corps (0).
+ */
+const load = (kg: number, assisted: boolean, dumbbell = false) =>
+  kg === 0 ? '' : assisted ? ` avec ${formatKg(kg)} d’aide` : ` à ${formatKg(kg, dumbbell)}`;
 
 /**
  * Ce à quoi la période est comparée : « à la semaine précédente », ou pour une période en cours la même portion de la
@@ -394,8 +398,11 @@ function signed(diff: number, format: (n: number) => string): string | null {
   return `${diff > 0 ? '+' : '−'}${format(Math.abs(diff))}`;
 }
 
-/** Sections du bilan, communes à l'écran et au texte du mail. `name` donne le nom affiché d'un exercice-variante. */
-export function reportSections(report: PeriodReport, variantName: (variantId: string) => string): ReportSection[] {
+/**
+ * Sections du bilan, communes à l'écran et au texte du mail. `name` donne le nom affiché d'un exercice-variante,
+ * `dumbbell` s'il est aux haltères (charges en « kg / haltère », §4.4).
+ */
+export function reportSections(report: PeriodReport, variantName: (variantId: string) => string, dumbbell: (variantId: string) => boolean = () => false): ReportSection[] {
   const { totals, previous } = report;
   // Nom d'un suivi : « Curl biceps haltères (maison) » pour le suivi de la maison d'un exercice à charge.
   const name = (variantId: string, home?: true) => `${variantName(variantId)}${home ? ' (maison)' : ''}`;
@@ -448,8 +455,8 @@ export function reportSections(report: PeriodReport, variantName: (variantId: st
               const from = `${p.sets}×${p.from.targetReps}${unit}`;
               const change: ReportPart[] =
                 p.kind === 'reps_up'
-                  ? [em(`${from} → ${p.sets}×${p.toReps}${unit}${load(p.from.weightKg, p.assisted)}`)]
-                  : [`${from}${load(p.from.weightKg, p.assisted)} validé → `, em(`${p.assisted ? 'moins d’aide' : 'poids supérieur'}, ${p.sets}×${p.toReps}`)];
+                  ? [em(`${from} → ${p.sets}×${p.toReps}${unit}${load(p.from.weightKg, p.assisted, dumbbell(p.variantId))}`)]
+                  : [`${from}${load(p.from.weightKg, p.assisted, dumbbell(p.variantId))} validé → `, em(`${p.assisted ? 'moins d’aide' : 'poids supérieur'}, ${p.sets}×${p.toReps}`)];
               return [`${name(p.variantId, p.home)} : `, ...change, ` (${shortDay(p.date)})`];
             })
           : [['Aucun palier validé.']],
@@ -457,7 +464,7 @@ export function reportSections(report: PeriodReport, variantName: (variantId: st
 
     sections.push({
       title: 'Records',
-      lines: report.records.length > 0 ? report.records.map((r): ReportLine => [`👑 ${name(r.variantId, r.home)} : `, em(formatRecord(r))]) : [['Aucun nouveau record.']],
+      lines: report.records.length > 0 ? report.records.map((r): ReportLine => [`👑 ${name(r.variantId, r.home)} : `, em(formatRecord(r, dumbbell(r.variantId)))]) : [['Aucun nouveau record.']],
     });
 
     // Une ligne par exercice : son passage en « poids inférieur » s'il a eu lieu pendant la période, sinon ses séances
@@ -470,13 +477,13 @@ export function reportSections(report: PeriodReport, variantName: (variantId: st
           `${name(r.variantId, r.home)} : `,
           ...decreases.flatMap((d, i): ReportPart[] => [
             ...(i > 0 ? [' ; '] : []),
-            `${d.reds}ᵉ séance rouge de suite${load(d.weightKg, d.assisted)} → `,
+            `${d.reds}ᵉ séance rouge de suite${load(d.weightKg, d.assisted, dumbbell(d.variantId))} → `,
             em(d.seconds ? 'cible −5 s recommandée' : d.bodyweight ? 'cible −1 rép. recommandée' : d.assisted ? 'plus d’aide recommandée' : 'poids inférieur recommandé'),
             ` (${shortDay(d.date)})`,
           ]),
         ];
       }
-      const ongoing = r.streak > r.count ? ` (${r.streak} de suite${load(r.weightKg, r.assisted)})` : '';
+      const ongoing = r.streak > r.count ? ` (${r.streak} de suite${load(r.weightKg, r.assisted, dumbbell(r.variantId))})` : '';
       return [`${name(r.variantId, r.home)} : `, em(`${plural(r.count, 'séance rouge', 'séances rouges')} ${inThisPeriod}`), ongoing];
     });
     sections.push({ title: 'En difficulté', lines: difficulty.length > 0 ? difficulty : [['Aucun exercice en difficulté.']] });
@@ -497,11 +504,11 @@ export function inProgressNote(report: PeriodReport): string | null {
 }
 
 /** Texte brut du mail : titres en capitales, listes simples, sans HTML. */
-export function reportText(report: PeriodReport, name: (variantId: string) => string): string {
+export function reportText(report: PeriodReport, name: (variantId: string) => string, dumbbell?: (variantId: string) => boolean): string {
   const head = [mailSubject(report.period)];
   const note = inProgressNote(report);
   if (note) head.push(`(${note})`);
-  const body = reportSections(report, name).map((s) => [s.title.toUpperCase(), ...s.lines.map((l) => `- ${lineText(l)}`)].join('\n'));
+  const body = reportSections(report, name, dumbbell).map((s) => [s.title.toUpperCase(), ...s.lines.map((l) => `- ${lineText(l)}`)].join('\n'));
   return [head.join('\n'), ...body].join('\n\n') + '\n';
 }
 

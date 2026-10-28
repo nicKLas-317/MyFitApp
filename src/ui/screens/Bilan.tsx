@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useApp } from '../../app/store';
 import { analyzeProgress, recentChanges, type ProgressCategory } from '../../analysis/progress';
 import { changeText } from '../labels';
+import { perDumbbell } from '../../library/search';
 import { displayName } from '../../library/catalog';
 import { formatIsoDay, formatNumericDay } from '../../session/format';
 import { exerciseColorProps } from '../groupColors';
@@ -151,7 +152,7 @@ export function Bilan() {
                   {name(c.variantId)}
                   {c.home && ' (maison)'}
                 </span>
-                <span className="small change-what">{changeText(c, ctxFor(c.variantId).cfg.seconds)}</span>
+                <span className="small change-what">{changeText(c, ctxFor(c.variantId).cfg.seconds, perDumbbell(variants.get(c.variantId)))}</span>
               </li>
             ))}
           </ul>

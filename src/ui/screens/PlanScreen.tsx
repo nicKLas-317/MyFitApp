@@ -3,6 +3,7 @@ import type { SessionPlan } from '../../domain/types';
 import { useApp } from '../../app/store';
 import { navigate } from '../../app/hooks';
 import { displayName } from '../../library/catalog';
+import { perDumbbell } from '../../library/search';
 import { newId } from '../../session/ops';
 import { formatCardio } from '../../cardio/model';
 import {
@@ -126,6 +127,7 @@ export function PlanScreen() {
                         target={{ sets: p.plannedSets ?? 0, reps: p.targetReps ?? 0, weightKg: p.weightKg }}
                         assisted={ctx.cfg.assisted}
                         seconds={ctx.cfg.seconds}
+                        perDumbbell={perDumbbell(ref)}
                         hint={hint}
                         startLabel={ctx.cfg.bodyweight ? 'Jamais réalisé' : ctx.cfg.assisted ? 'Jamais réalisé : aide de départ' : 'Jamais réalisé : poids de départ'}
                       />
