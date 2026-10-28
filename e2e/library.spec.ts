@@ -229,7 +229,7 @@ test.describe('Bibliothèque et recherche', () => {
     await page.getByLabel('Matériel').selectOption('barre');
     await page.getByRole('button', { name: 'Enregistrer' }).click();
 
-    await page.getByLabel('Poids de départ (kg)').fill('60');
+    await page.getByLabel(/^Poids de départ \(kg/).fill('60');
     await page.getByRole('button', { name: 'Ajouter', exact: true }).click();
     await expect(exerciseCard(page, 'Hip thrust')).toBeVisible();
     expect((await activeSession(page)).performances[0]).toMatchObject({ variantId: 'perso-hip-thrust', weightKg: 60, targetReps: 8 });
@@ -244,7 +244,7 @@ test.describe('Bibliothèque et recherche', () => {
     await page.getByRole('button', { name: 'Créer' }).click();
     await expect(page.getByText('Variante : 45°')).toBeVisible();
     await page.getByRole('button', { name: 'Ajouter à la séance' }).click();
-    await page.getByLabel('Poids de départ (kg)').fill('10');
+    await page.getByLabel(/^Poids de départ \(kg/).fill('10');
     await page.getByRole('button', { name: 'Ajouter', exact: true }).click();
     await expect(exerciseCard(page, 'Curl biceps banc incliné — 45°')).toBeVisible();
     expect((await activeSession(page)).performances[0]?.variantId).toBe('curl-biceps-banc-incline--45');
@@ -253,7 +253,7 @@ test.describe('Bibliothèque et recherche', () => {
     await page.goto('./#/bibliotheque');
     await search(page, 'pec deck');
     await page.getByRole('button', { name: 'Ajouter Pec deck à la séance' }).click();
-    await page.getByLabel('Poids de départ (kg)').fill('35');
+    await page.getByLabel(/^Poids de départ \(kg/).fill('35');
     await page.getByRole('button', { name: 'Ajouter', exact: true }).click();
     await expect(exerciseCard(page, 'Pec deck')).toBeVisible();
   });

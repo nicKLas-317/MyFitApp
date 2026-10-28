@@ -3,6 +3,8 @@ import { useApp } from '../../app/store';
 import { navigateBack } from '../../app/hooks';
 import type { VariantRef } from '../../library/catalog';
 import { addExercise, checkWeight, findPerformance, newId } from '../../session/ops';
+import { kgUnit } from '../../session/format';
+import { perDumbbell } from '../../library/search';
 import { addToPlan, inPlan, newPlan } from '../../plan/model';
 import { ExerciseBrowser } from '../library/ExerciseBrowser';
 
@@ -98,7 +100,7 @@ export function ExercisePicker({ variantId, forPlan = false }: { variantId?: str
           submitStart(ref);
         }}
       >
-        <label htmlFor={`start-${ref.variant.id}`}>{ctxFor(ref.variant.id, home).cfg.assisted ? 'Aide de départ (kg)' : 'Poids de départ (kg)'}</label>
+        <label htmlFor={`start-${ref.variant.id}`}>{ctxFor(ref.variant.id, home).cfg.assisted ? 'Aide de départ (kg)' : `Poids de départ (${kgUnit(perDumbbell(ref))})`}</label>
         <div className="row">
           <input
             id={`start-${ref.variant.id}`}

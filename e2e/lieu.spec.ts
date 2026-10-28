@@ -70,11 +70,13 @@ test.describe('Changer le lieu d’une séance en cours (version 1.30.0)', () =>
     expect(first).not.toHaveProperty('location');
     expect(first.performances).toMatchObject([{ variantId: 'pec-deck', weightKg: 30, reps: [9, 9, 9] }]);
 
-    // Le lendemain, à la salle, une série faite, puis à la maison : confirmation (« Non » garde la salle), la série
-    // reste telle quelle.
+    // Le lendemain, à la salle : curl aux haltères (12 kg, pas commencé) et pec deck (une série faite), puis à la
+    // maison : confirmation (« Non » garde la salle), la série reste telle quelle.
     await page.clock.setFixedTime(new Date('2026-10-29T18:00:00'));
     await page.goto('./');
     await page.getByRole('button', { name: 'Démarrer une séance', exact: true }).click();
+    const curl = await addExercise(page, 'curl biceps haltères', 'Curl biceps haltères', '12');
+    await expect(curl.getByTestId('next-target')).toHaveText('3 × 8 à 12 kg / haltère');
     const again = await addExercise(page, 'pec deck', 'Pec deck');
     await validateSets(again, 1);
     await expect(await headerMenu(page)).toHaveText(['Passer à la maison', 'Annuler la séance']);
@@ -93,12 +95,36 @@ test.describe('Changer le lieu d’une séance en cours (version 1.30.0)', () =>
     await expect(again.locator('.card-summary')).toHaveText('30 kg · 1/3');
     await expect.poll(async () => (await readSessions(page)).find((s) => s.state === 'active')?.location).toBe('maison');
     active = (await readSessions(page)).find((s) => s.state === 'active')!;
-    expect(active.performances).toMatchObject([{ weightKg: 30, targetReps: 9, reps: [9] }]);
+    expect(active.performances).toMatchObject([
+      { variantId: 'curl-biceps-halteres', weightKg: 0, targetReps: 8, reps: [] },
+      { variantId: 'pec-deck', weightKg: 30, targetReps: 9, reps: [9] },
+    ]);
+    // Le curl, jamais fait à la maison : les 12 kg de la salle ne sont pas repris ; champ vide, poids de départ à
+    // saisir, « 3 × 8 », aucune série avant la saisie (version 1.30.1).
+    await expect(curl.locator('.card-summary')).toHaveText('0/3');
+    await curl.locator('.card-header').click();
+    const curlWeight = curl.getByLabel('Poids (kg / haltère)');
+    await expect(curlWeight).toHaveValue('');
+    await expect(curl.getByTestId('start-hint')).toHaveText('Poids de départ à saisir');
+    await expect(curl.getByTestId('next-target')).toHaveText('3 × 8');
+    await expect(curl.getByRole('button', { name: 'Valider', exact: true })).toHaveCount(0);
+    await expect(curl.getByRole('button', { name: /^Valider les/ })).toHaveCount(0);
+    // Quitter le champ vide ne signale rien ; le poids saisi (6 kg) donne « 3 × 8 à 6 kg / haltère ».
+    await curlWeight.focus();
+    await curlWeight.press('Tab');
+    await expect(curl.getByRole('alert')).toHaveCount(0);
+    await curlWeight.fill('6');
+    await curlWeight.press('Tab');
+    await expect(curl.getByTestId('next-target')).toHaveText('3 × 8 à 6 kg / haltère');
+    await expect(curl.getByRole('button', { name: 'Valider les 3 séries' })).toBeVisible();
+    await expect.poll(async () => (await readSessions(page)).find((s) => s.state === 'active')?.performances[0]?.weightKg).toBe(6);
+    // Le curl reste sans série : retiré à la fin. Le pec deck s'achève.
+    await again.locator('.card-header').click();
     await validateSets(again, 2);
     await again.getByRole('button', { name: 'Bien', exact: true }).click();
     await finishSession(page);
     await expect.poll(async () => (await readSessions(page)).find((s) => s.date === '2026-10-29')?.state).toBe('done');
-    expect((await readSessions(page)).find((s) => s.date === '2026-10-29')).toMatchObject({ location: 'maison' });
+    expect((await readSessions(page)).find((s) => s.date === '2026-10-29')).toMatchObject({ location: 'maison', performances: [{ variantId: 'pec-deck' }] });
 
     // Comptée au lieu final : récapitulatif (la séance du 28 à la salle, celle du 29 en séries à la maison) ; fiche :
     // la salle n'a que la séance du 28 (3 × 9 à 30 kg, une verte), la maison a la sienne.

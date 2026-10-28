@@ -44,10 +44,13 @@ interface Props {
   bodyweight?: boolean;
   /** Exercice en secondes (gainage) : cible et dernière fois en secondes. */
   seconds?: boolean;
+  /** Exercice aux haltères (version 1.30.1) : charges en « kg / haltère ». */
+  perDumbbell?: boolean;
 }
 
-export function formatTargetLoad(weightKg: number, assisted: boolean): string {
-  return assisted ? ` avec ${formatKg(weightKg)} d’aide` : ` à ${formatKg(weightKg)}`;
+/** « à 30 kg », « avec 25 kg d’aide », « à 11,5 kg / haltère » (exercice aux haltères, version 1.30.1). */
+export function formatTargetLoad(weightKg: number, assisted: boolean, perDumbbell = false): string {
+  return assisted ? ` avec ${formatKg(weightKg)} d’aide` : ` à ${formatKg(weightKg, perDumbbell)}`;
 }
 
 /** Repère de progression (§5.3.1) en mention courte : « ↑ +1 rép. », « ↑ Poids supérieur », « ↓ Plus d’aide »… */
@@ -127,6 +130,7 @@ export function NextTarget({
   targetTestId = 'target',
   startLabel = 'Poids de départ à saisir',
   seconds = false,
+  perDumbbell = false,
 }: {
   target: TargetLine;
   assisted: boolean;
@@ -136,12 +140,21 @@ export function NextTarget({
   startLabel?: string;
   /** Exercice en secondes : « 3 × 30 s ». */
   seconds?: boolean;
+  /** Exercice aux haltères : « 3 × 9 à 11,5 kg / haltère ». */
+  perDumbbell?: boolean;
 }) {
   return (
     <>
       <p className="next-target" data-testid="next-target">
         <strong data-testid={targetTestId}>{formatSetsReps(target.sets, target.reps, seconds)}</strong>
         {target.weightKg !== null && target.weightKg > 0 && formatTargetLoad(target.weightKg, assisted)}
+        {/* Aux haltères : « / haltère » plus petit, qui passe dessous si la place manque ; la cible reste sur une ligne. */}
+        {perDumbbell && !assisted && target.weightKg !== null && target.weightKg > 0 && (
+          <>
+            {' '}
+            <span className="per-dumbbell">/ haltère</span>
+          </>
+        )}
       </p>
       {hint?.kind === 'start' && (
         <p className="next-hint" data-testid="start-hint">
@@ -174,7 +187,19 @@ export function NextTarget({
  * courte « 15/10 », retour à la ligne si l'écran est étroit) ; la cible, une seule ligne en grand dans la couleur du
  * groupe, avec la charge, puis une courte mention. Aucune couleur de statut hors de la pastille.
  */
-export function TargetSummary({ state, assisted, lastDate, label, target, hint, targetTestId = 'target', record, bodyweight = false, seconds = false }: Props) {
+export function TargetSummary({
+  state,
+  assisted,
+  lastDate,
+  label,
+  target,
+  hint,
+  targetTestId = 'target',
+  record,
+  bodyweight = false,
+  seconds = false,
+  perDumbbell = false,
+}: Props) {
   const last = state?.lastPerformance;
   return (
     <div className="target-summary" data-testid="target-summary">
@@ -185,7 +210,7 @@ export function TargetSummary({ state, assisted, lastDate, label, target, hint, 
             <span className="last-values">
               {assisted && 'aide '}
               {/* Chaque élément reste entier ; la ligne passe à la ligne entre deux éléments plutôt que d'être tronquée. */}
-              {[...(bodyweight ? [] : [formatKg(last.weightKg)]), ...(last.reps.length ? last.reps.map((r) => formatReps(r, seconds)) : ['—']), ...(lastDate ? [formatNumericDay(lastDate)] : [])].map((part, i) => (
+              {[...(bodyweight ? [] : [formatKg(last.weightKg, perDumbbell)]), ...(last.reps.length ? last.reps.map((r) => formatReps(r, seconds)) : ['—']), ...(lastDate ? [formatNumericDay(lastDate)] : [])].map((part, i) => (
                 <Fragment key={i}>
                   {i > 0 && ' '}
                   <span className="last-part">
@@ -204,7 +229,7 @@ export function TargetSummary({ state, assisted, lastDate, label, target, hint, 
       {record && (
         <p className="record-line" data-testid="record">
           <Crown />
-          <span>Record : {formatRecordWithDate(record)}</span>
+          <span>Record : {formatRecordWithDate(record, perDumbbell)}</span>
         </p>
       )}
       <div className="next-zone">
@@ -215,6 +240,7 @@ export function TargetSummary({ state, assisted, lastDate, label, target, hint, 
           hint={hint}
           targetTestId={targetTestId}
           seconds={seconds}
+          perDumbbell={perDumbbell}
           {...(bodyweight ? { startLabel: 'Première fois' } : {})}
         />
       </div>

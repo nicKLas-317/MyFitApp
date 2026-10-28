@@ -9,7 +9,8 @@ import { chartSeries } from '../../analysis/progress';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { LineChart } from '../LineChart';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
-import { formatIsoDay, formatKg, formatNumericDay, formatSetsReps } from '../../session/format';
+import { formatIsoDay, formatKg, formatNumericDay, formatSetsReps, kgUnit } from '../../session/format';
+import { perDumbbell } from '../../library/search';
 import { findPerformance } from '../../session/ops';
 import { FEELING_LABELS } from '../labels';
 import { groupColorProps } from '../groupColors';
@@ -35,6 +36,8 @@ function historyDay(date: string): string {
 export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: string; fromBilan?: boolean }) {
   const { variants, exercises, sessions, replay, records, active, ctxFor, saveExercises } = useApp();
   const ref = variants.get(variantId);
+  // Exercice aux haltères (version 1.30.1) : charges en « kg / haltère ».
+  const dumbbell = perDumbbell(ref);
   const [variantName, setVariantName] = useState<string | null>(null);
   const [variantError, setVariantError] = useState<string | null>(null);
   const [zoomed, setZoomed] = useState(false);
@@ -123,6 +126,7 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
           record={records.current.get(variantId) ?? null}
           bodyweight={ctx.cfg.bodyweight}
           seconds={ctx.cfg.seconds}
+          perDumbbell={dumbbell}
         />
       </section>
       {homeState && (
@@ -135,6 +139,7 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
             {...recommendedTarget(homeState, { sets: homeCtx.cfg.sets, reps: homeCtx.cfg.minReps }, homeCtx.cfg.assisted)}
             targetTestId="sheet-next-home"
             record={records.current.get(`${variantId}${HOME_SUFFIX}`) ?? null}
+            perDumbbell={dumbbell}
           />
         </section>
       )}
@@ -243,7 +248,7 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
           {/* Poids du corps : pas de charge, seulement les répétitions. */}
           {!ctx.cfg.bodyweight && (
             <>
-              <p className="muted small">{ctx.cfg.assisted ? 'Aide (kg)' : 'Charge (kg)'}</p>
+              <p className="muted small">{ctx.cfg.assisted ? 'Aide (kg)' : `Charge (${kgUnit(dumbbell)})`}</p>
               <LineChart data={series.map((p) => ({ date: p.date, value: p.weightKg }))} label={ctx.cfg.assisted ? 'Évolution de l’aide' : 'Évolution de la charge'} unit="kg" testId="chart-weight" />
             </>
           )}
@@ -277,7 +282,7 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
                   </span>
                   <span className="sheet-history-main">
                     {/* Poids du corps : pas de charge (0), seulement les répétitions. */}
-                    {p.weightKg > 0 && formatKg(p.weightKg)}
+                    {p.weightKg > 0 && formatKg(p.weightKg, dumbbell)}
                     {p.partial ? (
                       <span className="muted"> · historique partiel</span>
                     ) : p.weightKg > 0 ? (

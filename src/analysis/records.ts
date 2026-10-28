@@ -100,13 +100,16 @@ export function recordKeys(records: Records): Set<string> {
   return new Set(records.breaks.map((b) => `${b.sessionId}|${b.variantId}`));
 }
 
-/** « 3 × 9 à 20 kg », « 3 × 12 avec 30 kg d’aide », « 3 × 25 » (poids du corps), « 3 × 45 s » (en secondes). */
-export function formatRecord(r: Mark): string {
+/**
+ * « 3 × 9 à 20 kg », « 3 × 12 avec 30 kg d’aide », « 3 × 25 » (poids du corps), « 3 × 45 s » (en secondes) ;
+ * « 3 × 9 à 11,5 kg / haltère » pour un exercice aux haltères (version 1.30.1).
+ */
+export function formatRecord(r: Mark, perDumbbell = false): string {
   if (r.weightKg === 0) return formatSetsReps(r.sets, r.reps, r.seconds);
-  return `${r.sets} × ${r.reps} ${r.assisted ? `avec ${formatKg(r.weightKg)} d’aide` : `à ${formatKg(r.weightKg)}`}`;
+  return `${r.sets} × ${r.reps} ${r.assisted ? `avec ${formatKg(r.weightKg)} d’aide` : `à ${formatKg(r.weightKg, perDumbbell)}`}`;
 }
 
 /** « 3 × 9 à 20 kg (16 oct.) ». */
-export function formatRecordWithDate(r: PersonalRecord): string {
-  return `${formatRecord(r)} (${formatShortDay(r.date)})`;
+export function formatRecordWithDate(r: PersonalRecord, perDumbbell = false): string {
+  return `${formatRecord(r, perDumbbell)} (${formatShortDay(r.date)})`;
 }

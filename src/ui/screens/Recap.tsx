@@ -11,6 +11,7 @@ import { CardioLine } from '../CardioForm';
 import { exerciseColorProps } from '../groupColors';
 import { Crown } from '../Crown';
 import { formatRecord } from '../../analysis/records';
+import { perDumbbell } from '../../library/search';
 
 /** Récapitulatif de fin de séance (§5.6) : la séance est déjà enregistrée, le nom est facultatif. */
 export function Recap({ sessionId }: { sessionId: string }) {
@@ -105,7 +106,7 @@ export function Recap({ sessionId }: { sessionId: string }) {
             <p key={b.variantId} className="record-line">
               <Crown />
               <span>
-                {displayName(variants.get(b.variantId))} : <strong>{formatRecord(b)}</strong>
+                {displayName(variants.get(b.variantId))} : <strong>{formatRecord(b, perDumbbell(variants.get(b.variantId)))}</strong>
               </span>
             </p>
           ))}

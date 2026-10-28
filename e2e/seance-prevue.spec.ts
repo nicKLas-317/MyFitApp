@@ -77,7 +77,7 @@ async function planExercise(page: Page, query: string, name: string, startWeight
   await page.getByRole('searchbox', { name: 'Rechercher un exercice' }).fill(query);
   await page.getByRole('button', { name: new RegExp(`^${name}`) }).first().click();
   if (startWeight !== undefined) {
-    await page.getByLabel('Poids de départ (kg)').fill(startWeight);
+    await page.getByLabel(/^Poids de départ \(kg/).fill(startWeight);
     await page.getByRole('button', { name: 'Ajouter', exact: true }).click();
   }
   await expect(page.getByRole('heading', { name: 'Séance prévue' })).toBeVisible();

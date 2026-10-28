@@ -544,8 +544,11 @@ export function validateBackup(data: Obj): string[] {
     }
     for (const p of s.performances) {
       if (!variantIds.has(p.variantId)) errors.push(`Séance ${s.id} : exercice inconnu ${p.variantId}.`);
-      // Charge nulle pour un exercice au poids du corps, et pour lui seulement.
-      else if ((p.weightKg === 0) !== bodyweight.has(p.variantId)) errors.push(`Séance ${s.id} : charge invalide pour ${p.variantId}.`);
+      // Charge nulle pour un exercice au poids du corps, et pour lui seulement ; ou, dans une séance en cours, pour un
+      // exercice sans série dont le poids de départ reste à saisir (lieu changé, version 1.30.1).
+      else if ((p.weightKg === 0) !== bodyweight.has(p.variantId) && !(s.state === 'active' && p.weightKg === 0 && p.reps.length === 0)) {
+        errors.push(`Séance ${s.id} : charge invalide pour ${p.variantId}.`);
+      }
     }
   }
   if (active > 1) errors.push('Plusieurs séances en cours.');

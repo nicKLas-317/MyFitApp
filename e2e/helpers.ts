@@ -62,7 +62,8 @@ export async function addExercise(page: Page, query: string, name: string, start
   const escaped = name.replace(' — ', ' ').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   await page.getByRole('button', { name: new RegExp(`^${escaped}`) }).first().click();
   if (startWeight !== undefined) {
-    await page.getByLabel('Poids de départ (kg)').fill(startWeight);
+    // « Poids de départ (kg) », ou « (kg / haltère) » pour un exercice aux haltères (version 1.30.1).
+    await page.getByLabel(/^Poids de départ \(kg/).fill(startWeight);
     await page.getByRole('button', { name: 'Ajouter', exact: true }).click();
   }
   const card = exerciseCard(page, name);

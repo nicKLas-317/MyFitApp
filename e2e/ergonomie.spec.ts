@@ -552,6 +552,32 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
     await toTop(page);
     await expectClean(page, 'Séance, texte agrandi', 1.15);
     await restore();
+    // Exercice aux haltères (version 1.30.1) : « kg / haltère » sur la carte et dans le champ ; puis à la maison, où il
+    // n'a jamais été fait : poids de départ à saisir (champ vide, pas de séries), texte agrandi compris.
+    const curl = await addExercise(page, 'curl biceps haltères', 'Curl biceps haltères');
+    await expect(curl.getByLabel('Poids (kg / haltère)', { exact: true })).toBeVisible();
+    await toTop(page);
+    await expectClean(page, 'Séance, exercice aux haltères');
+    await page.getByRole('button', { name: 'Actions : Séance' }).click();
+    await page.getByRole('menuitem', { name: 'Passer à la maison' }).click();
+    await expect(page.getByTestId('switch-kept')).toHaveText('1 cardio déjà fait restera tel quel.');
+    await page.getByRole('button', { name: 'Oui, passer à la maison' }).click();
+    await expect(curl.getByTestId('start-hint')).toHaveText('Poids de départ à saisir');
+    await toTop(page);
+    await expectClean(page, 'Séance, poids de départ à saisir');
+    const largerStart = await largeText(page);
+    await toTop(page);
+    await expectClean(page, 'Séance, poids de départ à saisir, texte agrandi', 1.15);
+    await largerStart();
+    await page.getByRole('button', { name: 'Actions : Séance' }).click();
+    await page.getByRole('menuitem', { name: 'Passer à la salle' }).click();
+    await page.getByRole('button', { name: 'Oui, passer à la salle' }).click();
+    await expect(page.getByTestId('chrono')).toBeVisible();
+    await cardAction(curl, 'Retirer de la séance');
+    await curl.getByRole('button', { name: 'Oui, retirer' }).click();
+    await expect(curl).toHaveCount(0);
+    // « Annuler » (retrait) disparaît après quelques secondes : l'écran d'ajout est contrôlé sans lui.
+    await expect(page.getByRole('button', { name: 'Annuler', exact: true })).toHaveCount(0, { timeout: 15_000 });
     await page.getByRole('link', { name: 'Ajouter un exercice' }).click();
     await expect(page.getByRole('searchbox', { name: 'Rechercher un exercice' })).toBeVisible();
     await expectClean(page, 'Ajout d’un exercice');

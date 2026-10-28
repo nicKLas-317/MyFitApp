@@ -27,7 +27,7 @@ test.describe('Salle et maison (version 1.26.0)', () => {
     await expect(page.getByTestId('chrono')).toHaveCount(0);
     // Récents : le curl (de la salle) est proposé ; à la maison, il demande son poids de départ.
     const curl = await addExercise(page, 'curl biceps haltères', 'Curl biceps haltères', '6');
-    await expect(curl.getByTestId('next-target')).toHaveText('3 × 8 à 6 kg');
+    await expect(curl.getByTestId('next-target')).toHaveText('3 × 8 à 6 kg / haltère');
     await expect(curl.getByTestId('last-time')).toContainText('jamais réalisé');
     await doExercise(curl, 3, 'Bien');
     await finishSession(page);
@@ -54,11 +54,11 @@ test.describe('Salle et maison (version 1.26.0)', () => {
     // Fiche : la prochaine cible de la salle (12 kg), et celle de la maison à part (6 kg) ; historique « maison ».
     await page.goto('./#/exercice/curl-biceps-halteres');
     await expect(page.getByTestId('sheet-next')).toHaveText('3 × 8');
-    await expect(page.getByTestId('next-target').first()).toHaveText('3 × 8 à 12 kg');
+    await expect(page.getByTestId('next-target').first()).toHaveText('3 × 8 à 12 kg / haltère');
     const homeBlock = page.getByTestId('sheet-home');
     await expect(homeBlock).toContainText('Prochaine cible à la maison');
     await expect(homeBlock.getByTestId('sheet-next-home')).toHaveText('3 × 8');
-    await expect(homeBlock.getByTestId('next-target')).toHaveText('3 × 8 à 6 kg');
+    await expect(homeBlock.getByTestId('next-target')).toHaveText('3 × 8 à 6 kg / haltère');
     await expect(page.getByRole('list', { name: 'Historique de l’exercice' }).getByRole('listitem').first()).toContainText('maison');
 
     // Historique : « · maison » ; détail sans heures ni durée, lieu « Maison ».
@@ -78,7 +78,7 @@ test.describe('Salle et maison (version 1.26.0)', () => {
     saved = (await readSessions(page)).sort((a, b) => (a.date < b.date ? -1 : 1));
     expect(saved[1]!.location).toBeUndefined();
     await page.goto('./#/exercice/curl-biceps-halteres');
-    await expect(page.getByTestId('next-target').first()).toHaveText('3 × 8 à 6 kg');
+    await expect(page.getByTestId('next-target').first()).toHaveText('3 × 8 à 6 kg / haltère');
     await expect(page.getByTestId('sheet-home')).toHaveCount(0);
 
     // Et de nouveau à la maison : tout redevient comme avant.
@@ -86,8 +86,8 @@ test.describe('Salle et maison (version 1.26.0)', () => {
     await page.getByRole('group', { name: 'Lieu de la séance' }).getByRole('button', { name: 'Maison' }).click();
     await expect(page.getByRole('main')).toContainText('27 octobre 2026 · à la maison');
     await page.goto('./#/exercice/curl-biceps-halteres');
-    await expect(page.getByTestId('next-target').first()).toHaveText('3 × 8 à 12 kg');
-    await expect(page.getByTestId('sheet-home').getByTestId('next-target')).toHaveText('3 × 8 à 6 kg');
+    await expect(page.getByTestId('next-target').first()).toHaveText('3 × 8 à 12 kg / haltère');
+    await expect(page.getByTestId('sheet-home').getByTestId('next-target')).toHaveText('3 × 8 à 6 kg / haltère');
     expect((await readSessions(page)).find((s) => s.id === saved[1]!.id)?.location).toBe('maison');
 
     // Plage de la maison réglable par exercice : 8 à 15 par défaut, enregistrée seulement si elle change.

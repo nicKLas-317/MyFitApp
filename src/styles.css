@@ -605,6 +605,14 @@ div.card-header {
   font-weight: inherit;
 }
 
+/* Exercice aux haltères (version 1.30.1) : « / haltère » en texte courant, d'un bloc, sous la cible si la place manque. */
+.next-target .per-dumbbell {
+  display: inline-block;
+  font-size: var(--fs-3);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .next-hint {
   margin: 0;
   font-size: var(--fs-2);

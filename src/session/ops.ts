@@ -228,16 +228,29 @@ export function canSwitchLocation(session: Session): boolean {
 }
 
 /**
+ * Exercice à charge dont le poids de départ reste à saisir (version 1.30.1) : passé dans un suivi où il n'a jamais été
+ * réalisé, sa charge est vide (0, aucune série possible) jusqu'à la saisie. Retiré à la fin s'il n'a aucune série.
+ */
+export function needsStartWeight(p: Performance, cfg: VariantConfig): boolean {
+  return !cfg.bodyweight && p.weightKg === 0 && p.reps.length === 0;
+}
+
+/**
  * Change le lieu d'une séance en cours (version 1.30.0) : les exercices sans série validée prennent la charge et la
- * cible du suivi du nouveau lieu (`ctxFor`, comme au démarrage d'une séance prévue) ; jamais réalisé dans ce suivi, la
- * charge saisie sert de poids de départ. Les exercices commencés et le cardio restent tels quels : ils seront évalués
- * dans le suivi du nouveau lieu. L'heure de début est gardée.
+ * cible du suivi du nouveau lieu (`ctxFor`, comme au démarrage d'une séance prévue). Jamais réalisé dans ce suivi
+ * (version 1.30.1) : charge vide, poids de départ à saisir comme pour tout exercice jamais réalisé, cible au bas de la
+ * plage ; la charge de l'autre lieu n'est jamais reprise. Les exercices commencés et le cardio restent tels quels :
+ * ils seront évalués dans le suivi du nouveau lieu. L'heure de début est gardée.
  */
 export function switchLocation(session: Session, home: boolean, ctxFor: (variantId: string) => VariantContext, now: number): Session {
   if (!canSwitchLocation(session) || (session.location === 'maison') === home) return session;
-  const performances = session.performances.map((p) =>
-    p.reps.length > 0 ? p : (newPerformance(p.variantId, ctxFor(p.variantId), p.weightKg) ?? p),
-  );
+  const performances = session.performances.map((p): Performance => {
+    if (p.reps.length > 0) return p;
+    const ctx = ctxFor(p.variantId);
+    return (
+      newPerformance(p.variantId, ctx) ?? { ...p, weightKg: 0, targetReps: ctx.cfg.minReps, plannedSets: ctx.cfg.sets, feeling: 'inconnu' }
+    );
+  });
   const { location: _previous, ...rest } = session;
   return { ...rest, ...(home ? { location: 'maison' as const } : {}), performances, updatedAt: now };
 }

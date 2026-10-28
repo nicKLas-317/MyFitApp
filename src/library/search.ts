@@ -52,6 +52,15 @@ export function variantEquipment(exercise: Exercise, variant: Variant): string[]
   return [...(own.length > 0 ? [] : [exercise.equipment]), ...keys.flatMap((k) => EQUIPMENT_ALIASES[k] ?? [k])];
 }
 
+/**
+ * Exercice aux haltères (matériel « haltère » ou « haltères », de l'exercice ou de sa variante) : la charge notée est
+ * celle d'UN haltère, jamais le total des deux (version 1.30.1) ; un exercice à un seul haltère (extension triceps
+ * assis), le poids de cet haltère. Aucun calcul ne double ni n'additionne ces charges.
+ */
+export function perDumbbell(ref: { exercise: Exercise; variant: Variant } | undefined): boolean {
+  return !!ref && variantEquipment(ref.exercise, ref.variant).includes('haltère');
+}
+
 export interface SearchEntry {
   exercise: Exercise;
   variant: Variant;

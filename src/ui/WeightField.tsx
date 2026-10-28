@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { checkWeight } from '../session/ops';
-import { formatKg } from '../session/format';
+import { formatKg, kgUnit } from '../session/format';
 
 interface Props {
   value: number | null;
@@ -9,11 +9,13 @@ interface Props {
   label?: string;
   highlight?: boolean;
   autoFocus?: boolean;
+  /** Exercice aux haltères (version 1.30.1) : poids d'un haltère, unité « kg / haltère ». */
+  perDumbbell?: boolean;
   onCommit(value: number): void;
 }
 
 /** Saisie du poids en kg, avec virgule décimale et protection contre les fautes de frappe. */
-export function WeightField({ value, previous, label = 'Poids (kg)', highlight = false, autoFocus = false, onCommit }: Props) {
+export function WeightField({ value, previous, label = 'Poids (kg)', highlight = false, autoFocus = false, perDumbbell = false, onCommit }: Props) {
   const id = useId();
   const format = (v: number | null) => (v === null ? '' : String(v).replace('.', ','));
   const [text, setText] = useState(format(value));
@@ -45,6 +47,8 @@ export function WeightField({ value, previous, label = 'Poids (kg)', highlight =
   function submit(leaving = false) {
     if (pending !== null) return;
     if (value !== null && text === format(value)) return;
+    // Champ encore vide (poids de départ à saisir, version 1.30.1) : rien à enregistrer, pas d'erreur.
+    if (value === null && text.trim() === '') return;
     const result = checkWeight(text, previous);
     if (leaving) {
       if (result.kind === 'ok') onCommit(result.value);
@@ -84,7 +88,7 @@ export function WeightField({ value, previous, label = 'Poids (kg)', highlight =
             }
           }}
         />
-        <span className="unit">kg</span>
+        <span className="unit">{kgUnit(perDumbbell)}</span>
       </div>
       {error && (
         <p className="field-error" role="alert">
@@ -94,7 +98,7 @@ export function WeightField({ value, previous, label = 'Poids (kg)', highlight =
       {pending !== null && previous !== undefined && (
         <div className="confirm-box" role="alertdialog" aria-label="Confirmer le poids">
           <p>
-            {formatKg(pending)} ? C’est très différent de {formatKg(previous)}.
+            {formatKg(pending, perDumbbell)} ? C’est très différent de {formatKg(previous, perDumbbell)}.
           </p>
           <div className="row">
             <button
@@ -106,7 +110,7 @@ export function WeightField({ value, previous, label = 'Poids (kg)', highlight =
                 onCommit(v);
               }}
             >
-              Confirmer {formatKg(pending)}
+              Confirmer {formatKg(pending, perDumbbell)}
             </button>
             <button
               type="button"

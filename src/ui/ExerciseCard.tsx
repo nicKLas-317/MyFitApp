@@ -2,11 +2,13 @@ import { useState, type ReactNode } from 'react';
 import type { Performance, Session } from '../domain/types';
 import { useApp } from '../app/store';
 import { displayName } from '../library/catalog';
-import { formatKg, formatReps } from '../session/format';
+import { formatKg, formatReps, kgUnit } from '../session/format';
+import { perDumbbell } from '../library/search';
 import { repStep, trackKey } from '../engine';
 import {
   correctSet,
   deleteLastSet,
+  needsStartWeight,
   recordRemainingSets,
   recordSet,
   removeExercise,
@@ -73,6 +75,11 @@ export function ExerciseCard({ session, performance: p, open, locked = false, on
   const { hint, weightChange } = cardHint(state, assisted, p, seconds);
 
   const name = displayName(ref);
+  // Exercice aux haltères (version 1.30.1) : poids d'un haltère, « kg / haltère ».
+  const dumbbell = perDumbbell(ref);
+  // Lieu changé vers un suivi où l'exercice n'a jamais été réalisé (version 1.30.1) : poids de départ à saisir,
+  // aucune série avant.
+  const startPending = needsStartWeight(p, ctx.cfg);
   // Toutes les séries faites à la cible et mieux que le record des séances précédentes (jamais pour une première fois).
   const newRecord = beatsRecord(p, records.current.get(trackKey(settings, p.variantId, home)), ctx.cfg.assisted);
   const nextValue = Math.min(draft ?? target, target);
@@ -92,7 +99,7 @@ export function ExerciseCard({ session, performance: p, open, locked = false, on
             <strong>{name}</strong>
             <span className="card-summary muted small">
               {/* Poids du corps : pas de charge, seulement les séries faites. */}
-              {p.weightKg > 0 && <span>{formatKg(p.weightKg)}</span>}
+              {p.weightKg > 0 && <span>{formatKg(p.weightKg, dumbbell)}</span>}
               <span className="sets-count">
                 {p.weightKg > 0 && ' · '}
                 {done}/{planned}
@@ -140,14 +147,16 @@ export function ExerciseCard({ session, performance: p, open, locked = false, on
             hint={hint}
             bodyweight={ctx.cfg.bodyweight}
             seconds={seconds}
+            perDumbbell={dumbbell}
           />
 
           {!ctx.cfg.bodyweight && (
             <WeightField
-              label={ctx.cfg.assisted ? 'Aide (kg)' : 'Poids (kg)'}
-              value={p.weightKg}
-              previous={state?.palier.weightKg ?? p.weightKg}
-              highlight={weightChange !== null}
+              label={ctx.cfg.assisted ? 'Aide (kg)' : `Poids (${kgUnit(dumbbell)})`}
+              value={startPending ? null : p.weightKg}
+              previous={state?.palier.weightKg ?? (startPending ? undefined : p.weightKg)}
+              highlight={weightChange !== null || startPending}
+              perDumbbell={dumbbell}
               onCommit={(w) => void commit(setWeight(session, p.variantId, w, ctx, now()))}
             />
           )}
@@ -179,59 +188,61 @@ export function ExerciseCard({ session, performance: p, open, locked = false, on
             </div>
           )}
 
-          <ol className="sets">
-            {p.reps.map((r, i) => (
-              <li key={i} className="set done">
-                <span className="set-label">Série {i + 1}</span>
-                <Stepper
-                  label={`${seconds ? 'Secondes' : 'Répétitions'} série ${i + 1}`}
-                  hideLabel
-                  value={r}
-                  min={0}
-                  max={target}
-                  step={step}
-                  unit={unit}
-                  onChange={(v) => void commit(correctSet(session, p.variantId, i, v, now()), 'Série corrigée')}
-                />
-                <span className="check" aria-label="Enregistrée">
-                  ✓
-                </span>
-              </li>
-            ))}
-            {done < planned && (
-              <li className="set next">
-                <span className="set-label">Série {done + 1}</span>
-                <Stepper
-                  label={`${seconds ? 'Secondes' : 'Répétitions'} série ${done + 1}`}
-                  hideLabel
-                  value={nextValue}
-                  min={0}
-                  max={target}
-                  step={step}
-                  unit={unit}
-                  onChange={setDraft}
-                />
-                <button
-                  type="button"
-                  className="btn primary validate"
-                  onClick={() => {
-                    setDraft(null);
-                    void commit(recordSet(session, p.variantId, nextValue, now()), 'Série enregistrée');
-                  }}
-                >
-                  Valider
-                </button>
-              </li>
-            )}
-            {Array.from({ length: Math.max(0, planned - done - 1) }, (_, k) => (
-              <li key={`todo-${k}`} className="set todo" aria-hidden="true">
-                <span className="set-label">Série {done + k + 2}</span>
-                <span className="muted">{formatReps(target, seconds)}</span>
-              </li>
-            ))}
-          </ol>
+          {!startPending && (
+            <ol className="sets">
+              {p.reps.map((r, i) => (
+                <li key={i} className="set done">
+                  <span className="set-label">Série {i + 1}</span>
+                  <Stepper
+                    label={`${seconds ? 'Secondes' : 'Répétitions'} série ${i + 1}`}
+                    hideLabel
+                    value={r}
+                    min={0}
+                    max={target}
+                    step={step}
+                    unit={unit}
+                    onChange={(v) => void commit(correctSet(session, p.variantId, i, v, now()), 'Série corrigée')}
+                  />
+                  <span className="check" aria-label="Enregistrée">
+                    ✓
+                  </span>
+                </li>
+              ))}
+              {done < planned && (
+                <li className="set next">
+                  <span className="set-label">Série {done + 1}</span>
+                  <Stepper
+                    label={`${seconds ? 'Secondes' : 'Répétitions'} série ${done + 1}`}
+                    hideLabel
+                    value={nextValue}
+                    min={0}
+                    max={target}
+                    step={step}
+                    unit={unit}
+                    onChange={setDraft}
+                  />
+                  <button
+                    type="button"
+                    className="btn primary validate"
+                    onClick={() => {
+                      setDraft(null);
+                      void commit(recordSet(session, p.variantId, nextValue, now()), 'Série enregistrée');
+                    }}
+                  >
+                    Valider
+                  </button>
+                </li>
+              )}
+              {Array.from({ length: Math.max(0, planned - done - 1) }, (_, k) => (
+                <li key={`todo-${k}`} className="set todo" aria-hidden="true">
+                  <span className="set-label">Série {done + k + 2}</span>
+                  <span className="muted">{formatReps(target, seconds)}</span>
+                </li>
+              ))}
+            </ol>
+          )}
           {/* Séries préremplies conformes à ce qui a été fait : toutes enregistrées en un appui, il ne reste que le ressenti. */}
-          {done === 0 && planned > 1 && nextValue === target && (
+          {!startPending && done === 0 && planned > 1 && nextValue === target && (
             <button
               type="button"
               className="btn validate-all"

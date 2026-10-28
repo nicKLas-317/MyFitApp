@@ -50,8 +50,8 @@ test.describe('Dernière fois / Prochaine cible (§5.3.2)', () => {
     // Fiche, cible en hausse : repère sous la cible.
     await page.goto('./#/exercice/extension-triceps-haltere-assis');
     const summary = page.getByTestId('target-summary');
-    await expect(summary.getByTestId('last-time')).toHaveText(/^Dernière fois\s*14 kg · 8 · 8 · 8 · 12\/03$/);
-    await expect(summary.getByTestId('next-target')).toHaveText('3 × 9 à 14 kg');
+    await expect(summary.getByTestId('last-time')).toHaveText(/^Dernière fois\s*14 kg \/ haltère · 8 · 8 · 8 · 12\/03$/);
+    await expect(summary.getByTestId('next-target')).toHaveText('3 × 9 à 14 kg / haltère');
     await expect(summary.getByTestId('sheet-next')).toHaveText('3 × 9');
     await expect(summary.getByTestId('progress-marker')).toHaveText('↑ +1 rép.');
     await expect(summary.getByTestId('same-target')).toHaveCount(0);
@@ -63,8 +63,11 @@ test.describe('Dernière fois / Prochaine cible (§5.3.2)', () => {
     expect(sheet.lastColor).toBe('rgb(154, 161, 176)'); // gris clair
     expect(sheet.separator).toBe('1px');
     expect(sheet.lastOverflow).toBeLessThanOrEqual(0);
-    expect(sheet.lastLines, 'une seule ligne à 412 px').toBe(1);
+    // Aux haltères (version 1.30.1), « 14 kg / haltère » allonge la ligne : la pastille passe dessous, rien n'est tronqué.
+    expect(sheet.lastLines, 'au plus deux lignes à 412 px').toBeLessThanOrEqual(2);
     expect(sheet.ellipsis, 'jamais tronquée').toBe(false);
+    // « / haltère » en plus petit, à part : la cible elle-même reste sur une ligne.
+    await expect(summary.locator('.next-target .per-dumbbell')).toHaveText('/ haltère');
     for (const c of STATUS_COLORS) expect(sheet.colors, 'aucune couleur de statut hors de la pastille').not.toContain(c);
 
     // Fiche, cible identique à la dernière fois : mention discrète.
@@ -72,7 +75,10 @@ test.describe('Dernière fois / Prochaine cible (§5.3.2)', () => {
     await expect(summary.getByTestId('next-target')).toHaveText('3 × 8 à 47 kg');
     await expect(summary.getByTestId('same-target')).toHaveText('= Même cible : consolide');
     await expect(summary.getByTestId('progress-marker')).toHaveCount(0);
-    expect((await layout(summary)).targetColor).toBe(PECTORAUX);
+    const chestSheet = await layout(summary);
+    expect(chestSheet.targetColor).toBe(PECTORAUX);
+    expect(chestSheet.lastLines, 'une seule ligne à 412 px').toBe(1);
+    await expect(summary.locator('.per-dumbbell')).toHaveCount(0);
 
     // Exercice jamais réalisé.
     await page.goto('./#/exercice/squat-kettlebell');
@@ -85,19 +91,19 @@ test.describe('Dernière fois / Prochaine cible (§5.3.2)', () => {
     await page.getByRole('button', { name: 'Démarrer une séance' }).click();
     const card = await addExercise(page, 'extension triceps haltère assis', 'Extension triceps haltère assis');
     const inCard = card.getByTestId('target-summary');
-    await expect(inCard.getByTestId('last-time')).toHaveText(/14 kg · 8 · 8 · 8 · 12\/03$/);
-    await expect(inCard.getByTestId('next-target')).toHaveText('3 × 9 à 14 kg');
+    await expect(inCard.getByTestId('last-time')).toHaveText(/14 kg \/ haltère · 8 · 8 · 8 · 12\/03$/);
+    await expect(inCard.getByTestId('next-target')).toHaveText('3 × 9 à 14 kg / haltère');
     await expect(inCard.getByTestId('progress-marker')).toBeVisible();
-    const [summaryBox, weightBox] = await Promise.all([inCard.boundingBox(), card.getByLabel('Poids (kg)').boundingBox()]);
+    const [summaryBox, weightBox] = await Promise.all([inCard.boundingBox(), card.getByLabel('Poids (kg / haltère)').boundingBox()]);
     expect(summaryBox!.y + summaryBox!.height).toBeLessThanOrEqual(weightBox!.y);
     expect((await layout(inCard)).targetColor).toBe(TRICEPS);
     // Une autre charge saisie : ce n'est plus la progression recommandée, ni repère ni mention.
-    await card.getByLabel('Poids (kg)').fill('16');
-    await card.getByLabel('Poids (kg)').blur();
+    await card.getByLabel('Poids (kg / haltère)').fill('16');
+    await card.getByLabel('Poids (kg / haltère)').blur();
     await expect(inCard.getByTestId('progress-marker')).toHaveCount(0);
     await expect(inCard.getByTestId('same-target')).toHaveCount(0);
     // La ligne de cible suit la charge réellement saisie (plus lourde : retour à 3 × 8, §7.7).
-    await expect(inCard.getByTestId('next-target')).toHaveText('3 × 8 à 16 kg');
+    await expect(inCard.getByTestId('next-target')).toHaveText('3 × 8 à 16 kg / haltère');
     const chest = await addExercise(page, 'chest press', 'Chest press');
     await expect(chest.getByTestId('same-target')).toHaveText('= Même cible : consolide');
     await expect(exerciseCard(page, 'Chest press').getByTestId('next-target')).toHaveText('3 × 8 à 47 kg');

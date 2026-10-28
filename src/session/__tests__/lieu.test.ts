@@ -7,14 +7,18 @@ import { addCardio } from '../../cardio/model';
 import { computeRecords } from '../../analysis/records';
 import { weeklyRecap } from '../../analysis/weekly';
 import { addToPlan, newPlan, startFromPlan } from '../../plan/model';
+import { buildBackup, parseJsonImport } from '../../transfer/backup';
 import {
   addExercise,
   canSwitchLocation,
+  findPerformance,
   finishSession,
+  needsStartWeight,
   recordRemainingSets,
   recordSet,
   reopenSession,
   setFeeling,
+  setWeight,
   startSession,
   switchKept,
   switchLocation,
@@ -65,7 +69,8 @@ describe('Changer le lieu d’une séance en cours (version 1.30.0)', () => {
     expect(switchLocation(gym, true, atHome, at(28, 18, 4))).toEqual({ ...home, updatedAt: at(28, 18, 4) });
 
     // Salle → Maison avec des séries : le développé commencé reste tel quel (22 kg, 10-10-10) ; le curl, jamais fait à
-    // la maison, garde sa charge comme poids de départ, à la borne basse (3 × 8).
+    // la maison, ne garde pas la charge de la salle (version 1.30.1) : poids de départ à saisir, cible au bas de la
+    // plage (3 × 8).
     let s = addExercise(startSession(at(28), 'salle'), INCLINE, atGym(INCLINE), at(28, 18, 1)).session;
     s = addExercise(s, 'curl-biceps-halteres', atGym('curl-biceps-halteres'), at(28, 18, 2), 12).session;
     s = recordRemainingSets(s, INCLINE, at(28, 18, 10));
@@ -83,8 +88,23 @@ describe('Changer le lieu d’une séance en cours (version 1.30.0)', () => {
     expect(switchKept(s)).toBe('3 séries et 1 cardio déjà faits resteront tels quels.');
     const moved = switchLocation(s, true, atHome, at(28, 18, 30));
     expect(moved.location).toBe('maison');
-    expect(moved.performances).toEqual([s.performances[0], { ...s.performances[1], weightKg: 12, targetReps: 8 }]);
+    expect(moved.performances).toEqual([s.performances[0], { ...s.performances[1], weightKg: 0, targetReps: 8 }]);
     expect(moved.cardio).toEqual(s.cardio);
+    expect(needsStartWeight(moved.performances[1]!, atHome('curl-biceps-halteres').cfg)).toBe(true);
+    expect(needsStartWeight(moved.performances[0]!, atHome(INCLINE).cfg)).toBe(false);
+    expect(needsStartWeight(home.performances[1]!, atHome('pompes').cfg)).toBe(false);
+    // Le poids de départ saisi : 3 × 8 à 6 kg (par haltère).
+    expect(findPerformance(setWeight(moved, 'curl-biceps-halteres', 6, atHome('curl-biceps-halteres'), at(28, 18, 31)), 'curl-biceps-halteres')).toMatchObject({
+      weightKg: 6, targetReps: 8, reps: [],
+    });
+    // Sauvegarde : la séance en cours avec un poids de départ à saisir est acceptée ; une charge nulle reste refusée
+    // dans une séance terminée.
+    const backup = buildBackup({ sessions: [moved], exercises: LIB }, at(28, 18, 32));
+    const parsed = parseJsonImport(JSON.stringify(backup), LIB, '2026-10-28');
+    expect(parsed.kind === 'backup' && parsed.backup.sessions[0]?.performances[1]?.weightKg).toBe(0);
+    const doneZero = { ...moved, state: 'done' as const, endedAt: at(28, 19) };
+    const refused = parseJsonImport(JSON.stringify({ ...backup, sessions: [doneZero] }), LIB, '2026-10-28');
+    expect(refused.kind === 'error' && refused.details).toContain('Séance salle : charge invalide pour curl-biceps-halteres.');
 
     // Terminée : comptée au lieu final. Moteur : le développé entre dans le suivi de la maison, la salle est exactement
     // celle d'avant (3 × 10 recommandé) ; records de la salle inchangés ; récapitulatif en séries à la maison.

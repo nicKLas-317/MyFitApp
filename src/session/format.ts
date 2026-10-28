@@ -51,8 +51,17 @@ export function formatSetsReps(sets: number, reps: number, seconds = false): str
 }
 
 /** Poids en français : « 52,5 kg ». */
-export function formatKg(kg: number): string {
-  return `${kg.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} kg`;
+/**
+ * « 52,5 kg » ; « 11,5 kg / haltère » pour un exercice aux haltères (version 1.30.1) : la charge notée est celle d'un
+ * seul haltère, jamais le total. Affichage seulement : la valeur enregistrée ne change pas.
+ */
+export function formatKg(kg: number, perDumbbell = false): string {
+  return `${kg.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} kg${perDumbbell ? ' / haltère' : ''}`;
+}
+
+/** Unité d'un champ de poids : « kg », ou « kg / haltère » pour un exercice aux haltères (version 1.30.1). */
+export function kgUnit(perDumbbell: boolean): string {
+  return perDumbbell ? 'kg / haltère' : 'kg';
 }
 
 /** Valeur pour un champ datetime-local (heure locale). */
