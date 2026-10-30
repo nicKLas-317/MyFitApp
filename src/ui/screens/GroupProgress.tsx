@@ -4,7 +4,7 @@ import { useBody } from '../../body/store';
 import { navigateReplace, useNow } from '../../app/hooks';
 import type { WeighIn } from '../../body/model';
 import type { MuscleGroup } from '../../domain/types';
-import { GROUP_VIEW_GROUPS, groupIndex, groupWeeklySets, notEnoughForIndex, notEnoughForSets, SETS_ONLY_GROUPS, SETS_WEEKS } from '../../analysis/groups';
+import { GROUP_VIEW_GROUPS, type GroupSets, groupIndex, groupWeeklySets, notEnoughForIndex, notEnoughForSets, SETS_ONLY_GROUPS, SETS_WEEKS } from '../../analysis/groups';
 import { displayName } from '../../library/catalog';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
 import { formatShortDay } from '../../session/format';
@@ -20,6 +20,21 @@ export function groupOfSegment(segment: string | undefined): MuscleGroup {
 const EMPTY: readonly WeighIn[] = [];
 
 const fmt = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 });
+
+/**
+ * Texte du lecteur d'écran des séries par semaine (version 1.34.0) : les valeurs, la moyenne, puis l'explication complète
+ * que la légende visible abrège.
+ */
+function setsSummary(label: string, sets: GroupSets): string {
+  const group = label.toLowerCase();
+  const weeks = sets.weeks.map((w, i) => `semaine du ${formatShortDay(w.start)} ${fmt(w.total)}${i === sets.weeks.length - 1 ? ' (en cours)' : ''}`);
+  const average = sets.average === null ? '' : ` Moyenne : ${fmt(sets.average)}, semaine en cours exclue.`;
+  return (
+    `Séries par semaine ${group} : ${weeks.join(', ')}.${average} Depuis ta première séance, ${SETS_WEEKS} semaines au plus, du lundi au dimanche ; ` +
+    `en plein, les séries des exercices dont c’est le groupe principal ; en clair, les séries indirectes, comptées pour moitié ; ` +
+    `en pointillés, la moyenne par semaine.`
+  );
+}
 
 /**
  * Bilan par groupe musculaire (§19.10), vue secondaire du bilan : indice de progression (base 100) et séries par
@@ -93,16 +108,20 @@ export function GroupProgress({ group }: { group: MuscleGroup }) {
 
         <section className="frame group-chart" aria-label="Séries par semaine" {...groupColorProps(group)}>
           <h2 className="section-title">Séries par semaine</h2>
-          <p className="muted small">
-            {SETS_WEEKS} dernières semaines (lundi – dimanche). En plein : {label.toLowerCase()} en groupe principal ; en clair : séries indirectes,
-            comptées pour moitié.
-          </p>
           {sets.enough ? (
-            <BarChart
-              data={sets.weeks.map((w) => ({ label: formatShortDay(w.start), main: w.direct, extra: w.indirect / 2 }))}
-              label={`Séries par semaine ${label.toLowerCase()} : ${sets.weeks.map((w) => `semaine du ${formatShortDay(w.start)} ${fmt(w.total)}`).join(', ')}`}
-              testId="chart-sets"
-            />
+            <>
+              <p className="muted small" data-testid="sets-legend">
+                {/* Espaces insécables : ni « : » ni « · » en début de ligne. */}
+                {'Plein\u00a0: direct\u00a0· Clair\u00a0: indirect (÷\u00a02)\u00a0· Pointillés\u00a0: moyenne'}
+              </p>
+              <BarChart
+                data={sets.weeks.map((w) => ({ label: formatShortDay(w.start), main: w.direct, extra: w.indirect / 2 }))}
+                label={setsSummary(label, sets)}
+                average={sets.average}
+                current
+                testId="chart-sets"
+              />
+            </>
           ) : (
             <p className="group-not-enough" data-testid="sets-not-enough">
               {notEnoughForSets(sets)}

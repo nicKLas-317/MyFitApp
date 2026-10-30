@@ -70,7 +70,7 @@ test.describe('Bilan par groupe musculaire, version 1.33.0', () => {
     await page.getByRole('group', { name: 'Groupe musculaire' }).getByRole('button', { name: 'Triceps' }).click();
     await expect(indexSection(page).getByTestId('index-exercises')).toHaveText('Extension triceps haltère assis');
     await expect(indexSection(page).getByTestId('chart-index')).toHaveAttribute('data-values', '100.00 100.00 100.00 100.00 100.00 100.00');
-    await expect(setsSection(page).getByTestId('chart-sets')).toHaveAttribute('aria-label', /semaine du 26 oct\. 6,5$/);
+    await expect(setsSection(page).getByTestId('chart-sets')).toHaveAttribute('aria-label', /semaine du 26 oct\. 6,5 \(en cours\)\. Moyenne : 11,3, semaine en cours exclue\. /);
 
     // Abdominaux : séries seulement, avec le message ; la planche faite 1 fois sur 2 compte pour 1 série.
     await page.getByRole('group', { name: 'Groupe musculaire' }).getByRole('button', { name: 'Abdominaux' }).click();
@@ -79,7 +79,7 @@ test.describe('Bilan par groupe musculaire, version 1.33.0', () => {
       'Pas d’indice de progression pour les abdominaux : il se calcule sur la charge, et ces exercices se font sans charge (poids du corps, durée).',
     );
     await expect(indexSection(page)).toHaveCount(0);
-    await expect(setsSection(page).getByTestId('chart-sets')).toHaveAttribute('aria-label', /semaine du 12 oct\. 2, semaine du 19 oct\. 1, semaine du 26 oct\. 3$/);
+    await expect(setsSection(page).getByTestId('chart-sets')).toHaveAttribute('aria-label', /semaine du 12 oct\. 2, semaine du 19 oct\. 1, semaine du 26 oct\. 3 \(en cours\)\. Moyenne : 1,5, semaine en cours exclue\. /);
     await noOverflow(page);
 
     // Fiche d'un exercice : même texte, avec l'unité.

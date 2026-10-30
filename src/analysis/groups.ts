@@ -23,7 +23,10 @@ export const SETS_ONLY_GROUPS: readonly MuscleGroup[] = ['abdominaux'];
 export const INDEX_MIN_SESSIONS = 6;
 export const INDEX_MIN_WEEKS = 3;
 export const SETS_MIN_WEEKS = 3;
-/** Semaines affichées pour les séries, semaine en cours comprise. */
+/**
+ * Semaines affichées au plus pour les séries, semaine en cours comprise ; depuis la semaine de la première séance
+ * (version 1.34.0), jamais avant.
+ */
 export const SETS_WEEKS = 12;
 
 const LEG_SUBGROUPS: readonly MuscleGroup[] = ['quadriceps', 'ischio-jambiers', 'mollets', 'fessiers', 'adducteurs'];
@@ -175,14 +178,25 @@ export interface WeekSets {
 }
 
 export interface GroupSets {
-  /** Les 12 dernières semaines, de la plus ancienne à la semaine en cours. */
+  /**
+   * De la semaine de la première séance terminée (tous groupes, salle ou maison) à la semaine en cours, les 12
+   * dernières au plus ; semaines vides comprises.
+   */
   weeks: WeekSets[];
   /** Semaines avec au moins une série sur ce groupe. */
   activeWeeks: number;
   enough: boolean;
+  /**
+   * Moyenne des totaux hebdomadaires (version 1.34.0), de la première semaine affichée où le groupe a des séries à la
+   * dernière semaine terminée, semaines vides comprises : la semaine en cours n'y entre pas. Null sous le seuil.
+   */
+  average: number | null;
 }
 
-/** Séries effectuées sur un groupe, semaine par semaine (lundi 0 h 00 – dimanche, heure locale). */
+/**
+ * Séries effectuées sur un groupe, semaine par semaine (lundi 0 h 00 – dimanche, heure locale), depuis la semaine de
+ * la première séance terminée (version 1.34.0 : plus de semaines vides avant elle).
+ */
 export function groupWeeklySets(sessions: readonly Session[], exercises: readonly Exercise[], group: MuscleGroup, now: number, count = SETS_WEEKS): GroupSets {
   const byVariant = new Map<string, Exercise>();
   for (const e of exercises) for (const v of e.variants) byVariant.set(v.id, e);
@@ -195,8 +209,11 @@ export function groupWeeklySets(sessions: readonly Session[], exercises: readonl
     to.setDate(to.getDate() + 7);
     weeks.push({ start: localDate(from.getTime()), direct: 0, indirect: 0, total: 0, from: from.getTime(), to: to.getTime() });
   }
-  for (const s of sessions) {
-    if (s.state !== 'done') continue;
+  const done = sessions.filter((s) => s.state === 'done');
+  // Pas de semaine avant celle de la première séance ; la semaine en cours reste toujours affichée.
+  const first = done.length > 0 ? Math.min(current.getTime(), weekStart(new Date(Math.min(...done.map(sessionStartTime)))).getTime()) : current.getTime();
+  weeks.splice(0, weeks.findIndex((w) => w.from >= first));
+  for (const s of done) {
     const t = sessionStartTime(s);
     const week = weeks.find((w) => t >= w.from && t < w.to);
     if (!week) continue;
@@ -209,7 +226,11 @@ export function groupWeeklySets(sessions: readonly Session[], exercises: readonl
   }
   const result = weeks.map(({ start, direct, indirect }) => ({ start, direct, indirect, total: direct + indirect / 2 }));
   const activeWeeks = result.filter((w) => w.direct + w.indirect > 0).length;
-  return { weeks: result, activeWeeks, enough: activeWeeks >= SETS_MIN_WEEKS };
+  const enough = activeWeeks >= SETS_MIN_WEEKS;
+  // La dernière semaine est la semaine en cours : elle n'entre dans la moyenne qu'une fois terminée.
+  const finished = result.slice(Math.max(0, result.findIndex((w) => w.direct + w.indirect > 0)), -1);
+  const average = enough && finished.length > 0 ? finished.reduce((a, w) => a + w.total, 0) / finished.length : null;
+  return { weeks: result, activeWeeks, enough, average };
 }
 
 const plural = (n: number, word: string) => `${n} ${word}${n > 1 ? 's' : ''}`;

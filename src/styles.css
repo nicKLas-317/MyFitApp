@@ -2394,6 +2394,28 @@ fieldset.frame > legend + * {
   opacity: 0.4;
 }
 
+.bar-current.bar-main {
+  opacity: 0.45;
+}
+
+.bar-current.bar-extra {
+  opacity: 0.2;
+}
+
+.bar-outline {
+  fill: none;
+  stroke: var(--group-color);
+  stroke-width: 1.5;
+}
+
+/* Étiquette détourée de la couleur du fond : une ligne qui la traverse s'interrompt sous elle. */
+.chart-halo {
+  stroke: var(--surface);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+  paint-order: stroke;
+}
+
 .chart-baseline {
   stroke: var(--muted);
   stroke-width: 1;
