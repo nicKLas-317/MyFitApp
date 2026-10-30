@@ -23,7 +23,8 @@ describe('Bibliothèque version 10 : groupes secondaires réellement sollicités
     expect(secondary('developpe-couche')).toEqual(['triceps', 'epaules']);
     for (const e of LIB) {
       expect(e.secondaryGroups, e.id).not.toContain(e.primaryGroup);
-      expect(e.secondaryGroups, e.id).not.toContain('abdominaux');
+      // Seule exception (version 1.31.0, demande de l'utilisateur) : la chaise, abdominaux en secondaire (gainage).
+      if (e.id !== 'chaise') expect(e.secondaryGroups, e.id).not.toContain('abdominaux');
     }
     // La recherche par groupe suit : « épaules » trouve les développés, plus les écartés.
     expect(ids('epaules')).toContain('developpe-couche');

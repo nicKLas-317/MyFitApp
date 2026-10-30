@@ -79,10 +79,10 @@ describe('Recherche par groupe musculaire (§4.1 B)', () => {
     expect(ids('epaules')).toEqual(expect.arrayContaining(['elevations-laterales', 'elevations-laterales-machine', 'elevations-frontales', 'oiseau', 'face-pull']));
     const tri = LIB.filter((e) => e.primaryGroup === 'triceps').flatMap((e) => e.variants.map((v) => v.id)).sort();
     for (const q of ['triceps', 'tris']) expect(ids(q).slice(0, tri.length).sort(), q).toEqual(tri);
-    expect(ids('jambes').sort()).toEqual(['abducteurs-machine', 'adducteurs-machine', 'curl-ischios', 'hack-squat', 'leg-curl', 'leg-extension', 'mollets-machine', 'mollets-machine--assis', 'presse-a-cuisses', 'squat-kettlebell']);
+    expect(ids('jambes').sort()).toEqual(['abducteurs-machine', 'adducteurs-machine', 'chaise', 'curl-ischios', 'hack-squat', 'leg-curl', 'leg-extension', 'mollets-machine', 'mollets-machine--assis', 'presse-a-cuisses', 'squat-kettlebell']);
     // Version 11 : les trois abdos au poids du corps ; le crunch machine (synonyme « Abdos ») en tête ; version 12 : la planche.
-    expect(ids('abdos')).toEqual(['crunch-machine', 'crunch-sol', 'crunch-oblique-touche-talons', 'planche', 'releves-jambes-allonge']);
-    expect(ids('abdominaux')).toEqual(['crunch-machine', 'crunch-sol', 'crunch-oblique-touche-talons', 'planche', 'releves-jambes-allonge']);
+    expect(ids('abdos')).toEqual(['crunch-machine', 'crunch-sol', 'crunch-oblique-touche-talons', 'planche', 'releves-jambes-allonge', 'chaise']);
+    expect(ids('abdominaux')).toEqual(['crunch-machine', 'crunch-sol', 'crunch-oblique-touche-talons', 'planche', 'releves-jambes-allonge', 'chaise']);
     // Lexique (§4.2.1) : les ischio-jambiers et les quadriceps sont des sous-groupes des jambes.
     expect(ids('ischios').sort()).toEqual(['curl-ischios', 'leg-curl']);
     expect(ids('quadri').sort()).toEqual(['hack-squat', 'leg-extension', 'presse-a-cuisses', 'squat-kettlebell']);

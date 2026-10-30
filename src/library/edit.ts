@@ -79,11 +79,43 @@ function cleanInput(input: ExerciseInput): Omit<ExerciseInput, 'primaryGroup'> &
   };
 }
 
-/** Nouvel exercice personnalisé, avec sa variante standard (même identifiant que l'exercice). */
-export function createExercise(input: ExerciseInput, exercises: readonly Exercise[]): Exercise {
+/**
+ * Nouvel exercice personnalisé, avec sa variante standard (même identifiant que l'exercice) ; `config` : son type et sa
+ * plage choisis à la création (version 1.31.0).
+ */
+export function createExercise(input: ExerciseInput, exercises: readonly Exercise[], config?: VariantConfig): Exercise {
   const clean = cleanInput(input);
   const id = uniqueId(`perso-${slug(clean.name)}`, allIds(exercises));
-  return { id, ...clean, archived: false, variants: [{ id, name: 'Standard', synonyms: [], archived: false }] };
+  const exercise: Exercise = { id, ...clean, archived: false, variants: [{ id, name: 'Standard', synonyms: [], archived: false }] };
+  return config ? setVariantConfig(exercise, id, config) : exercise;
+}
+
+/**
+ * Type d'un exercice-variante (version 1.31.0) : à charge (kg), au poids du corps (répétitions) ou en durée (secondes).
+ * Figé dès que la variante a un historique : les performances enregistrées ne sont pas comparables d'un type à l'autre.
+ */
+export type ExerciseKind = 'load' | 'bodyweight' | 'seconds';
+
+export const EXERCISE_KINDS: readonly { kind: ExerciseKind; label: string }[] = [
+  { kind: 'load', label: 'Charge (kg)' },
+  { kind: 'bodyweight', label: 'Poids du corps (répétitions)' },
+  { kind: 'seconds', label: 'Durée (secondes)' },
+];
+
+/** Plage par défaut de chaque type : 8 à 12 répétitions, 10 à 40 répétitions, 20 à 60 s. */
+export const KIND_RANGES: Readonly<Record<ExerciseKind, { minReps: number; maxReps: number }>> = {
+  load: { minReps: DEFAULT_VARIANT_CONFIG.minReps, maxReps: DEFAULT_VARIANT_CONFIG.maxReps },
+  bodyweight: BODYWEIGHT_RANGE,
+  seconds: SECONDS_RANGE,
+};
+
+export function kindOf(cfg: Pick<VariantConfig, 'bodyweight' | 'seconds'>): ExerciseKind {
+  return cfg.seconds ? 'seconds' : cfg.bodyweight ? 'bodyweight' : 'load';
+}
+
+/** Réglages d'un type : au poids du corps et en durée, sans charge ni aide (un exercice en durée est au poids du corps). */
+export function kindFlags(kind: ExerciseKind): Pick<VariantConfig, 'bodyweight' | 'seconds'> {
+  return { ...(kind !== 'load' ? { bodyweight: true } : {}), ...(kind === 'seconds' ? { seconds: true } : {}) };
 }
 
 /** Modifie les métadonnées d'un exercice ; identifiant, variantes et historique sont conservés. */
@@ -209,6 +241,8 @@ export function compactConfig(cfg: VariantConfig): Partial<VariantConfig> | unde
   if (cfg.seconds) out.seconds = true;
   for (const k of ['sets', 'minReps', 'maxReps'] as const) if (cfg[k] !== defaults[k]) out[k] = cfg[k];
   if (cfg.assisted) out.assisted = true;
+  // Cible de départ : gardée si elle est dans la plage et n'en est pas la borne basse.
+  if (cfg.startReps !== undefined && cfg.startReps > cfg.minReps && cfg.startReps <= cfg.maxReps) out.startReps = cfg.startReps;
   // Plage de la maison : gardée seulement si elle diffère de celle par défaut (exercice à charge).
   if (!cfg.bodyweight) {
     const byDefault = homeRange({ minReps: cfg.minReps, maxReps: cfg.maxReps });

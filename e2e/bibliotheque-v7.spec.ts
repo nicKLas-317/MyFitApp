@@ -20,7 +20,7 @@ test.describe('Bibliothèque version 7 (§4.0)', () => {
     expect(await resultNames(page, 'hip adduction')).toEqual(['Adducteurs machine']);
     expect((await resultNames(page, 'barbell curl'))[0]).toBe('Curl biceps barre droite');
     expect((await resultNames(page, 'legs')).sort()).toEqual(
-      ['Abducteurs machine', 'Adducteurs machine', 'Curl ischios', 'Hack squat', 'Leg curl', 'Leg extension', 'Mollets machine', 'Mollets machine', 'Presse à cuisses', 'Squat kettlebell'].sort((a, b) => a.localeCompare(b, 'fr')),
+      ['Abducteurs machine', 'Adducteurs machine', 'Curl ischios', 'Hack squat', 'La chaise', 'Leg curl', 'Leg extension', 'Mollets machine', 'Mollets machine', 'Presse à cuisses', 'Squat kettlebell'].sort((a, b) => a.localeCompare(b, 'fr')),
     );
 
     // Fiches : dessin embarqué, distinct pour les abducteurs et les adducteurs.

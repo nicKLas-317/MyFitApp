@@ -26,6 +26,14 @@ export const SECONDS_RANGE = { minReps: 20, maxReps: 60 } as const;
 /** Pas de progression d'un exercice en secondes : 5 s. */
 export const SECONDS_STEP = 5;
 
+/**
+ * Cible d'un exercice jamais réalisé : sa cible de départ si elle est réglée (ramenée dans la plage), sinon la borne
+ * basse (§5.3).
+ */
+export function startTarget(cfg: Pick<VariantConfig, 'minReps' | 'maxReps' | 'startReps'>): number {
+  return cfg.startReps === undefined ? cfg.minReps : Math.min(Math.max(cfg.startReps, cfg.minReps), cfg.maxReps);
+}
+
 /** Pas de la cible : 5 s pour un exercice en secondes, 1 répétition sinon. */
 export function repStep(cfg: Pick<VariantConfig, 'seconds'>): number {
   return cfg.seconds ? SECONDS_STEP : 1;

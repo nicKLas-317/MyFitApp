@@ -3,7 +3,7 @@
  * L'heure courante est toujours passée en paramètre.
  */
 import type { Feeling, Performance, Session, VariantConfig } from '../domain/types';
-import { clampReps, expectedTarget, type ProgressState } from '../engine';
+import { clampReps, expectedTarget, startTarget, type ProgressState } from '../engine';
 import { defaultSessionName, localDate } from './format';
 
 /** Au-delà, une séance encore ouverte à la réouverture est considérée comme oubliée (§6). */
@@ -248,7 +248,7 @@ export function switchLocation(session: Session, home: boolean, ctxFor: (variant
     if (p.reps.length > 0) return p;
     const ctx = ctxFor(p.variantId);
     return (
-      newPerformance(p.variantId, ctx) ?? { ...p, weightKg: 0, targetReps: ctx.cfg.minReps, plannedSets: ctx.cfg.sets, feeling: 'inconnu' }
+      newPerformance(p.variantId, ctx) ?? { ...p, weightKg: 0, targetReps: startTarget(ctx.cfg), plannedSets: ctx.cfg.sets, feeling: 'inconnu' }
     );
   });
   const { location: _previous, ...rest } = session;

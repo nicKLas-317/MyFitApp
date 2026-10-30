@@ -44,6 +44,11 @@ export interface VariantConfig {
    */
   homeMinReps?: number;
   homeMaxReps?: number;
+  /**
+   * Cible de départ d'un exercice jamais réalisé (version 1.31.0), dans la plage : absente = borne basse. La chaise :
+   * 3 × 45 s dans une plage de 20 à 90 s.
+   */
+  startReps?: number;
 }
 
 /** Exercice-variante : unité d'historique et de progression (§4.3, §7.1). */

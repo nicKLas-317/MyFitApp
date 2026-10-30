@@ -2,11 +2,15 @@ import { useId, useState } from 'react';
 import type { Exercise, MuscleGroup, Variant, VariantConfig } from '../../domain/types';
 import { useApp } from '../../app/store';
 import { navigateBack, navigateReplace } from '../../app/hooks';
-import { BODYWEIGHT_RANGE, DEFAULT_VARIANT_CONFIG, homeRange, resolveConfig, SECONDS_RANGE } from '../../engine';
+import { DEFAULT_VARIANT_CONFIG, homeRange, resolveConfig } from '../../engine';
 import {
   createExercise,
   EQUIPMENT_OPTIONS,
+  EXERCISE_KINDS,
   exerciseHasHistory,
+  KIND_RANGES,
+  kindFlags,
+  kindOf,
   parseList,
   removeVariant,
   setVariantConfig,
@@ -17,6 +21,7 @@ import {
   variantHasHistory,
 } from '../../library/edit';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
+import type { ExerciseKind } from '../../library/edit';
 import { groupColorProps } from '../groupColors';
 
 const GROUPS = Object.keys(MUSCLE_GROUP_LABELS) as MuscleGroup[];
@@ -35,6 +40,8 @@ interface VariantForm {
   homeMinReps: string;
   homeMaxReps: string;
   homeInitial: { minReps: string; maxReps: string; stored: Pick<VariantConfig, 'homeMinReps' | 'homeMaxReps'> };
+  /** Cible de départ (bibliothèque, version 1.31.0) : pas de champ, gardée telle quelle. */
+  startReps?: number;
   archived: boolean;
   removed: boolean;
 }
@@ -50,28 +57,22 @@ interface Props {
   forPlan?: boolean;
 }
 
-type Mode = 'load' | 'bodyweight' | 'seconds';
-
-const RANGES: Record<Mode, { minReps: number; maxReps: number }> = {
-  load: DEFAULT_VARIANT_CONFIG,
-  bodyweight: BODYWEIGHT_RANGE,
-  seconds: SECONDS_RANGE,
-};
-
-const modeOf = (v: VariantForm): Mode => (v.seconds ? 'seconds' : v.bodyweight ? 'bodyweight' : 'load');
+/** Plage de type `to` : celle par défaut (8 à 12, 10 à 40, 20 à 60 s) si la plage n'avait pas été changée. */
+function rangeFor(range: { minReps: string; maxReps: string }, from: ExerciseKind, to: ExerciseKind): { minReps: string; maxReps: string } {
+  const unchanged = range.minReps === String(KIND_RANGES[from].minReps) && range.maxReps === String(KIND_RANGES[from].maxReps);
+  return unchanged ? { minReps: String(KIND_RANGES[to].minReps), maxReps: String(KIND_RANGES[to].maxReps) } : { minReps: range.minReps, maxReps: range.maxReps };
+}
 
 /**
- * Passage à charge, au poids du corps ou en secondes : la plage par défaut suit (8 à 12, 10 à 40, 20 à 60 s) si elle
- * n'avait pas été changée ; un exercice en secondes est au poids du corps, et aucun des deux n'est assisté.
+ * Passage à charge, au poids du corps ou en durée : la plage par défaut suit si elle n'avait pas été changée ; un
+ * exercice en durée est au poids du corps, et aucun des deux n'est assisté.
  */
-function modePatch(v: VariantForm, to: Mode): Partial<VariantForm> {
-  const from = RANGES[modeOf(v)];
-  const defaultRange = v.minReps === String(from.minReps) && v.maxReps === String(from.maxReps);
+function kindPatch(v: VariantForm, to: ExerciseKind): Partial<VariantForm> {
   return {
     bodyweight: to !== 'load',
     seconds: to === 'seconds',
     ...(to !== 'load' ? { assisted: false } : {}),
-    ...(defaultRange ? { minReps: String(RANGES[to].minReps), maxReps: String(RANGES[to].maxReps) } : {}),
+    ...rangeFor(v, kindOf(v), to),
   };
 }
 
@@ -86,6 +87,9 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false,
   const [primary, setPrimary] = useState<MuscleGroup | null>(original?.primaryGroup ?? null);
   const [secondary, setSecondary] = useState<MuscleGroup[]>(original?.secondaryGroups ?? []);
   const [equipment, setEquipment] = useState(original?.equipment ?? 'machine');
+  // Création (version 1.31.0) : type et plage de l'exercice, modifiables ensuite tant qu'il n'a pas d'historique.
+  const [kind, setKind] = useState<ExerciseKind>('load');
+  const [range, setRange] = useState({ minReps: String(KIND_RANGES.load.minReps), maxReps: String(KIND_RANGES.load.maxReps) });
   const [variantForms, setVariantForms] = useState<VariantForm[]>(() =>
     (original?.variants ?? []).map((v) => {
       const cfg = resolveConfig(settings, v.id);
@@ -110,6 +114,7 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false,
             ...(cfg.homeMaxReps !== undefined ? { homeMaxReps: cfg.homeMaxReps } : {}),
           },
         },
+        ...(cfg.startReps !== undefined ? { startReps: cfg.startReps } : {}),
         archived: v.archived,
         removed: false,
       };
@@ -144,13 +149,36 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false,
     setVariantForms((list) => list.map((v) => (v.id === vid ? { ...v, ...patch } : v)));
   }
 
+  /** Type choisi à la création : plage par défaut du type, et matériel « poids du corps » s'il n'avait pas été choisi. */
+  function chooseKind(to: ExerciseKind) {
+    setRange(rangeFor(range, kind, to));
+    setKind(to);
+    if (to !== 'load' && equipment === 'machine') setEquipment('poids du corps');
+    if (to === 'load' && equipment === 'poids du corps') setEquipment('machine');
+  }
+
+  /** Messages des erreurs de réglage d'une variante (ou de l'exercice créé). */
+  function configErrors(cfg: VariantConfig, label: string): string[] {
+    const errs = validateConfig(cfg);
+    return [
+      ...(errs.includes('sets') ? [`${label} : nombre de séries entre 1 et 10.`] : []),
+      ...(errs.includes('range') ? [`${label} : plage ${cfg.seconds ? 'de durée' : 'de répétitions'} invalide (minimum ≤ maximum).`] : []),
+      ...(errs.includes('home_range') ? [`${label} : plage de répétitions à la maison invalide (minimum ≤ maximum).`] : []),
+    ];
+  }
+
   /** Applique le formulaire à l'exercice ; renvoie les erreurs ou l'exercice prêt à enregistrer. */
   function build(): { errors: string[]; exercise?: Exercise } {
     const list: string[] = [];
     for (const e of validateExerciseInput(input, exercises, original?.id)) {
       list.push(e === 'name_missing' ? 'Saisis un nom.' : e === 'name_taken' ? 'Un autre exercice porte déjà ce nom.' : 'Choisis le groupe musculaire principal.');
     }
-    if (list.length > 0 || !original) return { errors: list, exercise: list.length ? undefined : createExercise(input, exercises) };
+    if (!original) {
+      const cfg: VariantConfig = { ...DEFAULT_VARIANT_CONFIG, minReps: Number(range.minReps), maxReps: Number(range.maxReps), ...kindFlags(kind) };
+      list.push(...configErrors(cfg, kind === 'seconds' ? 'Durée' : 'Répétitions'));
+      return { errors: list, exercise: list.length ? undefined : createExercise(input, exercises, cfg) };
+    }
+    if (list.length > 0) return { errors: list };
 
     let next = updateExercise(original, input);
     for (const form of variantForms) {
@@ -171,6 +199,7 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false,
         assisted: form.assisted,
         ...(form.bodyweight ? { bodyweight: true } : {}),
         ...(form.seconds ? { seconds: true } : {}),
+        ...(form.startReps !== undefined ? { startReps: form.startReps } : {}),
         // Plage de la maison : celle enregistrée si elle n'a pas été touchée (elle suit alors la plage de la salle).
         ...(form.bodyweight
           ? {}
@@ -178,10 +207,8 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false,
             ? form.homeInitial.stored
             : { homeMinReps: Number(form.homeMinReps), homeMaxReps: Number(form.homeMaxReps) }),
       };
-      const cfgErrors = validateConfig(cfg);
-      if (cfgErrors.includes('sets')) list.push(`${label} : nombre de séries entre 1 et 10.`);
-      if (cfgErrors.includes('range')) list.push(`${label} : plage ${form.seconds ? 'de durée' : 'de répétitions'} invalide (minimum ≤ maximum).`);
-      if (cfgErrors.includes('home_range')) list.push(`${label} : plage de répétitions à la maison invalide (minimum ≤ maximum).`);
+      const cfgErrors = configErrors(cfg, label);
+      list.push(...cfgErrors);
       const current = next.variants.find((v) => v.id === form.id)!;
       const patch: Partial<Variant> = { synonyms: parseList(form.synonyms), archived: form.archived };
       if (!standard) patch.name = form.name.trim().replace(/\s+/g, ' ');
@@ -242,6 +269,17 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false,
           <label htmlFor={`${id}-syn`}>Autres noms (français, anglais…)</label>
           <textarea id={`${id}-syn`} rows={2} value={synonyms} placeholder="Séparés par des virgules" onChange={(e) => setSynonyms(e.target.value)} />
         </div>
+        {!original && (
+          <>
+            <KindPicker kind={kind} onChange={chooseKind} />
+            <div className="field-grid">
+              <NumberField label={kind === 'seconds' ? 'Durée min (s)' : 'Rép. min'} value={range.minReps} onChange={(t) => setRange({ ...range, minReps: t })} />
+              <NumberField label={kind === 'seconds' ? 'Durée max (s)' : 'Rép. max'} value={range.maxReps} onChange={(t) => setRange({ ...range, maxReps: t })} />
+            </div>
+            <p className="muted small">3 séries par défaut ; type, séries et plage se changent dans « Modifier » tant que l’exercice n’a pas été réalisé.</p>
+          </>
+        )}
+
         <div className="field-grid">
           <div className="draft-field">
             <label htmlFor={`${id}-group`}>Groupe principal</label>
@@ -303,6 +341,8 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false,
                     <label htmlFor={`${id}-${v.id}-syn`}>Autres noms de la variante</label>
                     <input id={`${id}-${v.id}-syn`} type="text" value={v.synonyms} onChange={(e) => patchVariant(v.id, { synonyms: e.target.value })} />
                   </div>
+                  {/* Type : figé dès qu'il existe un historique (charges et durées incompatibles). */}
+                  <KindPicker kind={kindOf(v)} locked={locked} onChange={(to) => patchVariant(v.id, kindPatch(v, to))} />
                   <div className="field-grid three">
                     <NumberField label="Séries" value={v.sets} onChange={(t) => patchVariant(v.id, { sets: t })} />
                     <NumberField label={v.seconds ? 'Durée min (s)' : 'Rép. min'} value={v.minReps} onChange={(t) => patchVariant(v.id, { minReps: t })} />
@@ -315,40 +355,12 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false,
                       <NumberField label="Maison : rép. max" value={v.homeMaxReps} onChange={(t) => patchVariant(v.id, { homeMaxReps: t })} />
                     </div>
                   )}
-                  <label className="check-line">
-                    <input
-                      type="checkbox"
-                      checked={v.assisted}
-                      onChange={(e) => patchVariant(v.id, { assisted: e.target.checked, ...(e.target.checked ? { bodyweight: false, seconds: false } : {}) })}
-                    />
-                    <span>Exercice assisté : la charge est une aide (moins d’aide = plus dur)</span>
-                  </label>
-                  {/* Poids du corps : sans charge enregistrée. Figé dès qu'il existe un historique (charges incompatibles). */}
-                  <label className="check-line">
-                    <input
-                      type="checkbox"
-                      checked={v.bodyweight}
-                      disabled={locked}
-                      onChange={(e) => patchVariant(v.id, modePatch(v, e.target.checked ? 'bodyweight' : 'load'))}
-                    />
-                    <span>
-                      Poids du corps : sans charge, progression par les répétitions
-                      {locked && <span className="muted"> (déjà réalisé : non modifiable)</span>}
-                    </span>
-                  </label>
-                  {/* En secondes (gainage) : durée par série, au poids du corps. Figé dès qu'il existe un historique. */}
-                  <label className="check-line">
-                    <input
-                      type="checkbox"
-                      checked={v.seconds}
-                      disabled={locked}
-                      onChange={(e) => patchVariant(v.id, modePatch(v, e.target.checked ? 'seconds' : 'bodyweight'))}
-                    />
-                    <span>
-                      En secondes (gainage) : durée par série, par pas de 5 s
-                      {locked && <span className="muted"> (déjà réalisé : non modifiable)</span>}
-                    </span>
-                  </label>
+                  {!v.bodyweight && (
+                    <label className="check-line">
+                      <input type="checkbox" checked={v.assisted} onChange={(e) => patchVariant(v.id, { assisted: e.target.checked })} />
+                      <span>Exercice assisté : la charge est une aide (moins d’aide = plus dur)</span>
+                    </label>
+                  )}
                   {!standard && (
                     <div className="row">
                       <label className="check-line">
@@ -423,6 +435,33 @@ export function ExerciseEdit({ exerciseId, initialName = '', forSession = false,
         </section>
       )}
     </main>
+  );
+}
+
+/**
+ * Type de l'exercice (version 1.31.0) : charge, poids du corps ou durée. Une variante déjà réalisée affiche son type
+ * sans le proposer (jamais de bouton inactif, §17).
+ */
+function KindPicker({ kind, locked = false, onChange }: { kind: ExerciseKind; locked?: boolean; onChange(kind: ExerciseKind): void }) {
+  if (locked) {
+    return (
+      <p className="kind-locked">
+        Type : <strong>{EXERCISE_KINDS.find((k) => k.kind === kind)!.label}</strong>
+        <span className="muted"> (déjà réalisé : non modifiable)</span>
+      </p>
+    );
+  }
+  return (
+    <fieldset className="chips-field">
+      <legend>Type</legend>
+      <div className="feeling-options">
+        {EXERCISE_KINDS.map((k) => (
+          <button key={k.kind} type="button" className="chip" aria-pressed={kind === k.kind} onClick={() => onChange(k.kind)}>
+            {k.label}
+          </button>
+        ))}
+      </div>
+    </fieldset>
   );
 }
 

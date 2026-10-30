@@ -389,7 +389,8 @@ function validateVariant(v: unknown, path: string, errors: string[]): void {
   if (v.config !== undefined) {
     if (!isObj(v.config)) errors.push(`${path}.config invalide.`);
     else {
-      for (const k of ['sets', 'minReps', 'maxReps']) {
+      // Cible de départ (version 1.31.0) : un entier positif, ramené dans la plage à l'usage.
+      for (const k of ['sets', 'minReps', 'maxReps', 'startReps']) {
         if (v.config[k] !== undefined && !(isInt(v.config[k]) && (v.config[k] as number) > 0)) errors.push(`${path}.config.${k} invalide.`);
       }
       if (v.config.assisted !== undefined && typeof v.config.assisted !== 'boolean') errors.push(`${path}.config.assisted invalide.`);

@@ -18,7 +18,7 @@ const choiceOf = (name: string) => {
   return c?.kind === 'variant' ? c.variantId : null;
 };
 const NEW = ['curl-biceps-barre-droite', 'mollets-machine', 'abducteurs-machine', 'adducteurs-machine'];
-const LEGS = ['abducteurs-machine', 'adducteurs-machine', 'curl-ischios', 'hack-squat', 'leg-curl', 'leg-extension', 'mollets-machine', 'mollets-machine--assis', 'presse-a-cuisses', 'squat-kettlebell'];
+const LEGS = ['abducteurs-machine', 'adducteurs-machine', 'chaise', 'curl-ischios', 'hack-squat', 'leg-curl', 'leg-extension', 'mollets-machine', 'mollets-machine--assis', 'presse-a-cuisses', 'squat-kettlebell'];
 
 describe('Bibliothèque version 7 : curl à la barre, mollets, abducteurs, adducteurs (§4.0)', () => {
   it('147. Les quatre exercices, leurs groupes et leur matériel ; le curl à la barre est distinct des curls aux haltères et à la poulie', () => {

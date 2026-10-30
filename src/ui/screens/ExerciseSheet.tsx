@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../../app/store';
 import { navigate, navigateReplace } from '../../app/hooks';
-import { HOME_SUFFIX, sortSessions } from '../../engine';
+import { HOME_SUFFIX, sortSessions, startTarget } from '../../engine';
 import { displayName, variantLabel } from '../../library/catalog';
 import { addVariant, updateVariant, validateVariantName } from '../../library/edit';
 import { illustrationFor } from '../../library/illustrations';
@@ -121,7 +121,7 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
           assisted={ctx.cfg.assisted}
           lastDate={last?.session.date ?? null}
           label={homeState ? 'Prochaine cible à la salle' : 'Prochaine cible'}
-          {...recommendedTarget(state, { sets: ctx.cfg.sets, reps: ctx.cfg.minReps }, ctx.cfg.assisted, ctx.cfg.seconds)}
+          {...recommendedTarget(state, { sets: ctx.cfg.sets, reps: startTarget(ctx.cfg) }, ctx.cfg.assisted, ctx.cfg.seconds)}
           targetTestId="sheet-next"
           record={records.current.get(variantId) ?? null}
           bodyweight={ctx.cfg.bodyweight}
@@ -136,7 +136,7 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
             assisted={homeCtx.cfg.assisted}
             lastDate={lastHome?.session.date ?? null}
             label="Prochaine cible à la maison"
-            {...recommendedTarget(homeState, { sets: homeCtx.cfg.sets, reps: homeCtx.cfg.minReps }, homeCtx.cfg.assisted)}
+            {...recommendedTarget(homeState, { sets: homeCtx.cfg.sets, reps: startTarget(homeCtx.cfg) }, homeCtx.cfg.assisted)}
             targetTestId="sheet-next-home"
             record={records.current.get(`${variantId}${HOME_SUFFIX}`) ?? null}
             perDumbbell={dumbbell}

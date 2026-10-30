@@ -1,5 +1,5 @@
 import type { Status, VariantConfig } from '../domain/types';
-import { GREEN_STREAK_TO_PROGRESS, RED_STREAK_TO_DECREASE, repStep } from './config';
+import { GREEN_STREAK_TO_PROGRESS, RED_STREAK_TO_DECREASE, repStep, startTarget } from './config';
 import { computeStatus, isComplete, type EvaluablePerformance } from './status';
 import { compareDifficulty } from './weight';
 
@@ -76,7 +76,7 @@ type Counters = Pick<ProgressState, 'palier' | 'greenStreak' | 'redStreak'>;
 /** Prochaine recommandation, selon la priorité du §7.10. */
 export function recommend(state: Counters | undefined, cfg: VariantConfig): Recommendation {
   const plannedSets = cfg.sets;
-  if (!state) return { kind: 'start', targetReps: cfg.minReps, plannedSets };
+  if (!state) return { kind: 'start', targetReps: startTarget(cfg), plannedSets };
   const { palier } = state;
   if (cfg.bodyweight) {
     // Poids du corps : pas de charge à changer, seulement la cible (répétitions, ou secondes par pas de 5 s).
@@ -112,7 +112,7 @@ export function expectedTarget(
   weightKg: number,
   cfg: VariantConfig,
 ): number {
-  if (!state) return cfg.minReps;
+  if (!state) return startTarget(cfg);
   // Charge plus difficile (plus lourde, ou moins d'aide pour un exercice assisté) : borne basse.
   const cmp = compareDifficulty(weightKg, state.palier.weightKg, cfg.assisted);
   if (cmp > 0) return cfg.minReps;

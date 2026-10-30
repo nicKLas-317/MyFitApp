@@ -41,7 +41,7 @@ describe('Bibliothèque version 11 : abdominaux au poids du corps (§4.0)', () =
     expect(ids('crunch machine')[0]).toBe('crunch-machine');
     for (const q of ['heel touches', 'heel touch', 'touche talons', 'crunch oblique']) expect(ids(q), q).toEqual(['crunch-oblique-touche-talons']);
     for (const q of ['relevés de jambes', 'relevé de jambes allongé', 'leg raise', 'lying leg raise']) expect(ids(q)[0], q).toBe('releves-jambes-allonge');
-    expect(ids('abdos')).toEqual(['crunch-machine', 'crunch-sol', 'crunch-oblique-touche-talons', 'planche', 'releves-jambes-allonge']);
+    expect(ids('abdos')).toEqual(['crunch-machine', 'crunch-sol', 'crunch-oblique-touche-talons', 'planche', 'releves-jambes-allonge', 'chaise']);
     // « jambes » et « legs » restent les exercices de jambes : jamais les relevés (abdominaux), malgré leur nom.
     for (const q of ['jambes', 'legs', 'leg']) expect(ids(q), q).not.toContain('releves-jambes-allonge');
     expect(ids('jambes')).toContain('leg-extension');

@@ -428,6 +428,17 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
         ['Réglages', './#/reglages'],
         ['Données', './#/donnees'],
       ] as const).map(([screen, url]) => [screen, () => page.goto(url).then(() => undefined)] as [string, () => Promise<void>]),
+      // Type de l'exercice (version 1.31.0) : création avec « Durée (secondes) » choisi ; « Modifier » d'un exercice sans
+      // historique (types proposés) ; « Modifier un exercice » (chest press, déjà réalisé) affiche le type figé.
+      ['Nouvel exercice, type durée', async () => {
+        await page.goto('./#/nouvel-exercice');
+        await page.getByRole('group', { name: 'Type' }).getByRole('button', { name: 'Durée (secondes)' }).click();
+        await expect(page.getByLabel('Durée max (s)', { exact: true })).toHaveValue('60');
+      }],
+      ['Modifier la chaise', async () => {
+        await page.goto('./#/modifier/chaise');
+        await expect(page.getByRole('group', { name: 'Type' }).getByRole('button', { name: 'Durée (secondes)' })).toHaveAttribute('aria-pressed', 'true');
+      }],
       ['Accueil, activité ponctuelle ouverte', async () => {
         await page.goto('./');
         await page.getByRole('button', { name: '+ Activité' }).click();

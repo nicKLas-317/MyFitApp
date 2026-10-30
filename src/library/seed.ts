@@ -195,10 +195,18 @@ export const SEED_EXERCISES: readonly Exercise[] = [
     [{ suffix: 'genoux', name: 'Sur les genoux', synonyms: ['Pompes genoux', 'Pompes sur les genoux', 'Knee push-up'] }],
     { bodyweight: true, sets: 2 },
   ),
+  // Version 14 (1.31.0). La chaise (wall sit), en secondes : 20 à 90 s, cible de départ 3 × 45 s.
+  exercise('chaise', 'La chaise', ['Chaise', 'Wall sit', 'Chaise contre le mur'], 'jambes', ['abdominaux'], 'poids du corps', {
+    bodyweight: true,
+    seconds: true,
+    minReps: 20,
+    maxReps: 90,
+    startReps: 45,
+  }),
 ];
 
 /** Version de la bibliothèque initiale ; chaque version ajoute des exercices (jamais de suppression). */
-export const SEED_VERSION = 13;
+export const SEED_VERSION = 14;
 
 /**
  * Exercices devenus « à prise » à une version donnée : sur une base existante, leur variante standard prend le nom
@@ -226,6 +234,7 @@ export const SEED_ADDITIONS: Readonly<Record<number, readonly string[]>> = {
   11: ['crunch-sol', 'crunch-oblique-touche-talons', 'releves-jambes-allonge'],
   12: ['planche'],
   13: ['pompes'],
+  14: ['chaise'],
 };
 
 /**
