@@ -4,7 +4,7 @@ import { useBody } from '../../body/store';
 import { navigateReplace, useNow } from '../../app/hooks';
 import type { WeighIn } from '../../body/model';
 import type { MuscleGroup } from '../../domain/types';
-import { GROUP_VIEW_GROUPS, groupIndex, groupWeeklySets, notEnoughForIndex, notEnoughForSets, SETS_WEEKS } from '../../analysis/groups';
+import { GROUP_VIEW_GROUPS, groupIndex, groupWeeklySets, notEnoughForIndex, notEnoughForSets, SETS_ONLY_GROUPS, SETS_WEEKS } from '../../analysis/groups';
 import { displayName } from '../../library/catalog';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
 import { formatShortDay } from '../../session/format';
@@ -53,35 +53,43 @@ export function GroupProgress({ group }: { group: MuscleGroup }) {
       </div>
 
       <ErrorBoundary fallback={<p className="muted small">Graphiques indisponibles.</p>}>
-        <section className="frame group-chart" aria-label="Indice de progression" {...groupColorProps(group)}>
-          <h2 className="section-title">Indice de progression</h2>
-          <p className="muted small">
-            Force estimée de chaque exercice (formule d’Epley, série la moins bonne), base 100 à sa première séance ; moyenne des exercices du
-            groupe.
+        {/* Abdominaux (version 1.33.0) : exercices sans charge, pas d'indice ; seulement les séries par semaine. */}
+        {SETS_ONLY_GROUPS.includes(group) ? (
+          <p className="muted" data-testid="index-none">
+            Pas d’indice de progression pour les {label.toLowerCase()} : il se calcule sur la charge, et ces exercices se font sans charge (poids du
+            corps, durée).
           </p>
-          {index.enough ? (
-            <>
-              <p className="group-figure" data-testid="index-last">
-                {label} : <strong>{fmt(last!.value)}</strong>
-              </p>
-              <LineChart data={index.points} label={`Indice de progression ${label.toLowerCase()}`} unit="" baseline={100} testId="chart-index" />
-              <p className="muted small" data-testid="index-exercises">
-                {index.variantIds.map((id) => displayName(variants.get(id))).join(' · ')}
-              </p>
-              {index.assistedMethod && (
-                <p className="muted small" data-testid="index-assisted">
-                  {index.assistedMethod === 'bodyWeight'
-                    ? 'Exercices assistés : charge réelle = poids du corps (interpolé entre les pesées de « Mon poids ») − aide.'
-                    : 'Exercices assistés : sans pesée dans « Mon poids », la baisse de l’aide compte comme une hausse de charge.'}
-                </p>
-              )}
-            </>
-          ) : (
-            <p className="group-not-enough" data-testid="index-not-enough">
-              {notEnoughForIndex(index)}
+        ) : (
+          <section className="frame group-chart" aria-label="Indice de progression" {...groupColorProps(group)}>
+            <h2 className="section-title">Indice de progression</h2>
+            <p className="muted small">
+              Force estimée de chaque exercice (formule d’Epley, série la moins bonne), base 100 à sa première séance ; moyenne des exercices du
+              groupe.
             </p>
-          )}
-        </section>
+            {index.enough ? (
+              <>
+                <p className="group-figure" data-testid="index-last">
+                  {label} : <strong>{fmt(last!.value)}</strong>
+                </p>
+                <LineChart data={index.points} label={`Indice de progression ${label.toLowerCase()}`} unit="" baseline={100} span={5} testId="chart-index" />
+                <p className="muted small" data-testid="index-exercises">
+                  {index.variantIds.map((id) => displayName(variants.get(id))).join(' · ')}
+                </p>
+                {index.assistedMethod && (
+                  <p className="muted small" data-testid="index-assisted">
+                    {index.assistedMethod === 'bodyWeight'
+                      ? 'Exercices assistés : charge réelle = poids du corps (interpolé entre les pesées de « Mon poids ») − aide.'
+                      : 'Exercices assistés : sans pesée dans « Mon poids », la baisse de l’aide compte comme une hausse de charge.'}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="group-not-enough" data-testid="index-not-enough">
+                {notEnoughForIndex(index)}
+              </p>
+            )}
+          </section>
+        )}
 
         <section className="frame group-chart" aria-label="Séries par semaine" {...groupColorProps(group)}>
           <h2 className="section-title">Séries par semaine</h2>

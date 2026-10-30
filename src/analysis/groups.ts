@@ -10,8 +10,14 @@ import { resolveConfig, sortSessions, type EngineSettings } from '../engine';
 import { localDate } from '../session/format';
 import { sessionStartTime, weekStart } from './weekly';
 
-/** Groupes proposés par le sélecteur. */
-export const GROUP_VIEW_GROUPS: readonly MuscleGroup[] = ['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes'];
+/** Groupes proposés par le sélecteur ; les abdominaux depuis la version 1.33.0. */
+export const GROUP_VIEW_GROUPS: readonly MuscleGroup[] = ['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes', 'abdominaux'];
+
+/**
+ * Groupes sans indice (version 1.33.0) : leurs exercices se font sans charge (poids du corps, durée), l'indice ne se
+ * calcule pas ; seules les séries par semaine sont affichées.
+ */
+export const SETS_ONLY_GROUPS: readonly MuscleGroup[] = ['abdominaux'];
 
 /** Seuils d'affichage : indice = 6 séances sur 3 semaines différentes ; séries = 3 semaines avec des séries. */
 export const INDEX_MIN_SESSIONS = 6;
@@ -34,9 +40,14 @@ export function epley(weightKg: number, reps: number): number {
 
 const worstSet = (p: Performance) => Math.min(...p.reps);
 
-/** Performance exploitable pour l'indice : au moins une série enregistrée, pas d'historique partiel. */
+/**
+ * Performance exploitable pour l'indice : au moins une série enregistrée, avec une charge, pas d'historique partiel, et
+ * toutes les séries prévues faites (version 1.33.0, comme pour les records) : une séance incomplète n'entre ni dans le
+ * calcul, ni dans la base, ni dans le seuil des 6 séances ; ses séries restent comptées dans les séries par semaine.
+ * Une performance sous la cible compte (série la moins bonne).
+ */
 function usable(p: Performance): boolean {
-  return !p.partial && p.reps.length > 0 && p.weightKg > 0;
+  return !p.partial && p.reps.length > 0 && p.weightKg > 0 && (p.plannedSets === null || p.reps.length >= p.plannedSets);
 }
 
 /**

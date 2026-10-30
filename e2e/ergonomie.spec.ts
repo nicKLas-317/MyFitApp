@@ -425,6 +425,8 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
         ['Bilan de la semaine', './#/bilan-periode/semaine/2026-10-12'],
         ['Bilan du mois', './#/bilan-periode/mois/2026-09'],
         ['Par groupe', './#/bilan-groupes/triceps'],
+        // Abdominaux (version 1.33.0) : séries seulement, avec le message sans indice.
+        ['Par groupe, abdominaux', './#/bilan-groupes/abdominaux'],
         ['Mon poids', './#/poids'],
         ['Réglages', './#/reglages'],
         ['Données', './#/donnees'],

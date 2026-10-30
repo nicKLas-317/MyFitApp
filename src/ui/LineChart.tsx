@@ -18,6 +18,11 @@ interface Props {
   testId?: string;
   /** Ligne de référence horizontale (ex. 100 pour un indice en base 100). */
   baseline?: number;
+  /**
+   * Amplitude minimale de l'axe autour de la ligne de référence (version 1.33.0) : 5 pour un indice, axe de 95 à 105,
+   * élargi si les valeurs en sortent. Une variation minime ne remplit plus toute la hauteur.
+   */
+  span?: number;
 }
 
 const H = 160;
@@ -29,7 +34,7 @@ const toTime = (date: string) => Date.parse(`${date}T00:00:00Z`);
 const fmt = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 });
 const shortDate = (date: string) => new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(toTime(date));
 
-export function LineChart({ data, label, unit, testId, baseline }: Props) {
+export function LineChart({ data, label, unit, testId, baseline, span }: Props) {
   // Dessin à l'échelle 1 (largeur réelle) : les étiquettes gardent leur taille de police, 13 px.
   const [ref, W] = useWidth<SVGSVGElement>(320);
   if (data.length === 0) return null;
@@ -37,25 +42,39 @@ export function LineChart({ data, label, unit, testId, baseline }: Props) {
   const ys = data.map((d) => d.value);
   const [xMin, xMax] = [Math.min(...xs), Math.max(...xs)];
   let [yMin, yMax] = [Math.min(...ys, ...(baseline === undefined ? [] : [baseline])), Math.max(...ys, ...(baseline === undefined ? [] : [baseline]))];
-  if (yMin === yMax) {
-    yMin -= 1;
-    yMax += 1;
+  // Bornes de l'amplitude minimale, gardées telles quelles (et étiquetées) tant qu'aucune valeur n'en sort.
+  const bounds: number[] = [];
+  if (span !== undefined && baseline !== undefined) {
+    const [low, high] = [baseline - span, baseline + span];
+    const pad = (Math.max(yMax, high) - Math.min(yMin, low)) * 0.1;
+    if (yMin >= low) bounds.push(low);
+    if (yMax <= high) bounds.push(high);
+    yMin = yMin >= low ? low : yMin - pad;
+    yMax = yMax <= high ? high : yMax + pad;
+  } else {
+    if (yMin === yMax) {
+      yMin -= 1;
+      yMax += 1;
+    }
+    const pad = (yMax - yMin) * 0.1;
+    yMin -= pad;
+    yMax += pad;
   }
-  const pad = (yMax - yMin) * 0.1;
-  yMin -= pad;
-  yMax += pad;
   const x = (t: number) => (xMax === xMin ? M.left + (W - M.left - M.right) / 2 : M.left + ((t - xMin) / (xMax - xMin)) * (W - M.left - M.right));
   const y = (v: number) => M.top + (1 - (v - yMin) / (yMax - yMin)) * (H - M.top - M.bottom);
   // Étiquettes de l'axe : maximum, ligne de référence, minimum ; une étiquette trop proche d'une autre déjà placée
   // n'est pas dessinée (elles se chevaucheraient).
   const yLabels: number[] = [];
-  for (const v of [Math.max(...ys), ...(baseline === undefined ? [] : [baseline]), Math.min(...ys)]) {
+  for (const v of [Math.max(...ys), ...(baseline === undefined ? [] : [baseline]), Math.min(...ys), ...bounds]) {
     if (yLabels.every((u) => Math.abs(y(u) - y(v)) >= LABEL_GAP)) yLabels.push(v);
   }
   const points = data.map((d, i) => `${x(xs[i]!).toFixed(1)},${y(d.value).toFixed(1)}`).join(' ');
   const first = data[0]!;
   const last = data[data.length - 1]!;
-  const summary = `${label} : ${data.length} point${data.length > 1 ? 's' : ''}, de ${fmt(first.value)} ${unit} le ${shortDate(first.date)} à ${fmt(last.value)} ${unit} le ${shortDate(last.date)}.`;
+  // Texte du lecteur d'écran (version 1.33.0) : pas d'espace pour une unité vide, pas de point après « 29 oct. ».
+  const value = (v: number) => (unit ? `${fmt(v)} ${unit}` : fmt(v));
+  const end = shortDate(last.date);
+  const summary = `${label} : ${data.length} point${data.length > 1 ? 's' : ''}, de ${value(first.value)} le ${shortDate(first.date)} à ${value(last.value)} le ${end}${end.endsWith('.') ? '' : '.'}`;
 
   return (
     <svg ref={ref} className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={summary} data-testid={testId} data-points={data.length} data-values={ys.map((v) => v.toFixed(2)).join(' ')}>

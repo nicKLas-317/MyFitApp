@@ -147,8 +147,9 @@ test.describe('Bilan par groupe musculaire', () => {
     expect(values).toHaveLength(33);
     expect(Math.max(...values.slice(1).map((v, i) => values[i]! - v))).toBeLessThanOrEqual(1.01);
     expect(values.slice(17, 19)).toEqual([104.63, 107.69]);
-    // Étiquettes de l'axe sans chevauchement : 99,5 est trop proche de la ligne 100, seule la ligne 100 est étiquetée.
-    await expect(indexSection(page).locator('.chart-label[text-anchor="end"]')).toHaveText(['111,8', '100', '22 oct.']);
+    // Étiquettes de l'axe sans chevauchement : 99,5 est trop proche de la ligne 100, seule la ligne 100 est étiquetée ;
+    // l'axe descend à 95 au moins (version 1.33.0), borne étiquetée.
+    await expect(indexSection(page).locator('.chart-label[text-anchor="end"]')).toHaveText(['111,8', '100', '95', '22 oct.']);
     await expect(indexSection(page).getByTestId('index-assisted')).toHaveText(
       'Exercices assistés : charge réelle = poids du corps (interpolé entre les pesées de « Mon poids ») − aide.',
     );
