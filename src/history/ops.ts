@@ -8,14 +8,17 @@ import { sortSessions, validatePerformance, type PerformanceError } from '../eng
 import { isIsoDate } from '../session/format';
 import { normalizeName } from '../library/text';
 
-/** Séances terminées, de la plus récente à la plus ancienne, filtrées par nom (§10). */
-export function searchSessions(sessions: readonly Session[], query: string): Session[] {
+/**
+ * Séances terminées, de la plus récente à la plus ancienne, filtrées par nom (§10) : le nom affiché (`titleOf`,
+ * version 1.32.0) et le nom enregistré, qui garde la date d'une séance non renommée.
+ */
+export function searchSessions(sessions: readonly Session[], query: string, titleOf?: (s: Session) => string): Session[] {
   const q = normalizeName(query);
   const done = sortSessions(sessions.filter((s) => s.state === 'done')).reverse();
   if (!q) return done;
   const words = q.split(' ');
   return done.filter((s) => {
-    const name = normalizeName(s.name);
+    const name = normalizeName(titleOf ? `${titleOf(s)} ${s.name}` : s.name);
     return words.every((w) => name.includes(w));
   });
 }

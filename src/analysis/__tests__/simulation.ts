@@ -9,6 +9,7 @@
  * Semaines sans séance : 10, 17 et 24 août (vacances) et 21 septembre ; une seule séance la semaine du 5 octobre.
  */
 import type { Performance, Session } from '../../domain/types';
+import { defaultSessionName } from '../../session/format';
 
 /** Lundis sans séance, et jeudis sans séance. */
 const SKIPPED_WEEKS = ['2026-08-10', '2026-08-17', '2026-08-24', '2026-09-21'];
@@ -68,7 +69,7 @@ function session(date: Date, plans: [string, Plan][], counters: Map<string, numb
     return { variantId, weightKg, targetReps: Math.max(...reps), plannedSets: 3, reps, feeling: 'bien' };
   });
   return {
-    id: `sim-${iso(date)}`, name: `Séance du ${iso(date)}`, date: iso(date), startedAt: start, endedAt: start + 75 * 60_000,
+    id: `sim-${iso(date)}`, name: defaultSessionName(start), date: iso(date), startedAt: start, endedAt: start + 75 * 60_000,
     createdAt: start, updatedAt: start, origin: 'app', state: 'done', performances,
   };
 }

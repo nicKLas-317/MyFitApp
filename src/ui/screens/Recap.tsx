@@ -12,19 +12,23 @@ import { exerciseColorProps } from '../groupColors';
 import { Crown } from '../Crown';
 import { formatRecord } from '../../analysis/records';
 import { perDumbbell } from '../../library/search';
+import { autoTitleOf, titleOf } from '../sessionTitle';
 
 /** Récapitulatif de fin de séance (§5.6) : la séance est déjà enregistrée, le nom est facultatif. */
 export function Recap({ sessionId }: { sessionId: string }) {
   const { sessions, variants, replay, records, commit, lastFinish, ctxFor } = useApp();
   const session = sessions.find((s) => s.id === sessionId);
-  const [name, setName] = useState(session?.name ?? '');
+  // Nom saisi ; null tant que le champ n'a pas été touché : il montre le nom affiché (version 1.32.0).
+  const [typed, setName] = useState<string | null>(null);
+  const title = session ? titleOf(session, variants) : '';
+  const name = typed ?? title;
   // Écran quitté sans enregistrer le nom (bouton retour, onglet) : le nom saisi est enregistré au passage.
-  const latest = useRef({ session, name, commit });
-  latest.current = { session, name, commit };
+  const latest = useRef({ session, name, title, variants, commit });
+  latest.current = { session, name, title, variants, commit };
   useEffect(
     () => () => {
-      const { session: s, name: typed, commit: save } = latest.current;
-      if (s && typed.trim() && typed.trim() !== s.name) void save(renameSession(s, typed, Date.now()));
+      const { session: s, name: n, title: shown, variants: refs, commit: save } = latest.current;
+      if (s && n.trim() && n.trim() !== shown) void save(renameSession(s, n, Date.now(), autoTitleOf(s, refs)));
     },
     [],
   );
@@ -51,7 +55,7 @@ export function Recap({ sessionId }: { sessionId: string }) {
 
   async function saveName() {
     if (!session) return;
-    const ok = await commit(renameSession(session, name, Date.now()));
+    const ok = await commit(renameSession(session, name, Date.now(), autoTitleOf(session, variants)));
     if (ok) navigate('');
   }
 
@@ -94,7 +98,7 @@ export function Recap({ sessionId }: { sessionId: string }) {
         <input id="session-name" type="text" value={name} onChange={(e) => setName(e.target.value)} />
         <div className="row">
           <button type="submit" className="btn primary">
-            {name.trim() === session.name ? 'Garder ce nom' : 'Enregistrer le nom'}
+            {name.trim() === title ? 'Garder ce nom' : 'Enregistrer le nom'}
           </button>
         </div>
       </form>

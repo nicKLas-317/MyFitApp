@@ -5,6 +5,7 @@
 import type { Feeling, Performance, Session, VariantConfig } from '../domain/types';
 import { clampReps, expectedTarget, startTarget, type ProgressState } from '../engine';
 import { defaultSessionName, localDate } from './format';
+import { isDefaultSessionName, storedDefaultName } from './title';
 
 /** Au-delà, une séance encore ouverte à la réouverture est considérée comme oubliée (§6). */
 export const FORGOTTEN_AFTER_MS = 4 * 60 * 60 * 1000;
@@ -361,10 +362,13 @@ export function cancelAdditions(session: Session, now: number): Session {
   };
 }
 
-/** Renomme la séance ; un nom vide rétablit le nom par défaut. */
-export function renameSession(session: Session, name: string, now: number): Session {
+/**
+ * Renomme la séance. Un nom vide, ou identique au nom calculé `auto` (version 1.32.0), lui rend son nom calculé : le
+ * nom par défaut est enregistré (inchangé s'il l'était déjà), et le nom affiché suit de nouveau la séance.
+ */
+export function renameSession(session: Session, name: string, now: number, auto?: string): Session {
   const trimmed = name.trim();
-  const next = trimmed || (session.startedAt !== null ? defaultSessionName(session.startedAt) : session.name);
+  const next = !trimmed || trimmed === auto ? (isDefaultSessionName(session.name) ? session.name : storedDefaultName(session)) : trimmed;
   return next === session.name ? session : { ...session, name: next, updatedAt: now };
 }
 

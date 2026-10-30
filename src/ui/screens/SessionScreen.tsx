@@ -22,6 +22,7 @@ import { formatDuration } from '../../session/format';
 import { ExerciseCard } from '../ExerciseCard';
 import { finishLabel, MissingFeelings, remainingFeelings } from '../MissingFeelings';
 import { SaveIndicator } from '../SaveIndicator';
+import { titleOf } from '../sessionTitle';
 
 /**
  * État d'écran de la séance gardé en mémoire le temps de l'ouverture de l'appli : quitter le mode salle (fiche,
@@ -195,7 +196,7 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
           ‹
         </a>
         <div className="session-title">
-          <span className="muted small">{active.name}</span>
+          <span className="muted small">{titleOf(active, variants)}</span>
           {/* À la maison, pas de chronomètre (version 1.26.0) : la durée n'a pas d'importance. */}
           {active.location === 'maison' ? (
             <span className="session-place" data-testid="session-place">

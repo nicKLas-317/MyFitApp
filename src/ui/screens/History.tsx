@@ -10,6 +10,7 @@ import { sessionStartTime } from '../../analysis/weekly';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
 import { normalizeName } from '../../library/text';
 import { SessionDetail } from './SessionDetail';
+import { titleOf } from '../sessionTitle';
 
 /** « 2 ex. · 20 min cardio », « 15 min cardio », « 3 ex. ». */
 function contentSummary(s: Session): string {
@@ -40,13 +41,13 @@ function monthTitle(date: string): string {
  * regroupé par mois, une ligne compacte par séance ou activité. Suppression dans le détail seulement.
  */
 export function History() {
-  const { sessions, activities } = useApp();
+  const { sessions, activities, variants } = useApp();
   const [query, setQuery] = useState('');
   const done = useMemo(() => doneActivities(activities), [activities]);
   const months = useMemo(() => {
     const words = normalizeName(query).split(' ').filter(Boolean);
     const entries: Entry[] = [
-      ...searchSessions(sessions, query).map((session) => ({ kind: 'session' as const, time: sessionStartTime(session), date: session.date, session })),
+      ...searchSessions(sessions, query, (s) => titleOf(s, variants)).map((session) => ({ kind: 'session' as const, time: sessionStartTime(session), date: session.date, session })),
       ...done
         .filter((a) => words.every((w) => normalizeName(a.name).includes(w)))
         .map((activity) => ({ kind: 'activity' as const, time: activityStart(activity), date: activity.date, activity })),
@@ -60,7 +61,7 @@ export function History() {
       else out.push({ key, entries: [e] });
     }
     return out;
-  }, [sessions, done, query]);
+  }, [sessions, done, query, variants]);
   const total = sessions.filter((s) => s.state === 'done').length + done.length;
 
   return (
@@ -103,7 +104,7 @@ export function History() {
                     className="session-link"
                     href={`#/historique/${encodeURIComponent(entry.session.id)}`}
                     date={entry.date}
-                    title={entry.session.name}
+                    title={titleOf(entry.session, variants)}
                     meta={`${contentSummary(entry.session)}${entry.session.location === 'maison' ? ' · maison' : ''}${entry.session.origin === 'import' ? ' · importée' : ''}`}
                   />
                 ),

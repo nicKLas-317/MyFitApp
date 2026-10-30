@@ -16,6 +16,7 @@ import { CardioForm, CardioList } from '../CardioForm';
 import { exerciseColorProps } from '../groupColors';
 import { Crown } from '../Crown';
 import { recordKeys } from '../../analysis/records';
+import { autoTitleOf, titleOf } from '../sessionTitle';
 
 const FEELING_ORDER: Feeling[] = ['tres_bien', 'bien', 'moyen', 'mal', 'tres_mal', 'inconnu'];
 
@@ -34,7 +35,8 @@ const ERROR_LABELS: Record<CorrectionError, string> = {
 export function SessionDetail({ sessionId }: { sessionId: string }) {
   const { sessions, variants, replay, settings, active, commit, deleteSession, ctxFor, cardioMachines, records } = useApp();
   const session = sessions.find((s) => s.id === sessionId);
-  const [name, setName] = useState(session?.name ?? '');
+  // Nom saisi ; null tant que le champ n'a pas été touché : il montre le nom affiché, qui suit la séance (version 1.32.0).
+  const [name, setName] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [addingCardio, setAddingCardio] = useState(false);
@@ -53,6 +55,7 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
   }
 
   const evaluation = (variantId: string) => replay.evaluations.find((e) => e.sessionId === session.id && e.variantId === variantId);
+  const title = titleOf(session, variants);
   const home = session.location === 'maison';
   // Séance du jour saisie dans l'appli : elle peut être complétée (version 1.28.0).
   const completable = canComplete(session, Date.now());
@@ -93,7 +96,7 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
         <a href="#/historique" className="back" aria-label="Historique">
           ‹
         </a>
-        <h1>{session.name}</h1>
+        <h1>{title}</h1>
       </header>
       <p className="muted">
         {formatIsoDay(session.date)}
@@ -203,12 +206,13 @@ export function SessionDetail({ sessionId }: { sessionId: string }) {
         className="name-form"
         onSubmit={(e) => {
           e.preventDefault();
-          void save(renameSession(session, name, Date.now()));
+          void save(renameSession(session, name ?? title, Date.now(), autoTitleOf(session, variants)));
+          setName(null);
         }}
       >
         <label htmlFor={`${id}-name`}>Nom de la séance</label>
         <div className="row">
-          <input id={`${id}-name`} type="text" value={name} onChange={(e) => setName(e.target.value)} />
+          <input id={`${id}-name`} type="text" value={name ?? title} onChange={(e) => setName(e.target.value)} />
           <button type="submit" className="btn">
             Renommer
           </button>

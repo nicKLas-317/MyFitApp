@@ -416,6 +416,7 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
         ['Fiche', './#/exercice/chest-press'],
         ['Modifier un exercice', './#/modifier/chest-press'],
         ['Nouvel exercice', './#/nouvel-exercice'],
+        // Séances simulées au nom par défaut : historique et détail affichent le nom calculé (version 1.32.0).
         ['Historique', './#/historique'],
         ['Détail de séance', './#/historique/sim-2026-10-19'],
         ['Détail d’une activité', './#/historique/act-badminton-2026-10-12'],
