@@ -69,8 +69,9 @@ test.describe('Activités habituelles hors salle', () => {
 
     // Bilan de la semaine : section Séances et texte du mail.
     await page.goto('./#/bilan-periode/semaine/2026-10-19');
-    await expect(page.getByRole('region', { name: 'Séances' })).toContainText('Activités : Badminton ×1, 1 h 30');
-    await expect(page.getByRole('region', { name: 'Groupes travaillés' })).toContainText('Jambes : +1 indirect');
+    // Version 1.35.0 : tuile « Activités », barre des jambes.
+    await expect(page.locator('[data-testid="report-tile"][data-label="Activités"]')).toContainText('Badminton ×1, 1\u00a0h\u00a030');
+    await expect(page.getByRole('region', { name: 'Groupes travaillés' }).locator('[data-group="jambes"]')).toContainText('+1\u00a0indirect');
     await expect(page.getByTestId('report-text')).toContainText('- Activités : Badminton ×1, 1 h 30');
     await test.info().attach('bilan-semaine', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
 
@@ -249,7 +250,7 @@ test.describe('Activités habituelles hors salle', () => {
     await expect(page.getByRole('main')).toContainText('23 octobre 2026 · 1 h 15 · activité ponctuelle');
     await expect(page.getByRole('main')).toContainText('Groupes sollicités (en indirect) : Jambes, Abdominaux');
     await page.goto('./#/bilan-periode/semaine/2026-10-19');
-    await expect(page.getByRole('region', { name: 'Séances' })).toContainText('Activités : Escalade ×1, 1 h 30 ; Futsal ×1, 1 h 15');
+    await expect(page.locator('[data-testid="report-tile"][data-label="Activités"]')).toContainText('Escalade ×1, 1\u00a0h\u00a030 · Futsal ×1, 1\u00a0h\u00a015');
     await expect(page.getByTestId('report-text')).toContainText('- Activités : Escalade ×1, 1 h 30 ; Futsal ×1, 1 h 15');
 
     // Le futsal reste une habitude désactivée : aucune question, même le vendredi suivant.

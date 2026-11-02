@@ -113,18 +113,28 @@ test.describe('Bilans de la semaine et du mois (§19.7)', () => {
     await expect(page).toHaveURL(/#\/bilan-periode\/semaine\/2026-10-19$/);
     await expect(page.getByTestId('report-title')).toHaveText('Semaine du 19 au 25 oct. 2026');
     const section = (title: string) => page.getByRole('region', { name: title });
-    await expect(section('Séances')).toContainText('4 séances, +1 par rapport à la semaine précédente');
-    await expect(section('Séances')).toContainText('Cardio : 40 min (Tapis de marche 30 min, Rameur 10 min)');
-    await expect(section('Groupes travaillés')).toContainText('Biceps : 1× · +2 indirect');
+    // Version 1.35.0 : séances en tuiles comparées à la semaine précédente, groupes en barres, progressions en échelles.
+    const tile = (label: string) => section('Séances').locator(`[data-testid="report-tile"][data-label="${label}"]`);
+    await expect(page.getByTestId('report-reference')).toHaveText('Par rapport à la semaine précédente');
+    await expect(tile('Séances')).toHaveText(/^Séances4.*▲ \+1$/);
+    await expect(tile('Cardio')).toContainText('40\u00a0min');
+    await expect(tile('Cardio')).toContainText('Tapis de marche 30\u00a0min · Rameur 10\u00a0min');
+    await expect(tile('Cardio')).toContainText('▲ +40\u00a0min');
+    await expect(section('Groupes travaillés').locator('[data-group="biceps"]')).toContainText('1×\u00a0· +2\u00a0indirect');
+    // Lecteur d'écran : la phrase du mail, sous chaque échelle.
     await expect(section('Progressions')).toContainText('Tractions assistées : 3×12 avec 30 kg d’aide validé → moins d’aide, 3×8 (24 oct.)');
     await expect(section('En difficulté')).toContainText('Presse à cuisses : 4ᵉ séance rouge de suite à 100\u00a0kg → poids inférieur recommandé (21\u00a0oct.)');
     await expect(section('Poids')).toContainText('80,2 kg le 19 oct. → 79,6 kg le 25 oct.');
-    // Éléments importants mis en évidence (gras), le reste en texte simple.
-    await expect(section('Progressions').locator('.report-em').first()).toHaveText('3×8 → 3×9 à 12\u00a0kg\u00a0/\u00a0haltère');
+    // Échelle du curl aux haltères : ancienne cible 8 en pointillés, nouvelle 9 pleine ; « kg / haltère » sous le nom.
+    const curl = section('Progressions').getByTestId('report-progression').filter({ hasText: 'Curl biceps haltères' });
+    await expect(curl.locator('.rung-before')).toHaveText('8');
+    await expect(curl.locator('.rung-now')).toHaveText('9');
+    await expect(curl.locator('.prog-meta')).toHaveText('3\u00a0séries · à 12\u00a0kg\u00a0/\u00a0haltère · 21\u00a0oct.');
     // Curl aux haltères (version 1.30.2) : « kg / haltère », dans le texte du mail aussi.
     await expect(page.getByTestId('report-text')).toContainText('3×8 → 3×9 à 12 kg / haltère');
-    await expect(section('Groupes travaillés').locator('.report-em')).toHaveText(['Non travaillés : Épaules, Triceps']);
-    expect(await section('Séances').locator('.report-em').first().evaluate((e) => getComputedStyle(e).fontWeight)).toBe('700');
+    // Groupes non travaillés : barre vide, « non travaillé ».
+    await expect(section('Groupes travaillés').locator('[data-idle]')).toHaveText([/Épaules.*non travaillé/, /Triceps.*non travaillé/]);
+    expect(await tile('Séances').locator('.kpi-delta').evaluate((e) => getComputedStyle(e).fontWeight)).toBe('700');
     await test.info().attach('bilan-semaine', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
 
     // Aucune couleur de statut sur l'écran ; rien ne dépasse à 412, 360 et 320 px.
@@ -161,12 +171,18 @@ test.describe('Bilans de la semaine et du mois (§19.7)', () => {
     await expect(page.getByTestId('report-title')).toHaveText('Semaine du 26 oct. au 1 nov. 2026');
     await expect(page.locator('.report-heading')).toContainText('Semaine en cours, arrêtée au lun. 26 oct.');
     // Semaine en cours : comparée à la même portion de la précédente (le lundi seul ; la séance du 20 n'y est pas).
-    await expect(section('Séances')).toContainText('0 séance, autant que lun. de la semaine dernière');
+    await expect(page.getByTestId('report-reference')).toHaveText('Par rapport à lun. de la semaine dernière');
+    await expect(tile('Séances')).toHaveText(/^Séances0.*= autant$/);
     await expect(page.getByRole('button', { name: 'Semaine suivante' })).toHaveCount(0);
     // Onglet Mois : mois en cours (il contient des séances), comparé au mois précédent.
     await page.getByRole('button', { name: 'Mois', exact: true }).click();
     await expect(page.getByTestId('report-title')).toHaveText('Octobre 2026');
-    await expect(section('Séances')).toContainText('7 séances, +7 par rapport au 1er–26 du mois dernier');
+    // Septembre est entièrement avant la première séance : « Premier mois suivi », sans écart (version 1.35.0) ; le mail
+    // garde la comparaison avec la même portion du mois précédent.
+    await expect(page.getByTestId('report-reference')).toHaveText('Premier mois suivi');
+    await expect(tile('Séances')).toHaveText(/^Séances7$/);
+    await expect(page.getByTestId('report-text')).toContainText('- 7 séances, +7 par rapport au 1er–26 du mois dernier');
+    await expect(section('Séances').getByTestId('report-calendar')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Semaine', exact: true })).toHaveAttribute('aria-pressed', 'false');
 
     // Bilan ouvert : ni bandeau ni pastille pour cette semaine, même après relance.

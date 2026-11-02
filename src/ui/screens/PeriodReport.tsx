@@ -4,6 +4,7 @@ import { navigateReplace } from '../../app/hooks';
 import { useBody } from '../../body/store';
 import {
   buildReport,
+  buildReportScreen,
   defaultPeriod,
   firstPeriod,
   inProgressNote,
@@ -20,20 +21,13 @@ import {
 import { displayName } from '../../library/catalog';
 import { perDumbbell } from '../../library/search';
 import { copyText, openMailto, sendByMail } from '../share';
+import { keepUnits, ReportGroups, ReportProgressions, ReportSessions } from '../ReportVisuals';
 
 const KIND_SEGMENTS: Record<ReportKind, string> = { week: 'semaine', month: 'mois' };
 const TABS: { kind: ReportKind; label: string }[] = [
   { kind: 'week', label: 'Semaine' },
   { kind: 'month', label: 'Mois' },
 ];
-
-/**
- * À l'écran seulement : un nombre n'est jamais séparé de son unité en fin de ligne (« 30 min », « 12 kg », « 21 oct. »,
- * « 12 kg / haltère » d'un bloc).
- */
-function keepUnits(line: string): string {
-  return line.replace(/ \/ haltère/g, '\u00a0/\u00a0haltère').replace(/(\d) (min|kg|h|séances?|[a-zéû]+\.)/g, '$1\u00a0$2');
-}
 
 export function kindOfSegment(segment: string | undefined): ReportKind {
   return segment === 'mois' ? 'month' : 'week';
@@ -50,8 +44,13 @@ export function PeriodReport({ kind, periodParam }: { kind: ReportKind; periodPa
   const period = (periodParam ? parsePeriodKey(kind, periodParam) : null) ?? defaultPeriod(kind, sessions, now);
   const key = periodKey(period);
   const weighIns = body.status === 'ready' ? body.data.weighIns : [];
-  const report = useMemo(
-    () => buildReport(period, { sessions, exercises, evaluations: replay.evaluations, settings, groups: recapSettings.groups, weighIns, activities, now }),
+  const [report, screen] = useMemo(
+    () => {
+      const input = { sessions, exercises, evaluations: replay.evaluations, settings, groups: recapSettings.groups, weighIns, activities, now };
+      const built = buildReport(period, input);
+      // Écran seulement (version 1.35.0) : tuiles, barres, calendrier, échelles ; le texte du mail n'en dépend pas.
+      return [built, buildReportScreen(built, input)] as const;
+    },
     // `now` change à chaque rendu : la période (clé) et les données suffisent.
     [key, kind, sessions, exercises, replay, settings, recapSettings, weighIns, activities],
   );
@@ -118,26 +117,35 @@ export function PeriodReport({ kind, periodParam }: { kind: ReportKind; periodPa
           </button>
         )}
       </div>
-      {sections.map((s) => (
-        <section key={s.title} className="frame report-section" aria-label={s.title}>
-          <h3 className="section-title">{s.title}</h3>
-          <ul className="report-lines">
-            {s.lines.map((line) => (
-              <li key={lineText(line)}>
-                {line.map((part, i) =>
-                  typeof part === 'string' ? (
-                    keepUnits(part)
-                  ) : (
-                    <strong key={i} className="report-em">
-                      {keepUnits(part.em)}
-                    </strong>
-                  ),
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
+      {/* Version 1.35.0 : séances en tuiles (calendrier pour le mois), groupes en barres, progressions en échelles ;
+          Records, En difficulté et Poids en lignes, comme le texte du mail. */}
+      <ReportSessions report={report} screen={screen} />
+      {sections.map((s) =>
+        s.title === 'Séances' ? null : s.title === 'Groupes travaillés' ? (
+          <ReportGroups key={s.title} report={report} screen={screen} />
+        ) : s.title === 'Progressions' ? (
+          <ReportProgressions key={s.title} report={report} screen={screen} section={s} exerciseOf={(id) => variants.get(id)?.exercise} name={name} dumbbell={dumbbell} />
+        ) : (
+          <section key={s.title} className="frame report-section" aria-label={s.title}>
+            <h3 className="section-title">{s.title}</h3>
+            <ul className="report-lines">
+              {s.lines.map((line) => (
+                <li key={lineText(line)}>
+                  {line.map((part, i) =>
+                    typeof part === 'string' ? (
+                      keepUnits(part)
+                    ) : (
+                      <strong key={i} className="report-em">
+                        {keepUnits(part.em)}
+                      </strong>
+                    ),
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ),
+      )}
       <div className="report-actions">
         <button type="button" className="btn primary big" onClick={() => void send()}>
           Envoyer par mail
