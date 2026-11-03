@@ -50,6 +50,22 @@ export function groupAlert(sessions: readonly Session[], exercises: readonly Exe
   return { group, week: recent.at(-1)!.start, recent: recent.map((w) => w.total), average, referenceWeeks: reference.length };
 }
 
+/** Nombre arrondi à une décimale, à la française (« 5,3 », « 3 »). */
+const oneDecimal = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 });
+
+/**
+ * Chiffres de l'alerte (version 1.38.1), après le nom du groupe : « 3 séries par semaine depuis 2 semaines (ta
+ * moyenne : 5,3) ». Séries des 2 semaines en moyenne (choix signalé : 4 puis 2 donnent 3), moyenne de référence de
+ * l'alerte (pas celle du graphique, qui compte aussi ces 2 semaines), arrondies à une décimale ; « série » au
+ * singulier sous 2. Espaces insécables : ni « : » ni unité en début de ligne, « (ta moyenne : 5,3) » d’un bloc.
+ */
+export function alertFigures(alert: GroupAlert): string {
+  const recent = alert.recent.reduce((a, x) => a + x, 0) / alert.recent.length;
+  const shown = oneDecimal(recent);
+  const word = Number(shown.replace(',', '.')) < 2 ? 'série' : 'séries';
+  return `${shown}\u00a0${word} par semaine depuis ${ALERT_RECENT_WEEKS}\u00a0semaines (ta\u00a0moyenne\u00a0:\u00a0${oneDecimal(alert.average)})`;
+}
+
 /** Alertes ignorées sur l'appareil : groupe → dernière semaine terminée au moment de « Ignorer ». */
 export type IgnoredAlerts = Partial<Record<MuscleGroup, string>>;
 

@@ -1950,6 +1950,8 @@ fieldset {
 .group-alert-link {
   flex: 1 1 12em;
   color: var(--muted);
+  /* Version 1.38.1 : pas de soulignement ; seul le nom du groupe ressort (gras, blanc), toute la ligne reste cliquable. */
+  text-decoration: none;
 }
 
 .group-alert-name {

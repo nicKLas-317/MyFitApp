@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useApp } from '../app/store';
 import { routeHash, useNow } from '../app/hooks';
-import { groupAlerts, type GroupAlert } from '../analysis/groupAlerts';
+import { alertFigures, groupAlerts, type GroupAlert } from '../analysis/groupAlerts';
 import { MUSCLE_GROUP_LABELS } from '../library/seed';
 
 /**
@@ -33,7 +33,7 @@ export function GroupAlerts() {
           <a className="link group-alert-link" href={routeHash('bilan-groupes', a.group, 'series')}>
             <span>
               <strong className="group-alert-name">{MUSCLE_GROUP_LABELS[a.group]}</strong>
-              {' : sous ta moyenne depuis 2 semaines'}
+              {`\u00a0: ${alertFigures(a)}`}
             </span>
           </a>
           <button type="button" className="link group-alert-ignore" aria-label={`Ignorer l’alerte : ${MUSCLE_GROUP_LABELS[a.group]}`} onClick={() => void ignoreGroupAlert(a)}>

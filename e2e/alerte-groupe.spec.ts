@@ -71,7 +71,23 @@ test.describe('Alerte « groupe moins travaillé »', () => {
     const line = alerts(page).getByRole('listitem');
     await expect(line).toHaveCount(1);
     await expect(line).toHaveAttribute('data-group', 'dos');
-    await expect(line.getByRole('link')).toHaveText('Dos : sous ta moyenne depuis 2 semaines');
+    // Ses propres chiffres (version 1.38.1) : séries des 2 semaines et moyenne de l'alerte, arrondie à une décimale
+    // (5,25 → 5,3 ; le graphique garde sa moyenne, 4,8).
+    await expect(line.getByRole('link')).toHaveText('Dos : 3 séries par semaine depuis 2 semaines (ta moyenne : 5,3)');
+    // Sans soulignement, seul le nom en gras ; toute la ligne est le lien.
+    const look = await line.getByRole('link').evaluate((a) => ({
+      underline: [a, ...a.querySelectorAll('*')].some((e) => getComputedStyle(e).textDecorationLine.includes('underline')),
+      bold: getComputedStyle(a.querySelector('strong')!).fontWeight,
+      rest: getComputedStyle(a).fontWeight,
+      covers: (() => {
+        const r = document.createRange();
+        r.selectNodeContents(a);
+        const t = r.getBoundingClientRect();
+        const b = a.getBoundingClientRect();
+        return t.left >= b.left - 0.5 && t.right <= b.right + 0.5 && t.top >= b.top - 0.5 && t.bottom <= b.bottom + 0.5;
+      })(),
+    }));
+    expect(look).toEqual({ underline: false, bold: '700', rest: '400', covers: true });
     await expect(line.getByRole('link')).toHaveAttribute('href', '#/bilan-groupes/dos/series');
     await expect(line.getByRole('button', { name: 'Ignorer l’alerte : Dos' })).toHaveText('Ignorer');
     // Pastille sur l'onglet Progrès, nommée pour le lecteur d'écran.
@@ -120,7 +136,7 @@ test.describe('Alerte « groupe moins travaillé »', () => {
     // Onglet Progrès : la même ligne, sous les bilans prêts, au-dessus des bilans.
     await tabBar(page).getByRole('link', { name: /^Progrès/ }).click();
     await expect(page.getByRole('heading', { name: 'Progrès', exact: true })).toBeVisible();
-    await expect(alerts(page).getByRole('link')).toHaveText('Dos : sous ta moyenne depuis 2 semaines');
+    await expect(alerts(page).getByRole('link')).toHaveText('Dos : 3 séries par semaine depuis 2 semaines (ta moyenne : 5,3)');
 
     // « Ignorer » : la ligne et la pastille disparaissent, même après relance (mémorisé sur l'appareil).
     await alerts(page).getByRole('button', { name: 'Ignorer l’alerte : Dos' }).click();
@@ -144,15 +160,15 @@ test.describe('Alerte « groupe moins travaillé »', () => {
     await page.clock.setFixedTime(new Date(later));
     await writeSessions(page, alertHistory({ until: '2026-11-16', dosDown: ['2026-10-26', '2026-11-02', '2026-11-09'] }));
     await page.reload();
-    await expect(alerts(page).getByRole('link')).toHaveText('Dos : sous ta moyenne depuis 2 semaines');
+    await expect(alerts(page).getByRole('link')).toHaveText('Dos : 3 séries par semaine depuis 2 semaines (ta moyenne : 5)');
     await expect(tabBar(page).getByTestId('group-alert-badge')).toBeVisible();
 
     // Vacances les deux dernières semaines : tous les groupes sous leur moyenne, 3 lignes au plus, dans l'ordre des groupes.
     await open(page, { vacations: ['2026-10-26', '2026-11-02'], dosDown: [], pecDown: [] });
     await expect(alerts(page).getByRole('link')).toHaveText([
-      'Pectoraux : sous ta moyenne depuis 2 semaines',
-      'Dos : sous ta moyenne depuis 2 semaines',
-      'Épaules : sous ta moyenne depuis 2 semaines',
+      'Pectoraux : 0 série par semaine depuis 2 semaines (ta moyenne : 6)',
+      'Dos : 0 série par semaine depuis 2 semaines (ta moyenne : 6)',
+      'Épaules : 0 série par semaine depuis 2 semaines (ta moyenne : 4,5)',
     ]);
     for (const [width, big] of [[412, false], [360, false], [320, false], [360, true]] as const) {
       await page.setViewportSize({ width, height: 915 });
@@ -162,6 +178,17 @@ test.describe('Alerte « groupe moins travaillé »', () => {
       expect(l.minHeight).toBeGreaterThanOrEqual(48);
       expect(l.closest).toBeGreaterThanOrEqual(8);
       expect(l.overflow).toBeLessThanOrEqual(0);
+      // « (ta moyenne : 6) » d'un bloc (version 1.38.1) : jamais « 6) » seul en fin de ligne.
+      const split = await alerts(page).getByRole('link').evaluateAll((links) =>
+        links.filter((link) => {
+          const node = [...link.querySelectorAll('span')].flatMap((e) => [...e.childNodes]).find((n) => n.nodeType === 3 && n.textContent!.includes('(ta'))!;
+          const r = document.createRange();
+          r.setStart(node, node.textContent!.indexOf('(ta'));
+          r.setEnd(node, node.textContent!.length);
+          return new Set([...r.getClientRects()].map((c) => Math.round(c.top))).size > 1;
+        }).length,
+      );
+      expect(split, `${width} px${big ? ', texte à 115 %' : ''}`).toBe(0);
       await restore?.();
     }
     await page.setViewportSize({ width: 412, height: 915 });

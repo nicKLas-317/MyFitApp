@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Exercise, MuscleGroup, Session } from '../../domain/types';
 import { SEED_EXERCISES } from '../../library/seed';
 import { groupWeeklySets } from '../groups';
-import { ALERT_MAX, groupAlert, groupAlerts, ignoreAlert, sanitizeIgnoredAlerts } from '../groupAlerts';
+import { ALERT_MAX, alertFigures, groupAlert, groupAlerts, ignoreAlert, sanitizeIgnoredAlerts } from '../groupAlerts';
 import { DEFAULT_RECAP_SETTINGS } from '../weekly';
 import { ALERT_NOW, alertHistory } from './alertes-simulation';
 
@@ -93,6 +93,15 @@ describe('Alerte « groupe moins travaillé », version 1.38.0', () => {
     expect(alertsOf(both)).toEqual(['pectoraux', 'dos']);
     const deeper = both.map((s) => (s.date >= '2026-10-26' ? { ...s, performances: s.performances.filter((p) => p.variantId !== 'tirage-vertical') } : s));
     expect(alertsOf(deeper)).toEqual(['dos', 'pectoraux', 'biceps']);
+
+    // Chiffres de l'alerte (version 1.38.1) : séries des 2 semaines (en moyenne) et moyenne de l'alerte, une décimale.
+    expect(alertFigures(dos)).toBe('3\u00a0séries par semaine depuis 2\u00a0semaines (ta\u00a0moyenne\u00a0:\u00a05,3)');
+    const figures = (recent: number[], average: number) => alertFigures({ group: 'dos', week: '2026-11-02', recent, average, referenceWeeks: 4 });
+    expect(figures([4, 2], 6)).toBe('3\u00a0séries par semaine depuis 2\u00a0semaines (ta\u00a0moyenne\u00a0:\u00a06)');
+    expect(figures([4.5, 4], 4.75)).toBe('4,3\u00a0séries par semaine depuis 2\u00a0semaines (ta\u00a0moyenne\u00a0:\u00a04,8)');
+    expect(figures([1.5, 0], 1.98)).toBe('0,8\u00a0série par semaine depuis 2\u00a0semaines (ta\u00a0moyenne\u00a0:\u00a02)');
+    expect(figures([0, 0], 1)).toBe('0\u00a0série par semaine depuis 2\u00a0semaines (ta\u00a0moyenne\u00a0:\u00a01)');
+    expect(figures([1.5, 2.5], 3)).toBe('2\u00a0séries par semaine depuis 2\u00a0semaines (ta\u00a0moyenne\u00a0:\u00a03)');
 
     // Mémoire de l'appareil contrôlée : groupes du sélecteur et lundis seulement.
     expect(sanitizeIgnoredAlerts({ dos: '2026-11-02', quadriceps: '2026-11-02', biceps: 'hier', triceps: 3 })).toEqual({ dos: '2026-11-02' });
