@@ -177,11 +177,11 @@ test.describe('Bilans de la semaine et du mois (§19.7)', () => {
     // Onglet Mois : mois en cours (il contient des séances), comparé au mois précédent.
     await page.getByRole('button', { name: 'Mois', exact: true }).click();
     await expect(page.getByTestId('report-title')).toHaveText('Octobre 2026');
-    // Septembre est entièrement avant la première séance : « Premier mois suivi », sans écart (version 1.35.0) ; le mail
-    // garde la comparaison avec la même portion du mois précédent.
+    // Septembre est entièrement avant la première séance : « Premier mois suivi », sans écart, à l'écran (version 1.35.0)
+    // comme dans le mail (version 1.35.1).
     await expect(page.getByTestId('report-reference')).toHaveText('Premier mois suivi');
     await expect(tile('Séances')).toHaveText(/^Séances7$/);
-    await expect(page.getByTestId('report-text')).toContainText('- 7 séances, +7 par rapport au 1er–26 du mois dernier');
+    await expect(page.getByTestId('report-text')).toContainText('- 7 séances, premier mois suivi\n- Durée en salle : 7 h 00\n');
     await expect(section('Séances').getByTestId('report-calendar')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Semaine', exact: true })).toHaveAttribute('aria-pressed', 'false');
 

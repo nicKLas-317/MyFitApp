@@ -56,16 +56,17 @@ const bar = (s: ReturnType<typeof screenOf>['screen'], group: string) => s.bars.
 describe('Écran du bilan, version 1.35.0', () => {
   it('284. Première période suivie, cardio et activités comparés, barres avec la maison plafonnée à ½ par semaine, jours du mois, échelles de cycle ; texte du mail inchangé', () => {
     // Période précédente entièrement avant la première séance : pas d'écart (« Première semaine suivie », « Premier mois suivi »).
-    expect(screenOf(week('2026-10-12')).screen.first).toBe(true);
-    expect(screenOf(month).screen.first).toBe(true);
+    expect(screenOf(week('2026-10-12')).report.first).toBe(true);
+    expect(screenOf(month).report.first).toBe(true);
     // La semaine du 12 contient la première séance : la semaine du 19 est comparée.
     const w19 = screenOf(week('2026-10-19'));
-    expect(w19.screen.first).toBe(false);
+    expect(w19.report.first).toBe(false);
     expect(w19.screen).toMatchObject({ cardio: { now: 20, before: 10 }, activities: { now: 1, before: 0 } });
     // Semaine en cours (vendredi 23 au soir) : comparée à lun.–ven. de la semaine précédente (même portion).
     const inProgress = screenOf(week('2026-10-19'), oct(23, 22));
     expect(inProgress.report.compared.partial).toBe(true);
-    expect(inProgress.screen).toMatchObject({ first: false, cardio: { now: 20, before: 10 }, activities: { now: 1, before: 0 } });
+    expect(inProgress.report.first).toBe(false);
+    expect(inProgress.screen).toMatchObject({ cardio: { now: 20, before: 10 }, activities: { now: 1, before: 0 } });
 
     // Pectoraux, semaine du 19 : 1 séance à la salle, 11 séries à la maison plafonnées à ½ ; jambes : ½ (futsal).
     expect(bar(w19.screen, 'pectoraux')).toEqual({ group: 'pectoraux', direct: 1, indirect: 0, home: 0.5 });
@@ -89,8 +90,8 @@ describe('Écran du bilan, version 1.35.0', () => {
     // Une échelle par progression, dans le même ordre.
     expect(oc.screen.ladders).toHaveLength(oc.report.progressions.length);
 
-    // Le texte du mail ne dépend pas de l'écran : identique, comparaison comprise (« +5 par rapport au mois précédent »).
-    expect(reportText(oc.report, name)).toContain('- 5 séances (dont 3 à la maison), +5 par rapport au mois précédent\n');
+    // Le texte du mail ne dépend pas de l'écran (première période : test 286).
+    expect(reportText(w19.report, name)).toContain('- 3 séances (dont 2 à la maison), +2 par rapport à la semaine précédente\n');
 
     // Échelles : exercice à charge, toute la plage puis « +kg » (« −aide » s'il est assisté).
     const loaded = { minReps: 8, maxReps: 12, step: 1, bodyweight: false };
@@ -119,5 +120,30 @@ describe('Écran du bilan, version 1.35.0', () => {
     expect(progressionMeta(prog({ assisted: true, from: { weightKg: 41, targetReps: 8 } }))).toBe('3 séries · avec 41 kg d’aide · 29 oct.');
     expect(progressionMeta(prog({ sets: 2, from: { weightKg: 0, targetReps: 10 } }))).toBe('2 séries · poids du corps · 29 oct.');
     expect(progressionMeta(prog({ seconds: true, from: { weightKg: 0, targetReps: 25 } }))).toBe('3 séries · en secondes · 29 oct.');
+  });
+
+  it('286. Mail d’une première période suivie (version 1.35.1) : « premier mois suivi » ou « première semaine suivie » au lieu de l’écart, durée sans comparaison ; le reste identique', () => {
+    const oc = screenOf(month).report;
+    const text = reportText(oc, name);
+    expect(text).toContain('SÉANCES\n- 5 séances (dont 3 à la maison), premier mois suivi\n- Durée en salle : 2 h 00\n- Cardio : 30 min (Tapis de marche 30 min)\n');
+    expect(text).not.toContain('par rapport');
+    // Seules ces deux lignes changent : le reste du texte est identique, caractère pour caractère.
+    const before = reportText({ ...oc, first: false }, name).split('\n');
+    const diff = text.split('\n').map((l, i) => [l, before[i]]).filter(([a, b]) => a !== b);
+    expect(diff).toEqual([
+      ['- 5 séances (dont 3 à la maison), premier mois suivi', '- 5 séances (dont 3 à la maison), +5 par rapport au mois précédent'],
+      ['- Durée en salle : 2 h 00', '- Durée en salle : 2 h 00, +2 h 00 par rapport au mois précédent'],
+    ]);
+    // Semaine du 12 (première), en cours ou terminée.
+    expect(reportText(screenOf(week('2026-10-12')).report, name)).toContain('- 1 séance, première semaine suivie\n- Durée en salle : 1 h 00\n');
+    expect(reportText(screenOf(week('2026-10-12'), oct(14, 20)).report, name)).toContain('(Semaine en cours, arrêtée au mer. 14 oct.)\n\nSÉANCES\n- 1 séance, première semaine suivie\n');
+    // Une semaine entièrement avant la première séance n'est pas « suivie » : comparaison comme avant.
+    expect(screenOf(week('2026-10-05')).report.first).toBe(false);
+    expect(reportText(screenOf(week('2026-10-05')).report, name)).toContain('- 0 séance, autant que la semaine précédente\n');
+    // La semaine suivante est comparée, comme avant ; sans aucune séance, jamais « première ».
+    expect(screenOf(week('2026-10-19')).report.first).toBe(false);
+    const empty = buildReport(week('2026-10-19'), { sessions: [], exercises: LIB, evaluations: [], settings: SETTINGS, groups: DEFAULT_RECAP_SETTINGS.groups, weighIns: [], now: oct(30) });
+    expect(empty.first).toBe(false);
+    expect(reportText(empty, name)).toContain('- 0 séance, autant que la semaine précédente\n');
   });
 });

@@ -111,13 +111,14 @@ test.describe('Bilan de la période, version 1.35.0', () => {
     await page.getByRole('button', { name: 'Semaine précédente' }).click();
     await expect(page.getByTestId('report-reference')).toHaveText('Première semaine suivie');
     await expect(section(page, 'Séances').locator('.kpi-delta')).toHaveCount(0);
-    // Le mail garde sa comparaison.
-    await expect(page.getByTestId('report-text')).toContainText('- 1 séance, +1 par rapport à la semaine précédente');
+    // Le mail aussi (version 1.35.1) : « première semaine suivie » au lieu de l'écart, durée sans comparaison.
+    await expect(page.getByTestId('report-text')).toContainText('SÉANCES\n- 1 séance, première semaine suivie\n- Durée en salle : 1 h 00\n- Cardio : 10 min (Tapis de marche 10 min)\n');
 
     // Octobre : premier mois suivi ; calendrier au-dessus des tuiles (● salle, ○ maison, ◆ activité).
     await page.goto('./#/bilan-periode/mois/2026-10');
     await expect(page.getByTestId('report-reference')).toHaveText('Premier mois suivi');
     await expect(section(page, 'Séances').locator('.kpi-delta')).toHaveCount(0);
+    expect(await page.getByTestId('report-text').textContent()).toContain('SÉANCES\n- 5 séances (dont 3 à la maison), premier mois suivi\n');
     const calendar = page.getByTestId('report-calendar');
     await expect(calendar.locator('li[data-date]')).toHaveCount(31);
     await expect(calendar.locator('li[data-date="2026-10-01"]')).toHaveAttribute('aria-label', '1 oct. : rien');

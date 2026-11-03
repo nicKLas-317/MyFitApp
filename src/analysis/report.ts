@@ -203,6 +203,12 @@ export interface PeriodReport {
   decreases: ReportDecrease[];
   /** Première et dernière pesées de la période (une seule si une seule pesée, aucune sinon). */
   weighIns: WeighIn[];
+  /**
+   * Période qui contient la première séance terminée, la précédente étant entièrement avant elle (version 1.35.1) :
+   * aucun écart, ni à l'écran
+   * (« Premier mois suivi ») ni dans le mail (« 11 séances, premier mois suivi »).
+   */
+  first: boolean;
 }
 
 export interface ReportInput {
@@ -325,6 +331,8 @@ export function buildReport(period: ReportPeriod, input: ReportInput): PeriodRep
   const last = localDate(periodLastDay(period).getTime());
   const weighed = [...weighIns].filter((w) => w.date >= first && w.date <= last).sort((a, b) => (a.date < b.date ? -1 : 1));
 
+  const finished = sessions.filter((s) => s.state === 'done');
+  const firstSession = finished.length > 0 ? Math.min(...finished.map(sessionStartTime)) : null;
   const inProgress = now < period.next.getTime();
   const asOf = new Date(Math.min(now, period.next.getTime() - 1));
   const compared = comparedSpan(period, asOf, inProgress);
@@ -343,6 +351,8 @@ export function buildReport(period: ReportPeriod, input: ReportInput): PeriodRep
     reds: [...reds.values()],
     decreases,
     weighIns: weighed.length > 1 ? [weighed[0]!, weighed[weighed.length - 1]!] : weighed,
+    // La période contient la première séance, et la précédente est entièrement avant elle.
+    first: firstSession !== null && shiftPeriod(period, -1).next.getTime() <= firstSession && firstSession < period.next.getTime(),
   };
 }
 
@@ -411,7 +421,11 @@ export function reportSections(report: PeriodReport, variantName: (variantId: st
   const compare = (diff: string | null) => (diff ? `${diff} par rapport ${target.with}` : `autant que ${target.same}`);
 
   const atHome = totals.homeCount ? ` (dont ${totals.homeCount} à la maison)` : '';
-  const sessionsLines: ReportLine[] = [[`${plural(totals.sessionCount, 'séance')}${atHome}, `, em(compare(signed(totals.sessionCount - previous.sessionCount, String)))]];
+  // Première période suivie (version 1.35.1) : pas d'écart avec une période d'avant la première séance.
+  const firstFollowed = week ? 'première semaine suivie' : 'premier mois suivi';
+  const sessionsLines: ReportLine[] = [
+    [`${plural(totals.sessionCount, 'séance')}${atHome}, `, em(report.first ? firstFollowed : compare(signed(totals.sessionCount - previous.sessionCount, String)))],
+  ];
   // Durée en salle : séances à la salle seulement (la durée à la maison n'a pas d'importance).
   const gym = totals.sessionCount - (totals.homeCount ?? 0);
   if (gym > 0 || previous.sessionCount - (previous.homeCount ?? 0) > 0) {
@@ -420,7 +434,7 @@ export function reportSections(report: PeriodReport, variantName: (variantId: st
     const unknown = totals.unknownDuration > 0 ? ` (${plural(totals.unknownDuration, 'séance sans durée', 'séances sans durée')})` : '';
     const line: ReportLine = [`Durée en salle : ${known > 0 || gym === 0 ? formatDurationLong(totals.durationMs) : 'inconnue'}${unknown}`];
     // Comparaison seulement si toutes les durées des deux périodes sont connues.
-    if (totals.unknownDuration === 0 && previous.unknownDuration === 0) {
+    if (!report.first && totals.unknownDuration === 0 && previous.unknownDuration === 0) {
       line.push(', ', em(compare(signed(Math.round((totals.durationMs - previous.durationMs) / 60_000), formatMinutes))));
     }
     sessionsLines.push(line);
@@ -637,11 +651,6 @@ export function ladderSteps(p: Pick<ReportProgression, 'kind' | 'from' | 'toReps
 }
 
 export interface ReportScreen {
-  /**
-   * Période précédente entièrement avant la première séance terminée : « Première semaine suivie », « Premier mois
-   * suivi », sans écart (le mail garde sa comparaison).
-   */
-  first: boolean;
   /** Cardio (minutes) et activités confirmées (nombre) de la période et de l'intervalle comparé. */
   cardio: { now: number; before: number };
   activities: { now: number; before: number };
@@ -659,8 +668,6 @@ export interface ReportScreen {
 export function buildReportScreen(report: PeriodReport, input: ReportInput): ReportScreen {
   const { period } = report;
   const done = input.sessions.filter((s) => s.state === 'done');
-  const firstSession = done.length > 0 ? Math.min(...done.map(sessionStartTime)) : null;
-  const first = firstSession !== null && shiftPeriod(period, -1).next.getTime() <= firstSession;
   const activities = doneActivities(input.activities ?? []);
   const compared = report.compared;
   const inside = (span: Pick<ReportPeriod, 'start' | 'next'>) => (t: number) => containsTime(span, t);
@@ -692,7 +699,6 @@ export function buildReportScreen(report: PeriodReport, input: ReportInput): Rep
   });
 
   return {
-    first,
     cardio: { now: cardioIn(period), before: cardioIn(compared) },
     activities: { now: activitiesIn(period), before: activitiesIn(compared) },
     bars,

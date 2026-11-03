@@ -121,13 +121,13 @@ function MonthCalendar({ report, screen }: { report: PeriodReport; screen: Repor
 export function ReportSessions({ report, screen }: { report: PeriodReport; screen: ReportScreen }) {
   const { totals, previous } = report;
   const week = report.period.kind === 'week';
-  const compare = !screen.first;
+  const compare = !report.first;
   const gym = totals.sessionCount - (totals.homeCount ?? 0);
   const prevGym = previous.sessionCount - (previous.homeCount ?? 0);
   const known = gym - totals.unknownDuration;
   const comparable = totals.unknownDuration === 0 && previous.unknownDuration === 0;
   const minutes = (ms: number) => Math.round(ms / 60_000);
-  const reference = screen.first ? (week ? 'Première semaine suivie' : 'Premier mois suivi') : `Par rapport ${comparedTo(report).with}`;
+  const reference = report.first ? (week ? 'Première semaine suivie' : 'Premier mois suivi') : `Par rapport ${comparedTo(report).with}`;
   return (
     <section className="frame report-section" aria-label="Séances">
       <h3 className="section-title">Séances</h3>

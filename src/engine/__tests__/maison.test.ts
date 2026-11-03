@@ -129,9 +129,13 @@ describe('Salle et maison : deux suivis pour un exercice à charge (version 1.26
     const name = (id: string) => displayName(indexVariants(LIB).get(id));
     const report = buildReport(periodContaining('week', now), { sessions: week, exercises: LIB, evaluations, settings, groups: ['biceps'], weighIns: [], now });
     expect(report.totals).toEqual({ sessionCount: 3, homeCount: 1, durationMs: 7_200_000, unknownDuration: 0 });
+    // Première semaine suivie (version 1.35.1) : aucun écart, durée sans comparaison.
     const text = reportText(report, name);
-    expect(text).toContain('- 3 séances (dont 1 à la maison), +3 par rapport à lun.–ven. de la semaine dernière');
-    expect(text).toContain('- Durée en salle : 2 h 00, +2 h 00 par rapport à lun.–ven. de la semaine dernière');
+    expect(text).toContain('- 3 séances (dont 1 à la maison), première semaine suivie\n- Durée en salle : 2 h 00\n');
+    // Avec une période précédente suivie, la maison n'empêche pas la comparaison de durée.
+    const compared = reportText({ ...report, first: false }, name);
+    expect(compared).toContain('- 3 séances (dont 1 à la maison), +3 par rapport à lun.–ven. de la semaine dernière');
+    expect(compared).toContain('- Durée en salle : 2 h 00, +2 h 00 par rapport à lun.–ven. de la semaine dernière');
     expect(text).not.toContain('sans durée');
     // Une semaine à la maison seulement : pas de durée en salle.
     const homeWeek = buildReport(periodContaining('week', now), { sessions: [week[1]!], exercises: LIB, evaluations, settings, groups: ['biceps'], weighIns: [], now });
