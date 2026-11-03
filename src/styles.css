@@ -1920,6 +1920,46 @@ fieldset {
   margin-bottom: var(--space-2);
 }
 
+/*
+ * Alerte « groupe moins travaillé » (version 1.38.0) : une ligne discrète par groupe sous le récapitulatif (et en haut
+ * de l'onglet Progrès), neutre ; le texte ouvre le graphique, « Ignorer » à droite, 8 px entre les deux.
+ */
+.group-alerts {
+  list-style: none;
+  margin: 0 0 var(--space-2);
+  padding: 0;
+}
+
+/* Collées au récapitulatif : elles en sont la suite. */
+.weekly-recap:has(+ .group-alerts) {
+  margin-bottom: var(--space-1);
+}
+
+.group-alert {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  font-size: var(--fs-2);
+}
+
+.group-alert + .group-alert {
+  margin-top: var(--space-1);
+}
+
+.group-alert-link {
+  flex: 1 1 12em;
+  color: var(--muted);
+}
+
+.group-alert-name {
+  color: var(--text);
+}
+
+.group-alert-ignore {
+  flex: none;
+}
+
 /* Résumé de la semaine : une phrase, pas un titre de section. */
 .recap-title {
   font-size: var(--fs-2);

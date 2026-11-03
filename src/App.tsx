@@ -82,7 +82,7 @@ function Screen({ page, param, extra }: { page: string; param: string | undefine
     case 'bilan':
       return <Bilan />;
     case 'bilan-groupes':
-      return <GroupProgress group={groupOfSegment(param)} />;
+      return <GroupProgress group={groupOfSegment(param)} toSets={extra === 'series'} />;
     case 'bilan-periode':
       return <PeriodReport key={`${param ?? ''}/${extra ?? ''}`} kind={kindOfSegment(param)} periodParam={extra} />;
     case 'poids':

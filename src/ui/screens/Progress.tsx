@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useBody } from '../../body/store';
 import { formatKg, formatShortDay, localDate } from '../../session/format';
 import { ReportBanner } from '../ReportBanner';
+import { GroupAlerts } from '../GroupAlerts';
 import { WeighInForm } from './BodyScreen';
 
 /**
@@ -16,6 +17,8 @@ export function Progress() {
     <main className="screen tab-screen progress-screen">
       <h1>Progrès</h1>
       <ReportBanner />
+      {/* Les mêmes alertes que l'onglet Séance : la pastille de l'onglet y mène. */}
+      <GroupAlerts />
       <nav className="hub-links" aria-label="Bilans">
         <a className="btn big" href="#/bilan">
           Bilan de progression

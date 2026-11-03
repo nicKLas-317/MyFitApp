@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { usePendingReports } from './ReportBanner';
+import { useGroupAlerts } from './GroupAlerts';
 
 export type Tab = 'seance' | 'historique' | 'progres' | 'plus';
 
@@ -83,20 +84,26 @@ const TABS: { id: Tab; href: string; label: string; icon: ReactNode }[] = [
 
 /**
  * Barre d'onglets fixe en bas de l'écran (§3.4), au-dessus de la zone système d'Android : Séance, Historique,
- * Progrès, Plus. Un bilan prêt (§19.7) met une pastille sur l'onglet Progrès.
+ * Progrès, Plus. Un bilan prêt (§19.7) ou un groupe moins travaillé (version 1.38.0) met une pastille sur l'onglet
+ * Progrès.
  */
 export function TabBar({ active }: { active: Tab }) {
   const reports = usePendingReports();
+  // Pastille : un bilan prêt (§19.7) ou un groupe moins travaillé (version 1.38.0) ; un seul point.
+  const alerts = useGroupAlerts();
+  const notes = [...(reports.length > 0 ? ['bilan prêt'] : []), ...(alerts.length > 0 ? ['groupe sous ta moyenne'] : [])];
   return (
     <nav className="tab-bar" aria-label="Onglets">
       {TABS.map((t) => (
         <a key={t.id} className="tab" href={t.href} data-tab="" aria-current={t.id === active ? 'page' : undefined}>
           <span className="tab-icon-box">
             {t.icon}
-            {t.id === 'progres' && reports.length > 0 && <span className="tab-badge" data-testid="report-badge" />}
+            {t.id === 'progres' && notes.length > 0 && (
+              <span className="tab-badge" data-testid={reports.length > 0 ? 'report-badge' : 'group-alert-badge'} data-alert={alerts.length > 0 ? '' : undefined} />
+            )}
           </span>
           <span className="tab-label">{t.label}</span>
-          {t.id === 'progres' && reports.length > 0 && <span className="visually-hidden"> : bilan prêt</span>}
+          {t.id === 'progres' && notes.length > 0 && <span className="visually-hidden"> : {notes.join(', ')}</span>}
         </a>
       ))}
     </nav>

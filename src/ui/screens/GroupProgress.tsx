@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useApp } from '../../app/store';
 import { useBody } from '../../body/store';
 import { navigateReplace, useNow } from '../../app/hooks';
@@ -40,7 +40,7 @@ function setsSummary(label: string, sets: GroupSets): string {
  * Bilan par groupe musculaire (§19.10), vue secondaire du bilan : indice de progression (base 100) et séries par
  * semaine du groupe choisi, dans la couleur du groupe. En dessous des seuils, un message à la place du graphique.
  */
-export function GroupProgress({ group }: { group: MuscleGroup }) {
+export function GroupProgress({ group, toSets = false }: { group: MuscleGroup; toSets?: boolean }) {
   const { sessions, exercises, settings, variants } = useApp();
   const body = useBody();
   const weighIns = body.status === 'ready' ? body.data.weighIns : EMPTY;
@@ -49,6 +49,10 @@ export function GroupProgress({ group }: { group: MuscleGroup }) {
   const index = useMemo(() => groupIndex(sessions, exercises, settings, group, weighIns), [sessions, exercises, settings, group, weighIns]);
   const sets = useMemo(() => groupWeeklySets(sessions, exercises, group, Date.now()), [sessions, exercises, group, week]);
   const label = MUSCLE_GROUP_LABELS[group];
+  // Ouvert depuis une alerte « groupe moins travaillé » (version 1.38.0) : directement sur les séries par semaine.
+  useEffect(() => {
+    if (toSets) requestAnimationFrame(() => document.getElementById('series')?.scrollIntoView({ block: 'start' }));
+  }, [toSets]);
   const last = index.points.at(-1);
 
   return (
@@ -106,7 +110,7 @@ export function GroupProgress({ group }: { group: MuscleGroup }) {
           </section>
         )}
 
-        <section className="frame group-chart" aria-label="Séries par semaine" {...groupColorProps(group)}>
+        <section className="frame group-chart" id="series" aria-label="Séries par semaine" {...groupColorProps(group)}>
           <h2 className="section-title">Séries par semaine</h2>
           {sets.enough ? (
             <>

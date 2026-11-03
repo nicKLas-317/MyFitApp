@@ -7,6 +7,7 @@ import { exerciseHasHistory } from '../library/edit';
 import { DEFAULT_RECAP_SETTINGS, sanitizeRecapSettings, type WeeklyRecapSettings } from '../analysis/weekly';
 import { DEFAULT_REPORT_SETTINGS, markSeen, sanitizeReportSeen, sanitizeReportSettings, type ReportPeriod, type ReportSeen, type ReportSettings } from '../analysis/report';
 import { computeRecords, type Records } from '../analysis/records';
+import { ignoreAlert, sanitizeIgnoredAlerts, type GroupAlert, type IgnoredAlerts } from '../analysis/groupAlerts';
 import { answer, sanitizeActivities, sanitizeHabits, type ActivityRecord, type Habit, type Occurrence } from '../activities/model';
 import type { RemovedPerformance, VariantContext } from '../session/ops';
 import { currentPlan, sanitizePlan } from '../plan/model';
@@ -51,6 +52,9 @@ interface AppValue {
   /** Dernières périodes terminées dont le bilan a été ouvert : leur bandeau n'est plus affiché. */
   reportSeen: ReportSeen;
   markReportSeen(period: ReportPeriod): Promise<void>;
+  /** Alertes « groupe moins travaillé » ignorées (version 1.38.0), mémorisées sur l'appareil seulement. */
+  ignoredAlerts: IgnoredAlerts;
+  ignoreGroupAlert(alert: GroupAlert): Promise<void>;
   /** Activités habituelles hors salle (badminton…), modifiables dans les réglages. */
   habits: Habit[];
   setHabits(next: Habit[]): Promise<boolean>;
@@ -147,6 +151,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [reportSettings, setReportState] = useState<ReportSettings>(DEFAULT_REPORT_SETTINGS);
   const [reportSeen, setReportSeen] = useState<ReportSeen>({});
   const reportSeenRef = useRef<ReportSeen>({});
+  const [ignoredAlerts, setIgnoredAlerts] = useState<IgnoredAlerts>({});
+  const ignoredAlertsRef = useRef<IgnoredAlerts>({});
   const [habits, setHabitsState] = useState<Habit[]>(() => sanitizeHabits(undefined));
   const [activities, setActivitiesState] = useState<ActivityRecord[]>([]);
   const activitiesRef = useRef<ActivityRecord[]>([]);
@@ -171,7 +177,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           // Sans gravité : la correction sera refaite au prochain lancement.
           console.error('[MyFitApp] correction des ressentis « += » non appliquée', error);
         }
-        const [loadedSessions, loadedExercises, exportedAt, recap, machines, machinesVersion, reports, seen, loadedHabits, loadedActivities, loadedPlan] = await Promise.all([
+        const [loadedSessions, loadedExercises, exportedAt, recap, machines, machinesVersion, reports, seen, loadedHabits, loadedActivities, loadedPlan, ignored] = await Promise.all([
           repo.loadSessions(),
           repo.loadExercises(),
           repo.getMeta<number>('lastExportAt'),
@@ -183,6 +189,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           repo.getMeta<unknown>('habits'),
           repo.getMeta<unknown>('activities'),
           repo.getMeta<unknown>('plan'),
+          repo.getMeta<unknown>('groupAlertsIgnored'),
         ]);
         // Installation antérieure au cardio : aucune liste enregistrée, la liste par défaut s'applique.
         // Liste enregistrée par une version antérieure : les nouvelles machines sont ajoutées une seule fois.
@@ -207,6 +214,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setReportState(sanitizeReportSettings(reports));
         reportSeenRef.current = sanitizeReportSeen(seen);
         setReportSeen(reportSeenRef.current);
+        ignoredAlertsRef.current = sanitizeIgnoredAlerts(ignored);
+        setIgnoredAlerts(ignoredAlertsRef.current);
         setHabitsState(sanitizeHabits(loadedHabits));
         activitiesRef.current = sanitizeActivities(loadedActivities);
         setActivitiesState(activitiesRef.current);
@@ -596,6 +605,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [repo],
   );
 
+  const ignoreGroupAlert = useCallback(
+    async (alert: GroupAlert): Promise<void> => {
+      const next = ignoreAlert(ignoredAlertsRef.current, alert);
+      ignoredAlertsRef.current = next;
+      setIgnoredAlerts(next);
+      try {
+        await repo?.setMeta('groupAlertsIgnored', next);
+      } catch (error) {
+        // Sans gravité : l'alerte réapparaîtra à la prochaine ouverture.
+        console.error('[MyFitApp] alerte ignorée non mémorisée', error);
+      }
+    },
+    [repo],
+  );
+
   const generalSettings = useMemo(
     () => ({ weeklyRecap: recapSettings, cardioMachines, cardioMachinesVersion: CARDIO_MACHINES_VERSION, reports: reportSettings, habits }),
     [recapSettings, cardioMachines, reportSettings, habits],
@@ -660,6 +684,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setReportSettings,
     reportSeen,
     markReportSeen,
+    ignoredAlerts,
+    ignoreGroupAlert,
     habits,
     setHabits,
     activities,

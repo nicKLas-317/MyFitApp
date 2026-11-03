@@ -2,6 +2,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { formalForms } from '../src/ui/__tests__/vouvoiement';
 import type { Session, SessionPlan } from '../src/domain/types';
 import { simulatedHistory } from '../src/analysis/__tests__/simulation';
+import { ALERT_NOW, alertHistory } from '../src/analysis/__tests__/alertes-simulation';
 import { activeSession, addExercise, cardAction, doExercise, finishSheet, openSettingsSection, readSessions, startSession, validateSets, writeSessions } from './helpers';
 
 /** Fond d'un bouton principal (bleu) et cadre neutre. */
@@ -730,6 +731,35 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
     await page.reload();
     await expect(page.getByRole('dialog', { name: 'Séance toujours en cours' })).toBeVisible();
     await expectClean(page, 'Séance oubliée');
+
+    // Alertes « groupe moins travaillé » (version 1.38.0) : trois lignes (vacances les deux dernières semaines) sous le
+    // récapitulatif et en haut de l'onglet Progrès, à 412, 360 et 320 px et à 360 px avec le texte agrandi.
+    await page.clock.setFixedTime(new Date(ALERT_NOW));
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve, reject) => {
+          const open = indexedDB.open('myfitapp');
+          open.onsuccess = () => {
+            const tx = open.result.transaction('sessions', 'readwrite');
+            tx.objectStore('sessions').clear();
+            tx.oncomplete = () => (open.result.close(), resolve());
+            tx.onerror = () => reject(tx.error);
+          };
+        }),
+    );
+    await writeSessions(page, alertHistory({ vacations: ['2026-10-26', '2026-11-02'], dosDown: [], pecDown: [] }));
+    for (const [width, scale] of [[412, 1], [360, 1], [320, 1], [360, 1.15]] as const) {
+      await page.setViewportSize({ width, height: 800 });
+      for (const [screen, url] of [['Accueil avec des alertes', './'], ['Progrès avec des alertes', './#/progres']] as const) {
+        await page.goto(url);
+        await page.reload();
+        await expect(page.getByTestId('group-alerts').getByRole('listitem')).toHaveCount(3);
+        const restore = scale > 1 ? await largeText(page) : null;
+        await toTop(page);
+        await expectClean(page, `${screen} à ${width} px${scale > 1 ? ', texte à 115 %' : ''}`, scale);
+        await restore?.();
+      }
+    }
   });
 
   test('226. Couleurs des cadres : neutres partout, sauf ce qui concerne un groupe ; Mon poids en simple liste', async ({ page }) => {

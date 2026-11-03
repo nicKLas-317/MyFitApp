@@ -12,6 +12,7 @@ import { downloadBackup } from '../download';
 import { ActivityBanner } from '../ActivityBanner';
 import { ActivityEntry } from '../ActivityEntry';
 import { WeeklyRecapBlock } from '../WeeklyRecap';
+import { GroupAlerts } from '../GroupAlerts';
 
 export function Home() {
   const { active, commit, sessions, exercises, variants, ctxFor, plan, lastExportAt, markExported, generalSettings, activities } = useApp();
@@ -77,6 +78,8 @@ export function Home() {
       <h1 className="brand">MyFitApp</h1>
       <ActivityBanner />
       <WeeklyRecapBlock />
+      {/* Groupe moins travaillé (version 1.38.0) : une ligne discrète par groupe, sous le récapitulatif. */}
+      <GroupAlerts />
       {active ? (
         <button type="button" className="btn primary huge" onClick={() => navigate('seance')}>
           Reprendre la séance

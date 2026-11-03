@@ -52,9 +52,11 @@ export function BarChart({ data, label, average = null, current = false, testId 
   const h = (v: number) => (v / max) * (H - M.top - M.bottom);
   const base = height - bottom;
   // Libellés de l'abscisse : la première, la dernière et une sur quatre, pour rester lisible sur un téléphone ; avec
-  // peu de semaines (colonnes d'au moins 64 px), toutes, centrées sous leur barre.
+  // peu de semaines (colonnes d'au moins 64 px), toutes, centrées sous leur barre. Une date intermédiaire à moins de 3
+  // colonnes de la dernière (alignée à droite) n'est pas affichée : 11 semaines, « 26 oct. » collée à « 9 nov. » (1.38.0).
   const roomy = slot >= 64;
-  const shown = (i: number) => roomy || i === 0 || i === data.length - 1 || i % 4 === 0;
+  const last = data.length - 1;
+  const shown = (i: number) => roomy || i === 0 || i === last || (i % 4 === 0 && last - i >= 3);
   const anchor = (i: number) => (roomy ? 'middle' : i === 0 ? 'start' : i === data.length - 1 ? 'end' : 'middle');
   // Totaux au-dessus des barres : tous si la place le permet, sinon un sur deux (et le dernier), sans chevauchement.
   const totalShown = (i: number) => slot >= TOTAL_SLOT || i % 2 === (data.length - 1) % 2;
