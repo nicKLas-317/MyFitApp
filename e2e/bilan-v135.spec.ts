@@ -194,7 +194,7 @@ test.describe('Bilan de la période, version 1.35.0', () => {
     await noOverflow(page);
   });
 
-  test('288. Bâtons verticaux des groupes au-dessus du tableau (version 1.37.0) : couleur et ordre fixe, hauteur = total, noms courts lisibles sans chevauchement à 412, 360 et 320 px (texte agrandi compris), bâton vide grisé, totaux pour le lecteur d’écran', async ({ page }) => {
+  test('288. Bâtons verticaux des groupes au-dessus du tableau (version 1.37.0) : couleur et ordre fixe, hauteur = total, noms sur une ligne (entiers ou trois lettres), deux rangs seulement en dernier recours, sans chevauchement à 412, 360 et 320 px (texte agrandi compris), bâton vide grisé, totaux pour le lecteur d’écran', async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-11-02T09:00:00'));
     await page.goto('./');
     await writeSessions(page, SESSIONS);
@@ -220,22 +220,47 @@ test.describe('Bilan de la période, version 1.35.0', () => {
     expect(await dos.locator('.groups-stick-track').evaluate((e) => getComputedStyle(e).borderTopStyle)).toBe('dashed');
     // Gris des textes secondaires (--muted, #9aa1b0).
     expect(await dos.locator('.groups-stick-label').evaluate((e) => getComputedStyle(e).color)).toBe('rgb(154, 161, 176)');
-    // Noms : six groupes à 412 px, noms courts sur une ligne ; à 360 et 320 px (et texte agrandi), deux rangs alternés.
-    const expected = { 412: 'short', 360: 'staggered', 320: 'staggered' } as const;
+    // Noms (version 1.37.1) : toujours sur une ligne si possible ; six groupes : trois lettres à 412, 360 et 320 px, et
+    // encore à 320 px avec le texte agrandi à 115 %.
+    const largeText = () => page.addStyleTag({ content: ':root { font-size: calc(17px * 1.15) !important; }' });
+    const six = ['Pec', 'Dos', 'Épa', 'Bic', 'Tri', 'Jam'];
     for (const width of [412, 360, 320] as const) {
       await page.setViewportSize({ width, height: 900 });
-      await expect(chart).toHaveAttribute('data-labels', expected[width]);
+      await expect(chart).toHaveAttribute('data-labels', 'short');
       const names = await stickNames(page);
-      expect(names, `${width}px`).toMatchObject({ names: ['Pecto', 'Dos', 'Épaul', 'Biceps', 'Triceps', 'Jambes'], rows: expected[width] === 'short' ? 1 : 2, overlap: 0, outside: 0, tilted: 0 });
+      expect(names, `${width}px`).toMatchObject({ names: six, rows: 1, overlap: 0, outside: 0, tilted: 0 });
       expect(names.fontSize, `${width}px`).toBeGreaterThanOrEqual(13);
     }
-    // Texte agrandi à 115 % à 412 px : les noms ne tiennent plus sur une ligne, deux rangs, sans chevauchement.
-    await page.setViewportSize({ width: 412, height: 900 });
+    let large = await largeText();
     await expect(chart).toHaveAttribute('data-labels', 'short');
-    const large = await page.addStyleTag({ content: ':root { font-size: calc(17px * 1.15) !important; }' });
-    await expect(chart).toHaveAttribute('data-labels', 'staggered');
-    expect(await stickNames(page)).toMatchObject({ overlap: 0, outside: 0, rows: 2 });
+    expect(await stickNames(page)).toMatchObject({ names: six, rows: 1, overlap: 0, outside: 0 });
     await large.evaluate((el) => (el as Element).remove());
+
+    // Sept groupes (abdominaux au récapitulatif) : trois lettres sur une ligne à 320 px ; deux rangs alternés seulement en
+    // dernier recours, à 320 px avec le texte agrandi, sans chevauchement ; de retour sur une ligne ensuite.
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve, reject) => {
+          const open = indexedDB.open('myfitapp');
+          open.onsuccess = () => {
+            const tx = open.result.transaction('meta', 'readwrite');
+            tx.objectStore('meta').put({ groups: ['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes', 'abdominaux'], redThreshold: 2 }, 'weeklyRecap');
+            tx.oncomplete = () => (open.result.close(), resolve());
+            tx.onerror = () => reject(tx.error);
+          };
+        }),
+    );
+    await page.reload();
+    await expect(chart.locator('.groups-stick')).toHaveCount(7);
+    await expect(chart).toHaveAttribute('data-labels', 'short');
+    expect(await stickNames(page)).toMatchObject({ names: [...six, 'Abd'], rows: 1, overlap: 0, outside: 0 });
+    large = await largeText();
+    await expect(chart).toHaveAttribute('data-labels', 'staggered');
+    expect(await stickNames(page)).toMatchObject({ names: [...six, 'Abd'], rows: 2, overlap: 0, outside: 0, tilted: 0 });
+    await page.setViewportSize({ width: 360, height: 900 });
+    await expect(chart).toHaveAttribute('data-labels', 'short');
+    await large.evaluate((el) => (el as Element).remove());
+    await page.setViewportSize({ width: 320, height: 900 });
     await expect(chart).toHaveAttribute('data-labels', 'short');
   });
 });

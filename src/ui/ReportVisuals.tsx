@@ -162,20 +162,20 @@ export function ReportSessions({ report, screen }: { report: PeriodReport; scree
   );
 }
 
-/** Noms courts des groupes sous les bâtons (version 1.37.0), quand le nom entier ne tient pas. */
+/** Noms courts des groupes sous les bâtons (version 1.37.1) : trois lettres, quand le nom entier ne tient pas. */
 export const GROUP_SHORT_LABELS: Readonly<Record<MuscleGroup, string>> = {
-  pectoraux: 'Pecto',
+  pectoraux: 'Pec',
   dos: 'Dos',
-  epaules: 'Épaul',
-  biceps: 'Biceps',
-  triceps: 'Triceps',
-  jambes: 'Jambes',
-  quadriceps: 'Quadri',
-  'ischio-jambiers': 'Ischios',
-  mollets: 'Mollets',
-  fessiers: 'Fessiers',
-  adducteurs: 'Adduct.',
-  abdominaux: 'Abdos',
+  epaules: 'Épa',
+  biceps: 'Bic',
+  triceps: 'Tri',
+  jambes: 'Jam',
+  quadriceps: 'Qua',
+  'ischio-jambiers': 'Isc',
+  mollets: 'Mol',
+  fessiers: 'Fes',
+  adducteurs: 'Add',
+  abdominaux: 'Abd',
 };
 
 /** Disposition des noms sous les bâtons : entiers sur une ligne, courts sur une ligne, ou courts sur deux rangs alternés. */
@@ -185,8 +185,9 @@ export type StickLabels = 'full' | 'short' | 'staggered';
 const LABEL_GAP = 6;
 
 /**
- * Première disposition où chaque nom tient : sur une ligne, un nom dispose de la largeur de sa colonne ; sur deux rangs
- * alternés (jamais incliné), de deux colonnes. `full` et `short` : largeur de chaque nom, en px, à la taille affichée.
+ * Première disposition où chaque nom tient, toujours sur une ligne si possible (version 1.37.1) : le nom entier, sinon
+ * les trois lettres ; deux rangs alternés (jamais inclinés) seulement en dernier recours, si même les trois lettres ne
+ * tiennent pas (320 px avec le texte agrandi). Sur une ligne, un nom dispose de la largeur de sa colonne. `full` et `short` : largeur de chaque nom, en px, à la taille affichée.
  */
 export function stickLabels(column: number, full: readonly number[], short: readonly number[]): StickLabels {
   const fits = (widths: readonly number[], room: number) => widths.every((w) => w + LABEL_GAP <= room);
