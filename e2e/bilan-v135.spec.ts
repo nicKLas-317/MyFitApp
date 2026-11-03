@@ -47,21 +47,33 @@ const STATUS_COLORS = ['rgb(74, 222, 128)', 'rgb(253, 186, 116)', 'rgb(252, 165,
 const section = (page: Page, title: string) => page.getByRole('region', { name: title });
 const tile = (page: Page, label: string) => section(page, 'Séances').locator(`[data-testid="report-tile"][data-label="${label}"]`);
 const rungs = (card: ReturnType<Page['locator']>) => card.locator('.rung').evaluateAll((els) => els.map((e) => `${e.textContent}:${e.className.split(' ')[1]}`).join(' '));
-/** Largeur d'un segment de barre en séances (une séance directe = 1). */
-const units = (page: Page, group: string) =>
+/**
+ * Ligne d'un groupe (version 1.36.0) : chiffres Séances / Indirect / Maison (« » pour une case vide, lue « 0 »), total
+ * de la barre en séances et sa largeur rapportée au total le plus grand.
+ */
+const groupRow = (page: Page, group: string) =>
   section(page, 'Groupes travaillés')
-    .locator(`[data-group="${group}"] .seg`)
-    .evaluateAll((segs) => {
-      const track = segs[0]!.parentElement!.getBoundingClientRect().width;
-      // Échelle de la section : la barre la plus longue, arrondie à la séance supérieure (2 au moins).
-      const scale = Number(segs[0]!.closest('section')!.getAttribute('data-scale'));
-      return segs.map((s) => `${s.className.split(' ')[1]}:${Math.round((s.getBoundingClientRect().width / track) * scale * 100) / 100}`);
+    .locator(`tr[data-group="${group}"]`)
+    .evaluate((tr) => {
+      const bar = tr.querySelector<HTMLElement>('.groups-bar > span')!;
+      return {
+        cells: [...tr.querySelectorAll('td')].map((td) => (td.querySelector('.visually-hidden') ? '' : td.textContent)),
+        total: Number(bar.dataset.total),
+        width: Math.round((bar.getBoundingClientRect().width / bar.parentElement!.getBoundingClientRect().width) * 1000) / 1000,
+      };
     });
 
 async function noOverflow(page: Page): Promise<void> {
   for (const width of [412, 360, 320]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `${width}px`).toBe(true);
+    // Tableau des groupes dans son cadre ; en-têtes abrégés seulement à 320 px.
+    const table = page.locator('.groups-table');
+    if (await table.count()) {
+      const [t, frame] = await Promise.all([table.boundingBox(), section(page, 'Groupes travaillés').boundingBox()]);
+      expect(t!.x + t!.width, `${width}px`).toBeLessThanOrEqual(frame!.x + frame!.width - 16);
+      await expect(table.locator('thead .groups-short:visible')).toHaveCount(width === 320 ? 3 : 0);
+    }
   }
   await page.setViewportSize({ width: 412, height: 915 });
 }
@@ -84,12 +96,21 @@ test.describe('Bilan de la période, version 1.35.0', () => {
     // Pas de calendrier pour la semaine.
     await expect(page.getByTestId('report-calendar')).toHaveCount(0);
     // Barres : pectoraux 1 séance + maison plafonnée à ½ (11 séries) ; jambes ½ (futsal) ; dos vide, « non travaillé ».
-    expect(await units(page, 'pectoraux')).toEqual(['seg-main:1', 'seg-home:0.5']);
-    expect(await units(page, 'jambes')).toEqual(['seg-extra:0.5']);
-    await expect(section(page, 'Groupes travaillés').locator('[data-group="pectoraux"]')).toContainText('1× · +11 séries maison');
-    await expect(section(page, 'Groupes travaillés').locator('[data-group="dos"]')).toHaveText(/Dos\s*non travaillé/);
+    // Groupes (version 1.36.0) : pectoraux 1 séance, 11 séries à la maison plafonnées à ½ (total 1,5, la plus longue
+    // barre) ; jambes ½ (futsal) ; dos non travaillé, cases vides.
+    expect(await groupRow(page, 'pectoraux')).toEqual({ cells: ['1', '', '11'], total: 1.5, width: 1 });
+    expect(await groupRow(page, 'jambes')).toEqual({ cells: ['', '1', ''], total: 0.5, width: 0.333 });
+    expect(await groupRow(page, 'dos')).toEqual({ cells: ['', '', ''], total: 0, width: 0 });
+    await expect(section(page, 'Groupes travaillés').locator('tr[data-group="dos"]')).toHaveAttribute('data-idle', 'true');
+    // Case vide : rien d'affiché, « 0 » pour le lecteur d'écran ; en-têtes complets à 412 px.
+    await expect(section(page, 'Groupes travaillés').locator('tr[data-group="dos"] td').first()).toHaveText('0');
+    expect(await section(page, 'Groupes travaillés').locator('tr[data-group="dos"] td').first().evaluate((td) => (td as HTMLElement).getBoundingClientRect().width > 0 && td.querySelector('.visually-hidden') !== null)).toBe(true);
+    await expect(section(page, 'Groupes travaillés').locator('thead .groups-long:visible')).toHaveText(['Séances', 'Indirect', /^Maison\s*\(séries\)$/]);
+    await expect(section(page, 'Groupes travaillés').getByRole('columnheader')).toHaveText(['Barre : total', /Séances/, /Indirect/, /Maison/]);
+    // Barre du total : 12 px, dans la couleur du groupe.
+    expect(await section(page, 'Groupes travaillés').locator('tr[data-group="pectoraux"] .groups-bar').evaluate((e) => e.getBoundingClientRect().height)).toBe(12);
     // Couleur du groupe, jamais de couleur de statut.
-    expect(await section(page, 'Groupes travaillés').locator('[data-group="pectoraux"] .seg-main').evaluate((e) => getComputedStyle(e).backgroundColor)).toBe('rgb(62, 230, 238)');
+    expect(await section(page, 'Groupes travaillés').locator('tr[data-group="pectoraux"] .groups-bar > span').evaluate((e) => getComputedStyle(e).backgroundColor)).toBe('rgb(62, 230, 238)');
     const colors = await page.locator('main.period-report, main.period-report *').evaluateAll((els) => els.flatMap((e) => [getComputedStyle(e).color, getComputedStyle(e).backgroundColor, getComputedStyle(e).borderTopColor]));
     for (const c of STATUS_COLORS) expect(colors).not.toContain(c);
     // Échelles : chest press 10 → 11 (plage 8 à 12, puis « +kg ») ; planche 20 → 25 s (5 crans, sans « +kg »).
@@ -133,7 +154,8 @@ test.describe('Bilan de la période, version 1.35.0', () => {
     const [calBox, tilesBox] = [(await calendar.boundingBox())!, (await section(page, 'Séances').locator('.kpis').boundingBox())!];
     expect(calBox.y + calBox.height).toBeLessThan(tilesBox.y);
     // Maison plafonnée à ½ par semaine : ½ (semaine du 19) + 3/12 (semaine du 26), pas 14/12.
-    expect(await units(page, 'pectoraux')).toEqual(['seg-main:1', 'seg-main:1', 'seg-home:0.75']);
+    expect((await groupRow(page, 'pectoraux')).total).toBe(2.75);
+    expect((await groupRow(page, 'pectoraux')).cells).toEqual(['2', '', '14']);
     await noOverflow(page);
 
     // Semaine en cours (vendredi 30) : comparée à lun.–ven. de la semaine dernière ; pas de calendrier.

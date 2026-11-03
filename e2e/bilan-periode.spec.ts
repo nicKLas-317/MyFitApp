@@ -120,7 +120,8 @@ test.describe('Bilans de la semaine et du mois (§19.7)', () => {
     await expect(tile('Cardio')).toContainText('40\u00a0min');
     await expect(tile('Cardio')).toContainText('Tapis de marche 30\u00a0min · Rameur 10\u00a0min');
     await expect(tile('Cardio')).toContainText('▲ +40\u00a0min');
-    await expect(section('Groupes travaillés').locator('[data-group="biceps"]')).toContainText('1×\u00a0· +2\u00a0indirect');
+    // Groupes travaillés (version 1.36.0) : tableau Séances / Indirect / Maison, case vide pour zéro.
+    await expect(section('Groupes travaillés').locator('[data-group="biceps"] td')).toHaveText(['1', '2', '0']);
     // Lecteur d'écran : la phrase du mail, sous chaque échelle.
     await expect(section('Progressions')).toContainText('Tractions assistées : 3×12 avec 30 kg d’aide validé → moins d’aide, 3×8 (24 oct.)');
     await expect(section('En difficulté')).toContainText('Presse à cuisses : 4ᵉ séance rouge de suite à 100\u00a0kg → poids inférieur recommandé (21\u00a0oct.)');
@@ -133,7 +134,7 @@ test.describe('Bilans de la semaine et du mois (§19.7)', () => {
     // Curl aux haltères (version 1.30.2) : « kg / haltère », dans le texte du mail aussi.
     await expect(page.getByTestId('report-text')).toContainText('3×8 → 3×9 à 12 kg / haltère');
     // Groupes non travaillés : barre vide, « non travaillé ».
-    await expect(section('Groupes travaillés').locator('[data-idle]')).toHaveText([/Épaules.*non travaillé/, /Triceps.*non travaillé/]);
+    await expect(section('Groupes travaillés').locator('[data-idle] th')).toHaveText(['Épaules', 'Triceps']);
     expect(await tile('Séances').locator('.kpi-delta').evaluate((e) => getComputedStyle(e).fontWeight)).toBe('700');
     await test.info().attach('bilan-semaine', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
 

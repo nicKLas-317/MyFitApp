@@ -3,7 +3,7 @@
  * du mois, échelles de cycle des progressions. Affichage seulement : le texte du mail est inchangé. Pas de vert, d'orange
  * ni de rouge : couleurs des groupes et neutre.
  */
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { formatMinutes } from '../cardio/model';
 import type { Exercise } from '../domain/types';
 import {
@@ -15,7 +15,6 @@ import {
   type ReportScreen,
   type ReportSection,
 } from '../analysis/report';
-import { workParts } from '../analysis/weekly';
 import { MUSCLE_GROUP_LABELS } from '../library/seed';
 import { formatDurationLong, localDate } from '../session/format';
 import { exerciseColorProps, groupColorProps } from './groupColors';
@@ -163,47 +162,73 @@ export function ReportSessions({ report, screen }: { report: PeriodReport; scree
   );
 }
 
-/** Groupes travaillés : une barre par groupe, dans sa couleur ; ordre fixe des groupes affichés. */
+/**
+ * Groupes travaillés (version 1.36.0) : un petit tableau, une ligne par groupe affiché, dans l'ordre du récapitulatif ;
+ * colonnes Séances / Indirect / Maison (séries) en chiffres, case vide pour zéro ; sous le nom, la barre du total dans
+ * la couleur du groupe (mêmes règles que le récapitulatif : séance 1, indirect ½, maison ½ au plus par semaine).
+ * En-têtes abrégés sur un écran très étroit (320 px).
+ */
 export function ReportGroups({ report, screen }: { report: PeriodReport; screen: ReportScreen }) {
-  const scale = Math.max(2, Math.ceil(Math.max(...screen.bars.map((b) => b.direct + b.indirect + b.home))));
-  const width = (units: number): CSSProperties => ({ width: `${(100 * units) / scale}%` });
+  const totals = screen.bars.map((b) => b.direct + b.indirect + b.home);
+  const max = Math.max(...totals);
+  const head = (long: ReactNode, short: string, label: string) => (
+    <th scope="col" aria-label={label}>
+      <span className="groups-long" aria-hidden="true">
+        {long}
+      </span>
+      <span className="groups-short" aria-hidden="true">
+        {short}
+      </span>
+    </th>
+  );
+  // Zéro : case vide, lue « 0 » par le lecteur d'écran.
+  const cell = (n: number, col: string) => (
+    <td className="groups-num" data-col={col}>
+      {n > 0 ? n : <span className="visually-hidden">0</span>}
+    </td>
+  );
   return (
-    <section className="frame report-section" aria-label="Groupes travaillés" data-scale={scale}>
+    <section className="frame report-section" aria-label="Groupes travaillés">
       <h3 className="section-title">Groupes travaillés</h3>
-      <p className="report-legend" aria-hidden="true">
-        <span>
-          <i className="key key-main" />
-          séance
-        </span>
-        <span>
-          <i className="key key-extra" />
-          indirect (½)
-        </span>
-        <span>
-          <i className="key key-home" />
-          maison
-        </span>
-      </p>
-      {report.groups.map((g, i) => {
-        const bar = screen.bars[i]!;
-        const parts = workParts(g, NB);
-        const idle = parts.length === 0;
-        return (
-          <div key={g.group} className={`gbar${idle ? ' gbar-idle' : ''}`} data-testid="group-bar" data-group={g.group} data-idle={idle || undefined} {...(idle ? {} : groupColorProps(g.group))}>
-            <span className="gbar-name">{MUSCLE_GROUP_LABELS[g.group]}</span>
-            <span className="gbar-track" aria-hidden="true">
-              {Array.from({ length: g.count }, (_, k) => (
-                <span key={`d${k}`} className="seg seg-main" style={width(1)} />
-              ))}
-              {Array.from({ length: g.indirect }, (_, k) => (
-                <span key={`i${k}`} className="seg seg-extra" style={width(0.5)} />
-              ))}
-              {bar.home > 0 && <span className="seg seg-home" style={width(bar.home)} />}
-            </span>
-            <span className="gbar-parts">{idle ? 'non travaillé' : parts.join(' · ')}</span>
-          </div>
-        );
-      })}
+      <table className="groups-table">
+        <thead>
+          <tr>
+            <th scope="col" className="groups-name">
+              Barre : total
+            </th>
+            {head('Séances', 'Séan.', 'Séances')}
+            {head('Indirect', 'Ind.', 'Indirect')}
+            {head(
+              <>
+                Maison
+                <br />
+                (séries)
+              </>,
+              'Mais.',
+              'Maison (séries)',
+            )}
+          </tr>
+        </thead>
+        <tbody>
+          {report.groups.map((g, i) => {
+            const idle = g.count === 0 && g.indirect === 0 && !g.home;
+            const total = totals[i]!;
+            return (
+              <tr key={g.group} data-testid="group-row" data-group={g.group} data-idle={idle || undefined} className={idle ? 'groups-idle' : undefined} {...(idle ? {} : groupColorProps(g.group))}>
+                <th scope="row" className="groups-name">
+                  {MUSCLE_GROUP_LABELS[g.group]}
+                  <span className="groups-bar" aria-hidden="true">
+                    <span style={{ width: `${max > 0 ? (100 * total) / max : 0}%` }} data-total={total} />
+                  </span>
+                </th>
+                {cell(g.count, 'seances')}
+                {cell(g.indirect, 'indirect')}
+                {cell(g.home ?? 0, 'maison')}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </section>
   );
 }

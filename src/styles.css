@@ -2314,20 +2314,6 @@ fieldset.frame > legend + * {
   vertical-align: -1px;
 }
 
-.key-main {
-  background: var(--muted);
-}
-
-.key-extra {
-  background: color-mix(in srgb, var(--muted) 40%, transparent);
-}
-
-.key-home,
-.seg-home {
-  background: repeating-linear-gradient(135deg, var(--group-color, var(--muted)) 0 3px, transparent 3px 6px);
-  box-shadow: inset 0 0 0 1px var(--group-color, var(--muted));
-}
-
 .key-before {
   border: 2px dashed var(--muted);
 }
@@ -2370,57 +2356,77 @@ fieldset.frame > legend + * {
   font-weight: 700;
 }
 
-.gbar {
-  display: grid;
-  grid-template-columns: 6.5em minmax(0, 1fr);
-  column-gap: var(--space-1);
-  align-items: center;
-  padding: var(--space-1) 0;
+/* Groupes travaillés (version 1.36.0) : petit tableau, barre du total sous le nom, case vide pour zéro. */
+.groups-table {
+  width: 100%;
+  border-collapse: collapse;
 }
 
-.gbar + .gbar {
+.groups-table th,
+.groups-table td {
+  padding: var(--space-1) 0 var(--space-1) var(--space-1);
+  text-align: center;
+}
+
+.groups-table thead th {
+  font-size: var(--fs-1);
+  font-weight: 400;
+  color: var(--muted);
+  line-height: 1.2;
+  vertical-align: bottom;
+}
+
+.groups-table tbody tr {
   border-top: 1px solid var(--border);
 }
 
-.gbar-name {
+.groups-table .groups-name {
+  width: 100%;
+  padding-left: 0;
+  text-align: left;
+}
+
+.groups-table tbody .groups-name {
   font-size: var(--fs-2);
   font-weight: 600;
 }
 
-.gbar-track {
-  display: flex;
-  height: 16px;
+.groups-num {
+  font-weight: 700;
 }
 
-.gbar-parts {
-  grid-column: 2;
-  font-size: var(--fs-1);
-  color: var(--muted);
+.groups-bar {
+  display: block;
+  height: 12px;
+  margin-top: var(--space-1);
+  border-radius: 4px;
+  background: var(--surface-2);
+  overflow: hidden;
 }
 
-.gbar-idle .gbar-name {
-  color: var(--muted);
-}
-
-.gbar-idle .gbar-track {
-  border: 1px dashed var(--frame-neutral);
-  border-radius: 3px;
-}
-
-.seg {
+.groups-bar > span {
+  display: block;
   height: 100%;
-  flex: none;
-  border-radius: 3px;
-  /* Séparation entre deux séances, sans écart. */
-  border-right: 2px solid var(--surface);
-}
-
-.seg-main {
   background: var(--group-color);
 }
 
-.seg-extra {
-  background: color-mix(in srgb, var(--group-color) 40%, transparent);
+.groups-idle .groups-name {
+  color: var(--muted);
+}
+
+.groups-short {
+  display: none;
+}
+
+/* Écran très étroit (320 px) : en-têtes abrégés. */
+@media (max-width: 339px) {
+  .groups-long {
+    display: none;
+  }
+
+  .groups-short {
+    display: inline;
+  }
 }
 
 .prog-list {

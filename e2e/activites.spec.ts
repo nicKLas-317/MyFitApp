@@ -71,7 +71,7 @@ test.describe('Activités habituelles hors salle', () => {
     await page.goto('./#/bilan-periode/semaine/2026-10-19');
     // Version 1.35.0 : tuile « Activités », barre des jambes.
     await expect(page.locator('[data-testid="report-tile"][data-label="Activités"]')).toContainText('Badminton ×1, 1\u00a0h\u00a030');
-    await expect(page.getByRole('region', { name: 'Groupes travaillés' }).locator('[data-group="jambes"]')).toContainText('+1\u00a0indirect');
+    await expect(page.getByRole('region', { name: 'Groupes travaillés' }).locator('[data-group="jambes"] td[data-col="indirect"]')).toHaveText('1');
     await expect(page.getByTestId('report-text')).toContainText('- Activités : Badminton ×1, 1 h 30');
     await test.info().attach('bilan-semaine', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
 
