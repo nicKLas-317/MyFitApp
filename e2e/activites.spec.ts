@@ -153,7 +153,7 @@ test.describe('Activités habituelles hors salle', () => {
     await expect(banner(page)).toContainText('Tennis mercredi soir (19 h – 20 h 30)');
   });
 
-  test('240. Activité ponctuelle : « + Activité » discret sur l’onglet Séance, activité connue (hors habitude active en tête et présélectionnée, habitude désactivée comprise) ou nouveau nom, date, durée et groupes préremplis ; comptée comme une activité confirmée ; habitudes inchangées ; format smartphone', async ({ page }) => {
+  test('240. Activité ponctuelle : « + Activité » en bouton secondaire sur l’onglet Séance, activité connue (hors habitude active en tête et présélectionnée, habitude désactivée comprise) ou nouveau nom, date, durée et groupes préremplis ; comptée comme une activité confirmée ; habitudes inchangées ; format smartphone', async ({ page }) => {
     // Seul le badminton (habitude active) est connu : proposé, mais jamais présélectionné.
     await openAt(page, '2026-10-23', '12:00');
     await page.getByRole('button', { name: '+ Activité' }).click();
@@ -179,9 +179,26 @@ test.describe('Activités habituelles hors salle', () => {
     await openAt(page, '2026-10-23', '22:00');
     await expect(banner(page)).toHaveCount(1);
     await expect(banner(page)).toContainText('Badminton lundi soir');
-    // Bouton discret : un lien d'action sous « Démarrer une séance », 48 px de haut.
+    // Bouton secondaire (version 1.40.0 ; lien discret avant) sous « Démarrer une séance », 48 px de haut. À côté de
+    // « Préparer ma prochaine séance » seulement si chacun tient sur une ligne : à 412 px, ils ne tiennent pas ensemble,
+    // l'un sous l'autre, pleine largeur, chacun sur une ligne ; sur un écran plus large, côte à côte.
     const add = page.getByRole('button', { name: '+ Activité' });
-    await expect(add).toHaveClass(/\blink\b/);
+    const prepare = page.getByRole('button', { name: 'Préparer ma prochaine séance' });
+    await expect(add).toHaveClass(/\bbtn\b/);
+    await expect(add).not.toHaveClass(/\bprimary\b/);
+    const row = async () => {
+      const [a, p] = [(await add.boundingBox())!, (await prepare.boundingBox())!];
+      const lines = await Promise.all([add, prepare].map((b) => b.evaluate((el) => {
+        const r = document.createRange();
+        r.selectNodeContents(el);
+        return new Set([...r.getClientRects()].map((c) => Math.round(c.top))).size;
+      })));
+      return { sameRow: a.y === p.y, lines, height: Math.min(a.height, p.height), sameWidth: Math.round(a.width) === Math.round(p.width) };
+    };
+    expect(await row()).toEqual({ sameRow: false, lines: [1, 1], height: 48, sameWidth: true });
+    await page.setViewportSize({ width: 600, height: 915 });
+    expect(await row()).toMatchObject({ sameRow: true, lines: [1, 1] });
+    await page.setViewportSize({ width: 412, height: 915 });
     expect((await add.boundingBox())!.height).toBeGreaterThanOrEqual(47.5);
     expect((await add.boundingBox())!.y).toBeGreaterThan((await page.getByRole('button', { name: 'Démarrer une séance' }).boundingBox())!.y);
     await add.click();

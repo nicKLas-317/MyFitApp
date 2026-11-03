@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { useApp } from '../app/store';
 import { activityLabel, HABIT_GROUPS, knownActivities, oneOffActivity, type OneOffError } from '../activities/model';
 import type { MuscleGroup } from '../domain/types';
@@ -18,13 +18,33 @@ const ERRORS: Record<OneOffError, string> = {
  * habitudes désactivées comprises, ou nouveau nom), date (aujourd'hui par défaut), durée et groupes, préremplis d'après
  * la dernière fois ou l'habitude. Elle compte ensuite comme une activité habituelle confirmée.
  */
-export function ActivityEntry() {
+export function ActivityEntry({ before }: { before?: ReactNode }) {
   const { habits, activities, addActivity } = useApp();
   const [open, setOpen] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
+  // Version 1.40.0 : « + Activité » en bouton secondaire, à côté de son voisin (« Préparer ma prochaine séance ») quand
+  // chacun tient sur une ligne, sinon dessous ; le formulaire s'ouvre sous la rangée.
+  const button = !open && (
+    <button
+      type="button"
+      className="btn add-activity"
+      onClick={() => {
+        setSaved(null);
+        setOpen(true);
+      }}
+    >
+      + Activité
+    </button>
+  );
   return (
     <>
-      {open ? (
+      {(before || button) && (
+        <div className="home-row">
+          {before}
+          {button}
+        </div>
+      )}
+      {open && (
         <ActivityForm
           known={knownActivities(habits, activities)}
           onCancel={() => setOpen(false)}
@@ -37,17 +57,6 @@ export function ActivityEntry() {
             return [];
           }}
         />
-      ) : (
-        <button
-          type="button"
-          className="link add-activity"
-          onClick={() => {
-            setSaved(null);
-            setOpen(true);
-          }}
-        >
-          + Activité
-        </button>
       )}
       {saved && (
         <p className="muted small" role="status">

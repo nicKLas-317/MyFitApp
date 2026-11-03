@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { addExercise, doExercise, exerciseCard, finishSession, readSessions } from './helpers';
 
 test.describe('Compléter une séance terminée le même jour (version 1.28.0)', () => {
-  test('266. Lien discret sur l’accueil, bouton principal dans le détail ; ce qui était fait reste fermé ; une seule séance, durée sans la pause', async ({ page }) => {
+  test('266. Bouton secondaire sur l’accueil, bouton principal dans le détail ; ce qui était fait reste fermé ; une seule séance, durée sans la pause', async ({ page }) => {
     // Mardi 8 h, à la maison : développé incliné haltères 3 × 8.
     await page.clock.setFixedTime(new Date('2026-10-27T08:00:00'));
     await page.goto('./');
@@ -17,12 +17,13 @@ test.describe('Compléter une séance terminée le même jour (version 1.28.0)',
     // La fin de séance est écrite en base avant de recharger.
     await expect.poll(async () => (await readSessions(page))[0]?.state).toBe('done');
 
-    // Accueil : un lien discret (pas un bouton plein), sous le choix du lieu, au style de « Préparer ma prochaine séance ».
+    // Accueil : un bouton secondaire (version 1.40.0 ; lien discret avant), sous le choix du lieu, au-dessus de
+    // « Préparer ma prochaine séance ».
     await page.clock.setFixedTime(new Date('2026-10-27T09:00:00'));
     await page.reload();
     const link = page.getByRole('button', { name: 'Compléter la séance de ce matin' });
-    await expect(link).toHaveClass(/\blink\b/);
-    await expect(link).not.toHaveClass(/\bbtn\b/);
+    await expect(link).toHaveClass(/\bbtn\b/);
+    await expect(link).not.toHaveClass(/\bprimary\b/);
     const prepare = page.getByRole('button', { name: 'Préparer ma prochaine séance' });
     expect((await link.boundingBox())!.y).toBeLessThan((await prepare.boundingBox())!.y);
     expect((await place.boundingBox())!.y).toBeLessThan((await link.boundingBox())!.y);

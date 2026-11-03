@@ -18,14 +18,27 @@ export function useGroupAlerts(): GroupAlert[] {
 }
 
 /**
- * Une ligne discrète par groupe (3 au plus), sous le récapitulatif de l'onglet Séance et en haut de l'onglet Progrès :
+ * Une ligne discrète par groupe (3 au plus), sous le récapitulatif de l'onglet Séance (une seule ligne de résumé à
+ * partir de 2 groupes, `compact`) et en haut de l'onglet Progrès :
  * un appui ouvre les séries par semaine du groupe, « Ignorer » la masque jusqu'à la semaine suivante encore sous la
  * moyenne. Neutre comme le récapitulatif : ni couleur de groupe, ni vert, orange ou rouge.
  */
-export function GroupAlerts() {
+export function GroupAlerts({ compact = false }: { compact?: boolean }) {
   const alerts = useGroupAlerts();
   const { ignoreGroupAlert } = useApp();
   if (alerts.length === 0) return null;
+  // Onglet Séance (version 1.40.0) : à partir de 2 groupes, une seule ligne qui mène à l'onglet Progrès, où restent le
+  // détail et « Ignorer » ; « Démarrer une séance » reste ainsi à l'écran sans défiler.
+  if (compact && alerts.length >= 2) {
+    return (
+      <a className="link group-alerts-summary" href={routeHash('progres')} data-testid="group-alerts-summary">
+        <span>
+          <strong className="group-alert-name">{alerts.length}{'\u00a0'}groupes sous ta moyenne</strong>
+          {`\u00a0: ${alerts.map((a) => MUSCLE_GROUP_LABELS[a.group]).join(', ')}`}
+        </span>
+      </a>
+    );
+  }
   return (
     <ul className="group-alerts" aria-label="Groupes moins travaillés" data-testid="group-alerts">
       {alerts.map((a) => (

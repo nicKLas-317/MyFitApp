@@ -704,7 +704,7 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
     await page.goto(`./#/historique/${homeSession.id}`);
     await expect(page.getByRole('group', { name: 'Lieu de la séance' })).toBeVisible();
     await expectClean(page, 'Détail d’une séance à la maison');
-    // Compléter la séance du jour (version 1.28.0) : bouton principal du détail, lien discret de l'accueil, séance
+    // Compléter la séance du jour (version 1.28.0) : bouton principal du détail, bouton secondaire de l'accueil, séance
     // rouverte avec ce qui était fait fermé (texte agrandi compris), puis « Annuler les ajouts ».
     await expect(page.getByRole('button', { name: 'Compléter cette séance' })).toBeVisible();
     await page.goto('./');
@@ -754,7 +754,9 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
       for (const [screen, url] of [['Accueil avec des alertes', './'], ['Progrès avec des alertes', './#/progres']] as const) {
         await page.goto(url);
         await page.reload();
-        await expect(page.getByTestId('group-alerts').getByRole('listitem')).toHaveCount(3);
+        // Onglet Séance (version 1.40.0) : une ligne de résumé ; onglet Progrès : une ligne par groupe.
+        if (url === './') await expect(page.getByTestId('group-alerts-summary')).toHaveText('3 groupes sous ta moyenne : Pectoraux, Dos, Épaules');
+        else await expect(page.getByTestId('group-alerts').getByRole('listitem')).toHaveCount(3);
         const restore = scale > 1 ? await largeText(page) : null;
         await toTop(page);
         await expectClean(page, `${screen} à ${width} px${scale > 1 ? ', texte à 115 %' : ''}`, scale);

@@ -13,7 +13,7 @@ import { ActivityBanner } from '../ActivityBanner';
 import { ActivityEntry } from '../ActivityEntry';
 import { WeeklyRecapBlock } from '../WeeklyRecap';
 import { GroupAlerts } from '../GroupAlerts';
-import { WeekSuggestionLink } from '../WeekSuggestion';
+import { WeekSuggestionCard } from '../WeekSuggestion';
 
 export function Home() {
   const { active, commit, sessions, exercises, variants, ctxFor, plan, lastExportAt, markExported, generalSettings, activities } = useApp();
@@ -43,8 +43,9 @@ export function Home() {
     if (!completable) return;
     if (await commit(reopenSession(completable, Date.now()))) navigate('seance');
   }
-  const completeLink = completable && (
-    <button type="button" className="link complete-session" onClick={() => void complete()}>
+  /** Bouton secondaire (version 1.40.0 ; lien discret avant), seulement le jour même. */
+  const completeButton = completable && (
+    <button type="button" className="btn big complete-session" onClick={() => void complete()}>
       {completeLabel(completable)}
     </button>
   );
@@ -64,6 +65,8 @@ export function Home() {
    * Séance prévue (§5.9) : exercices dans l'ordre du plan, charge et cible recalculées par le moteur maintenant ;
    * toujours à la salle.
    */
+  const planNames = plan ? plan.items.map((e) => (e.kind === 'cardio' ? formatCardio(e.block) : displayName(variants.get(e.variantId)))).join(' · ') : '';
+
   async function startPlanned() {
     if (!plan) return;
     const available = (id: string) => {
@@ -74,13 +77,15 @@ export function Home() {
     navigate('seance');
   }
 
+  /** Version 1.40.0 : boutons secondaires sous « Démarrer » et le choix du lieu, chacun lisible comme une action. */
   return (
     <main className="screen tab-screen home">
-      <h1 className="brand">MyFitApp</h1>
+      {/* Titre masqué à l'écran (version 1.40.0), gardé pour le lecteur d'écran : « Démarrer » reste à l'écran. */}
+      <h1 className="brand visually-hidden">MyFitApp</h1>
       <ActivityBanner />
       <WeeklyRecapBlock />
-      {/* Groupe moins travaillé (version 1.38.0) : une ligne discrète par groupe, sous le récapitulatif. */}
-      <GroupAlerts />
+      {/* Groupe moins travaillé (version 1.38.0) : une ligne par groupe, ou une ligne de résumé à partir de 2 (1.40.0). */}
+      <GroupAlerts compact />
       {active ? (
         <button type="button" className="btn primary huge" onClick={() => navigate('seance')}>
           Reprendre la séance
@@ -96,17 +101,6 @@ export function Home() {
             {home ? 'Séance libre à la maison' : 'Séance libre'}
           </button>
           {placeChoice}
-          {completeLink}
-          <section className="card plan-summary" aria-label="Séance prévue">
-            <p className="plan-names" data-testid="plan-summary">
-              {plan.items.map((e) => (e.kind === 'cardio' ? formatCardio(e.block) : displayName(variants.get(e.variantId)))).join(' · ')}
-            </p>
-            <button type="button" className="link" onClick={() => navigate('seance-prevue')}>
-              Modifier ma séance prévue
-            </button>
-          </section>
-          {/* Séance pour compléter la semaine (version 1.39.0) : à côté de la séance prévue, jamais à sa place. */}
-          <WeekSuggestionLink />
         </>
       ) : (
         <>
@@ -114,14 +108,37 @@ export function Home() {
             {home ? 'Démarrer une séance à la maison' : 'Démarrer une séance'}
           </button>
           {placeChoice}
-          {completeLink}
-          <button type="button" className="link prepare-plan" onClick={() => navigate('seance-prevue')}>
-            Préparer ma prochaine séance
-          </button>
-          <WeekSuggestionLink />
         </>
       )}
-      <ActivityEntry />
+      <div className="home-actions">
+        {completeButton}
+        {!active && plan && (
+          // Carte « Ma séance prévue » (version 1.40.0) : tout le cadre ouvre la préparation.
+          <button type="button" className="card action-card plan-summary" aria-label={`Ma séance prévue : ${planNames}`} onClick={() => navigate('seance-prevue')}>
+            <span className="action-card-text">
+              <span className="action-card-title">Ma séance prévue</span>
+              <span className="action-card-sub plan-names" data-testid="plan-summary">
+                {planNames}
+              </span>
+            </span>
+            <span className="action-card-chevron" aria-hidden="true">
+              ›
+            </span>
+          </button>
+        )}
+        {/* Séance pour compléter la semaine (version 1.39.0) : à côté de la séance prévue, jamais à sa place. */}
+        <WeekSuggestionCard />
+        <ActivityEntry
+          before={
+            !active &&
+            !plan && (
+              <button type="button" className="btn prepare-plan" onClick={() => navigate('seance-prevue')}>
+                Préparer ma prochaine séance
+              </button>
+            )
+          }
+        />
+      </div>
       {remind && (
         <div className="banner info reminder" role="status">
           <span>{lastExportAt ? 'Aucune sauvegarde depuis plus de 14 jours.' : 'Pense à sauvegarder tes séances.'}</span>

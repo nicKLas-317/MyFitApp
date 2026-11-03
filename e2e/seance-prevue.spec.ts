@@ -91,7 +91,7 @@ test.describe('Séance prévue (§5.9)', () => {
   test('244. Préparée, gardée après une séance libre, réalisée 3 jours plus tard et modifiée à la salle ; non faits signalés ; export et import', async ({ page }) => {
     await seed(page, HISTORY, '2026-10-20T09:00:00');
 
-    // Accueil sans plan : « Démarrer une séance », et « Préparer ma prochaine séance » (discret).
+    // Accueil sans plan : « Démarrer une séance », et « Préparer ma prochaine séance » (bouton secondaire, version 1.40.0).
     await expect(main(page).getByRole('button', { name: 'Démarrer une séance' })).toBeVisible();
     await main(page).getByRole('button', { name: 'Préparer ma prochaine séance' }).click();
     await expect(page.getByRole('heading', { name: 'Séance prévue' })).toBeVisible();
@@ -142,11 +142,13 @@ test.describe('Séance prévue (§5.9)', () => {
     ]);
     const plannedCardio = (prepared.items[0] as PlanCardio).block;
 
-    // Accueil avec un plan : « Démarrer la séance prévue », « Séance libre » en secondaire, résumé et « Modifier ».
+    // Accueil avec un plan : « Démarrer la séance prévue », « Séance libre » en secondaire, carte « Ma séance prévue »
+    // (version 1.40.0 : toute la carte ouvre la préparation ; plus de « Préparer ma prochaine séance »).
     await page.getByRole('link', { name: 'Accueil' }).click();
     await expect(main(page).getByRole('button', { name: 'Démarrer la séance prévue' })).toBeVisible();
     await expect(page.getByTestId('plan-summary')).toHaveText(`${TAPIS_15} · Chest press · Pec deck · Leg extension · Curl biceps haltères`);
-    await expect(main(page).getByRole('button', { name: 'Modifier ma séance prévue' })).toBeVisible();
+    await expect(main(page).getByRole('button', { name: /^Ma séance prévue : / })).toBeVisible();
+    await expect(main(page).getByRole('button', { name: 'Préparer ma prochaine séance' })).toHaveCount(0);
 
     // Séance libre entre-temps : le pec deck reçoit sa deuxième verte ; le plan reste intact.
     await main(page).getByRole('button', { name: 'Séance libre' }).click();
@@ -158,7 +160,7 @@ test.describe('Séance prévue (§5.9)', () => {
     await expect(main(page).getByRole('button', { name: 'Démarrer la séance prévue' })).toBeVisible();
     expect(await readPlan(page)).toEqual(prepared);
     // La préparation suit déjà le moteur : 3 × 9 et « ↑ +1 rép. ».
-    await main(page).getByRole('button', { name: 'Modifier ma séance prévue' }).click();
+    await main(page).getByRole('button', { name: /^Ma séance prévue : / }).click();
     await expect(target(planItem(page, 'Pec deck'))).toHaveText('3 × 9 à 35 kg');
     await expect(hint(planItem(page, 'Pec deck'))).toHaveText('↑ +1 rép.');
 
@@ -263,7 +265,7 @@ test.describe('Séance prévue (§5.9)', () => {
     // Accueil : le plan est là, dans l'ordre où il était affiché (musculation, puis cardio). La base n'est pas réécrite.
     await expect(page.getByTestId('plan-summary')).toHaveText(`Pec deck · Leg extension · ${TAPIS_15}`);
     expect(await readPlan(page)).toEqual(legacy);
-    await main(page).getByRole('button', { name: 'Modifier ma séance prévue' }).click();
+    await main(page).getByRole('button', { name: /^Ma séance prévue : / }).click();
     await expect(planList(page).getByRole('listitem')).toHaveText([/^Pec deck/, /^Leg extension/, /^Cardio Tapis de marche/]);
     await expect(target(planItem(page, 'Leg extension'))).toHaveText('3 × 8 à 30 kg');
     expect(await readPlan(page)).toEqual(legacy);

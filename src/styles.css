@@ -216,24 +216,94 @@ fieldset.frame > legend {
   margin: var(--space-3) 0;
 }
 
-.home .brand {
-  margin: var(--space-1) 0 var(--space-2);
-}
-
-/* « + Activité » : discret, sous le bouton de séance ; le formulaire s'ouvre à sa place. */
-.home .add-activity {
+.home .activity-form {
   margin-top: var(--space-1);
 }
 
-/* « Préparer ma prochaine séance » et « + Activité » : l'un sous l'autre, chacun à la largeur de son texte. */
-.home .prepare-plan,
-.home .add-activity {
-  display: flex;
-  width: fit-content;
+/* Accueil sans titre visible (version 1.40.0) : le premier bloc garde la marge du haut de l'écran. */
+.home > .visually-hidden:first-child + * {
+  margin-top: var(--space-2);
 }
 
-.home .activity-form {
-  margin-top: var(--space-2);
+/*
+ * Actions secondaires de l'accueil (version 1.40.0), sous « Démarrer » et le choix du lieu : « Compléter la séance de
+ * ce matin », carte « Ma séance prévue », carte « Séance pour compléter la semaine », puis « Préparer ma prochaine
+ * séance » et « + Activité ».
+ */
+.home-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+.home-actions:empty {
+  display: none;
+}
+
+/* Côte à côte seulement si chacun tient sur une ligne (largeur de son texte), sinon l'un sous l'autre. */
+.home-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.home-row > .btn {
+  flex: 1 1 max-content;
+}
+
+/* Carte cliquable : tout le cadre est le bouton, chevron à droite. */
+.action-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: 100%;
+  min-height: var(--tap);
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-2);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.action-card-text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.action-card-title {
+  font-weight: 700;
+}
+
+.action-card-sub {
+  font-size: var(--fs-2);
+  color: var(--muted);
+}
+
+.action-card-chevron {
+  flex: none;
+  font-size: var(--fs-4);
+  color: var(--muted);
+  padding: 0 var(--space-1);
+}
+
+/* Groupes de la séance pour compléter la semaine : pastilles à la couleur du groupe (§3.2). */
+.group-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.group-pill {
+  font-size: var(--fs-1);
+  font-weight: 700;
+  line-height: 24px;
+  padding: 0 var(--space-1);
+  border-radius: 999px;
+  color: var(--bg);
+  background: var(--group-color);
 }
 
 /* Lieu (version 1.26.0) : « Salle » ou « Maison », sous le bouton de la séance libre et dans le détail d'une séance. */
@@ -243,19 +313,8 @@ fieldset.frame > legend {
   margin-top: var(--space-1);
 }
 
-/* Séance prévue (§5.9) sur l'accueil : « Séance libre » en secondaire, puis le résumé du plan et « Modifier ». */
-.home .free-session,
-.home .complete-session,
-.home .prepare-plan {
-  margin-top: var(--space-1);
-}
-
-/*
- * Séance pour compléter la semaine (version 1.39.0, §5.15) : une ligne discrète à côté de « Préparer ma prochaine
- * séance » (ou sous le résumé de la séance prévue), sur deux lignes au plus si la place manque.
- */
-.home .suggest-week {
-  display: flex;
+/* Séance prévue (§5.9) sur l'accueil : « Séance libre » en secondaire. */
+.home .free-session {
   margin-top: var(--space-1);
 }
 
@@ -278,15 +337,6 @@ fieldset.frame > legend {
   margin-top: var(--space-2);
 }
 
-.plan-summary {
-  margin-top: var(--space-2);
-  padding: var(--space-1) var(--space-2) 0;
-}
-
-.plan-names {
-  margin: 0;
-  color: var(--muted);
-}
 
 /* Préparation de la séance prévue : une carte par exercice, cible du moteur comme dans la carte de séance. */
 .plan-list {
@@ -1959,8 +2009,18 @@ fieldset {
 }
 
 /* Collées au récapitulatif : elles en sont la suite. */
-.weekly-recap:has(+ .group-alerts) {
+.weekly-recap:has(+ .group-alerts),
+.weekly-recap:has(+ .group-alerts-summary) {
   margin-bottom: var(--space-1);
+}
+
+/* Onglet Séance, 2 groupes ou plus (version 1.40.0) : une ligne de résumé, qui mène à l'onglet Progrès. */
+.group-alerts-summary {
+  display: flex;
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-2);
+  color: var(--muted);
+  text-decoration: none;
 }
 
 .group-alert {

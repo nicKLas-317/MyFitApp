@@ -66,6 +66,7 @@ async function writePlan(page: Page, plan: SessionPlan): Promise<void> {
 }
 
 const line = (page: Page) => page.getByTestId('week-suggestion');
+const pills = (page: Page) => line(page).locator('.group-pill');
 const items = (page: Page) => page.getByRole('list', { name: 'Séance proposée' }).getByRole('listitem');
 const planItems = (plan: SessionPlan | null) => plan?.items.map((i) => (i.kind === 'cardio' ? `cardio:${i.block.machine}:${i.block.minutes}` : i.variantId));
 const SUGGESTED = ['cardio:Tapis de marche:10', 'leg-extension', 'elevations-laterales', 'extension-triceps-poulie', 'curl-biceps-halteres'];
@@ -94,15 +95,31 @@ function layout(page: Page) {
 }
 
 test.describe('Séance pour compléter la semaine', () => {
-  test('294. Ligne discrète à côté de « Préparer ma prochaine séance » ; écran avec l’échauffement, les exercices et la cible du moteur ; « En faire ma séance prévue », « Remplacer ma séance prévue » ; « Démarrer cette séance » sans toucher à la séance prévue ; recalculée après la séance ; rien le lundi avant une séance à la salle', async ({ page }) => {
+  test('294. Carte avec ses groupes en pastilles au-dessus de « Préparer ma prochaine séance » ; écran avec l’échauffement, les exercices et la cible du moteur ; « En faire ma séance prévue », « Remplacer ma séance prévue » ; « Démarrer cette séance » sans toucher à la séance prévue ; recalculée après la séance ; rien le lundi avant une séance à la salle', async ({ page }) => {
     // Jeudi 12 nov., 9 h : pectoraux 2, dos 1 (travaillé hier), épaules, biceps, triceps 1,5, jambes 1.
     await open(page);
-    await expect(line(page)).toHaveText('Séance pour compléter la semaine : Jambes · Épaules · Triceps · Biceps');
-    // À côté de « Préparer ma prochaine séance », juste dessous ; lien d'action de 48 px ; « Démarrer » toujours à l'écran.
-    expect(await line(page).evaluate((el) => el.previousElementSibling?.classList.contains('prepare-plan'))).toBe(true);
+    // Carte cliquable (version 1.40.0 ; ligne discrète en 1.39.0) : titre, « Pour aujourd’hui · 4 exercices », groupes
+    // en pastilles de leur couleur ; juste au-dessus de « Préparer ma prochaine séance » et « + Activité ».
+    await expect(line(page).locator('.action-card-title')).toHaveText('Séance pour compléter la semaine');
+    await expect(line(page).locator('.action-card-sub')).toHaveText('Pour aujourd’hui · 4\u00a0exercices');
+    await expect(pills(page)).toHaveText(['Jambes', 'Épaules', 'Triceps', 'Biceps']);
+    const colors = await pills(page).evaluateAll((els) =>
+      els.map((el) => {
+        const probe = document.createElement('span');
+        probe.style.color = getComputedStyle(el).getPropertyValue('--group-color');
+        document.body.appendChild(probe);
+        const expected = getComputedStyle(probe).color;
+        probe.remove();
+        return { background: getComputedStyle(el).backgroundColor, expected, size: getComputedStyle(el).fontSize };
+      }),
+    );
+    for (const c of colors) expect(c).toEqual({ background: c.expected, expected: c.expected, size: '13px' });
+    expect(new Set(colors.map((c) => c.background)).size).toBe(4);
+    expect(await line(page).evaluate((el) => el.nextElementSibling?.querySelector('.prepare-plan') !== null)).toBe(true);
     expect((await line(page).boundingBox())!.height).toBeGreaterThanOrEqual(48);
     await expect(page.getByRole('button', { name: 'Démarrer une séance' })).toBeInViewport();
-    expect(await line(page).evaluate((el) => el.closest('[data-group-color]'))).toBeNull();
+    // Cadre neutre : seules les pastilles portent la couleur des groupes.
+    expect(await line(page).evaluate((el) => el.closest('[data-group-color]') ?? el.querySelector('[data-group-color]'))).toBeNull();
 
     // L'écran : onglet Séance, l'échauffement, puis les exercices dans l'ordre, chacun à la couleur de son groupe, avec
     // la charge et la cible du moteur.
@@ -187,7 +204,8 @@ test.describe('Séance pour compléter la semaine', () => {
     await page.getByRole('button', { name: 'Retour à l’accueil' }).click();
     // Recalculée après la séance : pour demain, jambes à l'objectif ; le dos a son tirage (qui complète le biceps).
     await expect(page.getByRole('button', { name: 'Démarrer la séance prévue' })).toBeVisible();
-    await expect(line(page)).toHaveText('Séance pour compléter la semaine : Dos · Épaules · Triceps');
+    await expect(line(page).locator('.action-card-sub')).toHaveText('Pour demain · 4\u00a0exercices');
+    await expect(pills(page)).toHaveText(['Dos', 'Épaules', 'Triceps']);
     await line(page).click();
     await expect(page.getByText('Pour demain, à la salle', { exact: false })).toBeVisible();
     await expect(page.getByTestId('suggest-notes')).toContainText('Biceps : complété par Tirage horizontal machine (appui pectoral) — Prise moyenne (groupe secondaire).');

@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { ALERT_NOW, alertHistory, type AlertScenario } from '../src/analysis/__tests__/alertes-simulation';
+import type { Session, SessionPlan } from '../src/domain/types';
+import { defaultSessionName } from '../src/session/format';
 import { tabBar, writeSessions } from './helpers';
 
 /** Taille de police Android agrandie (simulation) : tout le texte à 115 %. */
@@ -37,11 +39,15 @@ async function open(page: Page, scenario: AlertScenario = {}, now = ALERT_NOW): 
 
 const alerts = (page: Page) => page.getByTestId('group-alerts');
 
-/** Géométrie des lignes : hauteurs des éléments tactiles, écarts, débordement, place sous le récapitulatif. */
+/**
+ * Géométrie de l'accueil : hauteurs et écarts des éléments tactiles, débordement, alertes juste sous le récapitulatif
+ * (liste ou ligne de résumé), « Démarrer » (ou « Démarrer la séance prévue ») entièrement au-dessus de la barre
+ * d'onglets, sans défiler.
+ */
 function layout(page: Page) {
   return page.evaluate(() => {
-    const list = document.querySelector('[data-testid="group-alerts"]')!;
-    const taps = [...list.querySelectorAll('a, button')].map((e) => e.getBoundingClientRect());
+    window.scrollTo(0, 0);
+    const taps = [...document.querySelectorAll('main a, main button')].filter((e) => (e as HTMLElement).offsetParent !== null).map((e) => e.getBoundingClientRect());
     let closest = Infinity;
     for (let i = 0; i < taps.length; i++)
       for (let j = i + 1; j < taps.length; j++) {
@@ -52,20 +58,62 @@ function layout(page: Page) {
         closest = Math.min(closest, Math.max(dx, dy));
       }
     const recap = document.querySelector('[data-testid="weekly-recap"]')!;
+    const list = document.querySelector('[data-testid="group-alerts"], [data-testid="group-alerts-summary"]');
     const start = [...document.querySelectorAll('main button')].find((b) => b.textContent?.startsWith('Démarrer'))!;
+    const nav = document.querySelector('nav')!.getBoundingClientRect();
     return {
       minHeight: Math.min(...taps.map((r) => r.height)),
       closest,
       overflow: document.documentElement.scrollWidth - window.innerWidth,
-      afterRecap: recap.nextElementSibling === list,
-      startVisible: start.getBoundingClientRect().bottom <= window.innerHeight - 56,
-      fontSize: getComputedStyle(list.querySelector('li')!).fontSize,
+      afterRecap: !list || recap.nextElementSibling === list,
+      startVisible: start.getBoundingClientRect().bottom <= nav.top,
+      fontSize: list ? getComputedStyle(list.querySelector('li') ?? list).fontSize : null,
     };
   });
 }
 
+/** Tailles contrôlées : largeur, hauteur de l'écran, texte agrandi. */
+// 320 px : un écran de 360 × 800 avec la taille d’affichage agrandie d’Android (× 1,125) donne 320 × 711.
+const SIZES = [[412, 915, false], [360, 800, false], [320, 711, false], [360, 800, true]] as const;
+
+/**
+ * Cas le plus chargé de l'accueil (version 1.40.0), mercredi 11 nov. 12 h : question du badminton de lundi, 7 groupes au
+ * récapitulatif, 3 alertes (vacances les deux dernières semaines), séance du matin à compléter, séance pour compléter la
+ * semaine, rappel de sauvegarde ; avec ou sans séance prévue.
+ */
+async function openLoaded(page: Page, withPlan: boolean): Promise<void> {
+  await open(page, { vacations: ['2026-10-26', '2026-11-02'], dosDown: [], pecDown: [] });
+  const t = new Date(2026, 10, 11, 8).getTime();
+  const morning: Session = {
+    id: 'matin-11', name: defaultSessionName(t), date: '2026-11-11', startedAt: t, endedAt: t + 3_600_000, createdAt: t, updatedAt: t, origin: 'app', state: 'done',
+    performances: [{ variantId: 'presse-a-cuisses', weightKg: 60, targetReps: 10, plannedSets: 3, reps: [10, 10, 10], feeling: 'bien' }],
+  };
+  const plan: SessionPlan | null = withPlan
+    ? { id: 'plan-charge', createdAt: t, updatedAt: t, items: [{ kind: 'exercise', variantId: 'chest-press' }, { kind: 'exercise', variantId: 'pec-deck' }, { kind: 'exercise', variantId: 'tirage-vertical' }] }
+    : null;
+  await writeSessions(page, [morning]);
+  await page.evaluate(
+    (plan) =>
+      new Promise<void>((resolve, reject) => {
+        const open = indexedDB.open('myfitapp');
+        open.onsuccess = () => {
+          const tx = open.result.transaction('meta', 'readwrite');
+          const meta = tx.objectStore('meta');
+          meta.put({ groups: ['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes', 'abdominaux'], redThreshold: 2 }, 'weeklyRecap');
+          for (const key of ['activities', 'lastExportAt', 'plan']) meta.delete(key);
+          if (plan) meta.put(plan, 'plan');
+          tx.oncomplete = () => (open.result.close(), resolve());
+          tx.onerror = () => reject(tx.error);
+        };
+      }),
+    plan,
+  );
+  await page.reload();
+  await expect(page.getByTestId('weekly-recap')).toBeVisible();
+}
+
 test.describe('Alerte « groupe moins travaillé »', () => {
-  test('291. Ligne discrète sous le récapitulatif et pastille sur Progrès ; un appui ouvre les séries du groupe ; « Ignorer » jusqu’à la semaine suivante encore sous la moyenne ; 3 lignes au plus ; historique trop court : rien', async ({ page }) => {
+  test('291. Ligne discrète sous le récapitulatif (une ligne de résumé à partir de 2 groupes) et pastille sur Progrès ; un appui ouvre les séries du groupe ; « Ignorer » jusqu’à la semaine suivante encore sous la moyenne ; 3 lignes au plus ; historique trop court : rien ; cas le plus chargé : « Démarrer » à l’écran sans défiler', async ({ page }) => {
     // Dos en baisse 2 semaines, pectoraux 1 semaine seulement, vacances fin septembre : le dos seul.
     await open(page);
     const line = alerts(page).getByRole('listitem');
@@ -95,8 +143,8 @@ test.describe('Alerte « groupe moins travaillé »', () => {
     await expect(tabBar(page).getByRole('link', { name: 'Progrès : groupe sous ta moyenne' })).toBeVisible();
     await expect(tabBar(page).getByTestId('report-badge')).toHaveCount(0);
     // Discrète (15 px), sous le récapitulatif, « Démarrer une séance » toujours à l'écran ; rien ne dépasse.
-    for (const [width, big] of [[412, false], [360, false], [320, false], [360, true]] as const) {
-      await page.setViewportSize({ width, height: 915 });
+    for (const [width, height, big] of SIZES) {
+      await page.setViewportSize({ width, height });
       const restore = big ? await largeText(page) : null;
       const l = await layout(page);
       expect(l, `${width} px${big ? ', texte à 115 %' : ''}`).toMatchObject({ afterRecap: true, startVisible: true });
@@ -163,21 +211,37 @@ test.describe('Alerte « groupe moins travaillé »', () => {
     await expect(alerts(page).getByRole('link')).toHaveText('Dos : 3 séries par semaine depuis 2 semaines (ta moyenne : 5)');
     await expect(tabBar(page).getByTestId('group-alert-badge')).toBeVisible();
 
-    // Vacances les deux dernières semaines : tous les groupes sous leur moyenne, 3 lignes au plus, dans l'ordre des groupes.
+    // Vacances les deux dernières semaines : tous les groupes sous leur moyenne, 3 au plus, dans l'ordre des groupes.
+    // Onglet Séance (version 1.40.0) : une seule ligne de résumé, qui mène à l'onglet Progrès (sans « Ignorer »).
     await open(page, { vacations: ['2026-10-26', '2026-11-02'], dosDown: [], pecDown: [] });
-    await expect(alerts(page).getByRole('link')).toHaveText([
-      'Pectoraux : 0 série par semaine depuis 2 semaines (ta moyenne : 6)',
-      'Dos : 0 série par semaine depuis 2 semaines (ta moyenne : 6)',
-      'Épaules : 0 série par semaine depuis 2 semaines (ta moyenne : 4,5)',
-    ]);
-    for (const [width, big] of [[412, false], [360, false], [320, false], [360, true]] as const) {
-      await page.setViewportSize({ width, height: 915 });
+    await expect(alerts(page)).toHaveCount(0);
+    const summary = page.getByTestId('group-alerts-summary');
+    await expect(summary).toHaveText('3 groupes sous ta moyenne : Pectoraux, Dos, Épaules');
+    await expect(summary).toHaveAttribute('href', '#/progres');
+    expect(await summary.evaluate((a) => [getComputedStyle(a).textDecorationLine, getComputedStyle(a.querySelector('strong')!).fontWeight, getComputedStyle(a).fontSize])).toEqual(['none', '700', '15px']);
+    for (const [width, height, big] of SIZES) {
+      await page.setViewportSize({ width, height });
       const restore = big ? await largeText(page) : null;
       const l = await layout(page);
       expect(l, `${width} px${big ? ', texte à 115 %' : ''}`).toMatchObject({ afterRecap: true, startVisible: true });
       expect(l.minHeight).toBeGreaterThanOrEqual(48);
       expect(l.closest).toBeGreaterThanOrEqual(8);
       expect(l.overflow).toBeLessThanOrEqual(0);
+      await restore?.();
+    }
+    await page.setViewportSize({ width: 412, height: 915 });
+    // Onglet Progrès : le détail, une ligne par groupe avec « Ignorer ».
+    await summary.click();
+    await expect(page.getByRole('heading', { name: 'Progrès', exact: true })).toBeVisible();
+    await expect(alerts(page).getByRole('link')).toHaveText([
+      'Pectoraux : 0 série par semaine depuis 2 semaines (ta moyenne : 6)',
+      'Dos : 0 série par semaine depuis 2 semaines (ta moyenne : 6)',
+      'Épaules : 0 série par semaine depuis 2 semaines (ta moyenne : 4,5)',
+    ]);
+    await expect(alerts(page).getByRole('button', { name: /^Ignorer l’alerte/ })).toHaveCount(3);
+    for (const [width, height, big] of SIZES) {
+      await page.setViewportSize({ width, height });
+      const restore = big ? await largeText(page) : null;
       // « (ta moyenne : 6) » d'un bloc (version 1.38.1) : jamais « 6) » seul en fin de ligne.
       const split = await alerts(page).getByRole('link').evaluateAll((links) =>
         links.filter((link) => {
@@ -189,9 +253,11 @@ test.describe('Alerte « groupe moins travaillé »', () => {
         }).length,
       );
       expect(split, `${width} px${big ? ', texte à 115 %' : ''}`).toBe(0);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
       await restore?.();
     }
     await page.setViewportSize({ width: 412, height: 915 });
+    await page.goto('./');
     // Avec un bilan prêt en plus : une seule pastille, les deux raisons pour le lecteur d'écran.
     await page.evaluate(
       () =>
@@ -215,5 +281,33 @@ test.describe('Alerte « groupe moins travaillé »', () => {
     // Pectoraux en baisse une seule semaine : rien.
     await open(page, { dosDown: [] });
     await expect(alerts(page)).toHaveCount(0);
+
+    // Cas le plus chargé (version 1.40.0), sans puis avec séance prévue : « Démarrer » entièrement à l'écran sans
+    // défiler, au-dessus de la barre d'onglets, à 412, 360 et 320 px et à 360 px avec le texte à 115 % ; 48 px, 8 px,
+    // rien ne dépasse.
+    for (const withPlan of [false, true]) {
+      await openLoaded(page, withPlan);
+      const label = withPlan ? 'avec séance prévue' : 'sans séance prévue';
+      await expect(page.locator('.activity-banner')).toContainText('Badminton lundi soir');
+      await expect(page.getByTestId('weekly-recap').locator('.recap-cell')).toHaveCount(7);
+      await expect(page.getByTestId('group-alerts-summary')).toHaveText('3 groupes sous ta moyenne : Pectoraux, Dos, Épaules');
+      await expect(page.getByRole('button', { name: 'Compléter la séance de ce matin' })).toBeVisible();
+      await expect(page.getByTestId('week-suggestion')).toBeVisible();
+      await expect(page.getByRole('status').filter({ hasText: 'Pense à sauvegarder tes séances.' })).toBeVisible();
+      await expect(page.getByRole('button', { name: withPlan ? 'Démarrer la séance prévue' : 'Démarrer une séance' })).toBeVisible();
+      await expect(page.getByTestId('plan-summary')).toHaveCount(withPlan ? 1 : 0);
+      for (const [width, height, big] of SIZES) {
+        await page.setViewportSize({ width, height });
+        const restore = big ? await largeText(page) : null;
+        const l = await layout(page);
+        const size = `${label}, ${width} × ${height} px${big ? ', texte à 115 %' : ''}`;
+        expect(l, size).toMatchObject({ afterRecap: true, startVisible: true });
+        expect(l.minHeight, size).toBeGreaterThanOrEqual(48);
+        expect(l.closest, size).toBeGreaterThanOrEqual(8);
+        expect(l.overflow, size).toBeLessThanOrEqual(0);
+        await restore?.();
+      }
+      await page.setViewportSize({ width: 412, height: 915 });
+    }
   });
 });
