@@ -2356,7 +2356,61 @@ fieldset.frame > legend + * {
   font-weight: 700;
 }
 
-/* Groupes travaillés (version 1.36.0) : petit tableau, barre du total sous le nom, case vide pour zéro. */
+/*
+ * Groupes travaillés (version 1.37.0) : bâtons verticaux au-dessus du tableau, à la couleur du groupe ; noms entiers,
+ * courts, ou courts sur deux rangs alternés (jamais inclinés) selon la place ; tableau sans barre, case vide pour zéro.
+ */
+.groups-sticks {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  /* Marge sur les côtés : le nom d'un bâton du bord, un peu plus large que sa colonne, reste dans le cadre. */
+  margin: 0 var(--space-1) var(--space-1);
+}
+
+.groups-stick {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 96px;
+  justify-items: center;
+}
+
+.groups-stick-track {
+  display: flex;
+  align-items: flex-end;
+  width: min(32px, 70%);
+  height: 96px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.groups-stick-track > span {
+  display: block;
+  width: 100%;
+  background: var(--group-color);
+}
+
+/* Groupe non travaillé : bâton vide. */
+.groups-stick.groups-idle .groups-stick-track {
+  border: 1px dashed var(--frame-neutral);
+  background: none;
+}
+
+.groups-stick-label {
+  padding-top: var(--space-1);
+  font-size: var(--fs-1);
+  white-space: nowrap;
+}
+
+.groups-stick-spacer {
+  visibility: hidden;
+}
+
+.groups-stick.groups-idle .groups-stick-label {
+  color: var(--muted);
+}
+
 .groups-table {
   width: 100%;
   border-collapse: collapse;
@@ -2393,21 +2447,6 @@ fieldset.frame > legend + * {
 
 .groups-num {
   font-weight: 700;
-}
-
-.groups-bar {
-  display: block;
-  height: 12px;
-  margin-top: var(--space-1);
-  border-radius: 4px;
-  background: var(--surface-2);
-  overflow: hidden;
-}
-
-.groups-bar > span {
-  display: block;
-  height: 100%;
-  background: var(--group-color);
 }
 
 .groups-idle .groups-name {

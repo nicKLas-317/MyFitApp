@@ -48,20 +48,47 @@ const section = (page: Page, title: string) => page.getByRole('region', { name: 
 const tile = (page: Page, label: string) => section(page, 'Séances').locator(`[data-testid="report-tile"][data-label="${label}"]`);
 const rungs = (card: ReturnType<Page['locator']>) => card.locator('.rung').evaluateAll((els) => els.map((e) => `${e.textContent}:${e.className.split(' ')[1]}`).join(' '));
 /**
- * Ligne d'un groupe (version 1.36.0) : chiffres Séances / Indirect / Maison (« » pour une case vide, lue « 0 »), total
- * de la barre en séances et sa largeur rapportée au total le plus grand.
+ * Un groupe : chiffres de sa ligne du tableau Séances / Indirect / Maison (« » pour une case vide, lue « 0 »), total de
+ * son bâton en séances et sa hauteur rapportée au plus grand (version 1.37.0).
  */
 const groupRow = (page: Page, group: string) =>
-  section(page, 'Groupes travaillés')
-    .locator(`tr[data-group="${group}"]`)
-    .evaluate((tr) => {
-      const bar = tr.querySelector<HTMLElement>('.groups-bar > span')!;
-      return {
-        cells: [...tr.querySelectorAll('td')].map((td) => (td.querySelector('.visually-hidden') ? '' : td.textContent)),
-        total: Number(bar.dataset.total),
-        width: Math.round((bar.getBoundingClientRect().width / bar.parentElement!.getBoundingClientRect().width) * 1000) / 1000,
-      };
+  section(page, 'Groupes travaillés').evaluate((sec, g) => {
+    const tr = sec.querySelector(`tr[data-group="${g}"]`)!;
+    const stick = sec.querySelector<HTMLElement>(`.groups-stick[data-group="${g}"]`)!;
+    const fill = stick.querySelector('.groups-stick-track > span')!;
+    return {
+      cells: [...tr.querySelectorAll('td')].map((td) => (td.querySelector('.visually-hidden') ? '' : td.textContent)),
+      total: Number(stick.dataset.total),
+      height: Math.round((fill.getBoundingClientRect().height / fill.parentElement!.getBoundingClientRect().height) * 1000) / 1000,
+    };
+  }, group);
+
+/** Noms sous les bâtons : disposition choisie, chevauchements (texte seul) et noms hors du cadre. */
+const stickNames = (page: Page) =>
+  page.getByTestId('groups-chart').evaluate((c) => {
+    const names = [...c.querySelectorAll('.groups-stick-label:not(.groups-stick-spacer)')];
+    const boxes = names.map((l) => {
+      const r = document.createRange();
+      r.selectNodeContents(l);
+      return r.getBoundingClientRect();
     });
+    const frame = c.closest('section')!.getBoundingClientRect();
+    let overlap = 0;
+    for (let i = 0; i < boxes.length; i++)
+      for (let j = i + 1; j < boxes.length; j++) {
+        const [a, b] = [boxes[i]!, boxes[j]!];
+        if (a.left < b.right + 4 && b.left < a.right + 4 && a.top < b.bottom && b.top < a.bottom) overlap++;
+      }
+    return {
+      layout: c.getAttribute('data-labels'),
+      names: names.map((n) => n.textContent),
+      rows: new Set(boxes.map((b) => Math.round(b.top))).size,
+      overlap,
+      outside: boxes.filter((b) => b.left < frame.left + 18 || b.right > frame.right - 18).length,
+      fontSize: Math.min(...names.map((n) => parseFloat(getComputedStyle(n).fontSize))),
+      tilted: names.filter((n) => getComputedStyle(n).transform !== 'none' || getComputedStyle(n).writingMode !== 'horizontal-tb').length,
+    };
+  });
 
 async function noOverflow(page: Page): Promise<void> {
   for (const width of [412, 360, 320]) {
@@ -95,22 +122,20 @@ test.describe('Bilan de la période, version 1.35.0', () => {
     await expect(tile(page, 'Activités')).toHaveText(/^Activités1Futsal ×1, 1\sh\s00▲ \+1$/);
     // Pas de calendrier pour la semaine.
     await expect(page.getByTestId('report-calendar')).toHaveCount(0);
-    // Barres : pectoraux 1 séance + maison plafonnée à ½ (11 séries) ; jambes ½ (futsal) ; dos vide, « non travaillé ».
-    // Groupes (version 1.36.0) : pectoraux 1 séance, 11 séries à la maison plafonnées à ½ (total 1,5, la plus longue
-    // barre) ; jambes ½ (futsal) ; dos non travaillé, cases vides.
-    expect(await groupRow(page, 'pectoraux')).toEqual({ cells: ['1', '', '11'], total: 1.5, width: 1 });
-    expect(await groupRow(page, 'jambes')).toEqual({ cells: ['', '1', ''], total: 0.5, width: 0.333 });
-    expect(await groupRow(page, 'dos')).toEqual({ cells: ['', '', ''], total: 0, width: 0 });
+    // Groupes (versions 1.36.0 et 1.37.0) : pectoraux 1 séance, 11 séries à la maison plafonnées à ½ (total 1,5, le plus
+    // haut bâton) ; jambes ½ (futsal) ; dos non travaillé : cases vides, bâton vide.
+    expect(await groupRow(page, 'pectoraux')).toEqual({ cells: ['1', '', '11'], total: 1.5, height: 1 });
+    expect(await groupRow(page, 'jambes')).toEqual({ cells: ['', '1', ''], total: 0.5, height: 0.333 });
+    expect(await groupRow(page, 'dos')).toEqual({ cells: ['', '', ''], total: 0, height: 0 });
     await expect(section(page, 'Groupes travaillés').locator('tr[data-group="dos"]')).toHaveAttribute('data-idle', 'true');
-    // Case vide : rien d'affiché, « 0 » pour le lecteur d'écran ; en-têtes complets à 412 px.
+    // Case vide : rien d'affiché, « 0 » pour le lecteur d'écran ; en-têtes complets à 412 px ; plus de mini-barre.
     await expect(section(page, 'Groupes travaillés').locator('tr[data-group="dos"] td').first()).toHaveText('0');
     expect(await section(page, 'Groupes travaillés').locator('tr[data-group="dos"] td').first().evaluate((td) => (td as HTMLElement).getBoundingClientRect().width > 0 && td.querySelector('.visually-hidden') !== null)).toBe(true);
     await expect(section(page, 'Groupes travaillés').locator('thead .groups-long:visible')).toHaveText(['Séances', 'Indirect', /^Maison\s*\(séries\)$/]);
-    await expect(section(page, 'Groupes travaillés').getByRole('columnheader')).toHaveText(['Barre : total', /Séances/, /Indirect/, /Maison/]);
-    // Barre du total : 12 px, dans la couleur du groupe.
-    expect(await section(page, 'Groupes travaillés').locator('tr[data-group="pectoraux"] .groups-bar').evaluate((e) => e.getBoundingClientRect().height)).toBe(12);
-    // Couleur du groupe, jamais de couleur de statut.
-    expect(await section(page, 'Groupes travaillés').locator('tr[data-group="pectoraux"] .groups-bar > span').evaluate((e) => getComputedStyle(e).backgroundColor)).toBe('rgb(62, 230, 238)');
+    await expect(section(page, 'Groupes travaillés').getByRole('columnheader')).toHaveText(['Groupe', /Séances/, /Indirect/, /Maison/]);
+    await expect(section(page, 'Groupes travaillés').locator('table [style*="width"], .groups-bar')).toHaveCount(0);
+    // Bâton dans la couleur du groupe, jamais de couleur de statut.
+    expect(await section(page, 'Groupes travaillés').locator('.groups-stick[data-group="pectoraux"] .groups-stick-track > span').evaluate((e) => getComputedStyle(e).backgroundColor)).toBe('rgb(62, 230, 238)');
     const colors = await page.locator('main.period-report, main.period-report *').evaluateAll((els) => els.flatMap((e) => [getComputedStyle(e).color, getComputedStyle(e).backgroundColor, getComputedStyle(e).borderTopColor]));
     for (const c of STATUS_COLORS) expect(colors).not.toContain(c);
     // Échelles : chest press 10 → 11 (plage 8 à 12, puis « +kg ») ; planche 20 → 25 s (5 crans, sans « +kg »).
@@ -155,6 +180,7 @@ test.describe('Bilan de la période, version 1.35.0', () => {
     expect(calBox.y + calBox.height).toBeLessThan(tilesBox.y);
     // Maison plafonnée à ½ par semaine : ½ (semaine du 19) + 3/12 (semaine du 26), pas 14/12.
     expect((await groupRow(page, 'pectoraux')).total).toBe(2.75);
+    expect((await groupRow(page, 'pectoraux')).height).toBe(1);
     expect((await groupRow(page, 'pectoraux')).cells).toEqual(['2', '', '14']);
     await noOverflow(page);
 
@@ -166,5 +192,50 @@ test.describe('Bilan de la période, version 1.35.0', () => {
     await expect(tile(page, 'Séances')).toHaveText(/^Séances1dont\s1 à la maison▼ −2$/);
     await expect(page.getByTestId('report-calendar')).toHaveCount(0);
     await noOverflow(page);
+  });
+
+  test('288. Bâtons verticaux des groupes au-dessus du tableau (version 1.37.0) : couleur et ordre fixe, hauteur = total, noms courts lisibles sans chevauchement à 412, 360 et 320 px (texte agrandi compris), bâton vide grisé, totaux pour le lecteur d’écran', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-11-02T09:00:00'));
+    await page.goto('./');
+    await writeSessions(page, SESSIONS);
+    await writeActivities(page);
+    await page.reload();
+    await page.goto('./#/bilan-periode/semaine/2026-10-19');
+    const chart = page.getByTestId('groups-chart');
+    const sec = section(page, 'Groupes travaillés');
+    // Au-dessus du tableau ; un bâton par groupe du récapitulatif, dans son ordre.
+    const [chartBox, tableBox] = [(await chart.boundingBox())!, (await sec.locator('table').boundingBox())!];
+    expect(chartBox.y + chartBox.height).toBeLessThanOrEqual(tableBox.y);
+    await expect(chart.locator('.groups-stick')).toHaveCount(6);
+    expect(await chart.locator('.groups-stick').evaluateAll((els) => els.map((e) => e.getAttribute('data-group')))).toEqual(['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes']);
+    // Lecteur d'écran : les totaux par groupe ; pas de valeur écrite au-dessus des bâtons.
+    await expect(chart).toHaveAttribute('role', 'img');
+    await expect(chart).toHaveAttribute('aria-label', 'Total par groupe, en séances : pectoraux 1,5, dos 0, épaules 0,5, biceps 0, triceps 0,5, jambes 0,5.');
+    expect(await chart.evaluate((c) => [...c.querySelectorAll('.groups-stick-label:not(.groups-stick-spacer)')].map((l) => l.textContent).join(' '))).toBe((await chart.innerText()).replace(/\s+/g, ' ').trim());
+    // Hauteur = total ; le plus travaillé occupe toute la hauteur (96 px).
+    expect(await chart.locator('.groups-stick[data-group="pectoraux"] .groups-stick-track > span').evaluate((e) => e.getBoundingClientRect().height)).toBe(96);
+    expect(await groupRow(page, 'epaules')).toMatchObject({ total: 0.5, height: 0.333 });
+    // Groupe non travaillé : bâton vide (pointillés), nom grisé.
+    const dos = chart.locator('.groups-stick[data-group="dos"]');
+    expect(await dos.locator('.groups-stick-track').evaluate((e) => getComputedStyle(e).borderTopStyle)).toBe('dashed');
+    // Gris des textes secondaires (--muted, #9aa1b0).
+    expect(await dos.locator('.groups-stick-label').evaluate((e) => getComputedStyle(e).color)).toBe('rgb(154, 161, 176)');
+    // Noms : six groupes à 412 px, noms courts sur une ligne ; à 360 et 320 px (et texte agrandi), deux rangs alternés.
+    const expected = { 412: 'short', 360: 'staggered', 320: 'staggered' } as const;
+    for (const width of [412, 360, 320] as const) {
+      await page.setViewportSize({ width, height: 900 });
+      await expect(chart).toHaveAttribute('data-labels', expected[width]);
+      const names = await stickNames(page);
+      expect(names, `${width}px`).toMatchObject({ names: ['Pecto', 'Dos', 'Épaul', 'Biceps', 'Triceps', 'Jambes'], rows: expected[width] === 'short' ? 1 : 2, overlap: 0, outside: 0, tilted: 0 });
+      expect(names.fontSize, `${width}px`).toBeGreaterThanOrEqual(13);
+    }
+    // Texte agrandi à 115 % à 412 px : les noms ne tiennent plus sur une ligne, deux rangs, sans chevauchement.
+    await page.setViewportSize({ width: 412, height: 900 });
+    await expect(chart).toHaveAttribute('data-labels', 'short');
+    const large = await page.addStyleTag({ content: ':root { font-size: calc(17px * 1.15) !important; }' });
+    await expect(chart).toHaveAttribute('data-labels', 'staggered');
+    expect(await stickNames(page)).toMatchObject({ overlap: 0, outside: 0, rows: 2 });
+    await large.evaluate((el) => (el as Element).remove());
+    await expect(chart).toHaveAttribute('data-labels', 'short');
   });
 });

@@ -3,9 +3,9 @@
  * du mois, échelles de cycle des progressions. Affichage seulement : le texte du mail est inchangé. Pas de vert, d'orange
  * ni de rouge : couleurs des groupes et neutre.
  */
-import type { ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { formatMinutes } from '../cardio/model';
-import type { Exercise } from '../domain/types';
+import type { Exercise, MuscleGroup } from '../domain/types';
 import {
   comparedTo,
   lineText,
@@ -162,15 +162,76 @@ export function ReportSessions({ report, screen }: { report: PeriodReport; scree
   );
 }
 
+/** Noms courts des groupes sous les bâtons (version 1.37.0), quand le nom entier ne tient pas. */
+export const GROUP_SHORT_LABELS: Readonly<Record<MuscleGroup, string>> = {
+  pectoraux: 'Pecto',
+  dos: 'Dos',
+  epaules: 'Épaul',
+  biceps: 'Biceps',
+  triceps: 'Triceps',
+  jambes: 'Jambes',
+  quadriceps: 'Quadri',
+  'ischio-jambiers': 'Ischios',
+  mollets: 'Mollets',
+  fessiers: 'Fessiers',
+  adducteurs: 'Adduct.',
+  abdominaux: 'Abdos',
+};
+
+/** Disposition des noms sous les bâtons : entiers sur une ligne, courts sur une ligne, ou courts sur deux rangs alternés. */
+export type StickLabels = 'full' | 'short' | 'staggered';
+
+/** Écart minimal entre deux noms voisins, en px. */
+const LABEL_GAP = 6;
+
 /**
- * Groupes travaillés (version 1.36.0) : un petit tableau, une ligne par groupe affiché, dans l'ordre du récapitulatif ;
- * colonnes Séances / Indirect / Maison (séries) en chiffres, case vide pour zéro ; sous le nom, la barre du total dans
- * la couleur du groupe (mêmes règles que le récapitulatif : séance 1, indirect ½, maison ½ au plus par semaine).
- * En-têtes abrégés sur un écran très étroit (320 px).
+ * Première disposition où chaque nom tient : sur une ligne, un nom dispose de la largeur de sa colonne ; sur deux rangs
+ * alternés (jamais incliné), de deux colonnes. `full` et `short` : largeur de chaque nom, en px, à la taille affichée.
+ */
+export function stickLabels(column: number, full: readonly number[], short: readonly number[]): StickLabels {
+  const fits = (widths: readonly number[], room: number) => widths.every((w) => w + LABEL_GAP <= room);
+  if (fits(full, column)) return 'full';
+  if (fits(short, column)) return 'short';
+  return 'staggered';
+}
+
+/**
+ * Groupes travaillés (version 1.37.0) : un diagramme en bâtons verticaux au-dessus d'un petit tableau. Un bâton par
+ * groupe affiché au récapitulatif, dans son ordre (fixe), à la couleur du groupe ; hauteur = total en séances, avec les
+ * règles du récapitulatif (séance 1, indirect ½, maison 1/12 par série plafonnée à ½ par semaine) ; le plus travaillé
+ * occupe toute la hauteur ; pas de valeur au-dessus (le tableau donne les chiffres). Groupe non travaillé : bâton vide,
+ * nom en gris. Tableau : Séances / Indirect / Maison (séries), case vide pour zéro ; en-têtes abrégés à 320 px.
  */
 export function ReportGroups({ report, screen }: { report: PeriodReport; screen: ReportScreen }) {
   const totals = screen.bars.map((b) => b.direct + b.indirect + b.home);
   const max = Math.max(...totals);
+  const chartRef = useRef<HTMLDivElement>(null);
+  const [labels, setLabels] = useState<StickLabels>('staggered');
+  const groups = report.groups.map((g) => g.group);
+  const key = groups.join(',');
+  // Noms mesurés à la taille réellement affichée : refait quand la largeur change (écran tourné) ou la taille du texte
+  // (texte agrandi du téléphone), suivie par la hauteur d'un nom.
+  useLayoutEffect(() => {
+    const el = chartRef.current;
+    const label = el?.querySelector('.groups-stick-label');
+    const ctx = document.createElement('canvas').getContext('2d');
+    if (!el || !label || !ctx) return;
+    const measure = () => {
+      const style = getComputedStyle(label);
+      ctx.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+      const widths = (names: string[]) => names.map((n) => ctx.measureText(n).width);
+      setLabels(stickLabels(el.getBoundingClientRect().width / groups.length, widths(groups.map((g) => MUSCLE_GROUP_LABELS[g])), widths(groups.map((g) => GROUP_SHORT_LABELS[g]))));
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    observer.observe(label);
+    return () => observer.disconnect();
+  }, [key]);
+  const summary = `Total par groupe, en séances : ${report.groups
+    .map((g, i) => `${MUSCLE_GROUP_LABELS[g.group].toLowerCase()} ${totals[i]!.toLocaleString('fr-FR', { maximumFractionDigits: 1 })}`)
+    .join(', ')}.`;
   const head = (long: ReactNode, short: string, label: string) => (
     <th scope="col" aria-label={label}>
       <span className="groups-long" aria-hidden="true">
@@ -187,14 +248,34 @@ export function ReportGroups({ report, screen }: { report: PeriodReport; screen:
       {n > 0 ? n : <span className="visually-hidden">0</span>}
     </td>
   );
+  const idleOf = (g: PeriodReport['groups'][number]) => g.count === 0 && g.indirect === 0 && !g.home;
   return (
     <section className="frame report-section" aria-label="Groupes travaillés">
       <h3 className="section-title">Groupes travaillés</h3>
+      <div ref={chartRef} className={`groups-sticks groups-labels-${labels}`} role="img" aria-label={summary} data-testid="groups-chart" data-labels={labels}>
+        {report.groups.map((g, i) => {
+          const idle = idleOf(g);
+          return (
+            <div key={g.group} className={`groups-stick${idle ? ' groups-idle' : ''}`} data-group={g.group} data-total={totals[i]} {...(idle ? {} : groupColorProps(g.group))}>
+              <span className="groups-stick-track">
+                <span style={{ height: `${max > 0 ? (100 * totals[i]!) / max : 0}%` }} />
+              </span>
+              {/* Deux rangs alternés : un nom sur deux descend d'une ligne ; la première, vide, garde sa hauteur. */}
+              {labels === 'staggered' && i % 2 === 1 && (
+                <span className="groups-stick-label groups-stick-spacer" aria-hidden="true">
+                  {GROUP_SHORT_LABELS[g.group]}
+                </span>
+              )}
+              <span className="groups-stick-label">{labels === 'full' ? MUSCLE_GROUP_LABELS[g.group] : GROUP_SHORT_LABELS[g.group]}</span>
+            </div>
+          );
+        })}
+      </div>
       <table className="groups-table">
         <thead>
           <tr>
             <th scope="col" className="groups-name">
-              Barre : total
+              Groupe
             </th>
             {head('Séances', 'Séan.', 'Séances')}
             {head('Indirect', 'Ind.', 'Indirect')}
@@ -210,16 +291,12 @@ export function ReportGroups({ report, screen }: { report: PeriodReport; screen:
           </tr>
         </thead>
         <tbody>
-          {report.groups.map((g, i) => {
-            const idle = g.count === 0 && g.indirect === 0 && !g.home;
-            const total = totals[i]!;
+          {report.groups.map((g) => {
+            const idle = idleOf(g);
             return (
-              <tr key={g.group} data-testid="group-row" data-group={g.group} data-idle={idle || undefined} className={idle ? 'groups-idle' : undefined} {...(idle ? {} : groupColorProps(g.group))}>
+              <tr key={g.group} data-testid="group-row" data-group={g.group} data-idle={idle || undefined} className={idle ? 'groups-idle' : undefined}>
                 <th scope="row" className="groups-name">
                   {MUSCLE_GROUP_LABELS[g.group]}
-                  <span className="groups-bar" aria-hidden="true">
-                    <span style={{ width: `${max > 0 ? (100 * total) / max : 0}%` }} data-total={total} />
-                  </span>
                 </th>
                 {cell(g.count, 'seances')}
                 {cell(g.indirect, 'indirect')}
