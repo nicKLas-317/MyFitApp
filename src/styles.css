@@ -250,6 +250,34 @@ fieldset.frame > legend {
   margin-top: var(--space-1);
 }
 
+/*
+ * Séance pour compléter la semaine (version 1.39.0, §5.15) : une ligne discrète à côté de « Préparer ma prochaine
+ * séance » (ou sous le résumé de la séance prévue), sur deux lignes au plus si la place manque.
+ */
+.home .suggest-week {
+  display: flex;
+  margin-top: var(--space-1);
+}
+
+.suggest-cardio p,
+.suggest-bonus {
+  margin: 0;
+}
+
+.suggest-bonus {
+  font-size: var(--fs-2);
+}
+
+.suggest-notes p {
+  margin: 0 0 var(--space-1);
+}
+
+.suggest-actions {
+  display: grid;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
 .plan-summary {
   margin-top: var(--space-2);
   padding: var(--space-1) var(--space-2) 0;

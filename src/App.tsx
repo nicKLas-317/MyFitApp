@@ -26,6 +26,7 @@ import { GroupProgress, groupOfSegment } from './ui/screens/GroupProgress';
 import { Recap } from './ui/screens/Recap';
 import { SessionScreen } from './ui/screens/SessionScreen';
 import { PlanScreen } from './ui/screens/PlanScreen';
+import { SuggestionScreen } from './ui/screens/SuggestionScreen';
 import { Settings } from './ui/screens/Settings';
 
 function Router() {
@@ -60,7 +61,9 @@ function Screen({ page, param, extra }: { page: string; param: string | undefine
     case 'seance':
       return <SessionScreen openVariantId={param} />;
     case 'seance-prevue':
-      return param === 'ajouter' ? <ExercisePicker key={`prevue-${extra ?? ''}`} variantId={extra} forPlan /> : <PlanScreen />;
+      if (param === 'ajouter') return <ExercisePicker key={`prevue-${extra ?? ''}`} variantId={extra} forPlan />;
+      // Séance pour compléter la semaine (version 1.39.0).
+      return param === 'suggestion' ? <SuggestionScreen /> : <PlanScreen />;
     case 'ajouter':
       return <ExercisePicker key={param ?? ''} variantId={param} />;
     case 'bibliotheque':

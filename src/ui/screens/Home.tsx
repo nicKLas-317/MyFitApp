@@ -13,6 +13,7 @@ import { ActivityBanner } from '../ActivityBanner';
 import { ActivityEntry } from '../ActivityEntry';
 import { WeeklyRecapBlock } from '../WeeklyRecap';
 import { GroupAlerts } from '../GroupAlerts';
+import { WeekSuggestionLink } from '../WeekSuggestion';
 
 export function Home() {
   const { active, commit, sessions, exercises, variants, ctxFor, plan, lastExportAt, markExported, generalSettings, activities } = useApp();
@@ -104,6 +105,8 @@ export function Home() {
               Modifier ma séance prévue
             </button>
           </section>
+          {/* Séance pour compléter la semaine (version 1.39.0) : à côté de la séance prévue, jamais à sa place. */}
+          <WeekSuggestionLink />
         </>
       ) : (
         <>
@@ -115,6 +118,7 @@ export function Home() {
           <button type="button" className="link prepare-plan" onClick={() => navigate('seance-prevue')}>
             Préparer ma prochaine séance
           </button>
+          <WeekSuggestionLink />
         </>
       )}
       <ActivityEntry />

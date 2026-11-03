@@ -3,6 +3,7 @@ import { formalForms } from '../src/ui/__tests__/vouvoiement';
 import type { Session, SessionPlan } from '../src/domain/types';
 import { simulatedHistory } from '../src/analysis/__tests__/simulation';
 import { ALERT_NOW, alertHistory } from '../src/analysis/__tests__/alertes-simulation';
+import { weekHistory, WEEK_NOW } from '../src/plan/__tests__/completer-simulation';
 import { activeSession, addExercise, cardAction, doExercise, finishSheet, openSettingsSection, readSessions, startSession, validateSets, writeSessions } from './helpers';
 
 /** Fond d'un bouton principal (bleu) et cadre neutre. */
@@ -759,6 +760,44 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
         await expectClean(page, `${screen} à ${width} px${scale > 1 ? ', texte à 115 %' : ''}`, scale);
         await restore?.();
       }
+    }
+
+    // Séance pour compléter la semaine (version 1.39.0) : la ligne de l'accueil, son écran et la confirmation
+    // « Remplacer ma séance prévue », à 412, 360 et 320 px et à 360 px avec le texte agrandi.
+    await page.clock.setFixedTime(new Date(WEEK_NOW));
+    await page.evaluate(
+      (plan) =>
+        new Promise<void>((resolve, reject) => {
+          const open = indexedDB.open('myfitapp');
+          open.onsuccess = () => {
+            const tx = open.result.transaction(['sessions', 'meta'], 'readwrite');
+            tx.objectStore('sessions').clear();
+            tx.objectStore('meta').put(plan, 'plan');
+            tx.oncomplete = () => (open.result.close(), resolve());
+            tx.onerror = () => reject(tx.error);
+          };
+        }),
+      { id: 'plan-225', createdAt: WEEK_NOW - 3_600_000, updatedAt: WEEK_NOW - 3_600_000, items: [{ kind: 'exercise', variantId: 'pec-deck' }] },
+    );
+    await writeSessions(page, weekHistory());
+    for (const [width, scale] of [[412, 1], [360, 1], [320, 1], [360, 1.15]] as const) {
+      await page.setViewportSize({ width, height: 800 });
+      const size = `à ${width} px${scale > 1 ? ', texte à 115 %' : ''}`;
+      await page.goto('./');
+      await page.reload();
+      await expect(page.getByTestId('week-suggestion')).toBeVisible();
+      let restore = scale > 1 ? await largeText(page) : null;
+      await toTop(page);
+      await expectClean(page, `Accueil avec la séance pour compléter la semaine ${size}`, scale);
+      await restore?.();
+      await page.goto('./#/seance-prevue/suggestion');
+      await expect(page.getByRole('heading', { name: 'Compléter la semaine' })).toBeVisible();
+      restore = scale > 1 ? await largeText(page) : null;
+      await toTop(page);
+      await expectClean(page, `Compléter la semaine ${size}`, scale);
+      await page.getByRole('button', { name: 'Remplacer ma séance prévue' }).click();
+      await expectClean(page, `Compléter la semaine, remplacer la séance prévue ${size}`, scale);
+      await restore?.();
     }
   });
 
