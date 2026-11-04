@@ -154,6 +154,14 @@ test.describe('Bibliothèque et recherche', () => {
         await expect(attribution.getByRole('link', { name: /^[12]$/ }), id).toHaveCount(2);
       }
     }
+    // Version 1.40.3 : tirage vertical, ses trois prises : tirage devant la poitrine, jamais l'ancien tirage derrière la nuque.
+    for (const id of ['tirage-vertical', 'tirage-vertical--prise-tres-large', 'tirage-vertical--prise-serree']) {
+      await page.goto(`./#/exercice/${id}`);
+      await expect(await openIllustration(page), id).toBeVisible();
+      const attribution = page.getByTestId('attribution');
+      await expect(attribution.getByRole('link', { name: '1' }), id).toHaveAttribute('href', /File:Close-grip-front-lat-pull-down-1\.png$/);
+      await expect(attribution.getByRole('link', { name: '2' }), id).toHaveAttribute('href', /File:Close-grip-front-lat-pull-down-2\.png$/);
+    }
     for (const id of [
       'rowing-haltere', 'crunch-machine', 'dips-assistes', 'elevations-laterales-machine',
       'developpe-couche-halteres', 'tractions-assistees', 'face-pull', 'oiseau', 'squat-kettlebell',

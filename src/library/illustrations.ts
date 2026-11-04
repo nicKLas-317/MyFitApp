@@ -55,7 +55,10 @@ function drawn(key: string, title: string, source: typeof EVERKINETIC | typeof E
 export const ILLUSTRATIONS: Readonly<Record<string, Illustration>> = {
   // Tirage horizontal machine (appui pectoral) : aucun dessin sous licence vérifiable de cette machine → pictogramme.
   'tirage-horizontal-poulie-basse': drawn('tirage-horizontal-poulie-basse', 'Seated cable rows', EVERKINETIC, [`${COMMONS}Seated_cable_rows_1.svg`, `${COMMONS}Seated_cable_rows_2.svg`]),
-  'tirage-vertical': drawn('tirage-vertical', 'Wide grip lat pull down', EVERKINETIC, [`${COMMONS}Wide_grip_lat_pull_down_1.svg`, `${COMMONS}Wide_grip_lat_pull_down_2.svg`]),
+  // Tirage vertical, toutes les prises (version 1.40.3) : tirage devant la poitrine, barre droite. L'ancien dessin
+  // (« Wide grip lat pull down ») montrait un tirage derrière la nuque, un autre mouvement (§4.0) ; Everkinetic n'a
+  // aucun tirage devant la poitrine en prise large.
+  'tirage-vertical': drawn('tirage-vertical', 'Close grip front lat pull down', EVERKINETIC, [`${COMMONS}Close-grip-front-lat-pull-down-1.png`, `${COMMONS}Close-grip-front-lat-pull-down-2.png`]),
   'chest-press': drawn('chest-press', 'Machine bench press', EVERKINETIC, [`${COMMONS}Machine_bench_press_1.svg`, `${COMMONS}Machine_bench_press_2.svg`]),
   'pec-deck': drawn('pec-deck', 'Butterfly machine', EVERKINETIC, [`${COMMONS}Butterfly_machine_1.svg`, `${COMMONS}Butterfly_machine_2.svg`]),
   'developpe-couche': drawn('developpe-couche', 'Bench press', EVERKINETIC, [`${COMMONS}Bench_press_1.svg`, `${COMMONS}Bench_press_2.svg`]),

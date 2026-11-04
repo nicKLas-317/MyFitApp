@@ -85,5 +85,15 @@ describe('Illustrations embarquées (§4.0.1)', () => {
     expect(illustrationFor('oiseau', 'oiseau--halteres')?.title).toBe('Bent over rear deltoid raise with head on bench');
     // Une variante créée par l'utilisateur reprend le dessin de l'exercice.
     expect(illustrationFor('tirage-vertical', 'tirage-vertical--prise-serree')).toBe(ILLUSTRATIONS['tirage-vertical']);
+    // Tirage vertical (version 1.40.3) : tirage devant la poitrine pour les trois prises, jamais derrière la nuque.
+    expect(ILLUSTRATIONS['tirage-vertical']).toMatchObject({ title: 'Close grip front lat pull down', license: 'CC BY-SA 3.0', origin: 'Wikimedia Commons' });
+    expect(ILLUSTRATIONS['tirage-vertical']!.sources).toEqual([
+      'https://commons.wikimedia.org/wiki/File:Close-grip-front-lat-pull-down-1.png',
+      'https://commons.wikimedia.org/wiki/File:Close-grip-front-lat-pull-down-2.png',
+    ]);
+    for (const v of ['tirage-vertical', 'tirage-vertical--prise-tres-large', 'tirage-vertical--prise-serree']) {
+      expect(illustrationFor('tirage-vertical', v), v).toBe(ILLUSTRATIONS['tirage-vertical']);
+    }
+    expect(Object.values(ILLUSTRATIONS).some((i) => /Wide_grip_lat_pull_down/.test(i.sources[0]))).toBe(false);
   });
 });
