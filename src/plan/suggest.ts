@@ -253,6 +253,14 @@ export function weekSuggestion(input: SuggestionInput): WeekSuggestion | null {
   };
 }
 
+/**
+ * Échéance affichée (version 1.40.1) : la séance n'impose pas de jour, seulement la fin de la semaine. « D'ici
+ * dimanche », sauf le dimanche (la séance proposée est alors celle du jour, la dernière possible) : « Aujourd'hui ».
+ */
+export function suggestionDueToday(s: WeekSuggestion): boolean {
+  return !s.tomorrow && new Date(noonOf(s.day)).getDay() === 0;
+}
+
 /** Éléments de la séance proposée : l'échauffement en tête, puis les exercices (identifiant du cardio fourni). */
 export function suggestionItems(s: WeekSuggestion, newId: () => string): PlanItem[] {
   return [

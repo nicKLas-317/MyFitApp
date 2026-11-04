@@ -6,7 +6,7 @@ import { DEFAULT_RECAP_SETTINGS, weeklyRecap, type WeeklyRecapSettings } from '.
 import { rebuildProfile, resolveConfig, trackKey } from '../../engine';
 import { finishSession, recordRemainingSets, setFeeling, type VariantContext } from '../../session/ops';
 import { consumesPlan, currentPlan, sessionSteps, startFromPlan } from '../model';
-import { planMatchesSuggestion, suggestionPlan, weekSuggestion, type WeekSuggestion } from '../suggest';
+import { planMatchesSuggestion, suggestionDueToday, suggestionPlan, weekSuggestion, type WeekSuggestion } from '../suggest';
 import { CURRENT_WEEK, daySession, weekHistory, WEEK_NOW, type DaySpec } from './completer-simulation';
 
 const LIB: Exercise[] = [...SEED_EXERCISES];
@@ -79,7 +79,17 @@ describe('Séance pour compléter la semaine, version 1.39.0', () => {
     // Le dimanche après une séance à la salle, la séance proposée tomberait la semaine suivante : rien.
     expect(suggest(weekHistory([...CURRENT_WEEK, { date: '2026-11-15', hour: 10, variants: ['pec-deck'] }]), at(11, 15, 12))).toBeNull();
     // Le dimanche matin, sans séance ce jour-là : pour aujourd'hui.
-    expect(suggest(sessions, at(11, 15, 9))).toMatchObject({ day: '2026-11-15', tomorrow: false });
+    const sunday = suggest(sessions, at(11, 15, 9))!;
+    expect(sunday).toMatchObject({ day: '2026-11-15', tomorrow: false });
+    // Échéance (version 1.40.1) : « Aujourd'hui » le dimanche seulement, « D'ici dimanche » sinon, même pour une
+    // séance proposée le dimanche depuis le samedi (après une séance à la salle ce jour-là).
+    expect(suggestionDueToday(sunday)).toBe(true);
+    expect(suggestionDueToday(s)).toBe(false);
+    expect(suggestionDueToday(friday)).toBe(false);
+    expect(suggestionDueToday(monday)).toBe(false);
+    const saturday = suggest(weekHistory([...CURRENT_WEEK, { date: '2026-11-14', hour: 10, variants: ['pec-deck'] }]), at(11, 14, 12))!;
+    expect(saturday).toMatchObject({ day: '2026-11-15', tomorrow: true });
+    expect(suggestionDueToday(saturday)).toBe(false);
     // Tous les groupes à l'objectif : rien.
     const full = weekHistory([...CURRENT_WEEK, { date: '2026-11-12', hour: 8, variants: ['pec-deck', 'tirage-horizontal', 'leg-extension', 'elevations-laterales', 'extension-triceps-poulie'] }]);
     expect(suggest(full, at(11, 13, 9))).toBeNull();

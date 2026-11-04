@@ -8,7 +8,7 @@ import { MUSCLE_GROUP_LABELS } from '../../library/seed';
 import { newId } from '../../session/ops';
 import { formatCardio } from '../../cardio/model';
 import { plannedPerformance, startFromPlan } from '../../plan/model';
-import { SUGGEST_MAX, suggestionPlan, type SkipReason } from '../../plan/suggest';
+import { SUGGEST_MAX, suggestionDueToday, suggestionPlan, type SkipReason } from '../../plan/suggest';
 import { groupColorProps } from '../groupColors';
 import { ExercisePicto } from '../Pictogram';
 import { cardHint, NextTarget } from '../TargetSummary';
@@ -77,7 +77,7 @@ export function SuggestionScreen() {
     <main className="screen tab-screen suggest-screen">
       {header}
       <p className="muted">
-        Pour {s.tomorrow ? 'demain' : 'aujourd’hui'}, à la salle : les groupes de ton récapitulatif encore sous {recapSettings.redThreshold}
+        À faire {suggestionDueToday(s) ? 'aujourd’hui' : 'd’ici dimanche'}, à la salle : les groupes de ton récapitulatif encore sous {recapSettings.redThreshold}
         {' '}séances cette semaine.
       </p>
       {failed && (

@@ -98,10 +98,10 @@ test.describe('Séance pour compléter la semaine', () => {
   test('294. Carte avec ses groupes en pastilles au-dessus de « Préparer ma prochaine séance » ; écran avec l’échauffement, les exercices et la cible du moteur ; « En faire ma séance prévue », « Remplacer ma séance prévue » ; « Démarrer cette séance » sans toucher à la séance prévue ; recalculée après la séance ; rien le lundi avant une séance à la salle', async ({ page }) => {
     // Jeudi 12 nov., 9 h : pectoraux 2, dos 1 (travaillé hier), épaules, biceps, triceps 1,5, jambes 1.
     await open(page);
-    // Carte cliquable (version 1.40.0 ; ligne discrète en 1.39.0) : titre, « Pour aujourd’hui · 4 exercices », groupes
+    // Carte cliquable (version 1.40.0 ; ligne discrète en 1.39.0) : titre, « D’ici dimanche · 4 exercices » (1.40.1), groupes
     // en pastilles de leur couleur ; juste au-dessus de « Préparer ma prochaine séance » et « + Activité ».
     await expect(line(page).locator('.action-card-title')).toHaveText('Séance pour compléter la semaine');
-    await expect(line(page).locator('.action-card-sub')).toHaveText('Pour aujourd’hui · 4\u00a0exercices');
+    await expect(line(page).locator('.action-card-sub')).toHaveText('D’ici dimanche · 4\u00a0exercices');
     await expect(pills(page)).toHaveText(['Jambes', 'Épaules', 'Triceps', 'Biceps']);
     const colors = await pills(page).evaluateAll((els) =>
       els.map((el) => {
@@ -127,7 +127,7 @@ test.describe('Séance pour compléter la semaine', () => {
     await expect(page).toHaveURL(/#\/seance-prevue\/suggestion$/);
     await expect(page.getByRole('heading', { name: 'Compléter la semaine' })).toBeVisible();
     await expect(tabBar(page).getByRole('link', { name: /^Séance/ })).toHaveAttribute('aria-current', 'page');
-    await expect(page.getByText('Pour aujourd’hui, à la salle : les groupes de ton récapitulatif encore sous 2 séances cette semaine.')).toBeVisible();
+    await expect(page.getByText('À faire d’ici dimanche, à la salle : les groupes de ton récapitulatif encore sous 2 séances cette semaine.')).toBeVisible();
     await expect(items(page)).toHaveText([
       'Échauffement · Tapis de marche · inclinaison neutre · 10 min',
       /^Leg extension3 × 11 à 40 kg/,
@@ -202,17 +202,23 @@ test.describe('Séance pour compléter la semaine', () => {
     expect(done.cardio).toMatchObject([{ machine: 'Tapis de marche', minutes: 10 }]);
     expect((await readPlan(page))?.id).toBe('mon-plan');
     await page.getByRole('button', { name: 'Retour à l’accueil' }).click();
-    // Recalculée après la séance : pour demain, jambes à l'objectif ; le dos a son tirage (qui complète le biceps).
+    // Recalculée après la séance (pour demain, toujours « D’ici dimanche ») : jambes à l'objectif ; le dos a son tirage (qui complète le biceps).
     await expect(page.getByRole('button', { name: 'Démarrer la séance prévue' })).toBeVisible();
-    await expect(line(page).locator('.action-card-sub')).toHaveText('Pour demain · 4\u00a0exercices');
+    await expect(line(page).locator('.action-card-sub')).toHaveText('D’ici dimanche · 4\u00a0exercices');
     await expect(pills(page)).toHaveText(['Dos', 'Épaules', 'Triceps']);
     await line(page).click();
-    await expect(page.getByText('Pour demain, à la salle', { exact: false })).toBeVisible();
+    await expect(page.getByText('À faire d’ici dimanche, à la salle', { exact: false })).toBeVisible();
     await expect(page.getByTestId('suggest-notes')).toContainText('Biceps : complété par Tirage horizontal machine (appui pectoral) — Prise moyenne (groupe secondaire).');
 
     // Lundi matin, avant une séance à la salle : rien.
     await open(page, weekHistory([]), new Date(2026, 10, 9, 9).getTime());
     await expect(page.getByRole('button', { name: 'Démarrer une séance' })).toBeVisible();
     await expect(line(page)).toHaveCount(0);
+
+    // Dimanche matin, sans séance ce jour-là (version 1.40.1) : « Aujourd’hui » sur la carte et dans l'introduction.
+    await open(page, weekHistory(), new Date(2026, 10, 15, 9).getTime());
+    await expect(line(page).locator('.action-card-sub')).toHaveText(/^Aujourd’hui · \d+ exercices?$/);
+    await line(page).click();
+    await expect(page.getByText('À faire aujourd’hui, à la salle : les groupes de ton récapitulatif encore sous 2 séances cette semaine.')).toBeVisible();
   });
 });

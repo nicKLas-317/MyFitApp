@@ -2,7 +2,7 @@ import { useMemo, type CSSProperties } from 'react';
 import type { MuscleGroup } from '../domain/types';
 import { useApp } from '../app/store';
 import { navigate, useNow } from '../app/hooks';
-import { planMatchesSuggestion, weekSuggestion, type WeekSuggestion } from '../plan/suggest';
+import { planMatchesSuggestion, suggestionDueToday, weekSuggestion, type WeekSuggestion } from '../plan/suggest';
 import { MUSCLE_GROUP_LABELS } from '../library/seed';
 import { colorGroupOf, GROUP_COLORS } from './groupColors';
 
@@ -26,8 +26,8 @@ export function suggestionGroups(s: WeekSuggestion): MuscleGroup[] {
 
 /**
  * Carte de l'onglet Séance (version 1.40.0 ; ligne discrète en version 1.39.0), sous la séance prévue s'il y en a
- * une : « Séance pour compléter la semaine », « Pour aujourd'hui · 5 exercices », puis ses groupes en pastilles de leur
- * couleur ; toute la carte ouvre la suggestion. Rien pendant une séance, sans suggestion, ni quand la séance prévue
+ * une : « Séance pour compléter la semaine », « D'ici dimanche · 5 exercices » (« Aujourd'hui » le dimanche, version
+ * 1.40.1), puis ses groupes en pastilles de leur couleur ; toute la carte ouvre la suggestion. Rien pendant une séance, sans suggestion, ni quand la séance prévue
  * reprend déjà ses exercices.
  */
 export function WeekSuggestionCard() {
@@ -40,7 +40,7 @@ export function WeekSuggestionCard() {
       <span className="action-card-text">
         <span className="action-card-title">Séance pour compléter la semaine</span>
         <span className="action-card-sub">
-          {suggestion.tomorrow ? 'Pour demain' : 'Pour aujourd’hui'} · {count}
+          {suggestionDueToday(suggestion) ? 'Aujourd’hui' : 'D’ici dimanche'} · {count}
           {'\u00a0'}
           {count > 1 ? 'exercices' : 'exercice'}
         </span>
