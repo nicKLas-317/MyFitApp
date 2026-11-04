@@ -54,7 +54,7 @@ describe('Illustrations embarquées (§4.0.1)', () => {
     // Dips assistés : les dessins disponibles montrent des dips au poids du corps, sans machine d'assistance.
     expect(ILLUSTRATIONS['dips-assistes']).toBeUndefined();
     // Version 8 : aucun dessin fiable pour ces exercices ou variantes.
-    for (const id of ['developpe-couche-halteres', 'tractions-assistees', 'pull-over-poulie', 'face-pull', 'oiseau', 'squat-kettlebell']) {
+    for (const id of ['developpe-couche-halteres', 'tractions-assistees', 'face-pull', 'oiseau', 'squat-kettlebell']) {
       expect(ILLUSTRATIONS[id], id).toBeUndefined();
     }
     // Version 11 : les relevés de jambes allongé ont un dessin ; le crunch au sol et le crunch oblique, non.
@@ -64,6 +64,12 @@ describe('Illustrations embarquées (§4.0.1)', () => {
     // Version 13 : pompes classiques dessinées ; pompes sur les genoux sans dessin (pas celui des classiques).
     expect(illustrationFor('pompes', 'pompes')?.title).toBe('Push ups');
     expect(illustrationFor('pompes', 'pompes--genoux')).toBeUndefined();
+    // Version 1.40.2 : le pull-over à la poulie a un dessin (debout, bras tendus) ; la presse à cuisses reprend un
+    // pictogramme (le dessin montrait une presse inclinée à 45°, la presse de l'utilisateur est horizontale).
+    expect(ILLUSTRATIONS['pull-over-poulie']).toMatchObject({ title: 'Straight arm push down', license: 'CC BY-SA 4.0', origin: 'everkinetic/data' });
+    expect(ILLUSTRATIONS['pull-over-poulie']!.sources[0]).toMatch(/straight-arm-push-down-1\.png$/);
+    expect(ILLUSTRATIONS['presse-a-cuisses']).toBeUndefined();
+    expect(illustrationFor('presse-a-cuisses', 'presse-a-cuisses')).toBeUndefined();
     expect(Object.keys(ILLUSTRATIONS)).toHaveLength(40);
   });
 

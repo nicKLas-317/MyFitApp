@@ -67,7 +67,8 @@ export const ILLUSTRATIONS: Readonly<Record<string, Illustration>> = {
   // Ce dessin montre une barre droite : il illustre la variante « Barre » (version 8) ; la corde a le sien.
   'extension-triceps-poulie--barre': drawn('extension-triceps-poulie--barre', 'Triceps pushdown with cable', EVERKINETIC, [`${COMMONS}Triceps_pushdown_with_cable_1.svg`, `${COMMONS}Triceps_pushdown_with_cable_2.svg`]),
   'extension-triceps-haltere-assis': drawn('extension-triceps-haltere-assis', 'Seated triceps press with dumbbell', EVERKINETIC, [`${COMMONS}Seated_triceps_press_with_dumbbell_1.svg`, `${COMMONS}Seated_triceps_press_with_dumbbell_2.svg`]),
-  'presse-a-cuisses': drawn('presse-a-cuisses', 'Leg-press', EVERKINETIC, [`${COMMONS}Leg-press-1-1024x670.png`, `${COMMONS}Leg-press-2-1024x670.png`]),
+  // Presse à cuisses : pictogramme (version 1.40.2). Le dessin « Leg-press » d'Everkinetic montre une presse inclinée
+  // à 45°, alors que la presse de l'utilisateur est horizontale (assis, on pousse droit devant) : il était trompeur.
   'leg-extension': drawn('leg-extension', 'Leg extensions', EVERKINETIC, [`${COMMONS}Leg_extensions_1.svg`, `${COMMONS}Leg_extensions_2.svg`]),
   'leg-curl': drawn('leg-curl', 'Seated leg curl', EVERKINETIC, [`${COMMONS}Seated_leg_curl_1.svg`, `${COMMONS}Seated_leg_curl_2.svg`]),
   'ecarte-couche-halteres': drawn('ecarte-couche-halteres', 'Dumbbell flys', EVERKINETIC, [`${COMMONS}Dumbbell_flys_1.svg`, `${COMMONS}Dumbbell_flys_2.svg`]),
@@ -78,8 +79,8 @@ export const ILLUSTRATIONS: Readonly<Record<string, Illustration>> = {
   // les paires correctes viennent du dépôt everkinetic/data. Abducteurs : jambes serrées puis écartées ; adducteurs : l'inverse.
   'abducteurs-machine': drawn('abducteurs-machine', 'Thigh abductor', EVERKINETIC_DATA, [`${EK_DATA}thigh-abductor-1.png`, `${EK_DATA}thigh-abductor-2.png`]),
   'adducteurs-machine': drawn('adducteurs-machine', 'Thigh adductor', EVERKINETIC_DATA, [`${EK_DATA}thigh-adductor-1.png`, `${EK_DATA}thigh-adductor-2.png`]),
-  // Version 8. Développé couché haltères, tractions assistées, pull-over à la poulie, face pull, oiseau à la machine et
-  // squat kettlebell : aucun dessin fiable (le « Bench press dumbbell » d'Everkinetic montre un banc incliné) → pictogramme.
+  // Version 8. Développé couché haltères, tractions assistées, face pull, oiseau à la machine et squat kettlebell : aucun
+  // dessin fiable (le « Bench press dumbbell » d'Everkinetic montre un banc incliné) → pictogramme.
   'mollets-machine--assis': drawn('mollets-machine--assis', 'Seated calf raise using machine', EVERKINETIC, [`${COMMONS}Seated_calf_raise_using_machine_1.svg`, `${COMMONS}Seated_calf_raise_using_machine_2.svg`]),
   'extension-triceps-poulie': drawn('extension-triceps-poulie', 'Triceps pushdown with rope and cable', EVERKINETIC_DATA, [`${EK_DATA}triceps-pushdown-with-rope-and-cable-1.png`, `${EK_DATA}triceps-pushdown-with-rope-and-cable-2.png`]),
   'developpe-incline': drawn('developpe-incline', 'Incline bench press', EVERKINETIC_DATA, [`${EK_DATA}incline-bench-press-1.png`, `${EK_DATA}incline-bench-press-2.png`]),
@@ -102,6 +103,8 @@ export const ILLUSTRATIONS: Readonly<Record<string, Illustration>> = {
   'releves-jambes-allonge': drawn('releves-jambes-allonge', 'Flat bench leg raises', EVERKINETIC_DATA, [`${EK_DATA}flat-bench-leg-raises-1.png`, `${EK_DATA}flat-bench-leg-raises-2.png`]),
   // Version 13. Pompes classiques (variante standard) ; les pompes sur les genoux n'ont aucun dessin (voir plus bas).
   'pompes': drawn('pompes', 'Push ups', EVERKINETIC_DATA, [`${EK_DATA}push-ups-1.png`, `${EK_DATA}push-ups-2.png`]),
+  // Version 1.40.2. Pull-over à la poulie : debout, bras tendus, de la poulie haute jusqu'aux cuisses.
+  'pull-over-poulie': drawn('pull-over-poulie', 'Straight arm push down', EVERKINETIC_DATA, [`${EK_DATA}straight-arm-push-down-1.png`, `${EK_DATA}straight-arm-push-down-2.png`]),
 };
 
 /**

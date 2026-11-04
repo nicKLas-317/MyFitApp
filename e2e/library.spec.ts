@@ -128,13 +128,14 @@ test.describe('Bibliothèque et recherche', () => {
     const commons = [
       'tirage-horizontal-poulie-basse', 'tirage-vertical', 'chest-press', 'pec-deck', 'developpe-couche', 'developpe-epaules-machine',
       'elevations-laterales', 'curl-biceps-poulie-corde', 'curl-biceps-halteres', 'curl-biceps-banc-incline',
-      'extension-triceps-poulie--barre', 'extension-triceps-haltere-assis', 'presse-a-cuisses', 'leg-extension', 'leg-curl',
+      'extension-triceps-poulie--barre', 'extension-triceps-haltere-assis', 'leg-extension', 'leg-curl',
       'ecarte-couche-halteres', 'curl-ischios', 'curl-biceps-barre-droite', 'mollets-machine', 'mollets-machine--assis', 'kickback',
     ];
     const data = [
       'abducteurs-machine', 'adducteurs-machine', 'extension-triceps-poulie', 'developpe-incline', 'developpe-incline--halteres',
       'ecarte-poulie', 'rowing-barre', 'lombaires-banc', 'shrugs', 'developpe-militaire-halteres', 'oiseau--halteres',
       'elevations-frontales', 'curl-marteau', 'curl-pupitre', 'curl-biceps-barre-ez', 'barre-au-front', 'hack-squat',
+      'pull-over-poulie',
     ];
     for (const [ids, license, origin, source] of [
       [commons, '3.0', 'Wikimedia Commons', /commons\.wikimedia\.org\/wiki\/File:/],
@@ -155,10 +156,13 @@ test.describe('Bibliothèque et recherche', () => {
     }
     for (const id of [
       'rowing-haltere', 'crunch-machine', 'dips-assistes', 'elevations-laterales-machine',
-      'developpe-couche-halteres', 'tractions-assistees', 'pull-over-poulie', 'face-pull', 'oiseau', 'squat-kettlebell',
+      'developpe-couche-halteres', 'tractions-assistees', 'face-pull', 'oiseau', 'squat-kettlebell',
+      // Version 1.40.2 : la presse à cuisses n'a plus de dessin (presse inclinée, trompeuse).
+      'presse-a-cuisses',
     ]) {
       await page.goto(`./#/exercice/${id}`);
       await expect(page.locator('.sheet-head'), id).toBeVisible();
+      await expect(page.locator('figure.illustration'), id).toHaveCount(0);
       await expect(page.getByTestId('attribution'), id).toHaveCount(0);
     }
   });
