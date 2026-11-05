@@ -1,6 +1,12 @@
 import type { Feeling, Performance, Session } from '../../domain/types';
-import { DEFAULT_ENGINE_SETTINGS, type EngineSettings } from '../config';
+import { DEFAULT_VARIANT_CONFIG, type EngineSettings } from '../config';
 import { rebuildProfile, type ReplayResult } from '../replay';
+
+/** Réglages du moteur sans aucun réglage par exercice (tests seulement). */
+export const DEFAULT_ENGINE_SETTINGS: EngineSettings = {
+  defaults: DEFAULT_VARIANT_CONFIG,
+  overrides: {},
+};
 
 export const V = 'tirage-vertical';
 

@@ -5,20 +5,13 @@
  * donné à la main est affiché tel quel.
  */
 import type { MuscleGroup, Session } from '../domain/types';
+import { parentGroup } from '../domain/muscleGroups';
+import { countsAsWork } from '../domain/performance';
 import { MUSCLE_GROUP_LABELS } from '../library/seed';
 import { defaultSessionName, importedSessionName } from './format';
 
 /** Nombre de groupes au plus dans le nom. */
 export const TITLE_MAX_GROUPS = 3;
-
-/** Sous-groupes des jambes : nommés « Jambes ». */
-const PARENT_GROUP: Partial<Record<MuscleGroup, MuscleGroup>> = {
-  quadriceps: 'jambes',
-  'ischio-jambiers': 'jambes',
-  mollets: 'jambes',
-  fessiers: 'jambes',
-  adducteurs: 'jambes',
-};
 
 const LABELS: Record<MuscleGroup, string> = { ...MUSCLE_GROUP_LABELS, abdominaux: 'Abdos' };
 
@@ -37,10 +30,11 @@ export function autoSessionTitle(session: Session, primaryGroupOf: (variantId: s
   const sets = new Map<MuscleGroup, number>();
   for (const p of session.performances) {
     // Un exercice sans série ne compte pas ; une performance partielle importée (poids sans répétitions) compte.
-    if (p.reps.length === 0 && !p.partial) continue;
+    if (!countsAsWork(p)) continue;
     const group = primaryGroupOf(p.variantId);
     if (!group) continue;
-    const key = PARENT_GROUP[group] ?? group;
+    // Un sous-groupe des jambes est nommé « Jambes ».
+    const key = parentGroup(group);
     sets.set(key, (sets.get(key) ?? 0) + p.reps.length);
   }
   const groups = [...sets.entries()]

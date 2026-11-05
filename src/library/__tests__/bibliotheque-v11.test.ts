@@ -8,7 +8,8 @@ import { buildBackup, parseJsonImport, planImport } from '../../transfer/backup'
 import { matchExercise } from '../../transfer/match';
 import { buildEngineSettings } from '../catalog';
 import { SEED_ADDITIONS, SEED_EXERCISES, SEED_VERSION } from '../seed';
-import { buildSearchIndex, searchExercises } from '../search';
+import { buildSearchIndex } from '../search';
+import { searchExercises } from './helpers';
 
 const LIB: Exercise[] = [...SEED_EXERCISES];
 const ids = (q: string) => searchExercises(buildSearchIndex(LIB), q).map((r) => r.entry.variant.id);

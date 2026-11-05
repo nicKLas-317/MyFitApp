@@ -3,12 +3,13 @@ import { ActionMenu } from '../ActionMenu';
 import { useApp } from '../../app/store';
 import { parseHeight } from '../../body/model';
 import { useBody } from '../../body/store';
-import type { CardioMachine, MuscleGroup } from '../../domain/types';
+import type { CardioMachine } from '../../domain/types';
 import { machineCountsForLegs, machineListErrors, newMachine, type MachineListError } from '../../cardio/model';
 import { isValidEmail } from '../../analysis/report';
 import { HABIT_GROUPS, WEEKDAY_LABELS, WEEKDAYS, habitErrors, newHabit, type Habit, type HabitError, type Weekday } from '../../activities/model';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
 import { Stepper } from '../ExerciseCard';
+import { MAIN_GROUPS } from '../../domain/muscleGroups';
 
 const PERSIST_LABELS = {
   granted: 'accordé',
@@ -114,7 +115,7 @@ function HeightField() {
   );
 }
 
-const RECAP_CHOICES: MuscleGroup[] = ['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes', 'abdominaux'];
+const RECAP_CHOICES = MAIN_GROUPS;
 
 /** Récapitulatif hebdomadaire de l'accueil (§19.6) : groupes affichés et seuil du rouge. */
 function RecapSettingsField() {

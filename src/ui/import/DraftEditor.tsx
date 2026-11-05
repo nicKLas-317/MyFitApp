@@ -17,10 +17,11 @@ import {
 } from '../../transfer/draft';
 import { FEELING_LABELS } from '../labels';
 import { StatusBadge } from '../StatusBadge';
+import { MUSCLE_GROUPS } from '../../domain/muscleGroups';
 
 const NEW_EXERCISE = '__new_exercise';
 const NEW_VARIANT = '__new_variant';
-const GROUPS = Object.keys(MUSCLE_GROUP_LABELS) as MuscleGroup[];
+const GROUPS = MUSCLE_GROUPS;
 const FEELING_ORDER: Feeling[] = ['tres_bien', 'bien', 'moyen', 'mal', 'tres_mal', 'inconnu'];
 
 export function ProblemList({ problems }: { problems: readonly DraftProblem[] }) {

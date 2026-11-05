@@ -27,6 +27,7 @@ import { fixPlusEqualFeelings, isFeeling, readFeelingSymbol } from './feelings';
 import { detectDate } from './notes';
 import { newId } from '../session/ops';
 import { normalizeName } from '../library/text';
+import { MUSCLE_GROUPS } from '../domain/muscleGroups';
 
 export const APP_ID = 'MyFitApp';
 export const SCHEMA_VERSION = 7;
@@ -104,7 +105,7 @@ const isStr = (v: unknown): v is string => typeof v === 'string';
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const isInt = (v: unknown): v is number => Number.isInteger(v);
 const isStrArray = (v: unknown): v is string[] => Array.isArray(v) && v.every(isStr);
-const MUSCLE_GROUPS = Object.keys(MUSCLE_GROUP_LABELS) as MuscleGroup[];
+
 
 /**
  * Migre une sauvegarde native validée vers le format actuel.

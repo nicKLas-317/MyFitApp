@@ -10,7 +10,8 @@ import { newPerformance } from '../../session/ops';
 import { buildEngineSettings, displayName, indexVariants } from '../catalog';
 import { illustrationFor } from '../illustrations';
 import { SEED_ADDITIONS, SEED_EXERCISES, SEED_VERSION } from '../seed';
-import { buildSearchIndex, searchExercises } from '../search';
+import { buildSearchIndex } from '../search';
+import { searchExercises } from './helpers';
 
 const LIB: Exercise[] = [...SEED_EXERCISES];
 const settings = buildEngineSettings(LIB);

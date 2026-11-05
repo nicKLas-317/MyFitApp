@@ -11,15 +11,6 @@ export const SYMBOL_TO_FEELING: Readonly<Record<string, Feeling>> = {
   '--': 'tres_mal',
 };
 
-/** Symbole de référence de chaque ressenti (export en notes). */
-export const FEELING_TO_SYMBOL: Readonly<Partial<Record<Feeling, string>>> = {
-  tres_bien: '++',
-  bien: '+',
-  moyen: '=',
-  mal: '-=',
-  tres_mal: '--',
-};
-
 export type SymbolReading =
   | { kind: 'absent' }
   | { kind: 'known'; symbol: string; feeling: Feeling }

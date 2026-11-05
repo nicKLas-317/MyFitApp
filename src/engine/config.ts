@@ -13,11 +13,6 @@ export interface EngineSettings {
   overrides: Record<string, Partial<VariantConfig>>;
 }
 
-export const DEFAULT_ENGINE_SETTINGS: EngineSettings = {
-  defaults: DEFAULT_VARIANT_CONFIG,
-  overrides: {},
-};
-
 /** Plage par défaut d'un exercice au poids du corps (réglable par exercice) : 10 à 40 répétitions. */
 export const BODYWEIGHT_RANGE = { minReps: 10, maxReps: 40 } as const;
 

@@ -6,6 +6,7 @@
 import type { Feeling, Performance, Session } from '../domain/types';
 import { compareSessions, sortSessions, validatePerformance, type PerformanceError } from '../engine';
 import { isIsoDate } from '../session/format';
+import { parseIsoDay } from '../domain/calendar';
 import { normalizeName } from '../library/text';
 
 /**
@@ -85,19 +86,11 @@ export function setSessionLocation(session: Session, home: boolean, now: number)
   return home ? { ...rest, location: 'maison', updatedAt: now } : { ...rest, updatedAt: now };
 }
 
-/** Nombre total de répétitions réalisées dans une séance. */
-export function totalReps(session: Session): number {
-  return session.performances.reduce((n, p) => n + p.reps.reduce((a, b) => a + b, 0), 0);
-}
-
 /** Élément de l'historique (§10) : une séance, ou une activité rangée à son heure de début. */
 export type HistoryKey = { date: string; session: Session } | { date: string; time: number };
 
 /** Dernier instant d'une journée « AAAA-MM-JJ », heure locale. */
-function endOfDay(date: string): number {
-  const [y, m, d] = date.split('-').map(Number) as [number, number, number];
-  return new Date(y, m - 1, d + 1).getTime() - 1;
-}
+const endOfDay = (date: string) => parseIsoDay(date, 1).getTime() - 1;
 
 /**
  * Ordre chronologique de l'historique (version 1.41.2), du plus ancien au plus récent : par date, puis, entre deux

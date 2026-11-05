@@ -5,14 +5,16 @@
  */
 import type { WeighIn } from '../body/model';
 import { activityMinutes, activityStart, doneActivities, type ActivityRecord } from '../activities/model';
-import { cardioOf, formatMinutes } from '../cardio/model';
+import { cardioMinutes, cardioOf, formatMinutes } from '../cardio/model';
 import type { CardioMachine, Exercise, MuscleGroup, Session } from '../domain/types';
 import { evaluationTrack, HOME_SUFFIX, repStep, resolveConfig, type EngineSettings, type Evaluation, type Palier } from '../engine';
 import { MUSCLE_GROUP_LABELS } from '../library/seed';
-import { formatDurationLong, formatKg, localDate } from '../session/format';
+import { localDate, sessionStartTime, weekStart } from '../domain/calendar';
+import { formatDurationLong, formatKg, formatLoad, formatShortDay, plural } from '../session/format';
+import { elapsedMs } from '../session/ops';
 import { isPalierValidated } from './progress';
 import { computeRecords, formatRecord, type RecordBreak } from './records';
-import { groupWork, HOME_WEEK_CAP, LEG_CARDIO_BONUS, LEG_CARDIO_GROUP, legCardioWeek, sessionStartTime, weekStart, workParts } from './weekly';
+import { groupWork, HOME_WEEK_CAP, LEG_CARDIO_BONUS, LEG_CARDIO_GROUP, legCardioWeek, workParts } from './weekly';
 
 export type ReportKind = 'week' | 'month';
 
@@ -271,7 +273,7 @@ function totalsOf(sessions: readonly Session[], period: Pick<ReportPeriod, 'star
     // À la maison, la durée n'a pas d'importance : ni durée en salle, ni « sans durée ».
     if (s.location === 'maison') homeCount++;
     // Séance complétée (version 1.28.0) : la somme de ses périodes, sans la pause.
-    else if (s.startedAt !== null && s.endedAt !== null) durationMs += Math.max(0, s.endedAt - s.startedAt - (s.pauseMs ?? 0));
+    else if (s.startedAt !== null && s.endedAt !== null) durationMs += elapsedMs(s, s.endedAt);
     else unknownDuration++;
   }
   return { sessionCount: list.length, ...(homeCount > 0 ? { homeCount } : {}), durationMs, unknownDuration };
@@ -410,17 +412,11 @@ export function lineText(line: ReportLine): string {
   return line.map((p) => (typeof p === 'string' ? p : p.em)).join('');
 }
 
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n > 1 ? many : one}`;
-const shortDay = (date: string) => {
-  const [y, m, d] = date.split('-').map(Number);
-  return DAY_MONTH.format(new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1));
-};
 /**
  * « à 20 kg », « avec 30 kg d’aide », « à 12 kg / haltère » (exercice aux haltères, version 1.30.2), précédé d'une
  * espace ; rien pour un exercice au poids du corps (0).
  */
-const load = (kg: number, assisted: boolean, dumbbell = false) =>
-  kg === 0 ? '' : assisted ? ` avec ${formatKg(kg)} d’aide` : ` à ${formatKg(kg, dumbbell)}`;
+const load = (kg: number, assisted: boolean, dumbbell = false) => (kg === 0 ? '' : formatLoad(kg, assisted, dumbbell));
 
 /**
  * Ce à quoi la période est comparée : « à la semaine précédente », ou pour une période en cours la même portion de la
@@ -509,7 +505,7 @@ export function reportSections(report: PeriodReport, variantName: (variantId: st
                 p.kind === 'reps_up'
                   ? [em(`${from} → ${p.sets}×${p.toReps}${unit}${load(p.from.weightKg, p.assisted, dumbbell(p.variantId))}`)]
                   : [`${from}${load(p.from.weightKg, p.assisted, dumbbell(p.variantId))} validé → `, em(`${p.assisted ? 'moins d’aide' : 'poids supérieur'}, ${p.sets}×${p.toReps}`)];
-              return [`${name(p.variantId, p.home)} : `, ...change, ` (${shortDay(p.date)})`];
+              return [`${name(p.variantId, p.home)} : `, ...change, ` (${formatShortDay(p.date)})`];
             })
           : [['Aucun palier validé.']],
     });
@@ -531,7 +527,7 @@ export function reportSections(report: PeriodReport, variantName: (variantId: st
             ...(i > 0 ? [' ; '] : []),
             `${d.reds}ᵉ séance rouge de suite${load(d.weightKg, d.assisted, dumbbell(d.variantId))} → `,
             em(d.seconds ? 'cible −5 s recommandée' : d.bodyweight ? 'cible −1 rép. recommandée' : d.assisted ? 'plus d’aide recommandée' : 'poids inférieur recommandé'),
-            ` (${shortDay(d.date)})`,
+            ` (${formatShortDay(d.date)})`,
           ]),
         ];
       }
@@ -543,7 +539,7 @@ export function reportSections(report: PeriodReport, variantName: (variantId: st
 
   if (report.weighIns.length > 0) {
     const [a, b] = report.weighIns;
-    const at = (w: WeighIn): ReportPart[] => [em(formatKg(w.weightKg)), ` le ${shortDay(w.date)}`];
+    const at = (w: WeighIn): ReportPart[] => [em(formatKg(w.weightKg)), ` le ${formatShortDay(w.date)}`];
     sections.push({ title: 'Poids', lines: [b ? [...at(a!), ' → ', ...at(b)] : at(a!)] });
   }
   return sections;
@@ -711,7 +707,7 @@ export function buildReportScreen(report: PeriodReport, input: ReportInput): Rep
   const compared = report.compared;
   const inside = (span: Pick<ReportPeriod, 'start' | 'next'>) => (t: number) => containsTime(span, t);
   const cardioIn = (span: Pick<ReportPeriod, 'start' | 'next'>) =>
-    done.filter((s) => inside(span)(sessionStartTime(s))).reduce((n, s) => n + cardioOf(s).reduce((m, b) => m + b.minutes, 0), 0);
+    done.filter((s) => inside(span)(sessionStartTime(s))).reduce((n, s) => n + cardioMinutes(s), 0);
   const activitiesIn = (span: Pick<ReportPeriod, 'start' | 'next'>) => activities.filter((a) => inside(span)(activityStart(a))).length;
 
   // Maison plafonnée à ½ par semaine : semaine par semaine, sur la partie de chaque semaine comprise dans la période.
@@ -754,5 +750,5 @@ export function buildReportScreen(report: PeriodReport, input: ReportInput): Rep
 /** Ligne sous le nom d'une progression : « 3 séries · à 52 kg · 29 oct. », « 3 séries · poids du corps · 27 oct. ». */
 export function progressionMeta(p: ReportProgression, dumbbell = false): string {
   const charge = p.seconds ? 'en secondes' : p.from.weightKg === 0 ? 'poids du corps' : load(p.from.weightKg, p.assisted, dumbbell).trim();
-  return `${plural(p.sets, 'série')} · ${charge} · ${shortDay(p.date)}`;
+  return `${plural(p.sets, 'série')} · ${charge} · ${formatShortDay(p.date)}`;
 }

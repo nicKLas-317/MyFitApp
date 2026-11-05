@@ -7,7 +7,8 @@ import { buildBackup, parseJsonImport, planImport } from '../../transfer/backup'
 import { draftFromNotes } from '../../transfer/draft';
 import { matchExercise } from '../../transfer/match';
 import { SEED_ADDITIONS, SEED_EXERCISES, SEED_VERSION } from '../seed';
-import { buildSearchIndex, searchExercises } from '../search';
+import { buildSearchIndex } from '../search';
+import { searchExercises } from './helpers';
 import { nameKey } from '../text';
 
 const LIB: Exercise[] = [...SEED_EXERCISES];

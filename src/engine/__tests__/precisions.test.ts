@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_ENGINE_SETTINGS, type EngineSettings } from '../config';
+import type { EngineSettings } from '../config';
+import { DEFAULT_ENGINE_SETTINGS } from './helpers';
 import { finalState, green, incomplete, orange, partial, perf, red, replay, V } from './helpers';
 
 const last = (steps: Parameters<typeof replay>[0], settings?: EngineSettings) =>

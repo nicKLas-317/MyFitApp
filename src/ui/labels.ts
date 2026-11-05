@@ -1,5 +1,5 @@
-import type { Feeling, Status } from '../domain/types';
-import type { Palier, ProgressMarker, Recommendation } from '../engine';
+import type { Feeling } from '../domain/types';
+import { sameWeight, type Palier, type ProgressMarker, type Recommendation } from '../engine';
 import type { RatedFeeling } from '../session/ops';
 import { formatKg, formatSetsReps } from '../session/format';
 
@@ -19,8 +19,6 @@ export const FEELING_LABELS: Record<Feeling, string> = {
   tres_bien: 'Très bien passé',
   inconnu: 'Ressenti non renseigné',
 };
-
-export const STATUS_LABELS: Record<Status, string> = { vert: 'vert', orange: 'orange', rouge: 'rouge' };
 
 /**
  * Changement de charge recommandé (§7.6, §7.8). Pour un exercice assisté (§7.12), la charge est une aide :
@@ -63,7 +61,7 @@ const kgNumber = (kg: number) => kg.toLocaleString('fr-FR', { maximumFractionDig
  */
 export function changeText(c: { from: Palier; to: Palier }, seconds = false, perDumbbell = false): string {
   const reps = `${c.from.targetReps} → ${c.to.targetReps} ${seconds ? 's' : 'rép.'}`;
-  if (c.from.weightKg === c.to.weightKg) return reps;
+  if (sameWeight(c.from.weightKg, c.to.weightKg)) return reps;
   const weight = `${kgNumber(c.from.weightKg)} → ${perDumbbell ? `${kgNumber(c.to.weightKg)} kg/haltère` : formatKg(c.to.weightKg)}`;
   return c.from.targetReps === c.to.targetReps ? weight : `${weight}, ${reps}`;
 }

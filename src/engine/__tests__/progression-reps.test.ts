@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { finalState, green, history, orange, perf, red, replay, deepFreeze } from './helpers';
 import { rebuildProfile } from '../replay';
-import { DEFAULT_ENGINE_SETTINGS } from '../config';
+import { DEFAULT_ENGINE_SETTINGS } from './helpers';
 
 describe('§15 Progression des répétitions', () => {
   it('8. Une première séance verte à 3×8 ne déclenche pas de progression', () => {

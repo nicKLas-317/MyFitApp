@@ -297,10 +297,6 @@ export function searchWithInfo(index: readonly SearchEntry[], query: string): Se
   return { results, ignored: shown.length > 0 ? shown : ignore ? unknown : [] };
 }
 
-export function searchExercises(index: readonly SearchEntry[], query: string): SearchResult[] {
-  return searchWithInfo(index, query).results;
-}
-
 /** Exercices-variantes récemment utilisés, du plus récent au plus ancien. */
 export function recentVariantIds(sessions: readonly Session[], limit = 6, homeFirst = false): string[] {
   const ids: string[] = [];

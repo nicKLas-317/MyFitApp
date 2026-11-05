@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Session } from '../../domain/types';
-import { DEFAULT_ENGINE_SETTINGS, type EngineSettings } from '../config';
+import type { EngineSettings } from '../config';
+import { DEFAULT_ENGINE_SETTINGS } from './helpers';
 import { appendSession, EMPTY_PROFILE, rebuildProfile, type Profile } from '../replay';
 import { createSessionFromTemplate } from '../session';
 import { deepFreeze, green, history, orange, perf, red, replay, session, V } from './helpers';

@@ -1,4 +1,5 @@
 import { useWidth } from './useWidth';
+import { formatDecimal } from '../session/format';
 
 /**
  * Graphique d'évolution minimal en SVG (§19.2, §20) : une courbe dans le temps, sans dépendance.
@@ -31,7 +32,7 @@ const M = { top: 16, right: 16, bottom: 24, left: 48 };
 const LABEL_GAP = 16;
 
 const toTime = (date: string) => Date.parse(`${date}T00:00:00Z`);
-const fmt = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 });
+const fmt = formatDecimal;
 const shortDate = (date: string) => new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(toTime(date));
 
 export function LineChart({ data, label, unit, testId, baseline, span }: Props) {

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useApp } from '../../app/store';
 import { navigateBack } from '../../app/hooks';
 import type { Session } from '../../domain/types';
+import { parseIsoDay } from '../../domain/calendar';
 import { compareHistory, searchSessions } from '../../history/ops';
 import { formatDurationLong, formatIsoDay } from '../../session/format';
 import { cardioMinutes, formatMinutes } from '../../cardio/model';
@@ -24,14 +25,10 @@ type Entry = { kind: 'session'; date: string; session: Session } | { kind: 'acti
 const MONTH_FORMAT = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' });
 const WEEKDAY_FORMAT = new Intl.DateTimeFormat('fr-FR', { weekday: 'short' });
 
-const dayOf = (date: string) => {
-  const [y, m, d] = date.split('-').map(Number);
-  return new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1);
-};
 
 /** Intertitre d'un mois : « Octobre 2026 ». */
 function monthTitle(date: string): string {
-  const text = MONTH_FORMAT.format(dayOf(date));
+  const text = MONTH_FORMAT.format(parseIsoDay(date));
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
@@ -118,7 +115,7 @@ export function History() {
 
 /** Ligne compacte : jour à gauche, titre sur une ligne au plus, contenu dessous. */
 function HistoryRow({ className, href, date, title, meta }: { className: string; href: string; date: string; title: string; meta: string }) {
-  const day = dayOf(date);
+  const day = parseIsoDay(date);
   return (
     <li className="history-row">
       <a className={`history-line ${className}`} href={href}>

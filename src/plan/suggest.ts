@@ -8,8 +8,10 @@
 import type { CardioBlock, CardioMachine, Exercise, MuscleGroup, PlanItem, Session, SessionPlan } from '../domain/types';
 import type { ActivityRecord } from '../activities/model';
 import { compareSessions, resolveConfig, type EngineSettings } from '../engine';
-import { sessionStartTime, weeklyRecap, weekStart, type WeeklyRecapSettings } from '../analysis/weekly';
-import { localDate } from '../session/format';
+import { weeklyRecap, type WeeklyRecapSettings } from '../analysis/weekly';
+import { localDate, parseIsoDay, sessionStartTime, shiftIsoDay, weekBounds, weekStart } from '../domain/calendar';
+import { recapGroupOf } from '../domain/muscleGroups';
+import { countsAsWork } from '../domain/performance';
 import { sessionSteps } from './model';
 
 /** Exercices au plus, hors bonus abdos. */
@@ -27,15 +29,6 @@ export const BONUS_GROUP: MuscleGroup = 'abdominaux';
 const SESSION_ORDER: readonly MuscleGroup[] = [
   'pectoraux', 'dos', 'jambes', 'quadriceps', 'ischio-jambiers', 'mollets', 'fessiers', 'adducteurs', 'epaules', 'triceps', 'biceps',
 ];
-
-/** Sous-groupes des jambes : comptés pour « jambes » quand ils ne sont pas affichés eux-mêmes (comme le récapitulatif). */
-const PARENT_GROUP: Partial<Record<MuscleGroup, MuscleGroup>> = {
-  quadriceps: 'jambes',
-  'ischio-jambiers': 'jambes',
-  mollets: 'jambes',
-  fessiers: 'jambes',
-  adducteurs: 'jambes',
-};
 
 export interface SuggestedExercise {
   variantId: string;
@@ -80,17 +73,6 @@ export interface SuggestionInput {
 const isGym = (s: Session) => s.location !== 'maison';
 const done = (s: Session) => s.state === 'done';
 
-/** Jour civil décalé de `delta` jours (« YYYY-MM-DD »), à midi pour ignorer les changements d'heure. */
-function shiftDay(day: string, delta: number): string {
-  const [y, m, d] = day.split('-').map(Number) as [number, number, number];
-  return localDate(new Date(y, m - 1, d + delta, 12).getTime());
-}
-
-function noonOf(day: string): number {
-  const [y, m, d] = day.split('-').map(Number) as [number, number, number];
-  return new Date(y, m - 1, d, 12).getTime();
-}
-
 /**
  * La suggestion, ou null quand elle n'est pas affichée : aucune séance terminée à la salle cette semaine, la séance
  * proposée tomberait la semaine suivante (dimanche après une séance), ou aucun groupe à compléter (hors abdos).
@@ -112,21 +94,15 @@ export function weekSuggestion(input: SuggestionInput): WeekSuggestion | null {
   const today = localDate(now);
   const finished = sessions.filter(done);
   const gymToday = finished.some((s) => isGym(s) && s.date === today);
-  const day = gymToday ? shiftDay(today, 1) : today;
-  const monday = weekStart(new Date(now));
+  const day = gymToday ? shiftIsoDay(today, 1) : today;
+  const { start: monday, next: nextMonday } = weekBounds(now);
   const week = monday.getTime();
-  if (weekStart(new Date(noonOf(day))).getTime() !== week) return null;
-  const nextMonday = new Date(monday);
-  nextMonday.setDate(nextMonday.getDate() + 7);
+  if (weekStart(parseIsoDay(day, 0, 12)).getTime() !== week) return null;
   const inWeek = (s: Session) => sessionStartTime(s) >= week && sessionStartTime(s) < nextMonday.getTime();
   if (!finished.some((s) => isGym(s) && inWeek(s))) return null;
 
   const shown = new Set(recap.groups);
-  const recapGroup = (g: MuscleGroup): MuscleGroup | null => {
-    if (shown.has(g)) return g;
-    const parent = PARENT_GROUP[g];
-    return parent && shown.has(parent) ? parent : null;
-  };
+  const recapGroup = (g: MuscleGroup) => recapGroupOf(g, shown);
   const byVariant = new Map<string, { exercise: Exercise; archived: boolean }>();
   for (const e of exercises) for (const v of e.variants) byVariant.set(v.id, { exercise: e, archived: e.archived || v.archived });
   const primaryOf = (id: string) => {
@@ -147,18 +123,19 @@ export function weekSuggestion(input: SuggestionInput): WeekSuggestion | null {
   const byNeed = (a: MuscleGroup, b: MuscleGroup) => (score.get(a) ?? 0) - (score.get(b) ?? 0) || order(a) - order(b);
 
   // La veille de la séance proposée : groupes travaillés en direct à la salle.
-  const eve = shiftDay(day, -1);
+  const eve = shiftIsoDay(day, -1);
   const avoided = new Set<MuscleGroup>();
   for (const s of finished) {
     if (!isGym(s) || s.date !== eve) continue;
     for (const p of s.performances) {
-      const g = p.reps.length > 0 ? primaryOf(p.variantId) : null;
+      // Comme le récapitulatif : une performance partielle importée compte (version 1.41.3).
+      const g = countsAsWork(p) ? primaryOf(p.variantId) : null;
       if (g) avoided.add(g);
     }
   }
 
   // Exercices déjà faits : à la salle dans les 6 dernières semaines (au poids du corps : n'importe où).
-  const since = shiftDay(today, -SUGGEST_WINDOW_DAYS);
+  const since = shiftIsoDay(today, -SUGGEST_WINDOW_DAYS);
   const freq = new Map<string, number>();
   const last = new Map<string, Session>();
   const thisWeek = new Set<string>();
@@ -237,7 +214,7 @@ export function weekSuggestion(input: SuggestionInput): WeekSuggestion | null {
 
   // Ce que la séance apporterait : la même séance, terminée ce jour-là, dans le récapitulatif, échauffement compris
   // (ses minutes comptent pour les jambes, version 1.41.0).
-  const at = noonOf(day);
+  const at = parseIsoDay(day, 0, 12).getTime();
   const projected: Session = {
     id: 'suggestion', name: '', date: day, startedAt: at, endedAt: at + 3_600_000, createdAt: at, updatedAt: at, origin: 'app', state: 'done',
     performances: chosen.map((c) => ({ variantId: c.variantId, weightKg: 1, targetReps: 8, plannedSets: 3, reps: [8, 8, 8], feeling: 'bien' })),
@@ -262,7 +239,7 @@ export function weekSuggestion(input: SuggestionInput): WeekSuggestion | null {
  * dimanche », sauf le dimanche (la séance proposée est alors celle du jour, la dernière possible) : « Aujourd'hui ».
  */
 export function suggestionDueToday(s: WeekSuggestion): boolean {
-  return !s.tomorrow && new Date(noonOf(s.day)).getDay() === 0;
+  return !s.tomorrow && parseIsoDay(s.day, 0, 12).getDay() === 0;
 }
 
 /** Éléments de la séance proposée : l'échauffement en tête, puis les exercices (identifiant du cardio fourni). */

@@ -12,6 +12,9 @@
  * ½ par semaine, sans le plafond de 1 par jour (« +62 min cardio »). Sans effet sur « hier » / « aujourd'hui ».
  */
 import type { CardioMachine, Exercise, MuscleGroup, Session } from '../domain/types';
+import { localDate, sessionStartTime, weekBounds } from '../domain/calendar';
+import { RECAP_GROUP_ORDER, recapGroupOf } from '../domain/muscleGroups';
+import { countsAsWork } from '../domain/performance';
 import { cardioMinutes, cardioOf, formatMinutes, machineCountsForLegs } from '../cardio/model';
 import { activityEnd, activityStart, doneActivities, type ActivityRecord } from '../activities/model';
 
@@ -28,15 +31,6 @@ export interface WeeklyRecapSettings {
 export const DEFAULT_RECAP_SETTINGS: WeeklyRecapSettings = {
   groups: ['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes'],
   redThreshold: 2,
-};
-
-/** Sous-groupes des jambes : comptés pour « jambes » quand ils ne sont pas affichés eux-mêmes. */
-const PARENT_GROUP: Partial<Record<MuscleGroup, MuscleGroup>> = {
-  quadriceps: 'jambes',
-  'ischio-jambiers': 'jambes',
-  mollets: 'jambes',
-  fessiers: 'jambes',
-  adducteurs: 'jambes',
 };
 
 export interface RecapCell {
@@ -82,37 +76,17 @@ export interface WeeklyRecap {
   cells: RecapCell[];
 }
 
-/** Lundi 0 h 00 de la semaine (heure locale) contenant `date`. */
-export function weekStart(date: Date): Date {
-  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const offset = (d.getDay() + 6) % 7; // lundi = 0 … dimanche = 6
-  d.setDate(d.getDate() - offset);
-  return d;
-}
-
-/** Début de la séance : heure de début si connue, sinon minuit (heure locale) de sa date. */
-export function sessionStartTime(session: Session): number {
-  if (session.startedAt !== null) return session.startedAt;
-  const [y, m, d] = session.date.split('-').map(Number) as [number, number, number];
-  return new Date(y, m - 1, d).getTime();
-}
-
 /** Dernier moment où la séance a été pratiquée : fin si connue, sinon début. */
 function sessionLastTime(session: Session): number {
   return session.endedAt ?? sessionStartTime(session);
 }
 
-const dayKey = (t: number) => {
-  const d = new Date(t);
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-};
-
 function recencyOf(time: number, now: number): Recency {
   if (now - time >= 48 * 3600_000 || time > now) return null;
-  if (dayKey(time) === dayKey(now)) return 'today';
+  if (localDate(time) === localDate(now)) return 'today';
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
-  return dayKey(time) === dayKey(yesterday.getTime()) ? 'yesterday' : null;
+  return localDate(time) === localDate(yesterday.getTime()) ? 'yesterday' : null;
 }
 
 /** Poids maximal de la maison dans la semaine, pour un groupe (version 1.28.0). */
@@ -187,12 +161,7 @@ export function groupWork(
   const exerciseOfVariant = new Map<string, Exercise>();
   for (const e of exercises) for (const v of e.variants) exerciseOfVariant.set(v.id, e);
   const shown = new Set(groups);
-  const recapGroup = (g: MuscleGroup | undefined): MuscleGroup | null => {
-    if (!g) return null;
-    if (shown.has(g)) return g;
-    const parent = PARENT_GROUP[g];
-    return parent && shown.has(parent) ? parent : null;
-  };
+  const recapGroup = (g: MuscleGroup | undefined) => recapGroupOf(g, shown);
 
   const counts = new Map<MuscleGroup, number>();
   const indirects = new Map<MuscleGroup, number>();
@@ -217,7 +186,7 @@ export function groupWork(
     const homeSets = new Map<MuscleGroup, number>();
     for (const p of s.performances) {
       const e = exerciseOfVariant.get(p.variantId);
-      if (!e || (p.reps.length === 0 && !p.partial)) continue;
+      if (!e || !countsAsWork(p)) continue;
       const g = recapGroup(e.primaryGroup);
       if (g) {
         direct.add(g);
@@ -229,7 +198,7 @@ export function groupWork(
       }
     }
     for (const g of direct) secondary.delete(g);
-    const day = dayKey(sessionStartTime(s));
+    const day = localDate(sessionStartTime(s));
     if (s.location === 'maison') {
       // À la maison : les séries des groupes principaux seulement, 1/12 chacune, sans dépasser 1 pour la journée.
       for (const g of direct) {
@@ -257,7 +226,7 @@ export function groupWork(
   }
   for (const a of [...doneActivities(activities)].sort((x, y) => activityStart(x) - activityStart(y))) {
     const counted = inPeriod(activityStart(a));
-    const day = dayKey(activityStart(a));
+    const day = localDate(activityStart(a));
     const found = new Set(a.groups.map(recapGroup).filter((g): g is MuscleGroup => g !== null));
     for (const g of found) {
       if (counted && fits(day, g)) {
@@ -270,6 +239,15 @@ export function groupWork(
   return { counts, indirects, homes, homeScores, last };
 }
 
+/**
+ * Score d'un groupe, en séances (version 1.41.3, une seule définition) : séances directes, plus les parts déjà pondérées
+ * de l'indirect (½ par séance), de la maison (plafonnée) et du cardio des jambes. Récapitulatif (couleur, tri),
+ * bâtons des bilans (§19.7) et séance pour compléter la semaine (§5.15).
+ */
+export function groupScore(parts: { direct: number; indirect: number; home: number; cardio: number }): number {
+  return parts.direct + parts.indirect + parts.home + parts.cardio;
+}
+
 export function weeklyRecap(
   sessions: readonly Session[],
   exercises: readonly Exercise[],
@@ -278,9 +256,7 @@ export function weeklyRecap(
   activities: readonly ActivityRecord[] = [],
   machines: readonly CardioMachine[] = [],
 ): WeeklyRecap {
-  const start = weekStart(new Date(now));
-  const next = new Date(start);
-  next.setDate(next.getDate() + 7);
+  const { start, next } = weekBounds(now);
   const end = new Date(next);
   end.setDate(end.getDate() - 1);
 
@@ -304,7 +280,7 @@ export function weeklyRecap(
     const home = homes.get(group) ?? 0;
     // La maison : au plus ½ pour la semaine, jamais le niveau d'une séance à la salle (version 1.28.0).
     const cardio = group === LEG_CARDIO_GROUP ? legCardio : 0;
-    const score = count + indirect / 2 + Math.min(HOME_WEEK_CAP, homeScores.get(group) ?? 0) + (cardio > 0 ? LEG_CARDIO_BONUS : 0);
+    const score = groupScore({ direct: count, indirect: indirect / 2, home: Math.min(HOME_WEEK_CAP, homeScores.get(group) ?? 0), cardio: cardio > 0 ? LEG_CARDIO_BONUS : 0 });
     const color: RecapColor = score < 1 ? 'vert' : score >= settings.redThreshold ? 'rouge' : 'orange';
     const time = last.get(group);
     return {
@@ -359,10 +335,7 @@ export function workParts(w: { count: number; indirect: number; home?: number; c
 export function sanitizeRecapSettings(value: unknown): WeeklyRecapSettings {
   if (typeof value !== 'object' || value === null) return DEFAULT_RECAP_SETTINGS;
   const v = value as Record<string, unknown>;
-  const known: MuscleGroup[] = [
-    'pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes', 'quadriceps', 'ischio-jambiers', 'mollets', 'fessiers', 'adducteurs', 'abdominaux',
-  ];
-  const groups = Array.isArray(v.groups) ? known.filter((g) => (v.groups as unknown[]).includes(g)) : DEFAULT_RECAP_SETTINGS.groups;
+  const groups = Array.isArray(v.groups) ? RECAP_GROUP_ORDER.filter((g) => (v.groups as unknown[]).includes(g)) : DEFAULT_RECAP_SETTINGS.groups;
   const t = v.redThreshold;
   const redThreshold = Number.isInteger(t) && (t as number) >= 2 && (t as number) <= 7 ? (t as number) : DEFAULT_RECAP_SETTINGS.redThreshold;
   return { groups: groups.length > 0 ? groups : DEFAULT_RECAP_SETTINGS.groups, redThreshold };

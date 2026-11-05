@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Session } from '../../domain/types';
-import { DEFAULT_ENGINE_SETTINGS, rebuildProfile } from '../../engine';
+import { rebuildProfile } from '../../engine';
+import { DEFAULT_ENGINE_SETTINGS } from '../../engine/__tests__/helpers';
 import { green, history, orange, perf, V } from '../../engine/__tests__/helpers';
 import { correctPerformance, removePastPerformance, searchSessions, setSessionDate } from '../ops';
 

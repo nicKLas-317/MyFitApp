@@ -1854,10 +1854,6 @@ fieldset {
 }
 
 /* Historique et suivi corporel */
-.history-links {
-  margin: var(--space-2) 0;
-}
-
 .session-link {
   color: var(--text);
   text-decoration: none;

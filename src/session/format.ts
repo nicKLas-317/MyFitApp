@@ -1,10 +1,8 @@
-const pad = (n: number) => String(n).padStart(2, '0');
+import { localDate, parseIsoDay } from '../domain/calendar';
 
-/** Date locale de l'appareil au format YYYY-MM-DD. */
-export function localDate(ts: number): string {
-  const d = new Date(ts);
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
+export { localDate };
+
+const pad = (n: number) => String(n).padStart(2, '0');
 
 const DAY_FORMAT = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -50,13 +48,30 @@ export function formatSetsReps(sets: number, reps: number, seconds = false): str
   return `${sets} × ${formatReps(reps, seconds)}`;
 }
 
-/** Poids en français : « 52,5 kg ». */
 /**
- * « 52,5 kg » ; « 11,5 kg / haltère » pour un exercice aux haltères (version 1.30.1) : la charge notée est celle d'un
+ * Poids en français : « 52,5 kg » ; « 11,5 kg / haltère » pour un exercice aux haltères (version 1.30.1) : la charge notée est celle d'un
  * seul haltère, jamais le total. Affichage seulement : la valeur enregistrée ne change pas.
  */
 export function formatKg(kg: number, perDumbbell = false): string {
   return `${kg.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} kg${perDumbbell ? ' / haltère' : ''}`;
+}
+
+/**
+ * Charge d'une cible ou d'un record, précédée d'une espace (version 1.41.3, une seule définition) : « à 30 kg »,
+ * « avec 25 kg d’aide » (exercice assisté), « à 11,5 kg / haltère » (exercice aux haltères, version 1.30.1).
+ */
+export function formatLoad(weightKg: number, assisted: boolean, perDumbbell = false): string {
+  return assisted ? ` avec ${formatKg(weightKg)} d’aide` : ` à ${formatKg(weightKg, perDumbbell)}`;
+}
+
+/** « 1 séance », « 3 séances » ; `many` pour un pluriel irrégulier, `space` insécable si besoin. */
+export function plural(n: number, one: string, many = `${one}s`, space = ' '): string {
+  return `${n}${space}${n > 1 ? many : one}`;
+}
+
+/** Nombre à une décimale au plus, en français : « 5,3 », « 12 ». */
+export function formatDecimal(n: number): string {
+  return n.toLocaleString('fr-FR', { maximumFractionDigits: 1 });
 }
 
 /** Unité d'un champ de poids : « kg », ou « kg / haltère » pour un exercice aux haltères (version 1.30.1). */
@@ -77,24 +92,21 @@ export function fromDateTimeLocal(value: string): number | null {
 
 /** Date YYYY-MM-DD en français : « 12 octobre 2026 ». */
 export function formatIsoDay(date: string): string {
-  const [y, m, d] = date.split('-').map(Number);
-  return DAY_FORMAT.format(new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1));
+  return DAY_FORMAT.format(parseIsoDay(date));
 }
 
 const SHORT_DAY_FORMAT = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' });
 
 /** Date YYYY-MM-DD courte : « 15 oct. ». */
 export function formatShortDay(date: string): string {
-  const [y, m, d] = date.split('-').map(Number);
-  return SHORT_DAY_FORMAT.format(new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1));
+  return SHORT_DAY_FORMAT.format(parseIsoDay(date));
 }
 
 const SHORT_DATE_FORMAT = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
 
 /** Date YYYY-MM-DD courte avec l'année : « 22 sept. 2026 ». */
 export function formatShortDate(date: string): string {
-  const [y, m, d] = date.split('-').map(Number);
-  return SHORT_DATE_FORMAT.format(new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1));
+  return SHORT_DATE_FORMAT.format(parseIsoDay(date));
 }
 
 /** Date courte numérique, « 15/10 » : tient sur une ligne même sur un petit écran. */

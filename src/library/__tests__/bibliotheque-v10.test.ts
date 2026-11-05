@@ -4,7 +4,8 @@ import type { Exercise, MuscleGroup } from '../../domain/types';
 import { openAppDb, Repository } from '../../storage/db';
 import { buildBackup, parseJsonImport, planImport } from '../../transfer/backup';
 import { SEED_EXERCISES, SEED_VERSION } from '../seed';
-import { buildSearchIndex, searchExercises } from '../search';
+import { buildSearchIndex } from '../search';
+import { searchExercises } from './helpers';
 
 const LIB: Exercise[] = [...SEED_EXERCISES];
 const ids = (q: string) => searchExercises(buildSearchIndex(LIB), q).map((r) => r.entry.variant.id);

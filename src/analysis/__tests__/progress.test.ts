@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_ENGINE_SETTINGS, rebuildProfile } from '../../engine';
+import { rebuildProfile } from '../../engine';
+import { DEFAULT_ENGINE_SETTINGS } from '../../engine/__tests__/helpers';
 import { green, history, orange, partial, red, V } from '../../engine/__tests__/helpers';
 import { analyzeProgress, chartSeries, recentChanges } from '../progress';
 

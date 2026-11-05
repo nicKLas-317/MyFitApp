@@ -19,7 +19,7 @@ describe('Alerte « groupe moins travaillé », version 1.38.0', () => {
   it('289. Deux semaines terminées sous la moyenne des semaines d’avant (4 au moins), 6 semaines terminées au total ; vacances comptées, une seule semaine en baisse ou historique trop court : rien', () => {
     const sessions = alertHistory();
     // Dos en baisse 2 semaines : 3 et 3 séries, sous la moyenne des 8 semaines d'avant, vacances comprises (6 × 7 ÷ 8).
-    expect(groupAlert(sessions, LIB, 'dos', ALERT_NOW)).toEqual({ group: 'dos', week: '2026-11-02', recent: [3, 3], average: 5.25, referenceWeeks: 8 });
+    expect(groupAlert(sessions, LIB, 'dos', ALERT_NOW)).toEqual({ group: 'dos', week: '2026-11-02', recent: [3, 3], average: 5.25 });
     // Mêmes séries que le graphique « Séries par semaine » (semaine en cours exclue).
     const graph = groupWeeklySets(sessions, LIB, 'dos', ALERT_NOW).weeks;
     expect(graph.slice(-3, -1).map((w) => w.total)).toEqual([3, 3]);
@@ -30,7 +30,7 @@ describe('Alerte « groupe moins travaillé », version 1.38.0', () => {
     expect(alertsOf(sessions, ALERT_NOW, ALL)).toEqual(['dos']);
 
     // Vacances : la semaine vide compte dans la moyenne (comme la moyenne du graphique) ; sans elle, 6.
-    expect(groupAlert(alertHistory({ vacations: [] }), LIB, 'dos', ALERT_NOW)).toMatchObject({ average: 6, referenceWeeks: 8 });
+    expect(groupAlert(alertHistory({ vacations: [] }), LIB, 'dos', ALERT_NOW)).toMatchObject({ average: 6 });
     // Vacances les 2 dernières semaines : tous les groupes sous leur moyenne ; 3 lignes au plus, à égalité dans l'ordre des groupes.
     const away = alertHistory({ vacations: ['2026-10-26', '2026-11-02'], dosDown: [], pecDown: [] });
     expect(GROUPS.map((g) => groupAlert(away, LIB, g, ALERT_NOW)?.recent)).toEqual(GROUPS.map(() => [0, 0]));
@@ -43,7 +43,7 @@ describe('Alerte « groupe moins travaillé », version 1.38.0', () => {
     // Historique trop court : 5 semaines terminées (du 5 oct. au 2 nov.), le dos en baisse 2 semaines : rien.
     expect(alertsOf(alertHistory({ from: '2026-10-05' }), ALERT_NOW, ALL)).toEqual([]);
     // 6 semaines terminées (du 28 sept.), 4 de référence : l'alerte apparaît.
-    expect(groupAlert(alertHistory({ from: '2026-09-28' }), LIB, 'dos', ALERT_NOW)).toMatchObject({ average: 6, referenceWeeks: 4 });
+    expect(groupAlert(alertHistory({ from: '2026-09-28' }), LIB, 'dos', ALERT_NOW)).toMatchObject({ average: 6 });
     // Groupe commencé tard : moins de 4 semaines de référence (jambes depuis le 12 oct. : 2), rien, même en baisse.
     const lateLegs = alertHistory().map((s) =>
       s.date < '2026-10-12' || s.date >= '2026-10-26' ? { ...s, performances: s.performances.filter((p) => p.variantId !== 'presse-a-cuisses') } : s,
@@ -96,7 +96,7 @@ describe('Alerte « groupe moins travaillé », version 1.38.0', () => {
 
     // Chiffres de l'alerte (version 1.38.1) : séries des 2 semaines (en moyenne) et moyenne de l'alerte, une décimale.
     expect(alertFigures(dos)).toBe('3\u00a0séries par semaine depuis 2\u00a0semaines (ta\u00a0moyenne\u00a0:\u00a05,3)');
-    const figures = (recent: number[], average: number) => alertFigures({ group: 'dos', week: '2026-11-02', recent, average, referenceWeeks: 4 });
+    const figures = (recent: number[], average: number) => alertFigures({ group: 'dos', week: '2026-11-02', recent, average });
     expect(figures([4, 2], 6)).toBe('3\u00a0séries par semaine depuis 2\u00a0semaines (ta\u00a0moyenne\u00a0:\u00a06)');
     expect(figures([4.5, 4], 4.75)).toBe('4,3\u00a0séries par semaine depuis 2\u00a0semaines (ta\u00a0moyenne\u00a0:\u00a04,8)');
     expect(figures([1.5, 0], 1.98)).toBe('0,8\u00a0série par semaine depuis 2\u00a0semaines (ta\u00a0moyenne\u00a0:\u00a02)');

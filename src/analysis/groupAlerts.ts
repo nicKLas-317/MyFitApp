@@ -4,7 +4,8 @@
  * avec les séries du graphique « Séries par semaine » (§19.10) ; jamais stocké, aucun effet sur le moteur.
  */
 import type { MuscleGroup, Exercise, Session } from '../domain/types';
-import { GROUP_VIEW_GROUPS, groupWeeklySets, SETS_WEEKS } from './groups';
+import { GROUP_VIEW_GROUPS, groupWeeklySets } from './groups';
+import { formatDecimal } from '../session/format';
 
 /** Semaines terminées au total (depuis la semaine de la première séance) avant toute alerte. */
 export const ALERT_MIN_FINISHED_WEEKS = 6;
@@ -23,8 +24,6 @@ export interface GroupAlert {
   recent: number[];
   /** Moyenne des semaines de référence. */
   average: number;
-  /** Nombre de semaines de référence. */
-  referenceWeeks: number;
 }
 
 /**
@@ -36,7 +35,7 @@ export interface GroupAlert {
  * - alerte si les deux sont strictement sous cette moyenne.
  */
 export function groupAlert(sessions: readonly Session[], exercises: readonly Exercise[], group: MuscleGroup, now: number): GroupAlert | null {
-  const { weeks } = groupWeeklySets(sessions, exercises, group, now, SETS_WEEKS);
+  const { weeks } = groupWeeklySets(sessions, exercises, group, now);
   const finished = weeks.slice(0, -1);
   if (finished.length < ALERT_MIN_FINISHED_WEEKS) return null;
   const recent = finished.slice(-ALERT_RECENT_WEEKS);
@@ -47,11 +46,10 @@ export function groupAlert(sessions: readonly Session[], exercises: readonly Exe
   if (reference.length < ALERT_MIN_REFERENCE_WEEKS) return null;
   const average = reference.reduce((a, w) => a + w.total, 0) / reference.length;
   if (!recent.every((w) => w.total < average)) return null;
-  return { group, week: recent.at(-1)!.start, recent: recent.map((w) => w.total), average, referenceWeeks: reference.length };
+  return { group, week: recent.at(-1)!.start, recent: recent.map((w) => w.total), average };
 }
 
 /** Nombre arrondi à une décimale, à la française (« 5,3 », « 3 »). */
-const oneDecimal = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 });
 
 /**
  * Chiffres de l'alerte (version 1.38.1), après le nom du groupe : « 3 séries par semaine depuis 2 semaines (ta
@@ -61,9 +59,9 @@ const oneDecimal = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDig
  */
 export function alertFigures(alert: GroupAlert): string {
   const recent = alert.recent.reduce((a, x) => a + x, 0) / alert.recent.length;
-  const shown = oneDecimal(recent);
+  const shown = formatDecimal(recent);
   const word = Number(shown.replace(',', '.')) < 2 ? 'série' : 'séries';
-  return `${shown}\u00a0${word} par semaine depuis ${ALERT_RECENT_WEEKS}\u00a0semaines (ta\u00a0moyenne\u00a0:\u00a0${oneDecimal(alert.average)})`;
+  return `${shown}\u00a0${word} par semaine depuis ${ALERT_RECENT_WEEKS}\u00a0semaines (ta\u00a0moyenne\u00a0:\u00a0${formatDecimal(alert.average)})`;
 }
 
 /** Alertes ignorées sur l'appareil : groupe → dernière semaine terminée au moment de « Ignorer ». */

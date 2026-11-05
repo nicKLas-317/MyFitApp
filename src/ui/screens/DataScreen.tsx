@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useApp } from '../../app/store';
-import { formatDay, localDate } from '../../session/format';
+import { formatDay, localDate, plural } from '../../session/format';
 import { parseJsonImport, planImport, type Backup } from '../../transfer/backup';
 import {
   draftFromNotes,
@@ -170,9 +170,6 @@ export function DataScreen() {
   );
 }
 
-function plural(n: number, one: string, many: string): string {
-  return `${n} ${n > 1 ? many : one}`;
-}
 
 /** Aperçu éditable des séances détectées (notes ou JSON simple), puis confirmation. */
 function DraftsPreview({ initial, notes, onDone }: { initial: DraftSession[]; notes: string[]; onDone(outcome: Outcome): void }) {

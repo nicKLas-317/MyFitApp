@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { Exercise, MuscleGroup } from '../domain/types';
+import { parentGroup } from '../domain/muscleGroups';
 
 /** Groupes qui ont une couleur propre ; les sous-groupes des jambes prennent celle des jambes. */
 export type ColorGroup = 'epaules' | 'triceps' | 'dos' | 'pectoraux' | 'biceps' | 'jambes' | 'abdominaux';
@@ -19,23 +20,9 @@ export const GROUP_COLORS: Readonly<Record<ColorGroup, string>> = {
 };
 
 /** Groupe dont un groupe musculaire prend la couleur. */
-const COLOR_GROUP: Readonly<Record<MuscleGroup, ColorGroup>> = {
-  epaules: 'epaules',
-  pectoraux: 'pectoraux',
-  triceps: 'triceps',
-  dos: 'dos',
-  biceps: 'biceps',
-  jambes: 'jambes',
-  quadriceps: 'jambes',
-  'ischio-jambiers': 'jambes',
-  mollets: 'jambes',
-  fessiers: 'jambes',
-  adducteurs: 'jambes',
-  abdominaux: 'abdominaux',
-};
-
 export function colorGroupOf(group: MuscleGroup): ColorGroup {
-  return COLOR_GROUP[group];
+  // Les sous-groupes des jambes prennent la couleur des jambes (§3.2) ; les autres groupes sont ceux de GROUP_COLORS.
+  return parentGroup(group) as ColorGroup;
 }
 
 /**

@@ -7,11 +7,12 @@
 import { sortWeighIns, type WeighIn } from '../body/model';
 import type { Exercise, MuscleGroup, Performance, Session } from '../domain/types';
 import { resolveConfig, sortSessions, type EngineSettings } from '../engine';
-import { localDate } from '../session/format';
-import { sessionStartTime, weekStart } from './weekly';
+import { localDate, sessionStartTime, weekStart } from '../domain/calendar';
+import { MAIN_GROUPS, parentGroup } from '../domain/muscleGroups';
+import { plural } from '../session/format';
 
 /** Groupes proposés par le sélecteur ; les abdominaux depuis la version 1.33.0. */
-export const GROUP_VIEW_GROUPS: readonly MuscleGroup[] = ['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes', 'abdominaux'];
+export const GROUP_VIEW_GROUPS: readonly MuscleGroup[] = MAIN_GROUPS;
 
 /**
  * Groupes sans indice (version 1.33.0) : leurs exercices se font sans charge (poids du corps, durée), l'indice ne se
@@ -29,12 +30,6 @@ export const SETS_MIN_WEEKS = 3;
  */
 export const SETS_WEEKS = 12;
 
-const LEG_SUBGROUPS: readonly MuscleGroup[] = ['quadriceps', 'ischio-jambiers', 'mollets', 'fessiers', 'adducteurs'];
-
-/** Groupe du sélecteur d'un groupe musculaire : les sous-groupes des jambes comptent dans « jambes ». */
-function viewGroup(group: MuscleGroup): MuscleGroup {
-  return LEG_SUBGROUPS.includes(group) ? 'jambes' : group;
-}
 
 /** Force estimée (formule d'Epley) sur la moins bonne série : charge × (1 + répétitions / 30). */
 export function epley(weightKg: number, reps: number): number {
@@ -130,7 +125,7 @@ export function groupIndex(
   weighIns: readonly WeighIn[] = [],
 ): GroupIndex {
   const primary = new Map<string, MuscleGroup>();
-  for (const e of exercises) for (const v of e.variants) primary.set(v.id, viewGroup(e.primaryGroup));
+  for (const e of exercises) for (const v of e.variants) primary.set(v.id, parentGroup(e.primaryGroup));
   const first = new Map<string, { perf: Performance; date: string }>();
   const last = new Map<string, number>();
   const points: IndexPoint[] = [];
@@ -197,12 +192,12 @@ export interface GroupSets {
  * Séries effectuées sur un groupe, semaine par semaine (lundi 0 h 00 – dimanche, heure locale), depuis la semaine de
  * la première séance terminée (version 1.34.0 : plus de semaines vides avant elle).
  */
-export function groupWeeklySets(sessions: readonly Session[], exercises: readonly Exercise[], group: MuscleGroup, now: number, count = SETS_WEEKS): GroupSets {
+export function groupWeeklySets(sessions: readonly Session[], exercises: readonly Exercise[], group: MuscleGroup, now: number): GroupSets {
   const byVariant = new Map<string, Exercise>();
   for (const e of exercises) for (const v of e.variants) byVariant.set(v.id, e);
   const current = weekStart(new Date(now));
   const weeks: (WeekSets & { from: number; to: number })[] = [];
-  for (let i = count - 1; i >= 0; i--) {
+  for (let i = SETS_WEEKS - 1; i >= 0; i--) {
     const from = new Date(current);
     from.setDate(from.getDate() - 7 * i);
     const to = new Date(from);
@@ -220,8 +215,8 @@ export function groupWeeklySets(sessions: readonly Session[], exercises: readonl
     for (const p of s.performances) {
       const e = byVariant.get(p.variantId);
       if (!e || p.partial) continue;
-      if (viewGroup(e.primaryGroup) === group) week.direct += p.reps.length;
-      else if (e.secondaryGroups.some((g) => viewGroup(g) === group)) week.indirect += p.reps.length;
+      if (parentGroup(e.primaryGroup) === group) week.direct += p.reps.length;
+      else if (e.secondaryGroups.some((g) => parentGroup(g) === group)) week.indirect += p.reps.length;
     }
   }
   const result = weeks.map(({ start, direct, indirect }) => ({ start, direct, indirect, total: direct + indirect / 2 }));
@@ -232,8 +227,6 @@ export function groupWeeklySets(sessions: readonly Session[], exercises: readonl
   const average = enough && finished.length > 0 ? finished.reduce((a, w) => a + w.total, 0) / finished.length : null;
   return { weeks: result, activeWeeks, enough, average };
 }
-
-const plural = (n: number, word: string) => `${n} ${word}${n > 1 ? 's' : ''}`;
 
 /** « Pas encore assez de données pour analyser ta progression : 3 séances sur 6 nécessaires. » */
 export function notEnoughForIndex(index: GroupIndex): string {

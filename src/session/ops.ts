@@ -4,6 +4,7 @@
  */
 import type { Feeling, Performance, Session, VariantConfig } from '../domain/types';
 import { clampReps, expectedTarget, startTarget, type ProgressState } from '../engine';
+import { dayPart } from '../domain/calendar';
 import { defaultSessionName, localDate } from './format';
 import { isDefaultSessionName, storedDefaultName } from './title';
 
@@ -317,8 +318,9 @@ export function completableSession(sessions: readonly Session[], now: number): S
 
 /** « Compléter la séance de ce matin » (avant midi), « de cet après-midi » (avant 18 h), « de ce soir ». */
 export function completeLabel(session: Session): string {
-  const hour = new Date(session.startedAt ?? 0).getHours();
-  return `Compléter la séance ${hour < 12 ? 'de ce matin' : hour < 18 ? 'de cet après-midi' : 'de ce soir'}`;
+  const start = new Date(session.startedAt ?? 0);
+  const part = dayPart(start.getHours() * 60 + start.getMinutes());
+  return `Compléter la séance ${part === 'matin' ? 'de ce matin' : part === 'après-midi' ? 'de cet après-midi' : 'de ce soir'}`;
 }
 
 /**

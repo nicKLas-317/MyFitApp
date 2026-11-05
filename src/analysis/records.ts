@@ -10,7 +10,7 @@
  */
 import type { Performance, Session } from '../domain/types';
 import { compareDifficulty, resolveConfig, sortSessions, trackKey, type EngineSettings } from '../engine';
-import { formatKg, formatSetsReps, formatShortDay } from '../session/format';
+import { formatLoad, formatSetsReps, formatShortDay } from '../session/format';
 
 export interface PersonalRecord {
   variantId: string;
@@ -106,7 +106,7 @@ export function recordKeys(records: Records): Set<string> {
  */
 export function formatRecord(r: Mark, perDumbbell = false): string {
   if (r.weightKg === 0) return formatSetsReps(r.sets, r.reps, r.seconds);
-  return `${r.sets} × ${r.reps} ${r.assisted ? `avec ${formatKg(r.weightKg)} d’aide` : `à ${formatKg(r.weightKg, perDumbbell)}`}`;
+  return `${r.sets} × ${r.reps}${formatLoad(r.weightKg, r.assisted, perDumbbell)}`;
 }
 
 /** « 3 × 9 à 20 kg (16 oct.) ». */

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Session } from '../../domain/types';
 import { SEED_EXERCISES } from '../../library/seed';
-import { recapTitle, weekStart, weeklyRecap, type WeeklyRecap } from '../weekly';
+import { recapTitle, weeklyRecap, type WeeklyRecap } from '../weekly';
+import { weekStart } from '../../domain/calendar';
 
 const LIB = [...SEED_EXERCISES];
 /** Heure locale : lun. 12 octobre 2026 = début de semaine. */

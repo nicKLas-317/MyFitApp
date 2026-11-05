@@ -11,7 +11,8 @@ import { newPerformance } from '../../session/ops';
 import { buildEngineSettings } from '../catalog';
 import { compactConfig, createExercise, EXERCISE_KINDS, KIND_RANGES, kindFlags, kindOf, setVariantConfig } from '../edit';
 import { SEED_ADDITIONS, SEED_EXERCISES, SEED_VERSION } from '../seed';
-import { buildSearchIndex, searchExercises } from '../search';
+import { buildSearchIndex } from '../search';
+import { searchExercises } from './helpers';
 
 const LIB: Exercise[] = [...SEED_EXERCISES];
 const settings = buildEngineSettings(LIB);

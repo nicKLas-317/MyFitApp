@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Exercise } from '../../domain/types';
 import { addVariant, updateVariant } from '../edit';
-import { buildSearchIndex, equipmentKey, recentVariantIds, searchExercises } from '../search';
+import { buildSearchIndex, equipmentKey, recentVariantIds } from '../search';
+import { searchExercises } from './helpers';
 import { SEED_EXERCISES } from '../seed';
 
 const LIB: Exercise[] = [...SEED_EXERCISES];

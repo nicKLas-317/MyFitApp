@@ -7,6 +7,8 @@
  * ce n'est pas une séance de salle et elle n'a aucun effet sur le moteur de progression. Fonctions pures.
  */
 import type { MuscleGroup } from '../domain/types';
+import { dayPart, weekStart } from '../domain/calendar';
+import { MAIN_GROUPS } from '../domain/muscleGroups';
 import { slug, uniqueId } from '../library/edit';
 import { normalizeName } from '../library/text';
 import { formatDurationLong, isIsoDate, localDate } from '../session/format';
@@ -63,7 +65,7 @@ export const WEEKDAY_LABELS: Record<Weekday, string> = {
 export const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const satisfies readonly Weekday[];
 
 /** Groupes proposés pour une habitude (sous-groupes des jambes inutiles ici). */
-export const HABIT_GROUPS: readonly MuscleGroup[] = ['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes', 'abdominaux'];
+export const HABIT_GROUPS: readonly MuscleGroup[] = MAIN_GROUPS;
 
 export const DEFAULT_HABITS: readonly Habit[] = [
   { id: 'badminton', name: 'Badminton', weekday: 1, start: '21:00', end: '22:30', groups: ['epaules', 'jambes'], enabled: true },
@@ -170,13 +172,6 @@ export interface Occurrence {
   date: string;
 }
 
-/** Lundi 0 h 00 (heure locale) de la semaine de `now`. */
-function mondayOf(now: number): Date {
-  const d = new Date(now);
-  const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
-  return monday;
-}
 
 const recordId = (habitId: string, date: string) => `act-${habitId}-${date}`;
 
@@ -186,7 +181,7 @@ const recordId = (habitId: string, date: string) => `act-${habitId}-${date}`;
  * enregistrer (la semaine suivante ne pose que la question de son propre jour).
  */
 export function pendingOccurrences(habits: readonly Habit[], records: readonly ActivityRecord[], now: number): Occurrence[] {
-  const monday = mondayOf(now);
+  const monday = weekStart(new Date(now));
   const answered = new Set(records.map((r) => recordId(r.habitId, r.date)));
   return habits
     .filter((h) => h.enabled && habitErrors(h).length === 0)
@@ -306,8 +301,7 @@ export function formatClock(time: string): string {
 }
 
 function partOfDay(time: string): string {
-  const minutes = minutesOf(time) ?? 0;
-  return minutes < 12 * 60 ? 'matin' : minutes < 18 * 60 ? 'après-midi' : 'soir';
+  return dayPart(minutesOf(time) ?? 0);
 }
 
 /** « Badminton lundi soir (21 h – 22 h 30) ? » */

@@ -3,7 +3,7 @@ import { compareWeight, progressMarker, type ProgressMarker, type ProgressState 
 import type { Performance } from '../domain/types';
 import { formatRecordWithDate, type PersonalRecord } from '../analysis/records';
 import { Crown } from './Crown';
-import { formatKg, formatNumericDay, formatReps, formatSetsReps } from '../session/format';
+import { formatKg, formatLoad, formatNumericDay, formatReps, formatSetsReps } from '../session/format';
 import { loadChangeLabel, markerArrow, markerLabel } from './labels';
 import { StatusBadge } from './StatusBadge';
 
@@ -48,10 +48,6 @@ interface Props {
   perDumbbell?: boolean;
 }
 
-/** « à 30 kg », « avec 25 kg d’aide », « à 11,5 kg / haltère » (exercice aux haltères, version 1.30.1). */
-export function formatTargetLoad(weightKg: number, assisted: boolean, perDumbbell = false): string {
-  return assisted ? ` avec ${formatKg(weightKg)} d’aide` : ` à ${formatKg(weightKg, perDumbbell)}`;
-}
 
 /** Repère de progression (§5.3.1) en mention courte : « ↑ +1 rép. », « ↑ Poids supérieur », « ↓ Plus d’aide »… */
 export function markerHint(marker: ProgressMarker, assisted: boolean, seconds = false): TargetHint {
@@ -147,7 +143,7 @@ export function NextTarget({
     <>
       <p className="next-target" data-testid="next-target">
         <strong data-testid={targetTestId}>{formatSetsReps(target.sets, target.reps, seconds)}</strong>
-        {target.weightKg !== null && target.weightKg > 0 && formatTargetLoad(target.weightKg, assisted)}
+        {target.weightKg !== null && target.weightKg > 0 && formatLoad(target.weightKg, assisted)}
         {/* Aux haltères : « / haltère » plus petit, qui passe dessous si la place manque ; la cible reste sur une ligne. */}
         {perDumbbell && !assisted && target.weightKg !== null && target.weightKg > 0 && (
           <>

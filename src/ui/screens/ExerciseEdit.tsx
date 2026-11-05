@@ -23,8 +23,9 @@ import {
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
 import type { ExerciseKind } from '../../library/edit';
 import { groupColorProps } from '../groupColors';
+import { MUSCLE_GROUPS } from '../../domain/muscleGroups';
 
-const GROUPS = Object.keys(MUSCLE_GROUP_LABELS) as MuscleGroup[];
+const GROUPS = MUSCLE_GROUPS;
 
 interface VariantForm {
   id: string;

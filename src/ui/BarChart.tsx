@@ -1,4 +1,5 @@
 import { useWidth } from './useWidth';
+import { formatDecimal } from '../session/format';
 
 /**
  * Barres empilées minimales en SVG (§19.10) : une barre par semaine, la part principale en plein et la part
@@ -36,7 +37,7 @@ const LEGEND = 20;
 const LINE = 16;
 /** Largeur minimale d'une colonne pour écrire le total de chaque barre ; en dessous, une barre sur deux. */
 const TOTAL_SLOT = 28;
-const fmt = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 });
+const fmt = formatDecimal;
 
 export function BarChart({ data, label, average = null, current = false, testId }: Props) {
   // Dessin à l'échelle 1 (largeur réelle) : les étiquettes gardent leur taille de police, 13 px.

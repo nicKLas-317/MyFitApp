@@ -7,7 +7,7 @@ import type { MuscleGroup } from '../../domain/types';
 import { GROUP_VIEW_GROUPS, type GroupSets, groupIndex, groupWeeklySets, notEnoughForIndex, notEnoughForSets, SETS_ONLY_GROUPS, SETS_WEEKS } from '../../analysis/groups';
 import { displayName } from '../../library/catalog';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
-import { formatShortDay } from '../../session/format';
+import { formatDecimal, formatShortDay } from '../../session/format';
 import { BarChart } from '../BarChart';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { groupColorProps } from '../groupColors';
@@ -19,7 +19,7 @@ export function groupOfSegment(segment: string | undefined): MuscleGroup {
 
 const EMPTY: readonly WeighIn[] = [];
 
-const fmt = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 });
+const fmt = formatDecimal;
 
 /**
  * Texte du lecteur d'écran des séries par semaine (version 1.34.0) : les valeurs, la moyenne, puis l'explication complète

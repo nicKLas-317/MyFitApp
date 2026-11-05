@@ -3,7 +3,7 @@
  * du moteur (seule source de vérité). Aucun score inventé ; jamais de conclusion sur une seule séance.
  */
 import type { Session, Status } from '../domain/types';
-import { evaluationTrack, GREEN_STREAK_TO_PROGRESS, sortSessions, type Evaluation, type Palier, type Profile } from '../engine';
+import { evaluationTrack, GREEN_STREAK_TO_PROGRESS, sameWeight, sortSessions, type Evaluation, type Palier, type Profile } from '../engine';
 
 /** Fenêtre d'analyse : les 6 dernières séances de l'exercice-variante (§19.3). */
 export const ANALYSIS_WINDOW = 6;
@@ -80,7 +80,7 @@ export function recentChanges(evaluations: readonly Evaluation[], sessions: read
   for (const ev of evaluations) {
     const track = evaluationTrack(ev);
     const prev = last.get(track);
-    if (prev && (prev.weightKg !== ev.palier.weightKg || prev.targetReps !== ev.palier.targetReps)) {
+    if (prev && (!sameWeight(prev.weightKg, ev.palier.weightKg) || prev.targetReps !== ev.palier.targetReps)) {
       changes.push({
         variantId: ev.variantId,
         ...(ev.home ? { home: ev.home } : {}),

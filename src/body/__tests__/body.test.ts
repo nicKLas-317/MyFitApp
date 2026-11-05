@@ -1,6 +1,7 @@
 import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_ENGINE_SETTINGS, rebuildProfile } from '../../engine';
+import { rebuildProfile } from '../../engine';
+import { DEFAULT_ENGINE_SETTINGS } from '../../engine/__tests__/helpers';
 import { green, history } from '../../engine/__tests__/helpers';
 import { SEED_EXERCISES } from '../../library/seed';
 import { openAppDb, Repository } from '../../storage/db';

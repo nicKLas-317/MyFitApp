@@ -15,13 +15,14 @@ import {
   type ReportScreen,
   type ReportSection,
 } from '../analysis/report';
-import { LEG_CARDIO_MINUTES } from '../analysis/weekly';
+import { groupScore, LEG_CARDIO_MINUTES } from '../analysis/weekly';
 import { MUSCLE_GROUP_LABELS } from '../library/seed';
-import { formatDurationLong, localDate } from '../session/format';
+import { parseIsoDay } from '../domain/calendar';
+import { formatDecimal, formatDurationLong, localDate, plural as pluralWith } from '../session/format';
 import { exerciseColorProps, groupColorProps } from './groupColors';
 
 const NB = ' ';
-const plural = (n: number, one: string, many = `${one}s`) => `${n}${NB}${n > 1 ? many : one}`;
+const plural = (n: number, one: string, many = `${one}s`) => pluralWith(n, one, many, NB);
 /** Nombre jamais séparé de son unité (« 1 h 41 », « 30 min », « 12 kg / haltère »). */
 export function keepUnits(line: string): string {
   return line.replace(/ \/ haltère/g, `${NB}/${NB}haltère`).replace(/(\d) (min|kg|h|séances?|[a-zéû]+\.)/g, `$1${NB}$2`).replace(/(\d)\u00a0h (\d)/g, `$1${NB}h${NB}$2`);
@@ -50,10 +51,6 @@ function Tile({ label, value, sub, children }: { label: string; value: string | 
 }
 
 const MONTH = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' });
-const dayOf = (date: string) => {
-  const [y, m, d] = date.split('-').map(Number);
-  return new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1);
-};
 
 /** Calendrier du mois (● salle, ○ maison, ◆ activité), au-dessus des tuiles. */
 function MonthCalendar({ report, screen }: { report: PeriodReport; screen: ReportScreen }) {
@@ -65,7 +62,7 @@ function MonthCalendar({ report, screen }: { report: PeriodReport; screen: Repor
       ...(d.home > 0 ? [`${plural(d.home, 'séance')} à la maison`] : []),
       ...(d.activities > 0 ? [plural(d.activities, 'activité')] : []),
     ];
-    return `${MONTH.format(dayOf(d.date))} : ${parts.length > 0 ? parts.join(', ') : 'rien'}`;
+    return `${MONTH.format(parseIsoDay(d.date))} : ${parts.length > 0 ? parts.join(', ') : 'rien'}`;
   };
   return (
     <>
@@ -83,7 +80,7 @@ function MonthCalendar({ report, screen }: { report: PeriodReport; screen: Repor
         {screen.days.map((d) => (
           <li key={d.date} className={`cal-day${report.inProgress && d.date > today ? ' cal-future' : ''}`} aria-label={describe(d)} data-date={d.date}>
             <span className="cal-num" aria-hidden="true">
-              {dayOf(d.date).getDate()}
+              {parseIsoDay(d.date).getDate()}
             </span>
             <span className="cal-marks" aria-hidden="true">
               {Array.from({ length: d.gym }, (_, i) => (
@@ -207,7 +204,7 @@ export function stickLabels(column: number, full: readonly number[], short: read
  * une phrase sous le tableau (« Jambes : +½ pour 62 min de cardio. »).
  */
 export function ReportGroups({ report, screen }: { report: PeriodReport; screen: ReportScreen }) {
-  const totals = screen.bars.map((b) => b.direct + b.indirect + b.home + b.cardio);
+  const totals = screen.bars.map(groupScore);
   const max = Math.max(...totals);
   const chartRef = useRef<HTMLDivElement>(null);
   const [labels, setLabels] = useState<StickLabels>('staggered');
@@ -234,7 +231,7 @@ export function ReportGroups({ report, screen }: { report: PeriodReport; screen:
     return () => observer.disconnect();
   }, [key]);
   const summary = `Total par groupe, en séances : ${report.groups
-    .map((g, i) => `${MUSCLE_GROUP_LABELS[g.group].toLowerCase()} ${totals[i]!.toLocaleString('fr-FR', { maximumFractionDigits: 1 })}`)
+    .map((g, i) => `${MUSCLE_GROUP_LABELS[g.group].toLowerCase()} ${formatDecimal(totals[i]!)}`)
     .join(', ')}.`;
   const head = (long: ReactNode, short: string, label: string) => (
     <th scope="col" aria-label={label}>

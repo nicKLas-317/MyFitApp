@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Session } from '../../domain/types';
-import { DEFAULT_ENGINE_SETTINGS, DEFAULT_VARIANT_CONFIG, rebuildProfile } from '../../engine';
+import { DEFAULT_VARIANT_CONFIG, rebuildProfile } from '../../engine';
+import { DEFAULT_ENGINE_SETTINGS } from '../../engine/__tests__/helpers';
 import { green, history, V } from '../../engine/__tests__/helpers';
 import { defaultSessionName, formatDuration } from '../format';
 import {
