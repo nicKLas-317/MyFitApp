@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import type { CardioBlock, Performance, PlanCardio, Session, SessionPlan } from '../src/domain/types';
-import { addExercise, exerciseCard, finishSession, finishSheet, readSessions, reloadAfterWrites, writeSessions } from './helpers';
+import { addExercise, exerciseCard, finishSession, finishSheet, importedText, readSessions, reloadAfterWrites, writeSessions } from './helpers';
 
 /** Séance terminée : chaque exercice fait à la cible, « Bien passé » (vert). */
 function past(day: number, perfs: [string, number, number][]): Session {
@@ -275,7 +275,7 @@ test.describe('Séance prévue (§5.9)', () => {
     const downloading = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Exporter mes données' }).click();
     await page.getByLabel('Fichier à importer').setInputFiles(await (await downloading).path());
-    const exported = JSON.parse(await page.getByLabel('Notes de séance ou JSON').inputValue());
+    const exported = JSON.parse(await importedText(page));
     const migrated = {
       id: 'plan-telephone', createdAt: legacy.createdAt, updatedAt: legacy.updatedAt,
       items: [{ kind: 'exercise', variantId: 'pec-deck' }, { kind: 'exercise', variantId: 'leg-extension', startWeightKg: 30 }, { kind: 'cardio', block: tapis }],

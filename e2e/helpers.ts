@@ -77,6 +77,17 @@ export async function reloadAfterWrites(page: Page): Promise<void> {
   await page.reload();
 }
 
+/**
+ * Texte du fichier choisi dans « Importer / exporter », une fois lu par l'appli : la lecture du fichier est
+ * asynchrone, la zone de saisie se remplit un peu après le choix (échec du test 202 sur la machine de GitHub, le 5
+ * novembre 2026, quand elle était lue aussitôt).
+ */
+export async function importedText(page: Page): Promise<string> {
+  const area = page.getByLabel('Notes de séance ou JSON');
+  await expect(area).not.toHaveValue('');
+  return area.inputValue();
+}
+
 export async function activeSession(page: Page): Promise<Session> {
   const active = (await readSessions(page)).find((s) => s.state === 'active');
   if (!active) throw new Error('Aucune séance active en base');

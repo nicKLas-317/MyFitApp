@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Session } from '../src/domain/types';
-import { activeSession, openScreen, readSessions, reloadAfterWrites, writeSessions } from './helpers';
+import { activeSession, importedText, openScreen, readSessions, reloadAfterWrites, writeSessions } from './helpers';
 
 function done(id: string, name: string, date: string, reps: number[], feeling: 'bien' | 'moyen' = 'bien', variantId = 'tirage-vertical'): Session {
   const t = Date.parse(`${date}T18:00:00`);
@@ -186,7 +186,7 @@ test.describe('Historique, analyse et Mon poids', () => {
     await page.getByRole('button', { name: 'Exporter mes données' }).click();
     const file = await (await downloading).path();
     await page.getByLabel('Fichier à importer').setInputFiles(file);
-    const backup = JSON.parse(await page.getByLabel('Notes de séance ou JSON').inputValue());
+    const backup = JSON.parse(await importedText(page));
     expect(backup.bodyTracking).toEqual({ heightCm: 178, weighIns: [{ date: '2026-10-01', weightKg: 79.2 }] });
 
     const other = await browser.newContext({ baseURL: 'http://localhost:4173/MyFitApp/', locale: 'fr-FR', timezoneId: 'Europe/Paris' });

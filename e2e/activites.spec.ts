@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { openSettingsSection, reloadAfterWrites } from './helpers';
+import { importedText, openSettingsSection, reloadAfterWrites } from './helpers';
 
 /** Heure locale (Paris), octobre-novembre 2026 : le lundi 19 octobre commence la semaine. */
 const at = (date: string, time: string) => new Date(`${date}T${time}:00`);
@@ -80,7 +80,7 @@ test.describe('Activités habituelles hors salle', () => {
     const downloading = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Exporter mes données' }).click();
     await page.getByLabel('Fichier à importer').setInputFiles((await (await downloading).path())!);
-    const backup = JSON.parse(await page.getByLabel('Notes de séance ou JSON').inputValue());
+    const backup = JSON.parse(await importedText(page));
     expect(backup).toMatchObject({
       schemaVersion: 7,
       activities: [{ id: 'act-badminton-2026-10-19', date: '2026-10-19', name: 'Badminton', status: 'done' }],

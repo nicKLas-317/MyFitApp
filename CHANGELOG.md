@@ -9,6 +9,7 @@ Les commits sans changement de numéro (documentation, tests, workflow) sont ran
 - Changer la date d'une séance passée : début et fin au nouveau jour, à la même heure ; comptée dans sa nouvelle semaine partout (avant : le récapitulatif, les bilans et les séries par semaine la gardaient dans l'ancienne)
 - CLAUDE.md : fin du §15 (« Les tests doivent vérifier… » et « Tests de bout en bout fiables ») remise après le dernier test ; la version B l'avait déplacée par erreur entre les tests 241 et 242
 - Tests : garde contre les fichiers « .uuid » de fontconfig (`e2e/uuid-guard.mjs`, fin de chaque passe) et avertissement dans `e2e/fonts/fonts.conf` ; les 75 fichiers créés le 5 novembre hors node_modules (par un essai avec `prefix="relative"`) sont supprimés
+- Tests 43, 202 et 246 : le texte du fichier importé est lu une fois la zone de saisie remplie (`importedText`) ; le test 202 avait échoué sur la machine de GitHub en le lisant aussitôt
 
 ## 1.41.3 — 5 nov. 2026
 

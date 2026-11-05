@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Session } from '../src/domain/types';
 import { NOTES_11_3 } from '../src/transfer/__tests__/fixtures';
-import { openScreen, readExercises, readSessions, reloadAfterWrites, writeSessions } from './helpers';
+import { importedText, openScreen, readExercises, readSessions, reloadAfterWrites, writeSessions } from './helpers';
 
 const preview = (page: Page) => page.getByRole('region', { name: 'Aperçu de l’import' });
 const cards = (page: Page) => preview(page).locator('article.draft-exercise');
@@ -99,7 +99,7 @@ test.describe('Import et export', () => {
 
     // Réimport sur le même appareil : rien de nouveau. Le contenu du fichier s'affiche dans la zone de saisie.
     await page.getByLabel('Fichier à importer').setInputFiles(file);
-    const backup = JSON.parse(await page.getByLabel('Notes de séance ou JSON').inputValue());
+    const backup = JSON.parse(await importedText(page));
     expect(backup).toMatchObject({ app: 'MyFitApp', schemaVersion: 7, sessions: original });
     await expect(page.getByTestId('plan-new')).toHaveText('0 séance à ajouter');
     await expect(page.getByText('Rien de nouveau à importer.')).toBeVisible();
