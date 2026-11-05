@@ -8,7 +8,7 @@ import { weekSuggestion } from '../../plan/suggest';
 import { groupAlerts } from '../groupAlerts';
 import { groupIndex, groupWeeklySets } from '../groups';
 import { buildReport, buildReportScreen, parsePeriodKey, reportText, type ReportInput, type ReportPeriod } from '../report';
-import { DEFAULT_RECAP_SETTINGS, LEG_CARDIO_MINUTES, legCardioMinutes, recapCountLabel, recapTitle, weeklyRecap } from '../weekly';
+import { DEFAULT_RECAP_SETTINGS, LEG_CARDIO_MINUTES, RECAP_TITLE_FORMS, legCardioMinutes, recapCountLabel, recapTitle, weeklyRecap } from '../weekly';
 
 const LIB: Exercise[] = [...SEED_EXERCISES];
 const SETTINGS = buildEngineSettings(LIB);
@@ -180,5 +180,20 @@ describe('Cardio pour les jambes, version 1.41.0', () => {
     const score = (machines: readonly CardioMachine[]) => weeklyRecap(more, LIB, now, DEFAULT_RECAP_SETTINGS, [], machines).cells.find((c) => c.group === 'jambes')!.score;
     expect(score(MACHINES)).toBe(1.5);
     expect(score(MACHINES.map((m) => (m.id === 'tapis' ? { ...m, legs: false } : m)))).toBe(1);
+  });
+
+  it('298. Titre du récapitulatif raccourci (version 1.41.1) : sans « · N min de cardio », puis sans les noms de jours', () => {
+    const nb = '\u00a0';
+    const week = recapOf([session('a', 26, [['tapis', 50]], [p('leg-extension')]), session('b', 27, [], [p('pompes', 0)], { home: true })], MACHINES, new Date(2026, 10, 1, 20).getTime());
+    expect(RECAP_TITLE_FORMS).toEqual(['full', 'noCardio', 'short']);
+    expect(RECAP_TITLE_FORMS.map((f) => recapTitle(week, f))).toEqual([
+      `Semaine du lun.${nb}26${nb}oct. au dim.${nb}1${nb}nov.${nb}: 2${nb}séances · dont${nb}1${nb}maison · 50${nb}min${nb}de cardio`,
+      `Semaine du lun.${nb}26${nb}oct. au dim.${nb}1${nb}nov.${nb}: 2${nb}séances · dont${nb}1${nb}maison`,
+      `Semaine du 26${nb}oct. au 1${nb}nov.${nb}: 2${nb}séances · dont${nb}1${nb}maison`,
+    ]);
+    // Même mois : « Semaine du 9 au 15 nov. » ; forme par défaut inchangée.
+    const nov = recapOf([], MACHINES, new Date(2026, 10, 11, 12).getTime());
+    expect(recapTitle(nov, 'short')).toBe(`Semaine du 9 au 15${nb}nov.${nb}: 0${nb}séance`);
+    expect(recapTitle(nov)).toBe(`Semaine du lun.${nb}9 au dim.${nb}15${nb}nov.${nb}: 0${nb}séance`);
   });
 });

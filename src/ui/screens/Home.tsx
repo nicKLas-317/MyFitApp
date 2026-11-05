@@ -87,14 +87,14 @@ export function Home() {
       {/* Groupe moins travaillé (version 1.38.0) : une ligne par groupe, ou une ligne de résumé à partir de 2 (1.40.0). */}
       <GroupAlerts compact />
       {active ? (
-        <button type="button" className="btn primary huge" onClick={() => navigate('seance')}>
+        <button type="button" className="btn primary huge" data-home-start="" onClick={() => navigate('seance')}>
           Reprendre la séance
           {/* À la maison, pas de chronomètre : la durée n'a pas d'importance. */}
           <span className="chrono-inline">{active.location === 'maison' ? 'à la maison' : formatDuration(elapsedMs(active, now))}</span>
         </button>
       ) : plan ? (
         <>
-          <button type="button" className="btn primary huge" onClick={() => void startPlanned()}>
+          <button type="button" className="btn primary huge" data-home-start="" onClick={() => void startPlanned()}>
             Démarrer la séance prévue
           </button>
           <button type="button" className="btn big free-session" onClick={() => void start()}>
@@ -104,7 +104,7 @@ export function Home() {
         </>
       ) : (
         <>
-          <button type="button" className="btn primary huge" onClick={() => void start()}>
+          <button type="button" className="btn primary huge" data-home-start="" onClick={() => void start()}>
             {home ? 'Démarrer une séance à la maison' : 'Démarrer une séance'}
           </button>
           {placeChoice}

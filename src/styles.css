@@ -3114,3 +3114,10 @@ fieldset.frame > legend + * {
   grid-column: 1 / -1;
   font-size: var(--fs-2);
 }
+
+/* Formes du titre du récapitulatif, mesurées sans prendre de place (version 1.41.1). */
+.recap-title-probes {
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+}

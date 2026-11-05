@@ -311,23 +311,39 @@ test.describe('Alerte « groupe moins travaillé »', () => {
       }
       await page.setViewportSize({ width: 412, height: 915 });
     }
-    // Avec 50 min de tapis dans la séance du matin (version 1.41.0) : « Démarrer » à l'écran à 412 × 915, 360 × 800 et
-    // 360 × 800 px avec le texte à 115 %. À 320 × 711 px, il passe 6 px sous la barre d'onglets (limite signalée à
-    // l'utilisateur : en-tête sur 3 lignes, case des jambes sur 2).
-    await openLoaded(page, false, true);
-    await expect(page.getByTestId('weekly-recap').locator('[data-group="jambes"]')).toHaveText('Jambes (1× · +50\u00a0min\u00a0cardio) · aujourd’hui');
-    for (const [width, height, big] of SIZES.filter(([w]) => w !== 320)) {
-      await page.setViewportSize({ width, height });
-      const restore = big ? await largeText(page) : null;
-      const l = await layout(page);
-      const size = `avec cardio, ${width} × ${height} px${big ? ', texte à 115 %' : ''}`;
-      expect(l, size).toMatchObject({ afterRecap: true, startVisible: true });
-      expect(l.closest, size).toBeGreaterThanOrEqual(8);
-      expect(l.overflow, size).toBeLessThanOrEqual(0);
-      await restore?.();
+    // Avec 50 min de tapis dans la séance du matin (versions 1.41.0 et 1.41.1) : « Démarrer » à l'écran à toutes les
+    // tailles. Le titre du récapitulatif n'est raccourci que s'il le faut : complet à 412 × 915, 360 × 800 et 360 × 800
+    // avec le texte à 115 % (« Démarrer » y tient déjà) ; à 320 × 711, sans le cardio (puis sans les noms de jours si
+    // besoin).
+    for (const withPlan of [false, true]) {
+      await openLoaded(page, withPlan, true);
+      await expect(page.getByTestId('weekly-recap').locator('[data-group="jambes"]')).toHaveText('Jambes (1× · +50\u00a0min\u00a0cardio) · aujourd’hui');
+      for (const [width, height, big] of SIZES) {
+        await page.setViewportSize({ width, height });
+        const restore = big ? await largeText(page) : null;
+        const size = `avec cardio, ${withPlan ? 'avec' : 'sans'} séance prévue, ${width} × ${height} px${big ? ', texte à 115 %' : ''}`;
+        const title = page.getByTestId('weekly-recap').getByRole('heading');
+        // Forme attendue : la plus complète qui laisse « Démarrer » à l'écran.
+        if (width === 320) await expect(title, size).not.toHaveAttribute('data-form', 'full');
+        else await expect(title, size).toHaveAttribute('data-form', 'full');
+        const form = await title.getAttribute('data-form');
+        await expect(title, size).toHaveText(
+          form === 'short' ? /^Semaine du 9 au 15\snov\.\s: 2\sséances$/ : /^Semaine du lun\.\s9 au dim\.\s15\snov\.\s: 2\sséances(\s·\s50\smin\sde cardio)?$/,
+        );
+        if (form === 'noCardio') await expect(title, size).not.toContainText('cardio');
+        const l = await layout(page);
+        expect(l, size).toMatchObject({ afterRecap: true, startVisible: true });
+        expect(l.minHeight, size).toBeGreaterThanOrEqual(48);
+        expect(l.closest, size).toBeGreaterThanOrEqual(8);
+        expect(l.overflow, size).toBeLessThanOrEqual(0);
+        await restore?.();
+      }
+      await page.setViewportSize({ width: 412, height: 915 });
     }
+    // Sans cardio, rien à raccourcir à 320 × 711 si « Démarrer » tient déjà : titre complet.
+    await openLoaded(page, false);
     await page.setViewportSize({ width: 320, height: 711 });
-    expect((await layout(page)).overflow, 'avec cardio, 320 × 711 px').toBeLessThanOrEqual(0);
+    await expect(page.getByTestId('weekly-recap').getByRole('heading')).toHaveAttribute('data-form', 'full');
     await page.setViewportSize({ width: 412, height: 915 });
   });
 });

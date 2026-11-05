@@ -372,17 +372,29 @@ const DAY = new Intl.DateTimeFormat('fr-FR', { day: 'numeric' });
 const MONTH = new Intl.DateTimeFormat('fr-FR', { month: 'short' });
 
 /**
+ * Formes du titre, de la plus complète à la plus courte (version 1.41.1) : l'accueil prend une forme raccourcie
+ * seulement quand « Démarrer » ne tiendrait pas au-dessus de la barre d'onglets.
+ * - `full` : tout ;
+ * - `noCardio` : sans « · 45 min de cardio » (le cardio des jambes reste visible dans la case Jambes) ;
+ * - `short` : sans le cardio ni les noms de jours (« Semaine du 9 au 15 nov. »).
+ */
+export type RecapTitleForm = 'full' | 'noCardio' | 'short';
+export const RECAP_TITLE_FORMS: readonly RecapTitleForm[] = ['full', 'noCardio', 'short'];
+
+/**
  * « Semaine du lun. 12 au dim. 18 oct. : 2 séances » (mois répété si la semaine change de mois),
  * suivi de « · dont 1 maison », « · 1 activité » et « · 45 min de cardio » quand la semaine en contient.
+ * Formes raccourcies : voir `RecapTitleForm`.
  */
-export function recapTitle(recap: WeeklyRecap): string {
+export function recapTitle(recap: WeeklyRecap, form: RecapTitleForm = 'full'): string {
   const { start, end, sessionCount, homeCount, activityCount, cardioMinutes: minutes } = recap;
   const sameMonth = start.getMonth() === end.getMonth();
   // Espaces insécables : « 2 séances » ou « dim. 18 oct. » ne sont jamais coupés en fin de ligne.
   const nb = '\u00a0';
-  const from = `lun.${nb}${DAY.format(start)}${sameMonth ? '' : `${nb}${MONTH.format(start)}`}`;
-  const to = `dim.${nb}${DAY.format(end)}${nb}${MONTH.format(end)}`;
-  const cardio = minutes > 0 ? ` · ${formatMinutes(minutes).replace(/ /g, nb)}${nb}de cardio` : '';
+  const days = form !== 'short';
+  const from = `${days ? `lun.${nb}` : ''}${DAY.format(start)}${sameMonth ? '' : `${nb}${MONTH.format(start)}`}`;
+  const to = `${days ? `dim.${nb}` : ''}${DAY.format(end)}${nb}${MONTH.format(end)}`;
+  const cardio = minutes > 0 && form === 'full' ? ` · ${formatMinutes(minutes).replace(/ /g, nb)}${nb}de cardio` : '';
   const activities = activityCount > 0 ? ` · ${activityCount}${nb}activité${activityCount > 1 ? 's' : ''}` : '';
   const home = homeCount ? ` · dont${nb}${homeCount}${nb}maison` : '';
   return `Semaine du ${from} au ${to}${nb}: ${sessionCount}${nb}séance${sessionCount > 1 ? 's' : ''}${home}${activities}${cardio}`;
