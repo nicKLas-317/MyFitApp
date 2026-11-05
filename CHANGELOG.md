@@ -4,6 +4,11 @@ Ce qui a changé à chaque version de MyFitApp, de la plus récente à la plus a
 
 Les commits sans changement de numéro (documentation, tests, workflow) sont rangés sous la version en cours à ce moment-là.
 
+## 1.41.4 — 5 nov. 2026
+
+- Changer la date d'une séance passée : début et fin au nouveau jour, à la même heure ; comptée dans sa nouvelle semaine partout (avant : le récapitulatif, les bilans et les séries par semaine la gardaient dans l'ancienne)
+- CLAUDE.md : fin du §15 (« Les tests doivent vérifier… » et « Tests de bout en bout fiables ») remise après le dernier test ; la version B l'avait déplacée par erreur entre les tests 241 et 242
+
 ## 1.41.3 — 5 nov. 2026
 
 - Calendrier, groupes, score et travail définis une seule fois ; code mort retiré (`51e4e69`)

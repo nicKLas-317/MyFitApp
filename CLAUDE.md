@@ -1067,7 +1067,7 @@ Créer un historique chronologique des séances, avec :
 
 Permettre de rechercher une séance par son nom (nom affiché, §5.14, ou date d'une séance non renommée) et de consulter ses détails.
 
-Permettre de renommer et de corriger une séance passée. **Précision validée :** la date d'une séance passée est modifiable ; la séance est alors rejouée à sa nouvelle place chronologique (§7.9).
+Permettre de renommer et de corriger une séance passée. **Précision validée :** la date d'une séance passée est modifiable ; la séance est alors rejouée à sa nouvelle place chronologique (§7.9). Son début et sa fin passent au nouveau jour, à la même heure (version 1.41.4) : le récapitulatif, les bilans, les séries par semaine et le moteur la rangent tous dans sa nouvelle semaine. Une séance sans heure reste sans heure ; une séance non renommée reçoit le nom par défaut de sa nouvelle date, pour que la recherche par date la trouve (choix signalé à l'utilisateur).
 
 Permettre de supprimer une séance passée, après confirmation explicite, depuis son détail seulement (la liste, regroupée par mois, n'a aucun bouton, §3.5). La suppression déclenche le recalcul du profil (§7.9).
 
@@ -1707,14 +1707,6 @@ Les valeurs par défaut doivent permettre d'utiliser immédiatement l'applicatio
 
 241. Tutoiement : aucun texte du code de l'appli (chaînes, gabarits, texte JSX ; commentaires et tests exclus) ne contient « vous », « votre », « vos » ni d'impératif en « -ez » (« assez », « chez » admis) ; le texte du mail du bilan non plus (test 192) ; le texte affiché de chaque écran et état du test 225 non plus. Contre-test : « Choisissez une activité. » remis dans le code fait échouer le test.
 
-Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
-
-**Tests de bout en bout fiables (précision validée le 5 novembre 2026)** :
-- **Police fixée** : le navigateur des tests ne voit que DejaVu Sans et DejaVu Sans Mono (`e2e/fonts`, configuration fontconfig déclarée par `playwright.config.ts`), sur le poste comme sur la machine de GitHub : les contrôles au pixel près ne dépendent plus des polices installées. DejaVu Sans est plus large que Roboto (téléphone) : une mise en page qui tient avec elle tient aussi sur le téléphone (choix signalé à l'utilisateur). Rendu inchangé sur le poste (mêmes largeurs de texte qu'avant).
-- **Rechargement** : toujours par `reloadAfterWrites` (`e2e/helpers.ts`), qui attend que les écritures déjà parties vers IndexedDB soient enregistrées ; jamais un `reload()` qui les devance (échecs du test 266, le 27 octobre). Exceptions : la fiabilité à la fermeture (tests 120 et 121) et le hors-ligne (test 50), qui testent justement le rechargement sans attente.
-- **Un test par écran** pour le contrôle d'ergonomie (test 225) : un échec ne masque plus les autres écrans, et les tests tournent en parallèle.
-- Workflow sur `ubuntu-24.04` (épinglé, §21).
-
 ### Séance prévue (§5.9, versions 1.23.0 et 1.23.2)
 
 242. Préparation : exercices dans l'ordre, sans doublon, réordonnés, cardio prévu dans le même ordre (ajouté à la fin, remonté entre deux exercices puis en tête, gardant sa place une fois corrigé) ; charge, cible et mention du moteur comme la carte en séance (« = même cible », « ↑ Poids supérieur → 3 × 8 », poids de départ d'un exercice jamais réalisé) ; une séance libre entre-temps laisse le plan intact et fait évoluer la cible (« 3 × 9 ↑ +1 rép. ») ; démarrage 3 jours plus tard : charge et cible recalculées, séries préremplies, ordre du plan, origine `fromPlan` avec l'ordre (cardio en tête) ; exercice archivé ignoré, absent de l'ordre. À la salle : un seul ordre, cardio prévu compris ; éléments non terminés (séries ou ressenti manquants, cardio prévu pas validé) ; un cardio validé reste à sa place, retiré il redevient « prévu » ; ajouts en séance après le plan ; séance libre : exercices puis cardio.
@@ -1831,6 +1823,18 @@ Le test 225 contrôle aussi l'accueil avec un plan, la préparation (vide, avec 
 ### Calendrier, groupes et score : une seule définition (version 1.41.3)
 
 300. (unitaire) Calendrier (`src/domain/calendar.ts`) : lundi 0 h 00 de la semaine, y compris le dimanche du passage à l'heure d'hiver ; semaine du lundi au lundi suivant 0 h 00 ; date « AAAA-MM-JJ » en heure locale, décalée d'un jour (fin de mois, février) ; début d'une séance sans heure à minuit ; matin avant midi, après-midi avant 18 h, soir ensuite. Groupes (`src/domain/muscleGroups.ts`) : ordre de la bibliothèque identique à celui des libellés, ordre du récapitulatif, sept groupes principaux, sous-groupes des jambes rattachés à « Jambes » (seulement si « Jambes » est affiché et le sous-groupe non). Score : `groupScore` donne le score de chaque case du récapitulatif (données simulées). Travail (`countsAsWork`) : une performance partielle importée compte, y compris pour « la veille » de la séance pour compléter la semaine (dos écarté) ; contre-test sur l'ancienne règle. Non-régression : tout ce que calculent l'appli (moteur, récapitulatif, alertes, suggestion, bilans et leur écran, groupes, noms de séance, récents) est identique à la version 1.41.1 sur les deux vrais exports, jour par jour du 12 octobre au 5 novembre (`perso/`), et les 60 écrans capturés de chaque export sont identiques.
+
+### Changer la date d'une séance passée (§10, version 1.41.4)
+
+301. (unitaire et bout en bout) Séance du dimanche 25 octobre 2026 (passage à l'heure d'hiver), 18 h – 19 h, déplacée au lundi 26 : début et fin le lundi à 18 h et 19 h (durée 1 h), nom par défaut « Séance du 26 octobre 2026 — 18 h 00 » ; récapitulatif (2 séances la semaine du 26 avec celle du lundi 8 h, 0 la semaine du 19), bilans de la semaine (2 et 0), séries par semaine (6 séries de pectoraux la semaine du 26) et moteur (après la séance du lundi 8 h, son palier en dernier) la rangent tous dans la nouvelle semaine ; séance sans heure : toujours sans heure, nom importé à la nouvelle date ; nom donné à la main gardé ; même date : rien ne change. Bout en bout : date changée dans le détail, en-tête « 26 octobre 2026 · 18 h 00 – 19 h 00 », séance en base, récapitulatif « 1 séance » et « Pectoraux (1×) », bilan de la semaine du 26, recherche « 26 octobre ». Contre-test : sur la version 1.41.3, les deux tests unitaires et le test de bout en bout échouent.
+
+Les tests doivent vérifier les décisions réelles du moteur et les données enregistrées, pas seulement l'affichage.
+
+**Tests de bout en bout fiables (précision validée le 5 novembre 2026)** :
+- **Police fixée** : le navigateur des tests ne voit que DejaVu Sans et DejaVu Sans Mono (`e2e/fonts`, configuration fontconfig déclarée par `playwright.config.ts`), sur le poste comme sur la machine de GitHub : les contrôles au pixel près ne dépendent plus des polices installées. DejaVu Sans est plus large que Roboto (téléphone) : une mise en page qui tient avec elle tient aussi sur le téléphone (choix signalé à l'utilisateur). Rendu inchangé sur le poste (mêmes largeurs de texte qu'avant).
+- **Rechargement** : toujours par `reloadAfterWrites` (`e2e/helpers.ts`), qui attend que les écritures déjà parties vers IndexedDB soient enregistrées ; jamais un `reload()` qui les devance (échecs du test 266, le 27 octobre). Exceptions : la fiabilité à la fermeture (tests 120 et 121) et le hors-ligne (test 50), qui testent justement le rechargement sans attente.
+- **Un test par écran** pour le contrôle d'ergonomie (test 225) : un échec ne masque plus les autres écrans, et les tests tournent en parallèle.
+- Workflow sur `ubuntu-24.04` (épinglé, §21).
 
 ## 16. Vérification avant livraison
 

@@ -5,7 +5,8 @@
  */
 import type { Feeling, Performance, Session } from '../domain/types';
 import { compareSessions, sortSessions, validatePerformance, type PerformanceError } from '../engine';
-import { isIsoDate } from '../session/format';
+import { isIsoDate, localDate } from '../session/format';
+import { isDefaultSessionName, storedDefaultName } from '../session/title';
 import { parseIsoDay } from '../domain/calendar';
 import { normalizeName } from '../library/text';
 
@@ -68,12 +69,32 @@ export function removePastPerformance(session: Session, variantId: string, now: 
   return performances.length === session.performances.length ? session : { ...session, performances, updatedAt: now };
 }
 
-/** Change la date d'une séance passée : elle est rejouée à sa nouvelle place chronologique (§7.9). */
+/** Le même moment de la journée (heure locale), `days` jours plus tard ou plus tôt, changements d'heure compris. */
+function sameTimeShifted(ts: number, days: number): number {
+  const d = new Date(ts);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + days, d.getHours(), d.getMinutes(), d.getSeconds(), d.getMilliseconds()).getTime();
+}
+
+/**
+ * Change la date d'une séance passée : elle est rejouée à sa nouvelle place chronologique (§7.9). Depuis la version
+ * 1.41.4, le début et la fin passent au nouveau jour, à la même heure : le récapitulatif, les bilans et les séries par
+ * semaine la comptent dans sa nouvelle semaine, comme le moteur. Une séance sans heure reste sans heure. Une séance non
+ * renommée reçoit le nom par défaut de sa nouvelle date (la recherche par date la trouve, §5.14).
+ */
 export function setSessionDate(session: Session, date: string, now: number): Session {
   if (!isIsoDate(date)) throw new Error('Date invalide');
   if (date === session.date) return session;
-  // L'heure de début connue appartient à l'ancienne date : elle est conservée telle quelle.
-  return { ...session, date, updatedAt: now };
+  // Écart en jours civils entre le jour du début (la date pour une séance sans heure) et la nouvelle date.
+  const from = session.startedAt !== null ? localDate(session.startedAt) : session.date;
+  const days = Math.round((parseIsoDay(date, 0, 12).getTime() - parseIsoDay(from, 0, 12).getTime()) / 86_400_000);
+  const moved: Session = {
+    ...session,
+    date,
+    startedAt: session.startedAt === null ? null : sameTimeShifted(session.startedAt, days),
+    endedAt: session.endedAt === null ? null : sameTimeShifted(session.endedAt, days),
+    updatedAt: now,
+  };
+  return isDefaultSessionName(session.name) ? { ...moved, name: storedDefaultName(moved) } : moved;
 }
 
 /**
