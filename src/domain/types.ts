@@ -102,6 +102,11 @@ export interface CardioMachine {
   name: string;
   /** La machine se règle en inclinaison (tapis de marche). */
   incline: boolean;
+  /**
+   * Ses minutes comptent pour les jambes du récapitulatif (version 1.41.0). Absent : oui, sauf le rameur
+   * (`machineCountsForLegs`) ; enregistré seulement une fois la case changée dans les réglages.
+   */
+  legs?: boolean;
 }
 
 /**

@@ -15,6 +15,7 @@ import {
   type ReportScreen,
   type ReportSection,
 } from '../analysis/report';
+import { LEG_CARDIO_MINUTES } from '../analysis/weekly';
 import { MUSCLE_GROUP_LABELS } from '../library/seed';
 import { formatDurationLong, localDate } from '../session/format';
 import { exerciseColorProps, groupColorProps } from './groupColors';
@@ -202,9 +203,11 @@ export function stickLabels(column: number, full: readonly number[], short: read
  * règles du récapitulatif (séance 1, indirect ½, maison 1/12 par série plafonnée à ½ par semaine) ; le plus travaillé
  * occupe toute la hauteur ; pas de valeur au-dessus (le tableau donne les chiffres). Groupe non travaillé : bâton vide,
  * nom en gris. Tableau : Séances / Indirect / Maison (séries), case vide pour zéro ; en-têtes abrégés à 320 px.
+ * Cardio des jambes (version 1.41.0) : ½ par semaine à 45 min ou plus, compris dans le bâton des jambes et donné par
+ * une phrase sous le tableau (« Jambes : +½ pour 62 min de cardio. »).
  */
 export function ReportGroups({ report, screen }: { report: PeriodReport; screen: ReportScreen }) {
-  const totals = screen.bars.map((b) => b.direct + b.indirect + b.home);
+  const totals = screen.bars.map((b) => b.direct + b.indirect + b.home + b.cardio);
   const max = Math.max(...totals);
   const chartRef = useRef<HTMLDivElement>(null);
   const [labels, setLabels] = useState<StickLabels>('staggered');
@@ -249,7 +252,8 @@ export function ReportGroups({ report, screen }: { report: PeriodReport; screen:
       {n > 0 ? n : <span className="visually-hidden">0</span>}
     </td>
   );
-  const idleOf = (g: PeriodReport['groups'][number]) => g.count === 0 && g.indirect === 0 && !g.home;
+  const idleOf = (g: PeriodReport['groups'][number]) => g.count === 0 && g.indirect === 0 && !g.home && !g.cardio;
+  const legs = report.groups.find((g) => g.cardio);
   return (
     <section className="frame report-section" aria-label="Groupes travaillés">
       <h3 className="section-title">Groupes travaillés</h3>
@@ -307,8 +311,25 @@ export function ReportGroups({ report, screen }: { report: PeriodReport; screen:
           })}
         </tbody>
       </table>
+      {legs?.cardio && <p className="groups-cardio" data-testid="groups-cardio">{legCardioSentence(legs.cardio, legs.cardioWeeks)}</p>}
     </section>
   );
+}
+
+/** « ½ », « 1 », « 1½ » : poids du cardio des jambes. */
+function halves(weeks: number): string {
+  const whole = Math.floor(weeks / 2);
+  return `${whole > 0 ? whole : ''}${weeks % 2 === 1 ? '½' : ''}`;
+}
+
+/**
+ * Cardio des jambes sous le tableau (version 1.41.0) : « Jambes : +½ pour 62 min de cardio. » (semaine), « Jambes : +1
+ * pour le cardio, 2 semaines à 45 min ou plus (150 min). » (mois).
+ */
+export function legCardioSentence(minutes: number, weeks?: number): string {
+  const nb = '\u00a0';
+  if (!weeks) return `Jambes${nb}: +½ pour ${minutes}${nb}min de cardio.`;
+  return `Jambes${nb}: +${halves(weeks)} pour le cardio, ${weeks}${nb}semaine${weeks > 1 ? 's' : ''} à ${LEG_CARDIO_MINUTES}${nb}min ou plus (${minutes}${nb}min).`;
 }
 
 function Ladder({ steps }: { steps: LadderStep[] }) {

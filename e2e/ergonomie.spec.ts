@@ -513,6 +513,25 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
         await page.goto('./#/seance-prevue');
         await setPlan(page, null);
       }],
+      // Cardio des jambes (version 1.41.0) : 60 min de tapis dans la séance du lundi 19 → « Jambes (… · +60 min cardio) »
+      // à l'accueil, phrase sous le tableau des bilans de la semaine et du mois. Placé en dernier : les écrans suivants (à
+      // la largeur suivante) gardent ce cardio, sans effet sur leurs contrôles.
+      ['Accueil, cardio des jambes', async () => {
+        await page.goto('./');
+        const sessions = await readSessions(page);
+        const monday = sessions.find((x) => x.id === 'sim-2026-10-19')!;
+        await writeSessions(page, [{ ...monday, cardio: [{ id: 'sim-cardio-jambes', machineId: 'tapis', machine: 'Tapis de marche', incline: 'neutre', minutes: 60 }] }]);
+        await page.reload();
+        await expect(page.getByTestId('weekly-recap').locator('[data-group="jambes"]')).toContainText('+60\u00a0min\u00a0cardio');
+      }],
+      ['Bilan de la semaine, cardio des jambes', async () => {
+        await page.goto('./#/bilan-periode/semaine/2026-10-19');
+        await expect(page.getByTestId('groups-cardio')).toBeVisible();
+      }],
+      ['Bilan du mois, cardio des jambes', async () => {
+        await page.goto('./#/bilan-periode/mois/2026-10');
+        await expect(page.getByTestId('groups-cardio')).toBeVisible();
+      }],
     ];
     // À 412, 360 et 320 px, puis à 360 px avec le texte agrandi à 115 % : chaque écran, page entière.
     for (const [width, scale] of [[412, 1], [360, 1], [320, 1], [360, 1.15]] as const) {

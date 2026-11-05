@@ -256,7 +256,7 @@ test.describe('Cardio', () => {
     );
     await page.goto('./#/reglages');
     await page.reload();
-    const names = () => page.locator('.machine-row input').evaluateAll((list) => list.map((i) => (i as HTMLInputElement).value));
+    const names = () => page.locator('.machine-row input[type="text"]').evaluateAll((list) => list.map((i) => (i as HTMLInputElement).value));
     await expect.poll(names).toEqual(['Tapis', 'Rameur', 'Vélo elliptique', 'Vélo', 'Autre']);
 
     // Retirée par l'utilisateur, elle n'est jamais recréée.

@@ -241,9 +241,9 @@ test.describe('Écrans au calme allégés (version 1.21.0)', () => {
     // « Retirer » : dans le menu « ⋯ » de la machine ; effectif à l'enregistrement.
     await machines.getByRole('button', { name: 'Actions : Rameur', exact: true }).click();
     await page.getByRole('menuitem', { name: 'Retirer' }).click();
-    await expect(machines.locator('.machine-row input')).toHaveCount(4);
+    await expect(machines.locator('.machine-row input[type="text"]')).toHaveCount(4);
     await machines.getByRole('button', { name: 'Annuler' }).click();
-    await expect(machines.locator('.machine-row input')).toHaveCount(5);
+    await expect(machines.locator('.machine-row input[type="text"]')).toHaveCount(5);
   });
 
   test('236. Mon poids : date courte, une pesée par ligne à 412 et 360 px ; « Taille » sans séparateur isolé quand le lien passe à la ligne', async ({ page }) => {

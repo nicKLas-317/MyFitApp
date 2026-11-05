@@ -1,7 +1,9 @@
 /**
  * Cardio, version minimale : blocs « machine, inclinaison (tapis), durée, distance facultative » dans une séance.
- * Simple enregistrement : ni progression, ni couleur, ni ressenti, ni calories, aucun effet sur le moteur
- * ni sur les groupes musculaires du récapitulatif hebdomadaire. Fonctions pures.
+ * Simple enregistrement : ni progression, ni couleur, ni ressenti, ni calories, aucun effet sur le moteur.
+ * Seule exception (version 1.41.0) : les minutes des machines qui comptent pour les jambes (toutes sauf le rameur,
+ * par défaut) donnent ½ aux jambes du récapitulatif à partir de 45 min dans la semaine (`legCardioMinutes`, analysis/weekly).
+ * Fonctions pures.
  */
 import type { CardioBlock, CardioMachine, Incline, Session } from '../domain/types';
 import { slug, uniqueId } from '../library/edit';
@@ -10,7 +12,7 @@ import { normalizeName } from '../library/text';
 
 export const DEFAULT_CARDIO_MACHINES: readonly CardioMachine[] = [
   { id: 'tapis', name: 'Tapis de marche', incline: true },
-  { id: 'rameur', name: 'Rameur', incline: false },
+  { id: 'rameur', name: 'Rameur', incline: false, legs: false },
   { id: 'elliptique', name: 'Vélo elliptique', incline: false },
   { id: 'velo', name: 'Vélo', incline: false },
   { id: 'autre', name: 'Autre', incline: false },
@@ -47,6 +49,15 @@ export const MAX_CARDIO_KM = 200;
 
 export function cardioOf(session: Pick<Session, 'cardio'>): CardioBlock[] {
   return session.cardio ?? [];
+}
+
+/**
+ * La machine compte pour les jambes (version 1.41.0) : case « Compte pour les jambes » des réglages, cochée par
+ * défaut, décochée pour le rameur. Une liste enregistrée avant la version 1.41.0 n'a pas la case : le rameur
+ * (identifiant `rameur`, même renommé) ne compte pas, les autres comptent.
+ */
+export function machineCountsForLegs(machine: Pick<CardioMachine, 'id' | 'legs'>): boolean {
+  return machine.legs ?? machine.id !== 'rameur';
 }
 
 /** Durée totale de cardio d'une séance, en minutes. */
@@ -166,13 +177,13 @@ export function sanitizeCardioMachines(value: unknown): CardioMachine[] {
   const list: CardioMachine[] = [];
   for (const m of value) {
     if (typeof m !== 'object' || m === null) continue;
-    const { id, name, incline } = m as Record<string, unknown>;
+    const { id, name, incline, legs } = m as Record<string, unknown>;
     if (typeof id !== 'string' || !id || typeof name !== 'string' || !name.trim() || typeof incline !== 'boolean') continue;
     const key = normalizeName(name);
     if (ids.has(id) || names.has(key)) continue;
     ids.add(id);
     names.add(key);
-    list.push({ id, name: name.trim(), incline });
+    list.push({ id, name: name.trim(), incline, ...(typeof legs === 'boolean' ? { legs } : {}) });
   }
   return list.length > 0 ? list : [...DEFAULT_CARDIO_MACHINES];
 }

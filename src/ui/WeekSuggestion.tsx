@@ -11,11 +11,11 @@ import { colorGroupOf, GROUP_COLORS } from './groupColors';
  * des heures (la veille change à minuit).
  */
 export function useWeekSuggestion(): WeekSuggestion | null {
-  const { sessions, exercises, settings, recapSettings, activities } = useApp();
+  const { sessions, exercises, settings, recapSettings, activities, cardioMachines } = useApp();
   const hour = Math.floor(useNow(60_000) / 3_600_000);
   return useMemo(
-    () => weekSuggestion({ sessions, exercises, settings, recap: recapSettings, activities, now: Date.now() }),
-    [sessions, exercises, settings, recapSettings, activities, hour],
+    () => weekSuggestion({ sessions, exercises, settings, recap: recapSettings, activities, machines: cardioMachines, now: Date.now() }),
+    [sessions, exercises, settings, recapSettings, activities, cardioMachines, hour],
   );
 }
 

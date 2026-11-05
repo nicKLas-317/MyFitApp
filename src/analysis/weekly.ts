@@ -7,9 +7,12 @@
  * Une séance à la maison (version 1.28.0) compte selon son volume : 1/12 par série validée d'un exercice dont le groupe
  * est le groupe principal (« +5 séries maison »), au plus ½ par semaine et par groupe ; ses groupes secondaires ne
  * comptent pas. Un exercice sans aucune série ne compte jamais.
+ * Cardio (version 1.41.0) : à partir de 45 min dans la semaine sur les machines qui comptent pour les jambes (toutes
+ * sauf le rameur, par défaut), salle et maison confondues, les jambes reçoivent ½, comme un travail indirect, au plus
+ * ½ par semaine, sans le plafond de 1 par jour (« +62 min cardio »). Sans effet sur « hier » / « aujourd'hui ».
  */
-import type { Exercise, MuscleGroup, Session } from '../domain/types';
-import { cardioMinutes, formatMinutes } from '../cardio/model';
+import type { CardioMachine, Exercise, MuscleGroup, Session } from '../domain/types';
+import { cardioMinutes, cardioOf, formatMinutes, machineCountsForLegs } from '../cardio/model';
 import { activityEnd, activityStart, doneActivities, type ActivityRecord } from '../activities/model';
 
 export type RecapColor = 'vert' | 'orange' | 'rouge';
@@ -48,8 +51,14 @@ export interface RecapCell {
    */
   home?: number;
   /**
+   * Jambes seulement (version 1.41.0) : minutes de cardio de la semaine qui comptent pour les jambes, quand elles
+   * atteignent 45 min (« +62 min cardio ») ; absent sinon.
+   */
+  cardio?: number;
+  /**
    * Score de la semaine : 1 par séance directe, ½ par séance indirecte, 1/12 par série à la maison (au plus ½ pour la
-   * semaine). Il détermine la couleur et le tri : sous 1, le groupe reste vert ; la maison seule ne le rend jamais orange.
+   * semaine), ½ pour 45 min de cardio (jambes). Il détermine la couleur et le tri : sous 1, le groupe reste vert ; la
+   * maison seule ne le rend jamais orange.
    */
   score: number;
   color: RecapColor;
@@ -108,6 +117,33 @@ function recencyOf(time: number, now: number): Recency {
 
 /** Poids maximal de la maison dans la semaine, pour un groupe (version 1.28.0). */
 export const HOME_WEEK_CAP = 0.5;
+
+/** Cardio pour les jambes (version 1.41.0) : minutes de la semaine à atteindre, et poids (au plus, par semaine). */
+export const LEG_CARDIO_MINUTES = 45;
+export const LEG_CARDIO_BONUS = 0.5;
+/** Groupe qui reçoit le cardio. */
+export const LEG_CARDIO_GROUP: MuscleGroup = 'jambes';
+
+/**
+ * Minutes de cardio qui comptent pour les jambes (version 1.41.0), dans les séances terminées dont le début est dans la
+ * période, salle et maison confondues. Un bloc suit le réglage de sa machine dans la liste actuelle ; une machine
+ * retirée de la liste depuis suit la règle par défaut (tout sauf le rameur).
+ */
+export function legCardioMinutes(sessions: readonly Session[], machines: readonly CardioMachine[], inPeriod: (time: number) => boolean): number {
+  const byId = new Map(machines.map((m) => [m.id, m]));
+  let total = 0;
+  for (const s of sessions) {
+    if (s.state !== 'done' || !inPeriod(sessionStartTime(s))) continue;
+    for (const b of cardioOf(s)) if (machineCountsForLegs(byId.get(b.machineId) ?? { id: b.machineId })) total += b.minutes;
+  }
+  return total;
+}
+
+/** Minutes comptées pour les jambes sur une semaine : le total s'il atteint 45 min, sinon 0 (rien n'est affiché). */
+export function legCardioWeek(sessions: readonly Session[], machines: readonly CardioMachine[], inWeek: (time: number) => boolean): number {
+  const minutes = legCardioMinutes(sessions, machines, inWeek);
+  return minutes >= LEG_CARDIO_MINUTES ? minutes : 0;
+}
 
 const COLOR_RANK: Record<RecapColor, number> = { vert: 0, orange: 1, rouge: 2 };
 
@@ -240,6 +276,7 @@ export function weeklyRecap(
   now: number,
   settings: WeeklyRecapSettings = DEFAULT_RECAP_SETTINGS,
   activities: readonly ActivityRecord[] = [],
+  machines: readonly CardioMachine[] = [],
 ): WeeklyRecap {
   const start = weekStart(new Date(now));
   const next = new Date(start);
@@ -259,16 +296,27 @@ export function weeklyRecap(
   }
   const activityCount = doneActivities(activities).filter((a) => inWeek(activityStart(a))).length;
   const { counts, indirects, homes, homeScores, last } = groupWork(sessions, exercises, settings.groups, inWeek, activities);
+  const legCardio = legCardioWeek(sessions, machines, inWeek);
 
   const cells: RecapCell[] = settings.groups.map((group) => {
     const count = counts.get(group) ?? 0;
     const indirect = indirects.get(group) ?? 0;
     const home = homes.get(group) ?? 0;
     // La maison : au plus ½ pour la semaine, jamais le niveau d'une séance à la salle (version 1.28.0).
-    const score = count + indirect / 2 + Math.min(HOME_WEEK_CAP, homeScores.get(group) ?? 0);
+    const cardio = group === LEG_CARDIO_GROUP ? legCardio : 0;
+    const score = count + indirect / 2 + Math.min(HOME_WEEK_CAP, homeScores.get(group) ?? 0) + (cardio > 0 ? LEG_CARDIO_BONUS : 0);
     const color: RecapColor = score < 1 ? 'vert' : score >= settings.redThreshold ? 'rouge' : 'orange';
     const time = last.get(group);
-    return { group, count, indirect, ...(home > 0 ? { home } : {}), score, color, recency: time === undefined ? null : recencyOf(time, now) };
+    return {
+      group,
+      count,
+      indirect,
+      ...(home > 0 ? { home } : {}),
+      ...(cardio > 0 ? { cardio } : {}),
+      score,
+      color,
+      recency: time === undefined ? null : recencyOf(time, now),
+    };
   });
   // Vert en haut, puis orange, puis rouge ; à couleur égale, les groupes travaillés hier ou aujourd'hui en dernier,
   // puis score croissant (un vert avec de l'indirect après un vert sans rien).
@@ -285,19 +333,25 @@ export function weeklyRecap(
 
 /**
  * Nombre de séances d'une case, sans fraction : « 1× », « 1× · +1 indirect », « +2 indirect », puis les séries faites
- * à la maison : « +5 séries maison ».
+ * à la maison : « +5 séries maison », puis le cardio des jambes : « +62 min cardio ».
  * Vide sans aucun travail cette semaine ; une case verte peut afficher « +1 indirect ».
  */
 export function recapCountLabel(cell: RecapCell): string {
   return workParts(cell, '\u00a0').join(' · ');
 }
 
-/** Parties du travail d'un groupe : « 1× », « +1 indirect », « +5 séries maison » (récapitulatif et bilans). */
-export function workParts(w: { count: number; indirect: number; home?: number }, space = ' '): string[] {
+/**
+ * Parties du travail d'un groupe : « 1× », « +1 indirect », « +5 séries maison », « +62 min cardio » (récapitulatif
+ * et bilans). Sur un mois, le cardio donne aussi le nombre de semaines qui l'ont compté : « +150 min cardio (2 semaines) ».
+ */
+export function workParts(w: { count: number; indirect: number; home?: number; cardio?: number; cardioWeeks?: number }, space = ' '): string[] {
   return [
     ...(w.count > 0 ? [`${w.count}×`] : []),
     ...(w.indirect > 0 ? [`+${w.indirect}${space}indirect`] : []),
     ...(w.home ? [`+${w.home}${space}${w.home > 1 ? 'séries' : 'série'}${space}maison`] : []),
+    ...(w.cardio
+      ? [`+${w.cardio}${space}min${space}cardio${w.cardioWeeks ? `${space}(${w.cardioWeeks}${space}semaine${w.cardioWeeks > 1 ? 's' : ''})` : ''}`]
+      : []),
   ];
 }
 

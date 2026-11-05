@@ -38,7 +38,7 @@ export function kindOfSegment(segment: string | undefined): ReportKind {
  * Écran lié à plusieurs groupes : cadres neutres (§3.2), aucune couleur de statut.
  */
 export function PeriodReport({ kind, periodParam }: { kind: ReportKind; periodParam?: string }) {
-  const { sessions, exercises, replay, settings, variants, recapSettings, reportSettings, markReportSeen, activities } = useApp();
+  const { sessions, exercises, replay, settings, variants, recapSettings, reportSettings, markReportSeen, activities, cardioMachines } = useApp();
   const body = useBody();
   const now = Date.now();
   const period = (periodParam ? parsePeriodKey(kind, periodParam) : null) ?? defaultPeriod(kind, sessions, now);
@@ -46,13 +46,13 @@ export function PeriodReport({ kind, periodParam }: { kind: ReportKind; periodPa
   const weighIns = body.status === 'ready' ? body.data.weighIns : [];
   const [report, screen] = useMemo(
     () => {
-      const input = { sessions, exercises, evaluations: replay.evaluations, settings, groups: recapSettings.groups, weighIns, activities, now };
+      const input = { sessions, exercises, evaluations: replay.evaluations, settings, groups: recapSettings.groups, weighIns, activities, machines: cardioMachines, now };
       const built = buildReport(period, input);
       // Écran seulement (version 1.35.0) : tuiles, barres, calendrier, échelles ; le texte du mail n'en dépend pas.
       return [built, buildReportScreen(built, input)] as const;
     },
     // `now` change à chaque rendu : la période (clé) et les données suffisent.
-    [key, kind, sessions, exercises, replay, settings, recapSettings, weighIns, activities],
+    [key, kind, sessions, exercises, replay, settings, recapSettings, weighIns, activities, cardioMachines],
   );
   const name = (id: string) => displayName(variants.get(id));
   // Exercice aux haltères : charges en « kg / haltère » (§4.4), à l'écran comme dans le mail.

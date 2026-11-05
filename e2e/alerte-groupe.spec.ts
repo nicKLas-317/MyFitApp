@@ -79,14 +79,16 @@ const SIZES = [[412, 915, false], [360, 800, false], [320, 711, false], [360, 80
 /**
  * Cas le plus chargé de l'accueil (version 1.40.0), mercredi 11 nov. 12 h : question du badminton de lundi, 7 groupes au
  * récapitulatif, 3 alertes (vacances les deux dernières semaines), séance du matin à compléter, séance pour compléter la
- * semaine, rappel de sauvegarde ; avec ou sans séance prévue.
+ * semaine, rappel de sauvegarde ; avec ou sans séance prévue. `cardio` (version 1.41.0) : 50 min de tapis dans la séance
+ * du matin, « Jambes (1× · +50 min cardio) · aujourd’hui » et « · 50 min de cardio » dans l'en-tête.
  */
-async function openLoaded(page: Page, withPlan: boolean): Promise<void> {
+async function openLoaded(page: Page, withPlan: boolean, cardio = false): Promise<void> {
   await open(page, { vacations: ['2026-10-26', '2026-11-02'], dosDown: [], pecDown: [] });
   const t = new Date(2026, 10, 11, 8).getTime();
   const morning: Session = {
     id: 'matin-11', name: defaultSessionName(t), date: '2026-11-11', startedAt: t, endedAt: t + 3_600_000, createdAt: t, updatedAt: t, origin: 'app', state: 'done',
     performances: [{ variantId: 'presse-a-cuisses', weightKg: 60, targetReps: 10, plannedSets: 3, reps: [10, 10, 10], feeling: 'bien' }],
+    ...(cardio ? { cardio: [{ id: 'matin-11-tapis', machineId: 'tapis', machine: 'Tapis de marche', incline: 'neutre' as const, minutes: 50 }] } : {}),
   };
   const plan: SessionPlan | null = withPlan
     ? { id: 'plan-charge', createdAt: t, updatedAt: t, items: [{ kind: 'exercise', variantId: 'chest-press' }, { kind: 'exercise', variantId: 'pec-deck' }, { kind: 'exercise', variantId: 'tirage-vertical' }] }
@@ -309,5 +311,23 @@ test.describe('Alerte « groupe moins travaillé »', () => {
       }
       await page.setViewportSize({ width: 412, height: 915 });
     }
+    // Avec 50 min de tapis dans la séance du matin (version 1.41.0) : « Démarrer » à l'écran à 412 × 915, 360 × 800 et
+    // 360 × 800 px avec le texte à 115 %. À 320 × 711 px, il passe 6 px sous la barre d'onglets (limite signalée à
+    // l'utilisateur : en-tête sur 3 lignes, case des jambes sur 2).
+    await openLoaded(page, false, true);
+    await expect(page.getByTestId('weekly-recap').locator('[data-group="jambes"]')).toHaveText('Jambes (1× · +50\u00a0min\u00a0cardio) · aujourd’hui');
+    for (const [width, height, big] of SIZES.filter(([w]) => w !== 320)) {
+      await page.setViewportSize({ width, height });
+      const restore = big ? await largeText(page) : null;
+      const l = await layout(page);
+      const size = `avec cardio, ${width} × ${height} px${big ? ', texte à 115 %' : ''}`;
+      expect(l, size).toMatchObject({ afterRecap: true, startVisible: true });
+      expect(l.closest, size).toBeGreaterThanOrEqual(8);
+      expect(l.overflow, size).toBeLessThanOrEqual(0);
+      await restore?.();
+    }
+    await page.setViewportSize({ width: 320, height: 711 });
+    expect((await layout(page)).overflow, 'avec cardio, 320 × 711 px').toBeLessThanOrEqual(0);
+    await page.setViewportSize({ width: 412, height: 915 });
   });
 });

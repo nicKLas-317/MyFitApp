@@ -5,7 +5,7 @@
  * stocké ; il ne remplace jamais la séance prévue : « En faire ma séance prévue » la copie, « Démarrer cette séance »
  * la déroule comme une séance prévue sans toucher au plan. Aucun effet sur le moteur ni sur le récapitulatif.
  */
-import type { CardioBlock, Exercise, MuscleGroup, PlanItem, Session, SessionPlan } from '../domain/types';
+import type { CardioBlock, CardioMachine, Exercise, MuscleGroup, PlanItem, Session, SessionPlan } from '../domain/types';
 import type { ActivityRecord } from '../activities/model';
 import { compareSessions, resolveConfig, type EngineSettings } from '../engine';
 import { sessionStartTime, weeklyRecap, weekStart, type WeeklyRecapSettings } from '../analysis/weekly';
@@ -72,6 +72,8 @@ export interface SuggestionInput {
   settings: EngineSettings;
   recap: WeeklyRecapSettings;
   activities?: readonly ActivityRecord[];
+  /** Machines de cardio des réglages : celles qui comptent pour les jambes (version 1.41.0). */
+  machines?: readonly CardioMachine[];
   now: number;
 }
 
@@ -106,7 +108,7 @@ function noonOf(day: string): number {
  * - ordre : pectoraux, dos, jambes, épaules, triceps, biceps, puis le bonus ; en tête, le cardio d'échauffement.
  */
 export function weekSuggestion(input: SuggestionInput): WeekSuggestion | null {
-  const { sessions, exercises, settings, recap, activities = [], now } = input;
+  const { sessions, exercises, settings, recap, activities = [], machines = [], now } = input;
   const today = localDate(now);
   const finished = sessions.filter(done);
   const gymToday = finished.some((s) => isGym(s) && s.date === today);
@@ -138,7 +140,7 @@ export function weekSuggestion(input: SuggestionInput): WeekSuggestion | null {
   };
 
   // Scores de la semaine, comme le récapitulatif.
-  const cells = weeklyRecap(sessions, exercises, now, recap, activities).cells;
+  const cells = weeklyRecap(sessions, exercises, now, recap, activities, machines).cells;
   const score = new Map(cells.map((c) => [c.group, c.score]));
   const objective = recap.redThreshold;
   const order = (g: MuscleGroup) => recap.groups.indexOf(g);
@@ -233,13 +235,15 @@ export function weekSuggestion(input: SuggestionInput): WeekSuggestion | null {
       ? { id: 'echauffement', machineId: first.block.machineId, machine: first.block.machine, ...(first.block.incline ? { incline: first.block.incline } : {}), minutes: first.block.minutes }
       : null;
 
-  // Ce que la séance apporterait : la même séance, terminée ce jour-là, dans le récapitulatif.
+  // Ce que la séance apporterait : la même séance, terminée ce jour-là, dans le récapitulatif, échauffement compris
+  // (ses minutes comptent pour les jambes, version 1.41.0).
   const at = noonOf(day);
   const projected: Session = {
     id: 'suggestion', name: '', date: day, startedAt: at, endedAt: at + 3_600_000, createdAt: at, updatedAt: at, origin: 'app', state: 'done',
     performances: chosen.map((c) => ({ variantId: c.variantId, weightKg: 1, targetReps: 8, plannedSets: 3, reps: [8, 8, 8], feeling: 'bien' })),
+    ...(cardio ? { cardio: [cardio] } : {}),
   };
-  const after = new Map(weeklyRecap([...sessions, projected], exercises, at, recap, activities).cells.map((c) => [c.group, c.score]));
+  const after = new Map(weeklyRecap([...sessions, projected], exercises, at, recap, activities, machines).cells.map((c) => [c.group, c.score]));
   const below = recap.groups.filter((g) => (score.get(g) ?? 0) < objective);
   return {
     day,

@@ -2077,6 +2077,14 @@ fieldset {
 }
 
 /* Nombre de séances et mention « hier », plus discrets que le nom du groupe : « (1× · +1 indirect) » tient à 320 px. */
+/*
+ * Nombre de groupes impair (7 avec les abdominaux) : la dernière case, seule sur sa ligne, prend toute la largeur
+ * (version 1.41.0) ; « Jambes (1× · +50 min cardio) · aujourd'hui » y tient sur une ligne à 320 px.
+ */
+.recap-cell:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
 .recap-count,
 .recap-when {
   font-weight: 400;
@@ -3092,4 +3100,17 @@ fieldset.frame > legend + * {
 .plan-list .cardio-item {
   padding: var(--space-1) var(--space-1) var(--space-1) var(--space-2);
   gap: var(--space-1);
+}
+
+/* Cardio des jambes sous le tableau des groupes (version 1.41.0). */
+.groups-cardio {
+  margin: var(--space-1) 0 0;
+  font-size: var(--fs-2);
+  color: var(--muted);
+}
+
+/* « Compte pour les jambes » (version 1.41.0) : sous le nom de la machine, sur toute la largeur. */
+.machine-row .machine-legs {
+  grid-column: 1 / -1;
+  font-size: var(--fs-2);
 }

@@ -4,7 +4,7 @@ import { useApp } from '../../app/store';
 import { parseHeight } from '../../body/model';
 import { useBody } from '../../body/store';
 import type { CardioMachine, MuscleGroup } from '../../domain/types';
-import { machineListErrors, newMachine, type MachineListError } from '../../cardio/model';
+import { machineCountsForLegs, machineListErrors, newMachine, type MachineListError } from '../../cardio/model';
 import { isValidEmail } from '../../analysis/report';
 import { HABIT_GROUPS, WEEKDAY_LABELS, WEEKDAYS, habitErrors, newHabit, type Habit, type HabitError, type Weekday } from '../../activities/model';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
@@ -222,6 +222,8 @@ const MACHINE_ERRORS: Record<MachineListError, string> = {
 /**
  * Machines de cardio proposées pendant la séance. Renommer ou retirer une machine ne modifie pas
  * les séances déjà enregistrées : chaque bloc garde le nom de sa machine.
+ * « Compte pour les jambes » (version 1.41.0) : cochée par défaut, décochée pour le rameur ; ses minutes comptent pour
+ * les jambes du récapitulatif (½ à partir de 45 min dans la semaine).
  */
 function CardioMachinesField() {
   const { cardioMachines, setCardioMachines } = useApp();
@@ -268,6 +270,15 @@ function CardioMachinesField() {
             ) : (
               <span className="menu-placeholder" />
             )}
+            <label className="check-line machine-legs">
+              <input
+                type="checkbox"
+                aria-label={`Compte pour les jambes : ${m.name.trim() || `machine ${i + 1}`}`}
+                checked={machineCountsForLegs(m)}
+                onChange={(e) => change(list.map((x) => (x.id === m.id ? { ...x, legs: e.target.checked } : x)))}
+              />
+              <span aria-hidden="true">Compte pour les jambes</span>
+            </label>
           </li>
         ))}
       </ul>
