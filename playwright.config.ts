@@ -10,6 +10,8 @@ process.env.FONTCONFIG_FILE = `${process.cwd()}/e2e/fonts/fonts.conf`;
 
 export default defineConfig({
   testDir: './e2e',
+  // Garde : aucun fichier .uuid de fontconfig hors de e2e/fonts à la fin de la passe (e2e/fonts/fonts.conf).
+  globalTeardown: './e2e/uuid-guard.mjs',
   fullyParallel: true,
   retries: 0,
   reporter: 'list',
