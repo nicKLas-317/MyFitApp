@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Performance, Session, SessionPlan } from '../src/domain/types';
-import { addExercise, doExercise, exerciseCard, finishSession, readSessions, startSession, writeSessions } from './helpers';
+import { addExercise, doExercise, exerciseCard, finishSession, readSessions, reloadAfterWrites, startSession, writeSessions } from './helpers';
 
 /** Séance à la salle terminée le jour donné d'octobre 2026, à 18 h. */
 function done(id: string, day: number, performances: Performance[]): Session {
@@ -31,7 +31,7 @@ async function setPlan(page: Page, plan: SessionPlan): Promise<void> {
       }),
     plan,
   );
-  await page.reload();
+  await reloadAfterWrites(page);
 }
 
 const perf = (variantId: string, weightKg: number): Performance => ({ variantId, weightKg, targetReps: 8, plannedSets: 3, reps: [8, 8, 8], feeling: 'bien' });
@@ -42,7 +42,7 @@ test.describe('Charges aux haltères : « kg / haltère » (versions 1.30.1 et 1
     await page.goto('./');
     // Curl biceps haltères 12 kg (par haltère) et pec deck 30 kg, deux vertes à 3 × 8 : 3 × 9 proposé.
     await writeSessions(page, [done('s19', 19, [perf('curl-biceps-halteres', 12), perf('pec-deck', 30)]), done('s20', 20, [perf('curl-biceps-halteres', 12), perf('pec-deck', 30)])]);
-    await page.reload();
+    await reloadAfterWrites(page);
 
     // Fiche : cible, dernière fois, record, graphique et historique en « kg / haltère ».
     await page.goto('./#/exercice/curl-biceps-halteres');

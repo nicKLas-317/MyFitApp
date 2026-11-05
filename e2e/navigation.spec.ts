@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import type { Session } from '../src/domain/types';
-import { activeSession, addExercise, cardAction, doExercise, finishSheet, readSessions, tabBar, validateSets, writeSessions } from './helpers';
+import { activeSession, addExercise, cardAction, doExercise, finishSheet, readSessions, reloadAfterWrites, tabBar, validateSets, writeSessions } from './helpers';
 
 const ACCENT = 'rgb(91, 157, 255)';
 
@@ -17,7 +17,7 @@ async function seed(page: Page, sessions: Session[]): Promise<void> {
   await page.goto('./');
   await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
   await writeSessions(page, sessions);
-  await page.reload();
+  await reloadAfterWrites(page);
   await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
 }
 

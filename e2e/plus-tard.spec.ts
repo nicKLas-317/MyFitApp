@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { SessionPlan } from '../src/domain/types';
-import { addExercise, cardAction, doExercise, exerciseCard, finishSession, readSessions, startSession } from './helpers';
+import { addExercise, cardAction, doExercise, exerciseCard, finishSession, readSessions, reloadAfterWrites, startSession } from './helpers';
 
 const PLAN: SessionPlan = {
   id: 'plan-plus-tard', createdAt: 0, updatedAt: 0,
@@ -55,7 +55,7 @@ test.describe('« Plus tard » en séance (version 1.29.0)', () => {
     await expect(pecDeck).not.toHaveClass(/\bopen\b/);
     // Gardé après rechargement.
     await expect.poll(async () => (await readSessions(page))[0]?.later).toEqual(['pec-deck']);
-    await page.reload();
+    await reloadAfterWrites(page);
     await expect.poll(() => order(page)).toEqual(['Leg curl', 'Chest press', 'Pec deck']);
 
     // Leg curl puis chest press faits : chaque ressenti ouvre le suivant, le pec deck en dernier.
@@ -81,7 +81,7 @@ test.describe('« Plus tard » en séance (version 1.29.0)', () => {
     await page.clock.setFixedTime(new Date('2026-10-29T18:00:00'));
     await page.goto('./');
     await planMeta(page, PLAN);
-    await page.reload();
+    await reloadAfterWrites(page);
     await page.getByRole('button', { name: 'Démarrer la séance prévue' }).click();
     await expect(exerciseCard(page, 'Chest press')).toHaveClass(/\bopen\b/);
     await cardAction(exerciseCard(page, 'Chest press'), 'Plus tard');

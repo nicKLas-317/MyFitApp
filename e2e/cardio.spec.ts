@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { activeSession, addExercise, doExercise, finishSession, readSessions, startSession, validateSets, cardAction, finishSheet, openScreen, openSettingsSection } from './helpers';
+import { activeSession, addExercise, cardAction, doExercise, finishSession, finishSheet, openScreen, openSettingsSection, readSessions, reloadAfterWrites, startSession, validateSets } from './helpers';
 
 const cardioForm = (page: Page) => page.getByRole('form', { name: 'Cardio' });
 
@@ -41,7 +41,7 @@ test.describe('Cardio', () => {
       { id: expect.any(String), machineId: 'tapis', machine: 'Tapis de marche', incline: 'haute', minutes: 20 },
       { id: expect.any(String), machineId: 'rameur', machine: 'Rameur', minutes: 10 },
     ]);
-    await page.reload();
+    await reloadAfterWrites(page);
     const texts = page.getByTestId('cardio-text');
     await expect(texts).toHaveText(['Tapis de marche · inclinaison haute · 20 min', 'Rameur · 10 min']);
 
@@ -136,7 +136,7 @@ test.describe('Cardio', () => {
     await page.getByRole('button', { name: 'Enregistrer les machines' }).click();
     await expect(page.getByText('Machines enregistrées.')).toBeVisible();
 
-    await page.reload();
+    await reloadAfterWrites(page);
     await openSettingsSection(page, 'Machines de cardio');
     await expect(page.getByLabel('Nom de la machine 5')).toHaveValue('Vélo droit');
     await startSession(page);
@@ -175,7 +175,7 @@ test.describe('Cardio', () => {
     const legCurl = await addExercise(background, 'leg curl', 'Leg curl', '30');
     await validateSets(legCurl, 1);
     // Cette fenêtre-là n'a pas de canal pour prévenir : l'autre fenêtre est rouverte pour voir la séance.
-    await other.reload();
+    await reloadAfterWrites(other);
     await addCardio(other, 'Rameur', '10');
     await expect(background.getByTestId('cardio-text')).toHaveCount(0);
     await background.evaluate(() => {
@@ -255,7 +255,7 @@ test.describe('Cardio', () => {
         }),
     );
     await page.goto('./#/reglages');
-    await page.reload();
+    await reloadAfterWrites(page);
     const names = () => page.locator('.machine-row input[type="text"]').evaluateAll((list) => list.map((i) => (i as HTMLInputElement).value));
     await expect.poll(names).toEqual(['Tapis', 'Rameur', 'Vélo elliptique', 'Vélo', 'Autre']);
 
@@ -264,7 +264,7 @@ test.describe('Cardio', () => {
     await removeMachine(page, 'Vélo');
     await page.getByRole('button', { name: 'Enregistrer les machines' }).click();
     await expect(page.getByText('Machines enregistrées.')).toBeVisible();
-    await page.reload();
+    await reloadAfterWrites(page);
     await expect.poll(names).toEqual(['Tapis', 'Rameur', 'Vélo elliptique', 'Autre']);
   });
 });

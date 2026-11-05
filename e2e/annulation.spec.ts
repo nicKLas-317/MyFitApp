@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { SessionPlan } from '../src/domain/types';
-import { addExercise, readSessions, validateSets } from './helpers';
+import { addExercise, readSessions, reloadAfterWrites, validateSets } from './helpers';
 
 const PLAN: SessionPlan = { id: 'plan-annulation', createdAt: 0, updatedAt: 0, items: [{ kind: 'exercise', variantId: 'pec-deck', startWeightKg: 30 }] };
 
@@ -18,7 +18,7 @@ async function setPlan(page: Page, plan: SessionPlan): Promise<void> {
       }),
     plan,
   );
-  await page.reload();
+  await reloadAfterWrites(page);
 }
 
 /** Menu « ⋯ » de l'en-tête de la séance, puis « Annuler la séance » : volet de confirmation. */
@@ -88,7 +88,7 @@ test.describe('Annuler une séance en cours (version 1.27.0)', () => {
     await sheet.getByRole('button', { name: 'Oui, annuler la séance' }).click();
     await expect(page.getByRole('button', { name: 'Démarrer la séance prévue' })).toBeVisible();
     await expect(page.getByTestId('plan-summary')).toHaveText('Pec deck');
-    await page.reload();
+    await reloadAfterWrites(page);
     await expect(page.getByRole('button', { name: 'Démarrer la séance prévue' })).toBeVisible();
     expect(await readSessions(page)).toEqual([]);
 

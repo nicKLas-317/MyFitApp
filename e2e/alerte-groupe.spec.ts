@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { ALERT_NOW, alertHistory, type AlertScenario } from '../src/analysis/__tests__/alertes-simulation';
 import type { Session, SessionPlan } from '../src/domain/types';
 import { defaultSessionName } from '../src/session/format';
-import { tabBar, writeSessions } from './helpers';
+import { reloadAfterWrites, tabBar, writeSessions } from './helpers';
 
 /** Taille de police Android agrandie (simulation) : tout le texte à 115 %. */
 async function largeText(page: Page): Promise<() => Promise<void>> {
@@ -33,7 +33,7 @@ async function open(page: Page, scenario: AlertScenario = {}, now = ALERT_NOW): 
       }),
   );
   await writeSessions(page, alertHistory(scenario));
-  await page.reload();
+  await reloadAfterWrites(page);
   await expect(page.getByTestId('weekly-recap')).toBeVisible();
 }
 
@@ -110,7 +110,7 @@ async function openLoaded(page: Page, withPlan: boolean, cardio = false): Promis
       }),
     plan,
   );
-  await page.reload();
+  await reloadAfterWrites(page);
   await expect(page.getByTestId('weekly-recap')).toBeVisible();
 }
 
@@ -194,7 +194,7 @@ test.describe('Alerte « groupe moins travaillé »', () => {
     await expect(tabBar(page).getByTestId('group-alert-badge')).toHaveCount(0);
     await expect(tabBar(page).getByRole('link', { name: 'Progrès', exact: true })).toBeVisible();
     await page.goto('./');
-    await page.reload();
+    await reloadAfterWrites(page);
     await expect(page.getByTestId('weekly-recap')).toBeVisible();
     await expect(alerts(page)).toHaveCount(0);
     expect(await page.evaluate(() => new Promise((resolve) => {
@@ -209,7 +209,7 @@ test.describe('Alerte « groupe moins travaillé »', () => {
     const later = new Date(2026, 10, 18, 12).getTime();
     await page.clock.setFixedTime(new Date(later));
     await writeSessions(page, alertHistory({ until: '2026-11-16', dosDown: ['2026-10-26', '2026-11-02', '2026-11-09'] }));
-    await page.reload();
+    await reloadAfterWrites(page);
     await expect(alerts(page).getByRole('link')).toHaveText('Dos : 3 séries par semaine depuis 2 semaines (ta moyenne : 5)');
     await expect(tabBar(page).getByTestId('group-alert-badge')).toBeVisible();
 
@@ -272,7 +272,7 @@ test.describe('Alerte « groupe moins travaillé »', () => {
           };
         }),
     );
-    await page.reload();
+    await reloadAfterWrites(page);
     await expect(tabBar(page).locator('.tab-badge')).toHaveCount(1);
     await expect(tabBar(page).getByRole('link', { name: 'Progrès : bilan prêt, groupe sous ta moyenne' })).toBeVisible();
 

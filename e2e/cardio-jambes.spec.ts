@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { CardioMachine, Session } from '../src/domain/types';
-import { finishSession, openSettingsSection, startSession, writeSessions } from './helpers';
+import { finishSession, openSettingsSection, reloadAfterWrites, startSession, writeSessions } from './helpers';
 
 function done(id: string, iso: string, variantIds: string[], cardio: [string, string, number][]): Session {
   const t = Date.parse(iso);
@@ -35,7 +35,7 @@ test.describe('Cardio pour les jambes (version 1.41.0)', () => {
       done('s1', '2026-10-26T18:00:00', ['chest-press'], [['tapis', 'Tapis de marche', 20], ['rameur', 'Rameur', 15]]),
       done('s2', '2026-10-28T18:00:00', ['tirage-vertical'], [['elliptique', 'Vélo elliptique', 15]]),
     ]);
-    await page.reload();
+    await reloadAfterWrites(page);
     const recap = page.getByTestId('weekly-recap');
     const legs = recap.locator('[data-group="jambes"]');
     await expect(recap.getByRole('heading')).toHaveText(/: 2\sséances · 50\smin\sde cardio$/);
@@ -83,7 +83,7 @@ test.describe('Cardio pour les jambes (version 1.41.0)', () => {
     expect((await readMachines(page)).map((m) => [m.name, m.legs])).toEqual([
       ['Tapis de marche', undefined], ['Rameur', true], ['Vélo elliptique', false], ['Vélo', undefined], ['Autre', undefined], ['Marches', undefined],
     ]);
-    await page.reload();
+    await reloadAfterWrites(page);
     await openSettingsSection(page, 'Machines de cardio');
     await expect(legsBox('Rameur')).toBeChecked();
     await expect(legsBox('Vélo elliptique')).not.toBeChecked();

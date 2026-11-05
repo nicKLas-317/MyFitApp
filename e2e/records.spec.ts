@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Session } from '../src/domain/types';
-import { addExercise, doExercise, exerciseCard, finishSession, startSession, validateSets, writeSessions } from './helpers';
+import { addExercise, doExercise, exerciseCard, finishSession, reloadAfterWrites, startSession, validateSets, writeSessions } from './helpers';
 
 const CURL = 'curl-biceps-barre-droite';
 /** Couronne dorée (--gold) : jamais une couleur de statut ni de groupe. */
@@ -33,7 +33,7 @@ test.describe('Records personnels', () => {
 
     // Fiche : ligne du record avec la couronne dorée ; couronne dans l'historique pour le 16 seulement.
     await page.goto(`./#/exercice/${CURL}`);
-    await page.reload();
+    await reloadAfterWrites(page);
     const record = page.getByTestId('record');
     await expect(record).toHaveText('Record : 3 × 9 à 20 kg (16 oct.)');
     await expect(page.getByTestId('target-summary').getByTestId('record')).toHaveCount(1);

@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import type { CardioBlock, Performance, PlanCardio, Session, SessionPlan } from '../src/domain/types';
-import { addExercise, exerciseCard, finishSession, finishSheet, readSessions, writeSessions } from './helpers';
+import { addExercise, exerciseCard, finishSession, finishSheet, readSessions, reloadAfterWrites, writeSessions } from './helpers';
 
 /** Séance terminée : chaque exercice fait à la cible, « Bien passé » (vert). */
 function past(day: number, perfs: [string, number, number][]): Session {
@@ -22,7 +22,7 @@ async function seed(page: Page, sessions: Session[], when: string): Promise<void
   await page.goto('./');
   await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
   await writeSessions(page, sessions);
-  await page.reload();
+  await reloadAfterWrites(page);
   await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
 }
 
@@ -60,7 +60,7 @@ async function writePlan(page: Page, plan: unknown): Promise<void> {
       }),
     plan,
   );
-  await page.reload();
+  await reloadAfterWrites(page);
   await expect(page.locator('main').first()).toBeVisible();
 }
 

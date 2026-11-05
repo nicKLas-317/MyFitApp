@@ -8,6 +8,7 @@ Les commits sans changement de numéro (documentation, tests, workflow) sont ran
 
 - Calendrier, groupes, score et travail définis une seule fois ; code mort retiré (`51e4e69`)
 - CLAUDE.md : sept contradictions corrigées (exceptions au « bouton inactif » écrites au §17), §0 réécrit pour la façon de travailler actuelle, sections et tests remis dans l'ordre ; historique des versions déplacé ici (`CHANGELOG.md`)
+- Tests de bout en bout fiables : police fixée (DejaVu Sans, `e2e/fonts`), test 225 découpé en un test par écran, rechargement après l'enregistrement (`reloadAfterWrites`) ; workflow sur `ubuntu-24.04`
 
 ## 1.41.2 — 5 nov. 2026
 

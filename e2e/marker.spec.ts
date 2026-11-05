@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Session } from '../src/domain/types';
-import { addExercise, startSession, writeSessions } from './helpers';
+import { addExercise, reloadAfterWrites, startSession, writeSessions } from './helpers';
 
 function past(day: number, target: number): Session {
   const t = new Date(2026, 9, day, 18).getTime();
@@ -15,7 +15,7 @@ async function seed(page: Page, sessions: Session[]): Promise<void> {
   await page.goto('./');
   await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
   await writeSessions(page, sessions);
-  await page.reload();
+  await reloadAfterWrites(page);
 }
 
 test.describe('Repère de progression (§5.3.1)', () => {

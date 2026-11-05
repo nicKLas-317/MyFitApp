@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Session } from '../src/domain/types';
-import { writeSessions } from './helpers';
+import { reloadAfterWrites, writeSessions } from './helpers';
 
 /** Séance terminée le `d` octobre 2026 à 18 h ; chaque exercice : [variante, nombre de séries, cible]. */
 function session(d: number, perfs: [string, number, number][], home = false, cardio = 0): Session {
@@ -111,7 +111,7 @@ test.describe('Bilan de la période, version 1.35.0', () => {
     await page.goto('./');
     await writeSessions(page, SESSIONS);
     await writeActivities(page);
-    await page.reload();
+    await reloadAfterWrites(page);
 
     // Semaine du 19 : tuiles comparées à la semaine précédente (une séance, 10 min de cardio, aucune activité).
     await page.goto('./#/bilan-periode/semaine/2026-10-19');
@@ -187,7 +187,7 @@ test.describe('Bilan de la période, version 1.35.0', () => {
     // Semaine en cours (vendredi 30) : comparée à lun.–ven. de la semaine dernière ; pas de calendrier.
     await page.clock.setFixedTime(new Date('2026-10-30T21:00:00'));
     await page.goto('./#/bilan-periode/semaine/2026-10-26');
-    await page.reload();
+    await reloadAfterWrites(page);
     await expect(page.getByTestId('report-reference')).toHaveText('Par rapport à lun.–ven. de la semaine dernière');
     await expect(tile(page, 'Séances')).toHaveText(/^Séances1dont\s1 à la maison▼ −2$/);
     await expect(page.getByTestId('report-calendar')).toHaveCount(0);
@@ -199,7 +199,7 @@ test.describe('Bilan de la période, version 1.35.0', () => {
     await page.goto('./');
     await writeSessions(page, SESSIONS);
     await writeActivities(page);
-    await page.reload();
+    await reloadAfterWrites(page);
     await page.goto('./#/bilan-periode/semaine/2026-10-19');
     const chart = page.getByTestId('groups-chart');
     const sec = section(page, 'Groupes travaillés');
@@ -250,7 +250,7 @@ test.describe('Bilan de la période, version 1.35.0', () => {
           };
         }),
     );
-    await page.reload();
+    await reloadAfterWrites(page);
     await expect(chart.locator('.groups-stick')).toHaveCount(7);
     await expect(chart).toHaveAttribute('data-labels', 'short');
     expect(await stickNames(page)).toMatchObject({ names: [...six, 'Abd'], rows: 1, overlap: 0, outside: 0 });

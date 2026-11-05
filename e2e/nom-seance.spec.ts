@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Performance, Session } from '../src/domain/types';
-import { addExercise, doExercise, exerciseCard, finishSession, openScreen, readSessions, startSession, writeSessions } from './helpers';
+import { addExercise, doExercise, exerciseCard, finishSession, openScreen, readSessions, reloadAfterWrites, startSession, writeSessions } from './helpers';
 
 /** Rien ne dépasse de l'écran, à 412, 360 et 320 px. */
 async function noOverflow(page: Page): Promise<void> {
@@ -34,7 +34,7 @@ test.describe('Nom de séance calculé (version 1.32.0)', () => {
       past('perso', 26, [perf('tirage-vertical', 3)], { name: 'Haut du corps' }),
     ];
     await writeSessions(page, sessions);
-    await page.reload();
+    await reloadAfterWrites(page);
 
     // Historique : le nom calculé, le jour toujours à gauche ; le nom donné à la main est gardé.
     await openScreen(page, 'Historique');

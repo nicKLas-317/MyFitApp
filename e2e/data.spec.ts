@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Session } from '../src/domain/types';
 import { NOTES_11_3 } from '../src/transfer/__tests__/fixtures';
-import { readExercises, readSessions, writeSessions, openScreen } from './helpers';
+import { openScreen, readExercises, readSessions, reloadAfterWrites, writeSessions } from './helpers';
 
 const preview = (page: Page) => page.getByRole('region', { name: 'Aperçu de l’import' });
 const cards = (page: Page) => preview(page).locator('article.draft-exercise');
@@ -215,13 +215,13 @@ test.describe('Import et export', () => {
       performances: [{ variantId: 'leg-curl', weightKg: 40, targetReps: 8, plannedSets: 3, reps: [8, 8, 8], feeling: 'bien' }],
     };
     await writeSessions(page, [session]);
-    await page.reload();
+    await reloadAfterWrites(page);
     await expect(page.getByText('Pense à sauvegarder tes séances.')).toBeVisible();
     const downloading = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Exporter', exact: true }).click();
     await downloading;
     await expect(page.getByText('Pense à sauvegarder tes séances.')).toHaveCount(0);
-    await page.reload();
+    await reloadAfterWrites(page);
     await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
     await expect(page.getByText('Pense à sauvegarder tes séances.')).toHaveCount(0);
   });

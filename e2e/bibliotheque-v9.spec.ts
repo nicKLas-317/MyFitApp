@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Exercise, Session } from '../src/domain/types';
-import { readExercises, readSessions, writeSessions, openIllustration } from './helpers';
+import { openIllustration, readExercises, readSessions, reloadAfterWrites, writeSessions } from './helpers';
 
 /** Remet la base dans l'état d'une installation en bibliothèque version 8 : ancien tirage horizontal, sans poulie basse. */
 function asVersion8(page: Page): Promise<void> {
@@ -46,7 +46,7 @@ test.describe('Bibliothèque version 9 : tirage horizontal machine (appui pector
     };
     await writeSessions(page, [old]);
     await asVersion8(page);
-    await page.reload();
+    await reloadAfterWrites(page);
     await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
 
     // Base corrigée : même identifiant, nouveau nom et synonymes, synonyme appris gardé ; poulie basse ajoutée.

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Session } from '../src/domain/types';
-import { addExercise, readExercises, startSession, writeSessions } from './helpers';
+import { addExercise, readExercises, reloadAfterWrites, startSession, writeSessions } from './helpers';
 
 /** Rien ne dépasse de l'écran, à 412, 360 et 320 px. */
 async function noOverflow(page: Page): Promise<void> {
@@ -105,7 +105,7 @@ test.describe('Type d’un exercice et la chaise (version 1.31.0)', () => {
       performances: [{ variantId: saved.find((e) => e.name === 'Fentes bulgares')!.id, weightKg: 10, targetReps: 8, plannedSets: 3, reps: [8, 8, 8], feeling: 'bien' }],
     };
     await writeSessions(page, [past]);
-    await page.reload();
+    await reloadAfterWrites(page);
     await page.goto(`./#/modifier/${past.performances[0]!.variantId}`);
     await expect(page.getByRole('group', { name: 'Variante standard' }).getByText('Type : Charge (kg) (déjà réalisé : non modifiable)')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Durée (secondes)' })).toHaveCount(0);

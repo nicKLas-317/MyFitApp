@@ -4,7 +4,7 @@ import type { Session, SessionPlan } from '../src/domain/types';
 import { simulatedHistory } from '../src/analysis/__tests__/simulation';
 import { ALERT_NOW, alertHistory } from '../src/analysis/__tests__/alertes-simulation';
 import { weekHistory, WEEK_NOW } from '../src/plan/__tests__/completer-simulation';
-import { activeSession, addExercise, cardAction, doExercise, finishSheet, openSettingsSection, readSessions, startSession, validateSets, writeSessions } from './helpers';
+import { activeSession, addExercise, cardAction, doExercise, finishSheet, openSettingsSection, readSessions, reloadAfterWrites, startSession, validateSets, writeSessions } from './helpers';
 
 /** Fond d'un bouton principal (bleu) et cadre neutre. */
 const ACCENT = 'rgb(91, 157, 255)';
@@ -41,7 +41,7 @@ async function setPlan(page: Page, plan: SessionPlan | null): Promise<void> {
       }),
     plan,
   );
-  await page.reload();
+  await reloadAfterWrites(page);
   await expect(page.locator('main').first()).toBeVisible();
 }
 
@@ -58,7 +58,7 @@ async function seed(page: Page, sessions: Session[]): Promise<void> {
   await page.goto('./');
   await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
   await writeSessions(page, sessions);
-  await page.reload();
+  await reloadAfterWrites(page);
 }
 
 /** Répétitions préremplies de chaque série (série en cours et séries à venir), dans l'ordre. */
@@ -196,6 +196,193 @@ async function expectClean(page: Page, screen: string, scale = 1): Promise<void>
   // Tutoiement (§3.6) : aucun texte affiché ne vouvoie.
   expect(formalForms(await page.locator('body').innerText()), `${screen} : vouvoiement`).toEqual([]);
 }
+
+/**
+ * Test 225 : données simulées du 22 octobre 2026 à 19 h 30, comme sur le téléphone. Chaque écran est contrôlé dans son
+ * propre test (version C de l'audit du 5 novembre 2026), avec ces données.
+ */
+async function prepare225(page: Page): Promise<void> {
+  await page.clock.setFixedTime(new Date('2026-10-22T19:30:00'));
+  await seed(page, simulatedHistory('2026-10-19'));
+  // Données réalistes pour que chaque liste ait sa vraie forme : onze pesées (dates longues comme « 22 septembre
+  // 2026 », qui font passer le poids et « Corriger » sous la date), une activité confirmée (détail) et la question
+  // de la semaine en cours (accueil).
+  await page.evaluate(
+    ({ weights, activities }) =>
+      Promise.all([
+        new Promise<void>((resolve, reject) => {
+          const open = indexedDB.open('myfitapp-corps');
+          open.onsuccess = () => {
+            const tx = open.result.transaction(['weighIns', 'meta'], 'readwrite');
+            for (const w of weights) tx.objectStore('weighIns').put(w);
+            tx.objectStore('meta').put(178, 'heightCm');
+            tx.oncomplete = () => (open.result.close(), resolve());
+            tx.onerror = () => reject(tx.error);
+          };
+        }),
+        new Promise<void>((resolve, reject) => {
+          const open = indexedDB.open('myfitapp');
+          open.onsuccess = () => {
+            const tx = open.result.transaction('meta', 'readwrite');
+            tx.objectStore('meta').put(activities, 'activities');
+            tx.oncomplete = () => (open.result.close(), resolve());
+            tx.onerror = () => reject(tx.error);
+          };
+        }),
+      ]),
+    {
+      weights: ['06-02', '06-16', '06-30', '07-14', '07-28', '08-11', '08-25', '09-08', '09-22', '10-06', '10-20'].map((d, i) => ({ date: `2026-${d}`, weightKg: 80.4 - i * 0.3 })),
+      activities: [
+        { id: 'act-badminton-2026-10-12', habitId: 'badminton', date: '2026-10-12', name: 'Badminton', start: '21:00', end: '22:30', groups: ['epaules', 'jambes'], status: 'done', answeredAt: 0 },
+        { id: 'act-ponctuelle-futsal-2026-10-16', habitId: 'ponctuelle-futsal', date: '2026-10-16', name: 'Futsal', start: '00:00', end: '01:00', groups: ['jambes'], status: 'done', answeredAt: 0, oneOff: true },
+      ],
+    },
+  );
+
+  await reloadAfterWrites(page);
+  await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
+}
+
+/** Cardio des jambes (version 1.41.0) : 60 min de tapis dans la séance du lundi 19. */
+async function addLegCardio(page: Page): Promise<void> {
+  await page.goto('./');
+  const sessions = await readSessions(page);
+  const monday = sessions.find((x) => x.id === 'sim-2026-10-19')!;
+  await writeSessions(page, [{ ...monday, cardio: [{ id: 'sim-cardio-jambes', machineId: 'tapis', machine: 'Tapis de marche', incline: 'neutre', minutes: 60 }] }]);
+  await reloadAfterWrites(page);
+}
+
+/** Les quatre tailles du test 225 : 412, 360 et 320 px, puis 360 px avec le texte agrandi à 115 %. */
+const SIZES_225 = [[412, 1], [360, 1], [320, 1], [360, 1.15]] as const;
+
+const SCREENS_225: [string, (page: Page) => Promise<void>][] = [
+    ...([
+      ['Accueil', './'],
+      ['Progrès', './#/progres'],
+      ['Plus', './#/plus'],
+      ['Bibliothèque', './#/bibliotheque'],
+      ['Fiche', './#/exercice/chest-press'],
+      ['Modifier un exercice', './#/modifier/chest-press'],
+      ['Nouvel exercice', './#/nouvel-exercice'],
+      // Séances simulées au nom par défaut : historique et détail affichent le nom calculé (version 1.32.0).
+      ['Historique', './#/historique'],
+      ['Détail de séance', './#/historique/sim-2026-10-19'],
+      ['Détail d’une activité', './#/historique/act-badminton-2026-10-12'],
+      ['Détail d’une activité ponctuelle', './#/historique/act-ponctuelle-futsal-2026-10-16'],
+      ['Bilan', './#/bilan'],
+      ['Bilan de la semaine', './#/bilan-periode/semaine/2026-10-12'],
+      ['Bilan du mois', './#/bilan-periode/mois/2026-09'],
+      ['Par groupe', './#/bilan-groupes/triceps'],
+      // Abdominaux (version 1.33.0) : séries seulement, avec le message sans indice.
+      ['Par groupe, abdominaux', './#/bilan-groupes/abdominaux'],
+      ['Mon poids', './#/poids'],
+      ['Réglages', './#/reglages'],
+      ['Données', './#/donnees'],
+    ] as const).map(([screen, url]) => [screen, (page: Page) => page.goto(url).then(() => undefined)] as [string, (page: Page) => Promise<void>]),
+    // Type de l'exercice (version 1.31.0) : création avec « Durée (secondes) » choisi ; « Modifier » d'un exercice sans
+    // historique (types proposés) ; « Modifier un exercice » (chest press, déjà réalisé) affiche le type figé.
+    ['Nouvel exercice, type durée', async (page: Page) => {
+      await page.goto('./#/nouvel-exercice');
+      await page.getByRole('group', { name: 'Type' }).getByRole('button', { name: 'Durée (secondes)' }).click();
+      await expect(page.getByLabel('Durée max (s)', { exact: true })).toHaveValue('60');
+    }],
+    ['Modifier la chaise', async (page: Page) => {
+      await page.goto('./#/modifier/chaise');
+      await expect(page.getByRole('group', { name: 'Type' }).getByRole('button', { name: 'Durée (secondes)' })).toHaveAttribute('aria-pressed', 'true');
+    }],
+    ['Accueil, activité ponctuelle ouverte', async (page: Page) => {
+      await page.goto('./');
+      await page.getByRole('button', { name: '+ Activité' }).click();
+      await page.getByRole('form', { name: 'Activité ponctuelle' }).getByRole('button', { name: 'Autre' }).click();
+    }],
+    ['Mon poids, correction et suppression ouvertes', async (page: Page) => {
+      await page.goto('./#/poids');
+      const list = page.getByRole('list', { name: 'Historique des pesées' });
+      await list.getByRole('button', { name: 'Corriger' }).nth(2).click();
+      await list.getByRole('button', { name: 'Supprimer' }).click();
+    }],
+    ['Détail de séance, correction et suppression ouvertes', async (page: Page) => {
+      await page.goto('./#/historique/sim-2026-10-19');
+      await page.locator('li[data-variant]').first().getByRole('button', { name: 'Corriger' }).click();
+      await page.getByRole('button', { name: 'Supprimer la séance' }).click();
+    }],
+    ['Détail d’une activité, suppression ouverte', async (page: Page) => {
+      await page.goto('./#/historique/act-badminton-2026-10-12');
+      await page.getByRole('button', { name: 'Supprimer l’activité' }).click();
+    }],
+    ['Exercice sans historique, suppression ouverte', async (page: Page) => {
+      await page.goto('./#/modifier/crunch-machine');
+      await page.getByRole('button', { name: 'Supprimer l’exercice' }).click();
+    }],
+    ['Aperçu d’import', async (page: Page) => {
+      await page.goto('./#/donnees');
+      await page.getByLabel('Notes de séance ou JSON').fill('Seated row horizontal\n3x8x48kg =\n\nEpaules latéral raise\n3x8x9kgs ++\n\nTapis incliné 20 min');
+      await page.getByRole('button', { name: 'Analyser' }).click();
+    }],
+    ['Bibliothèque, dos', async (page: Page) => {
+      await page.goto('./#/bibliotheque');
+      await page.getByRole('group', { name: 'Filtrer par groupe musculaire' }).getByRole('button', { name: 'Dos' }).click();
+    }],
+    ['Fiche dépliée', async (page: Page) => {
+      await page.goto('./#/exercice/chest-press');
+      await page.getByRole('button', { name: 'Agrandir l’illustration' }).click();
+      await page.getByRole('button', { name: /^Voir tout/ }).click();
+    }],
+    ['Réglages dépliés', async (page: Page) => {
+      await page.goto('./#/reglages');
+      for (const name of ['Récapitulatif de la semaine', 'Bilans de la semaine et du mois', 'Activités habituelles', 'Machines de cardio']) await openSettingsSection(page, name);
+    }],
+    // Séance prévue (§5.9) : accueil avec un plan, préparation, ajout, menus ; puis sans plan (écran vide).
+    ['Accueil avec une séance prévue', async (page: Page) => {
+      await page.goto('./');
+      await setPlan(page, PLAN);
+    }],
+    ['Séance prévue', async (page: Page) => {
+      await page.goto('./#/seance-prevue');
+      await setPlan(page, PLAN);
+      await expect(page.locator('.plan-item[data-variant="curl-biceps-halteres"] .per-dumbbell')).toHaveText('/ haltère');
+    }],
+    ['Séance prévue, cardio et suppression ouverts', async (page: Page) => {
+      await page.goto('./#/seance-prevue');
+      await setPlan(page, PLAN);
+      await page.getByRole('main').getByRole('button', { name: '+ Cardio' }).click();
+      await page.getByRole('button', { name: 'Supprimer la séance prévue' }).click();
+    }],
+    ['Séance prévue, menu ouvert', async (page: Page) => {
+      await page.goto('./#/seance-prevue');
+      await setPlan(page, PLAN);
+      await page.getByRole('button', { name: 'Actions : Pec deck' }).click();
+    }],
+    ['Séance prévue, menu du cardio ouvert', async (page: Page) => {
+      await page.goto('./#/seance-prevue');
+      await setPlan(page, PLAN);
+      await page.getByRole('button', { name: /^Actions : cardio Tapis de marche/ }).click();
+    }],
+    ['Ajout à la séance prévue', async (page: Page) => {
+      await page.goto('./#/seance-prevue/ajouter');
+      await setPlan(page, PLAN);
+    }],
+    ['Séance prévue vide', async (page: Page) => {
+      await page.goto('./#/seance-prevue');
+      await setPlan(page, null);
+    }],
+    // Cardio des jambes (version 1.41.0) : 60 min de tapis dans la séance du lundi 19 → « Jambes (… · +60 min cardio) »
+    // à l'accueil, phrase sous le tableau des bilans de la semaine et du mois.
+    ['Accueil, cardio des jambes', async (page: Page) => {
+      await addLegCardio(page);
+      await expect(page.getByTestId('weekly-recap').locator('[data-group="jambes"]')).toContainText('+60\u00a0min\u00a0cardio');
+    }],
+    ['Bilan de la semaine, cardio des jambes', async (page: Page) => {
+      await addLegCardio(page);
+      await page.goto('./#/bilan-periode/semaine/2026-10-19');
+      await expect(page.getByTestId('groups-cardio')).toBeVisible();
+    }],
+    ['Bilan du mois, cardio des jambes', async (page: Page) => {
+      await addLegCardio(page);
+      await page.goto('./#/bilan-periode/mois/2026-10');
+      await expect(page.getByTestId('groups-cardio')).toBeVisible();
+    }],
+  ];
 
 test.describe('Ergonomie de la saisie et harmonisation du style', () => {
   test('221. Carte ouverte : une seule ligne de cible avec la charge et une courte mention ; « Dernière fois » jamais tronquée ; poids supérieur saisi : séries préremplies à 8', async ({ page }) => {
@@ -367,177 +554,19 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
     expect((await readSessions(page))[0]?.name).toBe('Pectoraux');
   });
 
-  test('225. Échelle typographique, espacements et éléments tactiles sur tous les écrans, à 412, 360 et 320 px', async ({ page }) => {
-    test.setTimeout(300_000);
-    await page.clock.setFixedTime(new Date('2026-10-22T19:30:00'));
-    await seed(page, simulatedHistory('2026-10-19'));
-    // Données réalistes pour que chaque liste ait sa vraie forme : onze pesées (dates longues comme « 22 septembre
-    // 2026 », qui font passer le poids et « Corriger » sous la date), une activité confirmée (détail) et la question
-    // de la semaine en cours (accueil).
-    await page.evaluate(
-      ({ weights, activities }) =>
-        Promise.all([
-          new Promise<void>((resolve, reject) => {
-            const open = indexedDB.open('myfitapp-corps');
-            open.onsuccess = () => {
-              const tx = open.result.transaction(['weighIns', 'meta'], 'readwrite');
-              for (const w of weights) tx.objectStore('weighIns').put(w);
-              tx.objectStore('meta').put(178, 'heightCm');
-              tx.oncomplete = () => (open.result.close(), resolve());
-              tx.onerror = () => reject(tx.error);
-            };
-          }),
-          new Promise<void>((resolve, reject) => {
-            const open = indexedDB.open('myfitapp');
-            open.onsuccess = () => {
-              const tx = open.result.transaction('meta', 'readwrite');
-              tx.objectStore('meta').put(activities, 'activities');
-              tx.oncomplete = () => (open.result.close(), resolve());
-              tx.onerror = () => reject(tx.error);
-            };
-          }),
-        ]),
-      {
-        weights: ['06-02', '06-16', '06-30', '07-14', '07-28', '08-11', '08-25', '09-08', '09-22', '10-06', '10-20'].map((d, i) => ({ date: `2026-${d}`, weightKg: 80.4 - i * 0.3 })),
-        activities: [
-          { id: 'act-badminton-2026-10-12', habitId: 'badminton', date: '2026-10-12', name: 'Badminton', start: '21:00', end: '22:30', groups: ['epaules', 'jambes'], status: 'done', answeredAt: 0 },
-          { id: 'act-ponctuelle-futsal-2026-10-16', habitId: 'ponctuelle-futsal', date: '2026-10-16', name: 'Futsal', start: '00:00', end: '01:00', groups: ['jambes'], status: 'done', answeredAt: 0, oneOff: true },
-        ],
-      },
-    );
-    await page.reload();
-    await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
-
-    /** Écrans et états contrôlés : chaque route de l'appli, et les états dépliés des écrans. */
-    const screens: [string, () => Promise<void>][] = [
-      ...([
-        ['Accueil', './'],
-        ['Progrès', './#/progres'],
-        ['Plus', './#/plus'],
-        ['Bibliothèque', './#/bibliotheque'],
-        ['Fiche', './#/exercice/chest-press'],
-        ['Modifier un exercice', './#/modifier/chest-press'],
-        ['Nouvel exercice', './#/nouvel-exercice'],
-        // Séances simulées au nom par défaut : historique et détail affichent le nom calculé (version 1.32.0).
-        ['Historique', './#/historique'],
-        ['Détail de séance', './#/historique/sim-2026-10-19'],
-        ['Détail d’une activité', './#/historique/act-badminton-2026-10-12'],
-        ['Détail d’une activité ponctuelle', './#/historique/act-ponctuelle-futsal-2026-10-16'],
-        ['Bilan', './#/bilan'],
-        ['Bilan de la semaine', './#/bilan-periode/semaine/2026-10-12'],
-        ['Bilan du mois', './#/bilan-periode/mois/2026-09'],
-        ['Par groupe', './#/bilan-groupes/triceps'],
-        // Abdominaux (version 1.33.0) : séries seulement, avec le message sans indice.
-        ['Par groupe, abdominaux', './#/bilan-groupes/abdominaux'],
-        ['Mon poids', './#/poids'],
-        ['Réglages', './#/reglages'],
-        ['Données', './#/donnees'],
-      ] as const).map(([screen, url]) => [screen, () => page.goto(url).then(() => undefined)] as [string, () => Promise<void>]),
-      // Type de l'exercice (version 1.31.0) : création avec « Durée (secondes) » choisi ; « Modifier » d'un exercice sans
-      // historique (types proposés) ; « Modifier un exercice » (chest press, déjà réalisé) affiche le type figé.
-      ['Nouvel exercice, type durée', async () => {
-        await page.goto('./#/nouvel-exercice');
-        await page.getByRole('group', { name: 'Type' }).getByRole('button', { name: 'Durée (secondes)' }).click();
-        await expect(page.getByLabel('Durée max (s)', { exact: true })).toHaveValue('60');
-      }],
-      ['Modifier la chaise', async () => {
-        await page.goto('./#/modifier/chaise');
-        await expect(page.getByRole('group', { name: 'Type' }).getByRole('button', { name: 'Durée (secondes)' })).toHaveAttribute('aria-pressed', 'true');
-      }],
-      ['Accueil, activité ponctuelle ouverte', async () => {
-        await page.goto('./');
-        await page.getByRole('button', { name: '+ Activité' }).click();
-        await page.getByRole('form', { name: 'Activité ponctuelle' }).getByRole('button', { name: 'Autre' }).click();
-      }],
-      ['Mon poids, correction et suppression ouvertes', async () => {
-        await page.goto('./#/poids');
-        const list = page.getByRole('list', { name: 'Historique des pesées' });
-        await list.getByRole('button', { name: 'Corriger' }).nth(2).click();
-        await list.getByRole('button', { name: 'Supprimer' }).click();
-      }],
-      ['Détail de séance, correction et suppression ouvertes', async () => {
-        await page.goto('./#/historique/sim-2026-10-19');
-        await page.locator('li[data-variant]').first().getByRole('button', { name: 'Corriger' }).click();
-        await page.getByRole('button', { name: 'Supprimer la séance' }).click();
-      }],
-      ['Détail d’une activité, suppression ouverte', async () => {
-        await page.goto('./#/historique/act-badminton-2026-10-12');
-        await page.getByRole('button', { name: 'Supprimer l’activité' }).click();
-      }],
-      ['Exercice sans historique, suppression ouverte', async () => {
-        await page.goto('./#/modifier/crunch-machine');
-        await page.getByRole('button', { name: 'Supprimer l’exercice' }).click();
-      }],
-      ['Aperçu d’import', async () => {
-        await page.goto('./#/donnees');
-        await page.getByLabel('Notes de séance ou JSON').fill('Seated row horizontal\n3x8x48kg =\n\nEpaules latéral raise\n3x8x9kgs ++\n\nTapis incliné 20 min');
-        await page.getByRole('button', { name: 'Analyser' }).click();
-      }],
-      ['Bibliothèque, dos', async () => {
-        await page.goto('./#/bibliotheque');
-        await page.getByRole('group', { name: 'Filtrer par groupe musculaire' }).getByRole('button', { name: 'Dos' }).click();
-      }],
-      ['Fiche dépliée', async () => {
-        await page.goto('./#/exercice/chest-press');
-        await page.getByRole('button', { name: 'Agrandir l’illustration' }).click();
-        await page.getByRole('button', { name: /^Voir tout/ }).click();
-      }],
-      ['Réglages dépliés', async () => {
-        await page.goto('./#/reglages');
-        for (const name of ['Récapitulatif de la semaine', 'Bilans de la semaine et du mois', 'Activités habituelles', 'Machines de cardio']) await openSettingsSection(page, name);
-      }],
-      // Séance prévue (§5.9) : accueil avec un plan, préparation, ajout, menus ; puis sans plan (écran vide).
-      ['Accueil avec une séance prévue', async () => {
-        await page.goto('./');
-        await setPlan(page, PLAN);
-      }],
-      ['Séance prévue', async () => {
-        await page.goto('./#/seance-prevue');
-        await expect(page.locator('.plan-item[data-variant="curl-biceps-halteres"] .per-dumbbell')).toHaveText('/ haltère');
-      }],
-      ['Séance prévue, cardio et suppression ouverts', async () => {
-        await page.goto('./#/seance-prevue');
-        await page.getByRole('main').getByRole('button', { name: '+ Cardio' }).click();
-        await page.getByRole('button', { name: 'Supprimer la séance prévue' }).click();
-      }],
-      ['Séance prévue, menu ouvert', async () => {
-        await page.goto('./#/seance-prevue');
-        await page.getByRole('button', { name: 'Actions : Pec deck' }).click();
-      }],
-      ['Séance prévue, menu du cardio ouvert', async () => {
-        await page.goto('./#/seance-prevue');
-        await page.getByRole('button', { name: /^Actions : cardio Tapis de marche/ }).click();
-      }],
-      ['Ajout à la séance prévue', () => page.goto('./#/seance-prevue/ajouter').then(() => undefined)],
-      ['Séance prévue vide', async () => {
-        await page.goto('./#/seance-prevue');
-        await setPlan(page, null);
-      }],
-      // Cardio des jambes (version 1.41.0) : 60 min de tapis dans la séance du lundi 19 → « Jambes (… · +60 min cardio) »
-      // à l'accueil, phrase sous le tableau des bilans de la semaine et du mois. Placé en dernier : les écrans suivants (à
-      // la largeur suivante) gardent ce cardio, sans effet sur leurs contrôles.
-      ['Accueil, cardio des jambes', async () => {
-        await page.goto('./');
-        const sessions = await readSessions(page);
-        const monday = sessions.find((x) => x.id === 'sim-2026-10-19')!;
-        await writeSessions(page, [{ ...monday, cardio: [{ id: 'sim-cardio-jambes', machineId: 'tapis', machine: 'Tapis de marche', incline: 'neutre', minutes: 60 }] }]);
-        await page.reload();
-        await expect(page.getByTestId('weekly-recap').locator('[data-group="jambes"]')).toContainText('+60\u00a0min\u00a0cardio');
-      }],
-      ['Bilan de la semaine, cardio des jambes', async () => {
-        await page.goto('./#/bilan-periode/semaine/2026-10-19');
-        await expect(page.getByTestId('groups-cardio')).toBeVisible();
-      }],
-      ['Bilan du mois, cardio des jambes', async () => {
-        await page.goto('./#/bilan-periode/mois/2026-10');
-        await expect(page.getByTestId('groups-cardio')).toBeVisible();
-      }],
-    ];
-    // À 412, 360 et 320 px, puis à 360 px avec le texte agrandi à 115 % : chaque écran, page entière.
-    for (const [width, scale] of [[412, 1], [360, 1], [320, 1], [360, 1.15]] as const) {
-      await page.setViewportSize({ width, height: 800 });
-      for (const [screen, open] of screens) {
-        await open();
+  // 225. Sur chaque écran et chaque état : seulement les cinq tailles de police, espacements de 8, 16 et 24 px, éléments
+  // tactiles de 48 px à 8 px de leurs voisins, un seul style de titre de section, étiquettes d'au moins 12 px, rien ne
+  // dépasse, aucun vouvoiement ; à 412, 360 et 320 px, et à 360 px avec le texte agrandi à 115 %. Un test par écran.
+  for (const [screen, open] of SCREENS_225) {
+    test(`225. ${screen}`, async ({ page }) => {
+      test.setTimeout(90_000);
+      await prepare225(page);
+      for (const [width, scale] of SIZES_225) {
+        await page.setViewportSize({ width, height: 800 });
+        // Un autre écran d'abord : l'écran contrôlé repart de son état initial à chaque taille (menus et volets fermés).
+        await page.goto('./#/plus');
+        await expect(page.locator('main').first()).toBeVisible();
+        await open(page);
         await expect(page.locator('main').first()).toBeVisible();
         const restore = scale > 1 ? await largeText(page) : null;
         await toTop(page);
@@ -545,13 +574,21 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
         await expectClean(page, `${screen} à ${width} px${scale > 1 ? ', texte à 115 %' : ''}`, scale);
         await restore?.();
       }
-    }
-    // Contrôle du contrôle : dans Mon poids, chaque « Corriger » de la liste est bien vérifié (aucun écarté).
+    });
+  }
+
+  test('225. Mon poids : les onze « Corriger » de la liste sont tous contrôlés (contrôle du contrôle)', async ({ page }) => {
+    await prepare225(page);
     await page.setViewportSize({ width: 412, height: 800 });
     await page.goto('./#/poids');
     await expect(page.getByRole('list', { name: 'Historique des pesées' }).getByRole('button', { name: 'Corriger' })).toHaveCount(11);
     expect((await auditScreen(page)).checked.filter((t) => t.includes('Corriger'))).toHaveLength(11);
 
+  });
+
+  test('225. Séance à la salle : carte, menus, cardio, poids du corps, secondes, haltères, poids de départ à saisir, ajout d’un exercice, récapitulatif de fin', async ({ page }) => {
+    test.setTimeout(120_000);
+    await prepare225(page);
     // Séance : carte ouverte, menu ouvert, cardio ; texte agrandi à 115 % à 360 px.
     await page.setViewportSize({ width: 360, height: 800 });
     await startSession(page);
@@ -645,6 +682,11 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
     const larger = await largeText(page);
     await expectClean(page, 'Récapitulatif de fin, texte agrandi', 1.15);
     await larger();
+  });
+
+  test('225. Séance prévue démarrée : carte ouverte, « Plus tard », volet de fin avec les non faits', async ({ page }) => {
+    await prepare225(page);
+    await page.setViewportSize({ width: 360, height: 800 });
     // Séance prévue démarrée : carte ouverte (« Valider les 3 séries »), cardio prévu ; volet de fin avec les non faits.
     await page.goto('./');
     await setPlan(page, PLAN);
@@ -670,6 +712,12 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
     await expectClean(page, 'Fin de séance prévue, non faits');
     await finishSheet(page).getByRole('button', { name: 'Oui, terminer' }).click();
     await setPlan(page, null);
+  });
+
+  test('225. Séance à la maison : menu de l’en-tête, annulation, pompes, changement de lieu, récapitulatif, détail, séance complétée', async ({ page }) => {
+    test.setTimeout(120_000);
+    await prepare225(page);
+    await page.setViewportSize({ width: 360, height: 800 });
     // Séance à la maison (version 1.26.0) : accueil avec « Maison » choisi, séance sans chronomètre, puis son détail
     // avec le lieu.
     await page.goto('./');
@@ -745,16 +793,25 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
     await expectClean(page, 'Annuler les ajouts');
     await page.getByRole('button', { name: 'Oui, annuler les ajouts' }).click();
     await expect.poll(async () => (await readSessions(page)).find((x) => x.id === homeSession.id)?.state).toBe('done');
+  });
+
+  test('225. Séance oubliée : fenêtre à la réouverture', async ({ page }) => {
+    await prepare225(page);
+    await page.setViewportSize({ width: 360, height: 800 });
     // Séance oubliée (ouverte depuis plus de 4 heures) : fenêtre à la réouverture.
     await startSession(page);
     await page.clock.setFixedTime(new Date('2026-10-23T01:00:00'));
-    await page.reload();
+    await reloadAfterWrites(page);
     await expect(page.getByRole('dialog', { name: 'Séance toujours en cours' })).toBeVisible();
     await expectClean(page, 'Séance oubliée');
 
-    // Alertes « groupe moins travaillé » (version 1.38.0) : trois lignes (vacances les deux dernières semaines) sous le
-    // récapitulatif et en haut de l'onglet Progrès, à 412, 360 et 320 px et à 360 px avec le texte agrandi.
+  });
+
+  test('225. Accueil avec des alertes', async ({ page }) => {
+    // Alertes « groupe moins travaillé » (version 1.38.0) : trois lignes (vacances les deux dernières semaines).
     await page.clock.setFixedTime(new Date(ALERT_NOW));
+    await page.goto('./');
+    await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
     await page.evaluate(
       () =>
         new Promise<void>((resolve, reject) => {
@@ -768,24 +825,55 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
         }),
     );
     await writeSessions(page, alertHistory({ vacations: ['2026-10-26', '2026-11-02'], dosDown: [], pecDown: [] }));
-    for (const [width, scale] of [[412, 1], [360, 1], [320, 1], [360, 1.15]] as const) {
+    for (const [width, scale] of SIZES_225) {
       await page.setViewportSize({ width, height: 800 });
-      for (const [screen, url] of [['Accueil avec des alertes', './'], ['Progrès avec des alertes', './#/progres']] as const) {
-        await page.goto(url);
-        await page.reload();
-        // Onglet Séance (version 1.40.0) : une ligne de résumé ; onglet Progrès : une ligne par groupe.
-        if (url === './') await expect(page.getByTestId('group-alerts-summary')).toHaveText('3 groupes sous ta moyenne : Pectoraux, Dos, Épaules');
-        else await expect(page.getByTestId('group-alerts').getByRole('listitem')).toHaveCount(3);
-        const restore = scale > 1 ? await largeText(page) : null;
-        await toTop(page);
-        await expectClean(page, `${screen} à ${width} px${scale > 1 ? ', texte à 115 %' : ''}`, scale);
-        await restore?.();
-      }
+      await page.goto('./');
+      await reloadAfterWrites(page);
+        // Onglet Séance (version 1.40.0) : une ligne de résumé.
+        await expect(page.getByTestId('group-alerts-summary')).toHaveText('3 groupes sous ta moyenne : Pectoraux, Dos, Épaules');
+      const restore = scale > 1 ? await largeText(page) : null;
+      await toTop(page);
+      await expectClean(page, `Accueil avec des alertes à ${width} px${scale > 1 ? ', texte à 115 %' : ''}`, scale);
+      await restore?.();
     }
+  });
 
-    // Séance pour compléter la semaine (version 1.39.0) : la ligne de l'accueil, son écran et la confirmation
-    // « Remplacer ma séance prévue », à 412, 360 et 320 px et à 360 px avec le texte agrandi.
+  test('225. Progrès avec des alertes', async ({ page }) => {
+    // Alertes « groupe moins travaillé » (version 1.38.0) : trois lignes (vacances les deux dernières semaines).
+    await page.clock.setFixedTime(new Date(ALERT_NOW));
+    await page.goto('./');
+    await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve, reject) => {
+          const open = indexedDB.open('myfitapp');
+          open.onsuccess = () => {
+            const tx = open.result.transaction('sessions', 'readwrite');
+            tx.objectStore('sessions').clear();
+            tx.oncomplete = () => (open.result.close(), resolve());
+            tx.onerror = () => reject(tx.error);
+          };
+        }),
+    );
+    await writeSessions(page, alertHistory({ vacations: ['2026-10-26', '2026-11-02'], dosDown: [], pecDown: [] }));
+    for (const [width, scale] of SIZES_225) {
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto('./#/progres');
+      await reloadAfterWrites(page);
+        // Onglet Progrès : une ligne par groupe.
+        await expect(page.getByTestId('group-alerts').getByRole('listitem')).toHaveCount(3);
+      const restore = scale > 1 ? await largeText(page) : null;
+      await toTop(page);
+      await expectClean(page, `Progrès avec des alertes à ${width} px${scale > 1 ? ', texte à 115 %' : ''}`, scale);
+      await restore?.();
+    }
+  });
+
+  test('225. Accueil avec la séance pour compléter la semaine', async ({ page }) => {
+    // Séance pour compléter la semaine (version 1.39.0), avec une séance prévue déjà préparée.
     await page.clock.setFixedTime(new Date(WEEK_NOW));
+    await page.goto('./');
+    await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
     await page.evaluate(
       (plan) =>
         new Promise<void>((resolve, reject) => {
@@ -801,19 +889,45 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
       { id: 'plan-225', createdAt: WEEK_NOW - 3_600_000, updatedAt: WEEK_NOW - 3_600_000, items: [{ kind: 'exercise', variantId: 'pec-deck' }] },
     );
     await writeSessions(page, weekHistory());
-    for (const [width, scale] of [[412, 1], [360, 1], [320, 1], [360, 1.15]] as const) {
+    for (const [width, scale] of SIZES_225) {
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto('./');
+      await reloadAfterWrites(page);
+      await expect(page.getByTestId('week-suggestion')).toBeVisible();
+      const restore = scale > 1 ? await largeText(page) : null;
+      await toTop(page);
+      await expectClean(page, `Accueil avec la séance pour compléter la semaine à ${width} px${scale > 1 ? ', texte à 115 %' : ''}`, scale);
+      await restore?.();
+    }
+  });
+
+  test('225. Compléter la semaine : écran et confirmation « Remplacer ma séance prévue »', async ({ page }) => {
+    // Séance pour compléter la semaine (version 1.39.0), avec une séance prévue déjà préparée.
+    await page.clock.setFixedTime(new Date(WEEK_NOW));
+    await page.goto('./');
+    await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
+    await page.evaluate(
+      (plan) =>
+        new Promise<void>((resolve, reject) => {
+          const open = indexedDB.open('myfitapp');
+          open.onsuccess = () => {
+            const tx = open.result.transaction(['sessions', 'meta'], 'readwrite');
+            tx.objectStore('sessions').clear();
+            tx.objectStore('meta').put(plan, 'plan');
+            tx.oncomplete = () => (open.result.close(), resolve());
+            tx.onerror = () => reject(tx.error);
+          };
+        }),
+      { id: 'plan-225', createdAt: WEEK_NOW - 3_600_000, updatedAt: WEEK_NOW - 3_600_000, items: [{ kind: 'exercise', variantId: 'pec-deck' }] },
+    );
+    await writeSessions(page, weekHistory());
+    for (const [width, scale] of SIZES_225) {
       await page.setViewportSize({ width, height: 800 });
       const size = `à ${width} px${scale > 1 ? ', texte à 115 %' : ''}`;
-      await page.goto('./');
-      await page.reload();
-      await expect(page.getByTestId('week-suggestion')).toBeVisible();
-      let restore = scale > 1 ? await largeText(page) : null;
-      await toTop(page);
-      await expectClean(page, `Accueil avec la séance pour compléter la semaine ${size}`, scale);
-      await restore?.();
       await page.goto('./#/seance-prevue/suggestion');
+      await reloadAfterWrites(page);
       await expect(page.getByRole('heading', { name: 'Compléter la semaine' })).toBeVisible();
-      restore = scale > 1 ? await largeText(page) : null;
+      const restore = scale > 1 ? await largeText(page) : null;
       await toTop(page);
       await expectClean(page, `Compléter la semaine ${size}`, scale);
       await page.getByRole('button', { name: 'Remplacer ma séance prévue' }).click();

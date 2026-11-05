@@ -42,6 +42,41 @@ export function writeSessions(page: Page, sessions: Session[]): Promise<void> {
   );
 }
 
+/**
+ * Attend que toutes les écritures déjà parties vers IndexedDB soient enregistrées (version C de l'audit du 5 novembre
+ * 2026) : une transaction d'écriture sur tous les magasins d'une base ne se termine qu'après celles commencées avant
+ * elle. L'appli écrit dès l'action, sans délai (§12) : après un clic, son écriture est déjà partie.
+ */
+export async function waitForWrites(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    const dbs = await indexedDB.databases();
+    await Promise.all(
+      dbs.map(
+        ({ name, version }) =>
+          new Promise<void>((resolve, reject) => {
+            if (!name) return resolve();
+            const open = indexedDB.open(name, version);
+            open.onerror = () => reject(open.error);
+            open.onsuccess = () => {
+              const db = open.result;
+              const stores = [...db.objectStoreNames];
+              if (stores.length === 0) return (db.close(), resolve());
+              const tx = db.transaction(stores, 'readwrite');
+              tx.oncomplete = () => (db.close(), resolve());
+              tx.onerror = () => (db.close(), reject(tx.error));
+            };
+          }),
+      ),
+    );
+  });
+}
+
+/** Recharge la page une fois les écritures en cours enregistrées (jamais un rechargement qui les devance). */
+export async function reloadAfterWrites(page: Page): Promise<void> {
+  await waitForWrites(page);
+  await page.reload();
+}
+
 export async function activeSession(page: Page): Promise<Session> {
   const active = (await readSessions(page)).find((s) => s.state === 'active');
   if (!active) throw new Error('Aucune séance active en base');

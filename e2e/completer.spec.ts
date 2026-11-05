@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { addExercise, doExercise, exerciseCard, finishSession, readSessions } from './helpers';
+import { addExercise, doExercise, exerciseCard, finishSession, readSessions, reloadAfterWrites } from './helpers';
 
 test.describe('Compléter une séance terminée le même jour (version 1.28.0)', () => {
   test('266. Bouton secondaire sur l’accueil, bouton principal dans le détail ; ce qui était fait reste fermé ; une seule séance, durée sans la pause', async ({ page }) => {
@@ -20,7 +20,7 @@ test.describe('Compléter une séance terminée le même jour (version 1.28.0)',
     // Accueil : un bouton secondaire (version 1.40.0 ; lien discret avant), sous le choix du lieu, au-dessus de
     // « Préparer ma prochaine séance ».
     await page.clock.setFixedTime(new Date('2026-10-27T09:00:00'));
-    await page.reload();
+    await reloadAfterWrites(page);
     const link = page.getByRole('button', { name: 'Compléter la séance de ce matin' });
     await expect(link).toHaveClass(/\bbtn\b/);
     await expect(link).not.toHaveClass(/\bprimary\b/);
@@ -77,7 +77,7 @@ test.describe('Compléter une séance terminée le même jour (version 1.28.0)',
 
     // À la salle, 12 h – 12 h 30 ; complétée à 18 h depuis le détail (bouton principal), terminée à 18 h 15 : 45 min.
     await page.clock.setFixedTime(new Date('2026-10-27T12:00:00'));
-    await page.reload();
+    await reloadAfterWrites(page);
     await page.getByRole('button', { name: 'Démarrer une séance', exact: true }).click();
     await doExercise(await addExercise(page, 'pec deck', 'Pec deck', '40'), 3, 'Bien');
     await page.clock.setFixedTime(new Date('2026-10-27T12:30:00'));
@@ -111,7 +111,7 @@ test.describe('Compléter une séance terminée le même jour (version 1.28.0)',
     // Le lendemain : plus de lien, plus de bouton « Compléter » dans le détail.
     await page.clock.setFixedTime(new Date('2026-10-28T09:00:00'));
     await page.goto(`./#/historique/${gym.id}`);
-    await page.reload();
+    await reloadAfterWrites(page);
     await expect(page.getByRole('button', { name: 'Nouvelle séance à partir de celle-ci' })).toHaveClass(/\bprimary\b/);
     await expect(page.getByRole('button', { name: 'Compléter cette séance' })).toHaveCount(0);
     await page.goto('./');

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Session, SessionPlan } from '../src/domain/types';
-import { addExercise, doExercise, exerciseCard, finishSession, readSessions, validateSets, writeSessions } from './helpers';
+import { addExercise, doExercise, exerciseCard, finishSession, readSessions, reloadAfterWrites, validateSets, writeSessions } from './helpers';
 
 const PLAN: SessionPlan = { id: 'plan-lieu', createdAt: 0, updatedAt: 0, items: [{ kind: 'exercise', variantId: 'pec-deck', startWeightKg: 30 }] };
 
@@ -27,7 +27,7 @@ async function setPlan(page: Page, plan: SessionPlan): Promise<void> {
       }),
     plan,
   );
-  await page.reload();
+  await reloadAfterWrites(page);
 }
 
 /** Menu « ⋯ » de l'en-tête de la séance. */
@@ -41,7 +41,7 @@ test.describe('Changer le lieu d’une séance en cours (version 1.30.0)', () =>
     await page.clock.setFixedTime(new Date('2026-10-28T18:00:00'));
     await page.goto('./');
     await writeSessions(page, [gym('s19', 19), gym('s20', 20)]);
-    await page.reload();
+    await reloadAfterWrites(page);
 
     // « Maison » touché par erreur : pec deck jamais fait à la maison, poids de départ 15 kg, « 3 × 8 à 15 kg ».
     await page.getByRole('group', { name: 'Lieu de la séance libre' }).getByRole('button', { name: 'Maison' }).click();

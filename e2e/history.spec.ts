@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Session } from '../src/domain/types';
-import { activeSession, readSessions, writeSessions, openScreen } from './helpers';
+import { activeSession, openScreen, readSessions, reloadAfterWrites, writeSessions } from './helpers';
 
 function done(id: string, name: string, date: string, reps: number[], feeling: 'bien' | 'moyen' = 'bien', variantId = 'tirage-vertical'): Session {
   const t = Date.parse(`${date}T18:00:00`);
@@ -14,7 +14,7 @@ async function seed(page: Page, sessions: Session[]): Promise<void> {
   await page.goto('./');
   await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
   await writeSessions(page, sessions);
-  await page.reload();
+  await reloadAfterWrites(page);
   await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
 }
 

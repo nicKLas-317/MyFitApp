@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import depart from '../docs/exemples/depart-exemple.json' with { type: 'json' };
 import { FRAME_SELECTOR } from '../src/ui/frames';
-import { addExercise, openScreen } from './helpers';
+import { addExercise, openScreen, reloadAfterWrites } from './helpers';
 
 /** Palette des cadres (--frame-1 à --frame-5), telle que le navigateur la calcule. */
 const PALETTE = ['rgb(255, 228, 74)', 'rgb(62, 230, 238)', 'rgb(140, 200, 255)', 'rgb(199, 155, 255)', 'rgb(255, 122, 214)'];
@@ -149,7 +149,7 @@ test.describe('Filtres du bilan et cadres de section', () => {
 
     // Le dernier filtre est mémorisé, même après rechargement.
     await early.click();
-    await page.reload();
+    await reloadAfterWrites(page);
     await expect(early).toHaveAttribute('aria-pressed', 'true');
     await expect(earlyRegion).toBeVisible();
     await expect(progressingRegion).toHaveCount(0);

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Session } from '../src/domain/types';
-import { writeSessions } from './helpers';
+import { reloadAfterWrites, writeSessions } from './helpers';
 
 function done(id: string, iso: string, variantIds: string[]): Session {
   const t = Date.parse(iso);
@@ -21,7 +21,7 @@ test.describe('Récapitulatif hebdomadaire : groupes secondaires (§19.6)', () =
       done('s2', '2026-10-20T18:00:00', ['developpe-couche']),
       done('s3', '2026-10-22T18:00:00', ['tractions-assistees']),
     ]);
-    await page.reload();
+    await reloadAfterWrites(page);
     const recap = page.getByTestId('weekly-recap');
     await expect(recap.getByRole('heading')).toHaveText(/: 3\sséances$/);
     const cell = (g: string) => recap.locator(`[data-group="${g}"]`);

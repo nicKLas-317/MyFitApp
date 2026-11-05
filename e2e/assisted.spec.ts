@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Session } from '../src/domain/types';
-import { addExercise, readSessions, startSession, writeSessions } from './helpers';
+import { addExercise, readSessions, reloadAfterWrites, startSession, writeSessions } from './helpers';
 
 function dips(id: string, date: string, weightKg: number, reps: number): Session {
   const t = Date.parse(`${date}T18:00:00`);
@@ -34,7 +34,7 @@ test.describe('Exercices assistés et données de départ', () => {
     await page.goto('./');
     await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
     await writeSessions(page, [dips('d1', '2026-10-01', 23, 12), dips('d2', '2026-10-03', 23, 12)]);
-    await page.reload();
+    await reloadAfterWrites(page);
     await startSession(page);
     const card = await addExercise(page, 'dips', 'Dips assistés');
     await expect(card.getByText('Moins d’aide', { exact: true })).toBeVisible();
@@ -72,7 +72,7 @@ test.describe('Exercices assistés et données de départ', () => {
         }),
     );
     await page.goto('./#/exercice/chest-press');
-    await page.reload();
+    await reloadAfterWrites(page);
     await expect(page.locator('.sheet-status [data-status]')).toHaveAttribute('data-status', 'orange');
     await expect(page.getByTestId('sheet-next')).toHaveText('3 × 8');
     await expect(page.getByRole('list', { name: 'Historique de l’exercice' })).toContainText('Moyen (+=)');

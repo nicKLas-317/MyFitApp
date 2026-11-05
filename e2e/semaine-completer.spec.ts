@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Session, SessionPlan } from '../src/domain/types';
 import { weekHistory, WEEK_NOW } from '../src/plan/__tests__/completer-simulation';
-import { exerciseCard, readSessions, tabBar, writeSessions } from './helpers';
+import { exerciseCard, readSessions, reloadAfterWrites, tabBar, writeSessions } from './helpers';
 
 /** Taille de police Android agrandie (simulation) : tout le texte à 115 %. */
 async function largeText(page: Page): Promise<() => Promise<void>> {
@@ -28,7 +28,7 @@ async function open(page: Page, sessions: Session[] = weekHistory(), now = WEEK_
       }),
   );
   await writeSessions(page, sessions);
-  await page.reload();
+  await reloadAfterWrites(page);
   await expect(page.getByTestId('weekly-recap')).toBeVisible();
 }
 
@@ -61,7 +61,7 @@ async function writePlan(page: Page, plan: SessionPlan): Promise<void> {
     plan,
   );
   await page.goto('./');
-  await page.reload();
+  await reloadAfterWrites(page);
   await expect(page.getByTestId('weekly-recap')).toBeVisible();
 }
 

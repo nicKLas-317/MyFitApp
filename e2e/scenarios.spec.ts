@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import type { Session } from '../src/domain/types';
-import { activeSession, addExercise, finishSession, readSessions, startSession, writeSessions } from './helpers';
+import { activeSession, addExercise, finishSession, readSessions, reloadAfterWrites, startSession, writeSessions } from './helpers';
 
 /** Séance passée (historique de départ) au palier donné, une par jour. */
 function past(day: number, weightKg: number, target: number, reps: number[], feeling: 'bien' | 'moyen'): Session {
@@ -16,7 +16,7 @@ async function seed(page: Page, sessions: Session[]): Promise<void> {
   await page.goto('./');
   await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
   await writeSessions(page, sessions);
-  await page.reload();
+  await reloadAfterWrites(page);
   await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
 }
 

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Session } from '../src/domain/types';
-import { writeSessions } from './helpers';
+import { reloadAfterWrites, writeSessions } from './helpers';
 
 async function noOverflow(page: Page): Promise<void> {
   for (const width of [412, 360, 320]) {
@@ -49,7 +49,7 @@ test.describe('Bilan par groupe musculaire, version 1.33.0', () => {
       session(21, [['planche', 0, [40], 2]], true),
       session(27, [['planche', 0, [40, 40], 2], ['crunch-sol', 0, [15]]], true),
     ]);
-    await page.reload();
+    await reloadAfterWrites(page);
     await page.goto('./#/bilan-groupes/dos');
 
     // Dos : la légère baisse ne remplit plus le graphique ; axe 95 à 105, étiqueté.

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { CardioMachine, Session } from '../src/domain/types';
-import { openSettingsSection, writeSessions } from './helpers';
+import { openSettingsSection, reloadAfterWrites, writeSessions } from './helpers';
 
 function readMachines(page: Page): Promise<CardioMachine[]> {
   return page.evaluate(
@@ -93,7 +93,7 @@ test.describe('Réglages entre fenêtres et ordre des séances d’un même jour
       },
     ];
     await writeSessions(page, sessions);
-    await page.reload();
+    await reloadAfterWrites(page);
 
     // Historique : la séance importée en premier (la plus récente pour le moteur), puis celle de 18 h.
     await page.goto('./#/historique');

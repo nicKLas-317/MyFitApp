@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Session } from '../src/domain/types';
-import { activeSession, exerciseCard, readExercises, readSessions, startSession, writeSessions, openScreen, openIllustration } from './helpers';
+import { activeSession, exerciseCard, openIllustration, openScreen, readExercises, readSessions, reloadAfterWrites, startSession, writeSessions } from './helpers';
 
 /** Noms des résultats affichés, dans l'ordre. */
 async function resultNames(page: Page): Promise<string[]> {
@@ -31,7 +31,7 @@ async function seedHistory(page: Page, sessions: Session[]): Promise<void> {
   await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
   await writeSessions(page, sessions);
   // Une navigation qui ne change que le hash ne recharge pas la page : rechargement explicite.
-  await page.reload();
+  await reloadAfterWrites(page);
   await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
 }
 

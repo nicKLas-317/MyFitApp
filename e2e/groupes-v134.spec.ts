@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Session } from '../src/domain/types';
-import { writeSessions } from './helpers';
+import { reloadAfterWrites, writeSessions } from './helpers';
 
 async function noOverflow(page: Page): Promise<void> {
   for (const width of [412, 360, 320]) {
@@ -36,7 +36,7 @@ test.describe('Séries par semaine, version 1.34.0', () => {
       session(9, 27, [['chest-press', 3]]),
       session(10, 3, [['chest-press', 2]]),
     ]);
-    await page.reload();
+    await reloadAfterWrites(page);
     await page.goto('./#/bilan-groupes/pectoraux');
 
     // Cinq barres : du 5 oct. (première séance) au 2 nov. ; plus de semaines vides avant.
@@ -106,7 +106,7 @@ test.describe('Séries par semaine, version 1.34.0', () => {
 
     // Lundi 9 novembre : la semaine du 2 nov. est terminée, elle entre dans la moyenne : (6 + 0 + 3 + 2) ÷ 4.
     await page.clock.setFixedTime(new Date('2026-11-09T08:00:00'));
-    await page.reload();
+    await reloadAfterWrites(page);
     await expect(chart(page)).toHaveAttribute('data-bars', '6');
     await expect(chart(page).getByTestId('chart-average')).toContainText('Moyenne : 2,8');
 

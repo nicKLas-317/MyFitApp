@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Session } from '../src/domain/types';
-import { writeSessions, openSettingsSection } from './helpers';
+import { openSettingsSection, reloadAfterWrites, writeSessions } from './helpers';
 
 const t = (day: number, h = 18) => Date.parse(`2026-10-${String(day).padStart(2, '0')}T${String(h).padStart(2, '0')}:00:00`);
 let n = 0;
@@ -77,7 +77,7 @@ test.describe('Bilans de la semaine et du mois (§19.7)', () => {
       { date: '2026-10-19', weightKg: 80.2 },
       { date: '2026-10-25', weightKg: 79.6 },
     ]);
-    await page.reload();
+    await reloadAfterWrites(page);
 
     // Onglet Séance : plus de bandeau ; une pastille sur l'onglet Progrès (semaine écoulée seulement : septembre n'a
     // aucune séance, pas de bilan du mois).
@@ -104,7 +104,7 @@ test.describe('Bilans de la semaine et du mois (§19.7)', () => {
     await banner.getByRole('button', { name: 'Plus tard' }).click();
     await expect(banner).toHaveCount(0);
     await expect(badge).toHaveCount(0);
-    await page.reload();
+    await reloadAfterWrites(page);
     await expect(banner).toHaveCount(1);
     await expect(badge).toHaveCount(1);
     await test.info().attach('progres-bandeau', { body: await page.screenshot(), contentType: 'image/png' });
@@ -191,7 +191,7 @@ test.describe('Bilans de la semaine et du mois (§19.7)', () => {
     await expect(page.getByRole('heading', { name: 'Progrès' })).toBeVisible();
     await expect(banner).toHaveCount(0);
     await expect(badge).toHaveCount(0);
-    await page.reload();
+    await reloadAfterWrites(page);
     await expect(page.getByRole('heading', { name: 'Progrès' })).toBeVisible();
     await expect(banner).toHaveCount(0);
     await expect(badge).toHaveCount(0);
@@ -212,7 +212,7 @@ test.describe('Bilans de la semaine et du mois (§19.7)', () => {
     await page.getByRole('button', { name: 'Enregistrer l’adresse' }).click();
     await expect(page.getByText('Adresse enregistrée.')).toBeVisible();
     await page.getByLabel('Signaler le bilan de la semaine (pastille sur Progrès)').uncheck();
-    await page.reload();
+    await reloadAfterWrites(page);
     await openSettingsSection(page, 'Bilans de la semaine et du mois');
     await expect(page.getByLabel('Signaler le bilan de la semaine (pastille sur Progrès)')).not.toBeChecked();
     await expect(page.getByLabel('Signaler le bilan du mois (pastille sur Progrès)')).toBeChecked();

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { simulatedHistory } from '../src/analysis/__tests__/simulation';
-import { writeSessions } from './helpers';
+import { reloadAfterWrites, writeSessions } from './helpers';
 
 /** Couleurs de groupe (§3.2) et couleurs de statut, interdites sur cet écran. */
 const CYAN = 'rgb(62, 230, 238)';
@@ -21,7 +21,7 @@ async function open(page: Page, now: string, until: string): Promise<void> {
   await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
   await writeSessions(page, simulatedHistory(until));
   await page.goto('./#/bilan');
-  await page.reload();
+  await reloadAfterWrites(page);
   await page.getByRole('link', { name: 'Par groupe musculaire' }).click();
   await expect(page.getByRole('heading', { name: 'Par groupe musculaire' })).toBeVisible();
 }
@@ -124,7 +124,7 @@ test.describe('Bilan par groupe musculaire', () => {
     await page.clock.setFixedTime(new Date('2026-07-07T09:00:00'));
     await writeSessions(page, simulatedHistory('2026-07-06'));
     await page.goto('./#/bilan-groupes/pectoraux');
-    await page.reload();
+    await reloadAfterWrites(page);
     await expect(indexSection(page).getByTestId('chart-index')).toHaveAttribute('data-points', '6');
     await expect(indexSection(page).getByTestId('index-not-enough')).toHaveCount(0);
   });
@@ -139,7 +139,7 @@ test.describe('Bilan par groupe musculaire', () => {
       { date: '2026-05-20', weightKg: 78 },
       { date: '2026-10-15', weightKg: 74 },
     ]);
-    await page.reload();
+    await reloadAfterWrites(page);
     await expect(indexSection(page).getByTestId('index-last')).toHaveText('Triceps : 111,7');
     // Pas de creux à la mi-août : le poids baisse progressivement, jamais plus d'un point d'un point à l'autre,
     // et l'indice monte quand l'aide baisse (30 juillet → 3 août).

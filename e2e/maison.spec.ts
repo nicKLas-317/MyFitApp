@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { addExercise, doExercise, finishSession, openScreen, readExercises, readSessions } from './helpers';
+import { addExercise, doExercise, finishSession, openScreen, readExercises, readSessions, reloadAfterWrites } from './helpers';
 
 test.describe('Salle et maison (version 1.26.0)', () => {
   test('258. Séance libre à la maison : sans chronomètre, suivi de la maison à part ; lieu changé dans le détail, les deux suivis recalculés', async ({ page }) => {
@@ -37,7 +37,7 @@ test.describe('Salle et maison (version 1.26.0)', () => {
     // Accueil : de nouveau la salle par défaut ; « dont 1 maison » dans le récapitulatif.
     await page.getByRole('button', { name: 'Retour à l’accueil' }).click();
     await expect(place).toBeVisible();
-    await page.reload();
+    await reloadAfterWrites(page);
     await expect(place.getByRole('button', { name: 'Salle' })).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByRole('button', { name: 'Démarrer une séance', exact: true })).toBeVisible();
     await expect(page.getByTestId('weekly-recap')).toContainText('2 séances · dont 1 maison');

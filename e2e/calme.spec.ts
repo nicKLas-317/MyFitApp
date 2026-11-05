@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { simulatedHistory } from '../src/analysis/__tests__/simulation';
-import { activeSession, exerciseCard, openScreen, openSettingsSection, writeSessions } from './helpers';
+import { activeSession, exerciseCard, openScreen, openSettingsSection, reloadAfterWrites, writeSessions } from './helpers';
 
 /** Données simulées (1er juin – 19 oct. 2026), du cardio sur la dernière séance, et une activité confirmée. */
 async function seed(page: Page): Promise<void> {
@@ -25,7 +25,7 @@ async function seed(page: Page): Promise<void> {
         };
       }),
   );
-  await page.reload();
+  await reloadAfterWrites(page);
   await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
 }
 
@@ -266,7 +266,7 @@ test.describe('Écrans au calme allégés (version 1.21.0)', () => {
       dates.map((d, i) => ({ date: `2026-${d}`, weightKg: Math.round((80.4 - i * 0.3) * 10) / 10 })),
     );
     await page.goto('./#/poids');
-    await page.reload();
+    await reloadAfterWrites(page);
     const rows = page.getByRole('list', { name: 'Historique des pesées' }).getByRole('listitem');
     await expect(rows).toHaveCount(11);
     await expect(rows.locator('.history-date')).toContainText(['20 oct. 2026', '6 oct. 2026', '22 sept. 2026', '8 sept. 2026', '25 août 2026', '11 août 2026', '28 juil. 2026']);

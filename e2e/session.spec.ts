@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { activeSession, addExercise, doExercise, exerciseCard, finishSession, readSessions, startSession, validateSets, writeSessions, cardAction, finishSheet } from './helpers';
+import { activeSession, addExercise, cardAction, doExercise, exerciseCard, finishSession, finishSheet, readSessions, reloadAfterWrites, startSession, validateSets, writeSessions } from './helpers';
 
 test.describe('Séance, persistance et chronomètre', () => {
   test('45 et 46. Le rechargement restaure la séance en cours et un chronomètre cohérent', async ({ page }) => {
@@ -18,7 +18,7 @@ test.describe('Séance, persistance et chronomètre', () => {
     const chronoBefore = await page.getByTestId('chrono').textContent();
     expect(chronoBefore).toMatch(/^00:0[2-9]$/);
 
-    await page.reload();
+    await reloadAfterWrites(page);
     const restored = exerciseCard(page, 'Tirage vertical — Prise moyenne');
     await expect(restored).toBeVisible();
     await expect(restored.getByText('2/3')).toBeVisible();
@@ -125,14 +125,14 @@ test.describe('Séance, persistance et chronomètre', () => {
       },
     ]);
 
-    await page.reload();
+    await reloadAfterWrites(page);
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByText('Séance toujours en cours')).toBeVisible();
     await dialog.getByRole('button', { name: 'Poursuivre' }).click();
     await expect(dialog).toBeHidden();
     expect((await readSessions(page))[0]?.state).toBe('active');
 
-    await page.reload();
+    await reloadAfterWrites(page);
     await expect(dialog).toBeVisible();
     await dialog.getByRole('button', { name: 'Terminer la séance' }).click();
     await expect(page.getByRole('heading', { name: 'Séance terminée' })).toBeVisible();

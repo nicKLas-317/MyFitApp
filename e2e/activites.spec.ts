@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { openSettingsSection } from './helpers';
+import { openSettingsSection, reloadAfterWrites } from './helpers';
 
 /** Heure locale (Paris), octobre-novembre 2026 : le lundi 19 octobre commence la semaine. */
 const at = (date: string, time: string) => new Date(`${date}T${time}:00`);
@@ -10,7 +10,7 @@ const recapTitle = (page: Page) => page.getByTestId('weekly-recap').getByRole('h
 async function openAt(page: Page, date: string, time: string, path = './'): Promise<void> {
   await page.clock.setFixedTime(at(date, time));
   await page.goto(path);
-  await page.reload();
+  await reloadAfterWrites(page);
 }
 
 async function noOverflow(page: Page): Promise<void> {
@@ -103,7 +103,7 @@ test.describe('Activités habituelles hors salle', () => {
     await openAt(page, '2026-10-26', '22:31');
     await banner(page).getByRole('button', { name: 'Non' }).click();
     await expect(banner(page)).toHaveCount(0);
-    await page.reload();
+    await reloadAfterWrites(page);
     await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
     await expect(banner(page)).toHaveCount(0);
     await expect(recapTitle(page)).not.toContainText('activité');
@@ -143,7 +143,7 @@ test.describe('Activités habituelles hors salle', () => {
     const box = (await habits.boundingBox())!;
     const clip = { ...box, y: box.y + (await page.evaluate(() => window.scrollY)) };
     await test.info().attach('reglages-activites', { body: await page.screenshot({ fullPage: true, clip }), contentType: 'image/png' });
-    await page.reload();
+    await reloadAfterWrites(page);
     await expect((await openSettingsSection(page, 'Activités habituelles')).getByRole('listitem', { name: 'Badminton' }).getByLabel('Activée')).not.toBeChecked();
 
     await openAt(page, '2026-11-09', '22:31');
@@ -257,7 +257,7 @@ test.describe('Activités habituelles hors salle', () => {
     await form.getByRole('button', { name: 'Annuler' }).click();
 
     // Après relance : toujours là ; historique (ligne compacte, détail sans heures) et bilan de la semaine.
-    await page.reload();
+    await reloadAfterWrites(page);
     await expect(recapTitle(page)).toContainText(/2\s+activités/);
     await page.goto('./#/historique');
     const item = page.getByRole('link', { name: /Futsal · 1 h 15/ });
