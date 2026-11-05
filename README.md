@@ -15,7 +15,7 @@ Application personnelle de suivi de musculation, en français, installable sur s
 - Historique, avec des séances nommées d'après leur contenu (« Salle · Pectoraux · Triceps · Jambes », « Maison · Pectoraux · Abdos ») tant qu'on ne les renomme pas ; graphiques, bilan de progression, récapitulatif de la semaine sur l'accueil, bilans de la semaine et du mois en images (tuiles comparées, bâtons et tableau des groupes travaillés, calendrier du mois, échelle du cycle de chaque progression) et envoyables par mail, activités habituelles hors salle confirmées en un geste et activités ponctuelles (« + Activité »), records personnels marqués d'une couronne, bilan par groupe musculaire (indice de progression, séries par semaine depuis la première séance avec leur moyenne, abdominaux compris), alerte discrète sur l'accueil quand un groupe est sous sa moyenne depuis 2 semaines (« Ignorer » en cas de vacances ou de blessure), suivi du poids.
 - Aucun compte ni serveur : les données restent sur l'appareil, dans le navigateur (IndexedDB).
 
-Le cahier des charges complet est dans [CLAUDE.md](CLAUDE.md).
+Le cahier des charges complet est dans [CLAUDE.md](CLAUDE.md) ; l'historique des versions, dans [CHANGELOG.md](CHANGELOG.md).
 
 ## Installer sur le téléphone
 
