@@ -4,6 +4,7 @@
  * pas sur le seul nom affiché. Fonctions pures, sans dépendance à l'interface.
  */
 import type { Exercise, MuscleGroup, Session, Variant } from '../domain/types';
+import { compareSessions } from '../engine/replay';
 import { MUSCLE_GROUP_LABELS } from './seed';
 import { canonicalName, nameTokens, normalizeName, unknownWordsOf } from './text';
 
@@ -309,8 +310,8 @@ export function recentVariantIds(sessions: readonly Session[], limit = 6, homeFi
     .filter((s) => s.state === 'done')
     .sort(
       (a, b) =>
-        rank(a) - rank(b) ||
-        (b.date === a.date ? (b.startedAt ?? b.createdAt) - (a.startedAt ?? a.createdAt) : b.date < a.date ? -1 : 1),
+        // Du plus récent au plus ancien, dans l'ordre du moteur (§7.9, version 1.41.2).
+        rank(a) - rank(b) || compareSessions(b, a),
     );
   for (const s of done) for (const p of s.performances) if (!ids.includes(p.variantId)) ids.push(p.variantId);
   return ids.slice(0, limit);

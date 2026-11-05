@@ -2,11 +2,10 @@ import { useMemo, useState } from 'react';
 import { useApp } from '../../app/store';
 import { navigateBack } from '../../app/hooks';
 import type { Session } from '../../domain/types';
-import { searchSessions } from '../../history/ops';
+import { compareHistory, searchSessions } from '../../history/ops';
 import { formatDurationLong, formatIsoDay } from '../../session/format';
 import { cardioMinutes, formatMinutes } from '../../cardio/model';
 import { activityLabel, activityMinutes, activityStart, doneActivities, formatClock, type ActivityRecord } from '../../activities/model';
-import { sessionStartTime } from '../../analysis/weekly';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
 import { normalizeName } from '../../library/text';
 import { SessionDetail } from './SessionDetail';
@@ -20,7 +19,7 @@ function contentSummary(s: Session): string {
   return parts.join(' · ');
 }
 
-type Entry = { kind: 'session'; time: number; date: string; session: Session } | { kind: 'activity'; time: number; date: string; activity: ActivityRecord };
+type Entry = { kind: 'session'; date: string; session: Session } | { kind: 'activity'; time: number; date: string; activity: ActivityRecord };
 
 const MONTH_FORMAT = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' });
 const WEEKDAY_FORMAT = new Intl.DateTimeFormat('fr-FR', { weekday: 'short' });
@@ -47,13 +46,13 @@ export function History() {
   const months = useMemo(() => {
     const words = normalizeName(query).split(' ').filter(Boolean);
     const entries: Entry[] = [
-      ...searchSessions(sessions, query, (s) => titleOf(s, variants)).map((session) => ({ kind: 'session' as const, time: sessionStartTime(session), date: session.date, session })),
+      ...searchSessions(sessions, query, (s) => titleOf(s, variants)).map((session) => ({ kind: 'session' as const, date: session.date, session })),
       ...done
         .filter((a) => words.every((w) => normalizeName(a.name).includes(w)))
         .map((activity) => ({ kind: 'activity' as const, time: activityStart(activity), date: activity.date, activity })),
     ];
-    // Du plus récent au plus ancien ; l'ordre des séances entre elles reste celui de la recherche.
-    const sorted = entries.map((e, i) => ({ e, i })).sort((a, b) => b.e.time - a.e.time || a.i - b.i).map(({ e }) => e);
+    // Du plus récent au plus ancien, dans l'ordre du moteur (version 1.41.2) ; à égalité, l'ordre de la recherche.
+    const sorted = entries.map((e, i) => ({ e, i })).sort((a, b) => compareHistory(b.e, a.e) || a.i - b.i).map(({ e }) => e);
     const out: { key: string; entries: Entry[] }[] = [];
     for (const e of sorted) {
       const key = e.date.slice(0, 7);

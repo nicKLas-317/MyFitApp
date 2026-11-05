@@ -135,6 +135,58 @@ export function useApp(): AppValue {
   return value;
 }
 
+/** Tout ce que l'appli lit dans la base, déjà contrôlé : au lancement et à chaque relecture (§12). */
+interface StoredData {
+  sessions: Session[];
+  exercises: Exercise[];
+  lastExportAt: number | null;
+  recap: WeeklyRecapSettings;
+  machines: CardioMachine[];
+  /** Liste de machines enregistrée par une version antérieure, complétée ici (à réenregistrer au lancement). */
+  machinesOutdated: boolean;
+  reports: ReportSettings;
+  reportSeen: ReportSeen;
+  ignoredAlerts: IgnoredAlerts;
+  habits: Habit[];
+  activities: ActivityRecord[];
+  plan: SessionPlan | null;
+}
+
+async function loadStored(repo: Repository): Promise<StoredData> {
+  const [sessions, exercises, exportedAt, recap, machines, machinesVersion, reports, seen, habits, activities, plan, ignored] = await Promise.all([
+    repo.loadSessions(),
+    repo.loadExercises(),
+    repo.getMeta<number>('lastExportAt'),
+    repo.getMeta<unknown>('weeklyRecap'),
+    repo.getMeta<unknown>('cardioMachines'),
+    repo.getMeta<number>('cardioMachinesVersion'),
+    repo.getMeta<unknown>('reports'),
+    repo.getMeta<unknown>('reportsSeen'),
+    repo.getMeta<unknown>('habits'),
+    repo.getMeta<unknown>('activities'),
+    repo.getMeta<unknown>('plan'),
+    repo.getMeta<unknown>('groupAlertsIgnored'),
+  ]);
+  // Installation antérieure au cardio : aucune liste enregistrée, la liste par défaut s'applique.
+  // Liste enregistrée par une version antérieure : les nouvelles machines sont ajoutées une seule fois.
+  const machinesOutdated = machines !== undefined && (machinesVersion ?? 1) < CARDIO_MACHINES_VERSION;
+  const machineList = sanitizeCardioMachines(machines);
+  return {
+    sessions,
+    exercises,
+    lastExportAt: exportedAt ?? null,
+    recap: sanitizeRecapSettings(recap),
+    machines: machinesOutdated ? upgradeCardioMachines(machineList, machinesVersion ?? 1) : machineList,
+    machinesOutdated,
+    reports: sanitizeReportSettings(reports),
+    reportSeen: sanitizeReportSeen(seen),
+    ignoredAlerts: sanitizeIgnoredAlerts(ignored),
+    habits: sanitizeHabits(habits),
+    activities: sanitizeActivities(activities),
+    plan: sanitizePlan(plan),
+  };
+}
+
 type LoadState = { kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'ready'; repo: Repository };
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -165,6 +217,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const localChanges = useRef(0);
   const channel = useRef<BroadcastChannel | null>(null);
 
+  /**
+   * Applique ce qui vient d'être lu dans la base, hors séances (bibliothèque, réglages, activités, séance prévue,
+   * mémoire de l'appareil) : au lancement, et à chaque relecture (autre fenêtre, retour au premier plan, §12).
+   * Une valeur inchangée garde son objet, pour ne rien redessiner.
+   */
+  const applyStored = useCallback((stored: StoredData) => {
+    const keep = <T,>(next: T) => (current: T) => (JSON.stringify(current) === JSON.stringify(next) ? current : next);
+    setExercises(keep(stored.exercises));
+    setLastExportAt(stored.lastExportAt);
+    setRecapState(keep(stored.recap));
+    setMachinesState(keep(stored.machines));
+    setReportState(keep(stored.reports));
+    reportSeenRef.current = stored.reportSeen;
+    setReportSeen(keep(stored.reportSeen));
+    ignoredAlertsRef.current = stored.ignoredAlerts;
+    setIgnoredAlerts(keep(stored.ignoredAlerts));
+    setHabitsState(keep(stored.habits));
+    activitiesRef.current = stored.activities;
+    setActivitiesState(keep(stored.activities));
+    setStoredPlan(keep(stored.plan));
+  }, []);
+
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -177,27 +252,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
           // Sans gravité : la correction sera refaite au prochain lancement.
           console.error('[MyFitApp] correction des ressentis « += » non appliquée', error);
         }
-        const [loadedSessions, loadedExercises, exportedAt, recap, machines, machinesVersion, reports, seen, loadedHabits, loadedActivities, loadedPlan, ignored] = await Promise.all([
-          repo.loadSessions(),
-          repo.loadExercises(),
-          repo.getMeta<number>('lastExportAt'),
-          repo.getMeta<unknown>('weeklyRecap'),
-          repo.getMeta<unknown>('cardioMachines'),
-          repo.getMeta<number>('cardioMachinesVersion'),
-          repo.getMeta<unknown>('reports'),
-          repo.getMeta<unknown>('reportsSeen'),
-          repo.getMeta<unknown>('habits'),
-          repo.getMeta<unknown>('activities'),
-          repo.getMeta<unknown>('plan'),
-          repo.getMeta<unknown>('groupAlertsIgnored'),
-        ]);
-        // Installation antérieure au cardio : aucune liste enregistrée, la liste par défaut s'applique.
-        // Liste enregistrée par une version antérieure : les nouvelles machines sont ajoutées une seule fois.
-        let machineList = sanitizeCardioMachines(machines);
-        if (machines !== undefined && (machinesVersion ?? 1) < CARDIO_MACHINES_VERSION) {
-          machineList = upgradeCardioMachines(machineList, machinesVersion ?? 1);
+        const stored = await loadStored(repo);
+        // Liste de machines enregistrée par une version antérieure : les nouvelles machines sont ajoutées une seule fois.
+        if (stored.machinesOutdated) {
           try {
-            await repo.setMeta('cardioMachines', machineList);
+            await repo.setMeta('cardioMachines', stored.machines);
             await repo.setMeta('cardioMachinesVersion', CARDIO_MACHINES_VERSION);
           } catch (error) {
             // Sans gravité : la mise à niveau sera refaite au prochain lancement.
@@ -205,21 +264,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }
         }
         if (cancelled) return;
-        sessionsRef.current = loadedSessions;
-        setSessions(loadedSessions);
-        setExercises(loadedExercises);
-        setLastExportAt(exportedAt ?? null);
-        setRecapState(sanitizeRecapSettings(recap));
-        setMachinesState(machineList);
-        setReportState(sanitizeReportSettings(reports));
-        reportSeenRef.current = sanitizeReportSeen(seen);
-        setReportSeen(reportSeenRef.current);
-        ignoredAlertsRef.current = sanitizeIgnoredAlerts(ignored);
-        setIgnoredAlerts(ignoredAlertsRef.current);
-        setHabitsState(sanitizeHabits(loadedHabits));
-        activitiesRef.current = sanitizeActivities(loadedActivities);
-        setActivitiesState(activitiesRef.current);
-        setStoredPlan(sanitizePlan(loadedPlan));
+        sessionsRef.current = stored.sessions;
+        setSessions(stored.sessions);
+        applyStored(stored);
         setLoad({ kind: 'ready', repo });
 
         // §12 : stockage persistant demandé au premier lancement, état affiché ensuite.
@@ -248,24 +295,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   /**
-   * Relit séances et bibliothèque dans la base, écrites peut-être par une autre fenêtre : une fenêtre restée
-   * en arrière-plan n'écrit jamais une ancienne version d'une séance par-dessus une version plus récente.
-   * Une écriture locale non confirmée garde sa version, plus récente que la base.
+   * Enregistre une ou plusieurs valeurs de la méta (réglages, activités, séance prévue…), puis met l'état à jour et
+   * prévient les autres fenêtres (§12) ; rien n'est changé si l'écriture échoue.
+   */
+  const writeMeta = useCallback(
+    async (entries: [string, unknown][], apply: () => void): Promise<boolean> => {
+      if (!repo) return false;
+      try {
+        for (const [key, value] of entries) await repo.setMeta(key, value);
+      } catch (error) {
+        console.error(`[MyFitApp] ${entries.map(([k]) => k).join(', ')} non enregistré`, error);
+        return false;
+      }
+      apply();
+      localChanges.current++;
+      announce();
+      return true;
+    },
+    [repo, announce],
+  );
+
+  /**
+   * Relit toute la base (séances, bibliothèque, réglages, activités, séance prévue, mémoire de l'appareil), écrite
+   * peut-être par une autre fenêtre : une fenêtre restée en arrière-plan n'écrit jamais une ancienne version d'une
+   * séance ou d'un réglage par-dessus une version plus récente. Une écriture locale non confirmée garde sa version,
+   * plus récente que la base.
    */
   const reloadFromDb = useCallback(async () => {
     if (!repo) return;
     const startedAt = localChanges.current;
-    let loadedSessions: Session[];
-    let loadedExercises: Exercise[];
-    let loadedActivities: unknown;
-    let loadedPlan: unknown;
+    let stored: StoredData;
     try {
-      [loadedSessions, loadedExercises, loadedActivities, loadedPlan] = await Promise.all([
-        repo.loadSessions(),
-        repo.loadExercises(),
-        repo.getMeta<unknown>('activities'),
-        repo.getMeta<unknown>('plan'),
-      ]);
+      stored = await loadStored(repo);
     } catch (error) {
       console.error('[MyFitApp] relecture de la base impossible', error);
       return;
@@ -273,23 +334,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // Une modification faite ici entre-temps est plus récente que ce qui vient d'être lu.
     if (localChanges.current !== startedAt) return;
     const unconfirmed = new Map(pending.current.toRetry().map((s) => [s.id, s]));
-    const list = loadedSessions.map((s) => unconfirmed.get(s.id) ?? s);
-    for (const s of unconfirmed.values()) if (!loadedSessions.some((x) => x.id === s.id)) list.push(s);
+    const list = stored.sessions.map((s) => unconfirmed.get(s.id) ?? s);
+    for (const s of unconfirmed.values()) if (!stored.sessions.some((x) => x.id === s.id)) list.push(s);
     if (!sameVersions(sessionsRef.current, list)) {
       sessionsRef.current = list;
       setSessions(list);
       // L'annulation reprendrait une version antérieure aux modifications de l'autre fenêtre.
       setUndo(null);
     }
-    setExercises((current) => (JSON.stringify(current) === JSON.stringify(loadedExercises) ? current : loadedExercises));
-    const nextActivities = sanitizeActivities(loadedActivities);
-    if (JSON.stringify(nextActivities) !== JSON.stringify(activitiesRef.current)) {
-      activitiesRef.current = nextActivities;
-      setActivitiesState(nextActivities);
-    }
-    const nextPlan = sanitizePlan(loadedPlan);
-    setStoredPlan((current) => (JSON.stringify(current) === JSON.stringify(nextPlan) ? current : nextPlan));
-  }, [repo]);
+    applyStored(stored);
+  }, [repo, applyStored]);
 
   useEffect(() => {
     if (!repo || typeof BroadcastChannel === 'undefined') return;
@@ -478,79 +532,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const setRecapSettings = useCallback(
-    async (next: WeeklyRecapSettings): Promise<boolean> => {
-      if (!repo) return false;
-      try {
-        await repo.setMeta('weeklyRecap', next);
-      } catch {
-        return false;
-      }
-      setRecapState(next);
-      return true;
-    },
-    [repo],
+    (next: WeeklyRecapSettings) => writeMeta([['weeklyRecap', next]], () => setRecapState(next)),
+    [writeMeta],
   );
 
   const setCardioMachines = useCallback(
-    async (next: CardioMachine[]): Promise<boolean> => {
-      if (!repo) return false;
-      try {
-        await repo.setMeta('cardioMachines', next);
-        await repo.setMeta('cardioMachinesVersion', CARDIO_MACHINES_VERSION);
-      } catch {
-        return false;
-      }
-      setMachinesState(next);
-      return true;
-    },
-    [repo],
+    (next: CardioMachine[]) =>
+      writeMeta(
+        [
+          ['cardioMachines', next],
+          ['cardioMachinesVersion', CARDIO_MACHINES_VERSION],
+        ],
+        () => setMachinesState(next),
+      ),
+    [writeMeta],
   );
 
   const setReportSettings = useCallback(
-    async (next: ReportSettings): Promise<boolean> => {
-      if (!repo) return false;
-      try {
-        await repo.setMeta('reports', next);
-      } catch {
-        return false;
-      }
-      setReportState(next);
-      return true;
-    },
-    [repo],
+    (next: ReportSettings) => writeMeta([['reports', next]], () => setReportState(next)),
+    [writeMeta],
   );
 
   const setHabits = useCallback(
-    async (next: Habit[]): Promise<boolean> => {
-      if (!repo) return false;
-      try {
-        await repo.setMeta('habits', next);
-      } catch {
-        return false;
-      }
-      setHabitsState(next);
-      return true;
-    },
-    [repo],
+    (next: Habit[]) => writeMeta([['habits', next]], () => setHabitsState(next)),
+    [writeMeta],
   );
 
   /** Enregistre la liste complète des activités ; l'état n'est mis à jour qu'en cas de succès. */
   const writeActivities = useCallback(
-    async (next: ActivityRecord[]): Promise<boolean> => {
-      if (!repo) return false;
-      try {
-        await repo.setMeta('activities', next);
-      } catch (error) {
-        console.error('[MyFitApp] activité non enregistrée', error);
-        return false;
-      }
-      activitiesRef.current = next;
-      setActivitiesState(next);
-      localChanges.current++;
-      announce();
-      return true;
-    },
-    [repo, announce],
+    (next: ActivityRecord[]) =>
+      writeMeta([['activities', next]], () => {
+        activitiesRef.current = next;
+        setActivitiesState(next);
+      }),
+    [writeMeta],
   );
 
   const answerActivity = useCallback(
@@ -572,22 +587,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [writeActivities],
   );
 
-  const savePlan = useCallback(
-    async (next: SessionPlan | null): Promise<boolean> => {
-      if (!repo) return false;
-      try {
-        await repo.setMeta('plan', next);
-      } catch (error) {
-        console.error('[MyFitApp] séance prévue non enregistrée', error);
-        return false;
-      }
-      setStoredPlan(next);
-      localChanges.current++;
-      announce();
-      return true;
-    },
-    [repo, announce],
-  );
+  const savePlan = useCallback((next: SessionPlan | null) => writeMeta([['plan', next]], () => setStoredPlan(next)), [writeMeta]);
 
   const markReportSeen = useCallback(
     async (period: ReportPeriod): Promise<void> => {
@@ -595,14 +595,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (next === reportSeenRef.current) return;
       reportSeenRef.current = next;
       setReportSeen(next);
-      try {
-        await repo?.setMeta('reportsSeen', next);
-      } catch (error) {
-        // Sans gravité : le bandeau réapparaîtra à la prochaine ouverture.
-        console.error('[MyFitApp] bilan ouvert non mémorisé', error);
-      }
+      // Une relecture de la base commencée avant ne doit pas rétablir l'ancienne valeur.
+      localChanges.current++;
+      // Un échec est sans gravité : le bandeau réapparaîtra à la prochaine ouverture.
+      await writeMeta([['reportsSeen', next]], () => {});
     },
-    [repo],
+    [writeMeta],
   );
 
   const ignoreGroupAlert = useCallback(
@@ -610,14 +608,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const next = ignoreAlert(ignoredAlertsRef.current, alert);
       ignoredAlertsRef.current = next;
       setIgnoredAlerts(next);
-      try {
-        await repo?.setMeta('groupAlertsIgnored', next);
-      } catch (error) {
-        // Sans gravité : l'alerte réapparaîtra à la prochaine ouverture.
-        console.error('[MyFitApp] alerte ignorée non mémorisée', error);
-      }
+      // Une relecture de la base commencée avant ne doit pas rétablir l'ancienne valeur.
+      localChanges.current++;
+      // Un échec est sans gravité : l'alerte réapparaîtra à la prochaine ouverture.
+      await writeMeta([['groupAlertsIgnored', next]], () => {});
     },
-    [repo],
+    [writeMeta],
   );
 
   const generalSettings = useMemo(
@@ -625,19 +621,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [recapSettings, cardioMachines, reportSettings, habits],
   );
 
-  const markExported = useCallback(
-    async (at: number): Promise<boolean> => {
-      if (!repo) return false;
-      try {
-        await repo.setMeta('lastExportAt', at);
-        setLastExportAt(at);
-        return true;
-      } catch {
-        return false;
-      }
-    },
-    [repo],
-  );
+  const markExported = useCallback((at: number) => writeMeta([['lastExportAt', at]], () => setLastExportAt(at)), [writeMeta]);
 
   const settings = useMemo(() => buildEngineSettings(exercises), [exercises]);
   const variants = useMemo(() => indexVariants(exercises), [exercises]);
@@ -650,12 +634,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // séance est supprimée ensuite de l'historique.
   useEffect(() => {
     if (!repo || !storedPlan || plan) return;
-    repo.setMeta('plan', null).then(
-      () => setStoredPlan((current) => (current?.id === storedPlan.id ? null : current)),
-      // Sans gravité : le plan réalisé n'est plus proposé ; le retrait sera refait au prochain lancement.
-      (error) => console.error('[MyFitApp] séance prévue réalisée non retirée', error),
-    );
-  }, [repo, storedPlan, plan]);
+    // Un échec est sans gravité : le plan réalisé n'est plus proposé ; le retrait sera refait au prochain lancement.
+    void writeMeta([['plan', null]], () => setStoredPlan((current) => (current?.id === storedPlan.id ? null : current)));
+  }, [repo, storedPlan, plan, writeMeta]);
 
   const ctxFor = useCallback(
     (variantId: string, home = false): VariantContext => {

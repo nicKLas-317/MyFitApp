@@ -4,7 +4,7 @@
  * puisque le profil est toujours dérivé de l'historique.
  */
 import type { Feeling, Performance, Session } from '../domain/types';
-import { sortSessions, validatePerformance, type PerformanceError } from '../engine';
+import { compareSessions, sortSessions, validatePerformance, type PerformanceError } from '../engine';
 import { isIsoDate } from '../session/format';
 import { normalizeName } from '../library/text';
 
@@ -88,4 +88,26 @@ export function setSessionLocation(session: Session, home: boolean, now: number)
 /** Nombre total de répétitions réalisées dans une séance. */
 export function totalReps(session: Session): number {
   return session.performances.reduce((n, p) => n + p.reps.reduce((a, b) => a + b, 0), 0);
+}
+
+/** Élément de l'historique (§10) : une séance, ou une activité rangée à son heure de début. */
+export type HistoryKey = { date: string; session: Session } | { date: string; time: number };
+
+/** Dernier instant d'une journée « AAAA-MM-JJ », heure locale. */
+function endOfDay(date: string): number {
+  const [y, m, d] = date.split('-').map(Number) as [number, number, number];
+  return new Date(y, m - 1, d + 1).getTime() - 1;
+}
+
+/**
+ * Ordre chronologique de l'historique (version 1.41.2), du plus ancien au plus récent : par date, puis, entre deux
+ * séances du même jour, l'ordre du moteur (§7.9 : une séance sans heure passe après celles dont l'heure est connue) ;
+ * une activité se range à son heure de début, une séance sans heure en fin de journée. L'historique, la « Dernière
+ * fois » de la fiche et les exercices récents suivent ainsi le même ordre.
+ */
+export function compareHistory(a: HistoryKey, b: HistoryKey): number {
+  if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+  if ('session' in a && 'session' in b) return compareSessions(a.session, b.session);
+  const time = (k: HistoryKey) => ('session' in k ? (k.session.startedAt ?? endOfDay(k.date)) : k.time);
+  return time(a) - time(b);
 }
