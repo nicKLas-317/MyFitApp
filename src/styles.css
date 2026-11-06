@@ -2838,6 +2838,13 @@ fieldset.frame > legend + * {
   color: var(--text);
 }
 
+/* Série de rouges en cours (fiche, version 1.42.0) : ligne grise sous le record, jamais à côté de la pastille. */
+.red-run {
+  margin: 0;
+  font-size: var(--fs-2);
+  color: var(--muted);
+}
+
 .records-list .record-line + .record-line {
   margin-top: var(--space-1);
 }

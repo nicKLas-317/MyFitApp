@@ -36,7 +36,7 @@ export interface ProgressState {
   palier: Palier;
   /** Validations vertes standard consécutives au palier actuel (§7.5). */
   greenStreak: number;
-  /** Séances rouges consécutives au même poids (§7.8, §7.11 E). */
+  /** Séances rouges consécutives au même poids (§7.8, §7.11 E) ; une séance orange « Mal passé » est neutre (version 1.42.0). */
   redStreak: number;
   lastStatus: Status;
   lastPerformance: EvaluablePerformance;
@@ -72,6 +72,15 @@ export interface Evaluation {
 }
 
 type Counters = Pick<ProgressState, 'palier' | 'greenStreak' | 'redStreak'>;
+
+/**
+ * Séance orange avec le ressenti « Mal passé » (toutes les séries à la cible, ou une seule en dessous) : neutre pour le
+ * compteur de rouges, comme une séance incomplète (version 1.42.0, §7.8). Elle n'efface plus les séances rouges d'avant
+ * (« Mal », « Très mal », « Mal », « Très mal »… mène à la baisse à la 4ᵉ rouge).
+ */
+export function neutralForReds(status: Status, perf: Pick<EvaluablePerformance, 'feeling'>): boolean {
+  return status === 'orange' && perf.feeling === 'mal';
+}
 
 /** Prochaine recommandation, selon la priorité du §7.10. */
 export function recommend(state: Counters | undefined, cfg: VariantConfig): Recommendation {
@@ -169,8 +178,9 @@ export function applyPerformance(
       greenStreak = standard && isGreen ? 1 : 0;
       redStreak = isRed ? 1 : 0;
     } else {
-      // Même poids : le compteur de rouges continue (§7.8, §7.11 E et F).
-      redStreak = isRed ? prev.redStreak + 1 : complete ? 0 : prev.redStreak;
+      // Même poids : le compteur de rouges continue (§7.8, §7.11 E et F). Une séance orange « Mal passé » est neutre
+      // (version 1.42.0) : elle ne remet pas le compteur à 0 et laisse une baisse déjà recommandée.
+      redStreak = isRed ? prev.redStreak + 1 : complete && !neutralForReds(status, perf) ? 0 : prev.redStreak;
 
       if (perf.targetReps === prev.palier.targetReps) {
         // Palier actuel refait : conforme si rien d'autre n'était recommandé (ou au plafond, sans autre cible

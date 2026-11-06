@@ -4,6 +4,12 @@ Ce qui a changé à chaque version de MyFitApp, de la plus récente à la plus a
 
 Les commits sans changement de numéro (documentation, tests, workflow) sont rangés sous la version en cours à ce moment-là.
 
+## 1.42.0 — 6 nov. 2026
+
+- Moteur : une séance orange « Mal passé » ne remet plus le compteur de rouges à 0 (neutre, comme une séance incomplète) et laisse une baisse déjà recommandée ; avant, « Mal », « Très mal », « Mal », « Très mal »… ne menait jamais à « poids inférieur » (option B1, choisie après simulation ; aucun écart sur les vraies données)
+- Fiche : « Série en cours : 2 séances rouges » sous le record, à partir de 2 rouges, masquée quand une baisse est recommandée ; « · séance de départ » dans l'historique pour une séance faite à une charge changée sans recommandation
+- Carte en séance : « ↓ / ↑ Nouvelle charge : séance de départ » (« Nouvelle aide : séance de départ » pour un exercice assisté) quand la charge saisie change sans recommandation du moteur
+
 ## 1.41.4 — 5 nov. 2026
 
 - Changer la date d'une séance passée : début et fin au nouveau jour, à la même heure ; comptée dans sa nouvelle semaine partout (avant : le récapitulatif, les bilans et les séries par semaine la gardaient dans l'ancienne)

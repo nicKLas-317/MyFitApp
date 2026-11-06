@@ -124,6 +124,7 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
           {...recommendedTarget(state, { sets: ctx.cfg.sets, reps: startTarget(ctx.cfg) }, ctx.cfg.assisted, ctx.cfg.seconds)}
           targetTestId="sheet-next"
           record={records.current.get(variantId) ?? null}
+          redRun
           bodyweight={ctx.cfg.bodyweight}
           seconds={ctx.cfg.seconds}
           perDumbbell={dumbbell}
@@ -139,6 +140,7 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
             {...recommendedTarget(homeState, { sets: homeCtx.cfg.sets, reps: startTarget(homeCtx.cfg) }, homeCtx.cfg.assisted)}
             targetTestId="sheet-next-home"
             record={records.current.get(`${variantId}${HOME_SUFFIX}`) ?? null}
+            redRun
             perDumbbell={dumbbell}
           />
         </section>
@@ -307,6 +309,8 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
                       p.partial ? null : `${FEELING_LABELS[p.feeling]}${p.feelingSymbol ? ` (${p.feelingSymbol})` : ''}`,
                       session.location === 'maison' ? 'maison' : null,
                       session.origin === 'import' ? 'importée' : null,
+                      // Charge changée sans recommandation du moteur (§7.11 B, version 1.42.0) : nouveau palier.
+                      evaluation?.decision === 'manual_weight' ? 'séance de départ' : null,
                     ]
                       .filter(Boolean)
                       .join(' · ')}

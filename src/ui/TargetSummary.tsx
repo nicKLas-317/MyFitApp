@@ -1,5 +1,5 @@
 import { Fragment } from 'react';
-import { compareWeight, progressMarker, type ProgressMarker, type ProgressState } from '../engine';
+import { compareDifficulty, compareWeight, progressMarker, type ProgressMarker, type ProgressState } from '../engine';
 import type { Performance } from '../domain/types';
 import { formatRecordWithDate, type PersonalRecord } from '../analysis/records';
 import { Crown } from './Crown';
@@ -10,13 +10,15 @@ import { StatusBadge } from './StatusBadge';
 /**
  * Mention sous la cible (§5.3.1, §5.3.2) : exercice jamais réalisé, changement recommandé (« ↑ +1 rép. »,
  * « ↑ Poids supérieur »), cible identique à la dernière fois, ou plafond atteint (poids du corps). Null : rien
- * (l'utilisateur a choisi une autre charge ou une autre cible, ce n'est plus la progression recommandée).
+ * (l'utilisateur a choisi une autre cible, ce n'est plus la progression recommandée). Charge changée sans recommandation
+ * du moteur (version 1.42.0) : « ↓ Nouvelle charge : séance de départ » (`fresh`, sans flèche pour un exercice assisté).
  */
 export type TargetHint =
   | { kind: 'start' }
   | { kind: 'same' }
   | { kind: 'ceiling' }
   | { kind: 'change'; arrow: '↑' | '↓'; label: string; detail?: string }
+  | { kind: 'fresh'; arrow: '↑' | '↓' | null; label: string }
   | null;
 
 /** Ligne de cible : « 3 × 9 à 30 kg », « 3 × 9 avec 25 kg d’aide », ou « 3 × 8 » sans charge connue. */
@@ -46,6 +48,8 @@ interface Props {
   seconds?: boolean;
   /** Exercice aux haltères (version 1.30.1) : charges en « kg / haltère ». */
   perDumbbell?: boolean;
+  /** Fiche (version 1.42.0) : « Série en cours : 2 séances rouges » sous le record, à partir de 2 rouges. */
+  redRun?: boolean;
 }
 
 
@@ -86,9 +90,25 @@ export function recommendedTarget(
 }
 
 /**
+ * Charge saisie différente du palier sans que le moteur recommande ce changement (§7.11 B, version 1.42.0) : la séance
+ * est une séance de départ (nouveau palier, elle ne valide rien). « ↓ Nouvelle charge : séance de départ » pour une
+ * charge plus légère, « ↑ … » pour une plus lourde, « Nouvelle aide : séance de départ » pour un exercice assisté.
+ * Null : même charge, charge recommandée, ou charge pas encore saisie.
+ */
+export function freshLoadHint(state: ProgressState | undefined, assisted: boolean, weightKg: number): TargetHint {
+  if (!state || !(weightKg > 0) || compareWeight(weightKg, state.palier.weightKg) === 0) return null;
+  const harder = compareDifficulty(weightKg, state.palier.weightKg, assisted) > 0;
+  const rec = state.recommendation.kind;
+  if ((harder && rec === 'weight_up') || (!harder && rec === 'weight_down')) return null;
+  if (assisted) return { kind: 'fresh', arrow: null, label: 'Nouvelle aide : séance de départ' };
+  return { kind: 'fresh', arrow: harder ? '↑' : '↓', label: 'Nouvelle charge : séance de départ' };
+}
+
+/**
  * Mention de la carte d'un exercice de la séance (et d'un exercice de la séance prévue, §5.9) d'après la charge et la
  * cible saisies : changement de charge à saisir (« ↑ Poids supérieur → 3 × 8 »), repère de progression (§5.3.1),
- * cible identique ; rien si l'utilisateur a choisi une autre charge ou une autre cible.
+ * cible identique, séance de départ d'une charge changée sans recommandation (version 1.42.0) ; rien si l'utilisateur
+ * a choisi une autre cible.
  */
 export function cardHint(
   state: ProgressState | undefined,
@@ -114,7 +134,7 @@ export function cardHint(
           ? rec.kind === 'ceiling'
             ? { kind: 'ceiling' }
             : { kind: 'same' }
-          : null;
+          : freshLoadHint(state, assisted, p.weightKg);
   return { hint, weightChange };
 }
 
@@ -174,6 +194,12 @@ export function NextTarget({
           {hint.detail && <span> {hint.detail}</span>}
         </p>
       )}
+      {hint?.kind === 'fresh' && (
+        <p className="next-hint change" role="status" data-testid="fresh-load">
+          {hint.arrow && <span aria-hidden="true">{hint.arrow} </span>}
+          <span>{hint.label}</span>
+        </p>
+      )}
     </>
   );
 }
@@ -195,8 +221,12 @@ export function TargetSummary({
   bodyweight = false,
   seconds = false,
   perDumbbell = false,
+  redRun = false,
 }: Props) {
   const last = state?.lastPerformance;
+  // Série de rouges en cours (§7.8), masquée quand la baisse est déjà recommandée (« ↓ Poids inférieur »).
+  const rec = state?.recommendation.kind;
+  const reds = redRun && state && state.redStreak >= 2 && rec !== 'weight_down' && rec !== 'reps_down' ? state.redStreak : 0;
   return (
     <div className="target-summary" data-testid="target-summary">
       <p className="last-zone" data-testid="last-time">
@@ -226,6 +256,11 @@ export function TargetSummary({
         <p className="record-line" data-testid="record">
           <Crown />
           <span>Record : {formatRecordWithDate(record, perDumbbell)}</span>
+        </p>
+      )}
+      {reds > 0 && (
+        <p className="red-run" data-testid="red-run">
+          Série en cours : {reds} séances rouges
         </p>
       )}
       <div className="next-zone">

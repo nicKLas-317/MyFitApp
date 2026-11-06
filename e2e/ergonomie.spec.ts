@@ -290,6 +290,26 @@ const SCREENS_225: [string, (page: Page) => Promise<void>][] = [
       await page.goto('./#/modifier/chaise');
       await expect(page.getByRole('group', { name: 'Type' }).getByRole('button', { name: 'Durée (secondes)' })).toHaveAttribute('aria-pressed', 'true');
     }],
+    // Série de rouges en cours (version 1.42.0) : ligne « Série en cours : 2 séances rouges » sous le record, à la salle
+    // et à la maison (une séance « Mal » entre deux rouges ne l'interrompt pas).
+    ['Fiche, série de rouges en cours', async (page: Page) => {
+      const red = (id: string, date: string, feeling: 'mal' | 'tres_mal', home: boolean): Session => {
+        const start = new Date(`${date}T${home ? '08' : '18'}:00:00`).getTime();
+        return {
+          id, name: 'Séance', date, startedAt: start, endedAt: start + 3_600_000, createdAt: start, updatedAt: start, origin: 'app', state: 'done',
+          ...(home ? { location: 'maison' as const } : {}),
+          performances: [{ variantId: 'curl-biceps-banc-incline', weightKg: home ? 11.5 : 12, targetReps: 8, plannedSets: 3, reps: [8, 8, 8], feeling }],
+        };
+      };
+      await page.goto('./');
+      await writeSessions(page, [
+        red('rouge-1', '2026-10-13', 'tres_mal', false), red('rouge-2', '2026-10-15', 'mal', false), red('rouge-3', '2026-10-17', 'tres_mal', false),
+        red('rouge-4', '2026-10-14', 'tres_mal', true), red('rouge-5', '2026-10-16', 'tres_mal', true),
+      ]);
+      await reloadAfterWrites(page);
+      await page.goto('./#/exercice/curl-biceps-banc-incline');
+      await expect(page.getByTestId('red-run')).toHaveCount(2);
+    }],
     ['Accueil, activité ponctuelle ouverte', async (page: Page) => {
       await page.goto('./');
       await page.getByRole('button', { name: '+ Activité' }).click();
@@ -637,6 +657,22 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
     await expect(curl.getByLabel('Poids (kg / haltère)', { exact: true })).toBeVisible();
     await toTop(page);
     await expectClean(page, 'Séance, exercice aux haltères');
+    // Charge plus légère sans recommandation (version 1.42.0) : « ↓ Nouvelle charge : séance de départ », texte agrandi
+    // compris ; la charge enregistrée est remise ensuite.
+    const curlWeight = curl.getByLabel('Poids (kg / haltère)', { exact: true });
+    const before = await curlWeight.inputValue();
+    await curlWeight.fill(String(Number(before.replace(',', '.')) - 1).replace('.', ','));
+    await curlWeight.press('Enter');
+    await expect(curl.getByTestId('fresh-load')).toHaveText('↓ Nouvelle charge : séance de départ');
+    await toTop(page);
+    await expectClean(page, 'Séance, séance de départ');
+    const largerFresh = await largeText(page);
+    await toTop(page);
+    await expectClean(page, 'Séance, séance de départ, texte agrandi', 1.15);
+    await largerFresh();
+    await curlWeight.fill(before);
+    await curlWeight.press('Enter');
+    await expect(curl.getByTestId('fresh-load')).toHaveCount(0);
     await page.getByRole('button', { name: 'Actions : Séance' }).click();
     await page.getByRole('menuitem', { name: 'Passer à la maison' }).click();
     await expect(page.getByTestId('switch-kept')).toHaveText('1 cardio déjà fait restera tel quel.');
