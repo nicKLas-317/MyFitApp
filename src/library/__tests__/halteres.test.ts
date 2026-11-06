@@ -79,7 +79,7 @@ describe('Charges aux haltères : poids d’un haltère (version 1.30.1)', () =>
     });
     const red = [8, 6, 6];
     // Curl aux haltères : deux vertes à 3 × 8 (+1 rép. le 19), record battu le 21 ; élévations latérales : quatrième
-    // rouge de suite le 23 ; pec deck (machine) : +1 rép. le 19.
+    // rouge de la série le 23 ; pec deck (machine) : +1 rép. le 19.
     const sessions = [
       session(12, [['curl-biceps-halteres', 12, [8, 8, 8]], ['elevations-laterales', 6, red], ['pec-deck', 40, [8, 8, 8]]]),
       session(19, [['curl-biceps-halteres', 12, [8, 8, 8]], ['elevations-laterales', 6, red], ['pec-deck', 40, [8, 8, 8]]]),
@@ -95,14 +95,14 @@ describe('Charges aux haltères : poids d’un haltère (version 1.30.1)', () =>
     const lines = (title: string) => reportSections(report, name, dumbbell).find((s) => s.title === title)!.lines.map(lineText);
     expect(lines('Progressions')).toEqual(['Curl biceps haltères : 3×8 → 3×9 à 12 kg / haltère (19 oct.)', 'Pec deck : 3×8 → 3×9 à 40 kg (19 oct.)']);
     expect(lines('Records')).toEqual(['👑 Curl biceps haltères : 3 × 9 à 12 kg / haltère']);
-    expect(lines('En difficulté')).toEqual(['Élévations latérales haltères : 4ᵉ séance rouge de suite à 6 kg / haltère → poids inférieur recommandé (23 oct.)']);
-    // Série de rouges commencée avant la période, sans baisse : « (3 de suite à 6 kg / haltère) ».
+    expect(lines('En difficulté')).toEqual(['Élévations latérales haltères : série de 4 rouges à 6 kg / haltère → poids inférieur recommandé (23 oct.)']);
+    // Série de rouges commencée avant la période, sans baisse : « (série en cours : 3 rouges à 6 kg / haltère) ».
     const before = buildReport(periodContaining('week', at(20)), {
       sessions: sessions.slice(0, 3), exercises: LIB, evaluations: rebuildProfile(sessions.slice(0, 3), settings).evaluations, settings,
       groups: DEFAULT_RECAP_SETTINGS.groups, weighIns: [], now: at(22),
     });
     expect(reportSections(before, name, dumbbell).find((s) => s.title === 'En difficulté')!.lines.map(lineText)).toEqual([
-      'Élévations latérales haltères : 2 séances rouges cette semaine (3 de suite à 6 kg / haltère)',
+      'Élévations latérales haltères : 2 séances rouges cette semaine (série en cours : 3 rouges à 6 kg / haltère)',
     ]);
     // Texte du mail : la même chose.
     const text = reportText(report, name, dumbbell);

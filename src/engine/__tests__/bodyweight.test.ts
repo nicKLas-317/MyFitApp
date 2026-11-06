@@ -117,7 +117,7 @@ describe('Exercices au poids du corps : progression par les répétitions seulem
     );
     expect(text).toContain('Crunch au sol : 3×24 → 3×25 (20 oct.)');
     expect(text).toContain('👑 Crunch au sol : 3 × 25');
-    expect(text).toContain('Crunch au sol : 4ᵉ séance rouge de suite → cible −1 rép. recommandée (29 oct.)');
+    expect(text).toContain('Crunch au sol : série de 4 rouges → cible −1 rép. recommandée (29 oct.)');
     expect(text).not.toContain('0 kg');
   });
 });

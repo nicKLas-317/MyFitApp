@@ -41,6 +41,13 @@ test.describe('Séances rouges et séance de départ (version 1.42.0)', () => {
     await expect(page.getByTestId('progress-marker')).toContainText('Poids inférieur');
     await expect(page.getByTestId('red-run')).toHaveCount(0);
 
+    // Bilan de progression (version 1.42.1) : « série en cours : 2 rouges », comme la fiche ; jamais « de suite ».
+    await page.goto('./#/bilan');
+    await expect(page.locator('.bilan-item', { hasText: /^Curl biceps banc incliné\d/ })).toContainText('série en cours : 2 rouges');
+    await expect(page.locator('.bilan-item', { hasText: 'Curl biceps banc incliné (maison)' })).toContainText('série en cours : 2 rouges');
+    await expect(page.getByRole('main')).not.toContainText('de suite');
+    await expect(page.getByRole('main')).not.toContainText('consécutives');
+
     // Séance : le curl à 10 kg (baisse non recommandée) puis 14 kg (hausse non recommandée), puis 10 kg.
     await startSession(page);
     const curl = await addExercise(page, 'curl incliné', 'Curl biceps banc incliné');

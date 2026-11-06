@@ -154,7 +154,7 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
     ]);
     // Une seule verte (pec deck) ne valide rien ; la première verte du curl, la semaine précédente, n'est pas listée.
     expect(r.progressions.map((p) => p.variantId)).not.toContain('pec-deck');
-    expect(linesOf(r, 'En difficulté')).toEqual(['Presse à cuisses : 4ᵉ séance rouge de suite à 100 kg → poids inférieur recommandé (21 oct.)']);
+    expect(linesOf(r, 'En difficulté')).toEqual(['Presse à cuisses : série de 4 rouges à 100 kg → poids inférieur recommandé (21 oct.)']);
     // La semaine précédente : trois rouges, pas encore de baisse ; la première verte du curl ne valide rien.
     const previous = report(shiftPeriod(WEEK, -1), sessions, oct(26, 9));
     // Série commencée dans la période : pas de parenthèse.
@@ -169,7 +169,7 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
     ];
     const assisted = report(WEEK, dips, oct(26, 9));
     expect(linesOf(assisted, 'Progressions')).toEqual(['Dips assistés : 3×8 → 3×9 avec 25 kg d’aide (19 oct.)']);
-    expect(linesOf(assisted, 'En difficulté')).toEqual(['Dips assistés : 4ᵉ séance rouge de suite avec 25 kg d’aide → plus d’aide recommandée (23 oct.)']);
+    expect(linesOf(assisted, 'En difficulté')).toEqual(['Dips assistés : série de 4 rouges avec 25 kg d’aide → plus d’aide recommandée (23 oct.)']);
 
     // Sans baisse : rouges de la période, et série en cours quand elle a commencé avant (semaine comme mois).
     const ongoing = [
@@ -178,7 +178,7 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
       session(oct(22), [red('presse-a-cuisses', 100), green('leg-curl', 30)]),
     ];
     expect(linesOf(report(WEEK, ongoing, oct(26, 9)), 'En difficulté')).toEqual([
-      'Presse à cuisses : 2 séances rouges cette semaine (3 de suite à 100 kg)',
+      'Presse à cuisses : 2 séances rouges cette semaine (série en cours : 3 rouges à 100 kg)',
       // Série interrompue par une verte : rien de plus.
       'Leg curl : 1 séance rouge cette semaine',
     ]);
@@ -187,7 +187,7 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
       'Leg curl : 1 séance rouge ce mois-ci',
     ]);
     const pastSeries = [session(oct(14), [red('tractions-assistees', 30, 12)]), session(oct(19), [red('tractions-assistees', 30, 12)])];
-    expect(linesOf(report(WEEK, pastSeries, oct(26, 9)), 'En difficulté')).toEqual(['Tractions assistées : 1 séance rouge cette semaine (2 de suite avec 30 kg d’aide)']);
+    expect(linesOf(report(WEEK, pastSeries, oct(26, 9)), 'En difficulté')).toEqual(['Tractions assistées : 1 séance rouge cette semaine (série en cours : 2 rouges avec 30 kg d’aide)']);
 
     // Calcul pur : séances et moteur inchangés.
     expect(sessions).toEqual(snapshot);
@@ -296,7 +296,7 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
         '- Aucun nouveau record.',
         '',
         'EN DIFFICULTÉ',
-        '- Presse à cuisses : 4ᵉ séance rouge de suite à 100 kg → poids inférieur recommandé (21 oct.)',
+        '- Presse à cuisses : série de 4 rouges à 100 kg → poids inférieur recommandé (21 oct.)',
         '',
         'POIDS',
         '- 80,2 kg le 19 oct. → 79,6 kg le 25 oct.',
@@ -360,5 +360,28 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
     expect(sanitizeReportSettings({ weekBanner: false, email: ` ${ADDRESS} ` })).toEqual({ weekBanner: false, monthBanner: true, email: ADDRESS });
     expect(sanitizeReportSettings({ email: 'pas une adresse' }).email).toBe('');
     expect(sanitizeReportSettings(null)).toEqual(DEFAULT_REPORT_SETTINGS);
+  });
+});
+
+describe('Séries de rouges dans les bilans : formulation exacte (version 1.42.1)', () => {
+  const mal = (v: string, kg: number): Perf => ({ v, kg, reps: [8, 8, 8], feeling: 'mal' });
+  const tresMal = (v: string, kg: number): Perf => ({ v, kg, reps: [8, 8, 8], feeling: 'tres_mal' });
+
+  it('304. Une séance « Mal » entre deux rouges ne coupe pas la série : « série en cours : 3 rouges », « série de 4 rouges », jamais « de suite » (écran et mail)', () => {
+    // Semaine précédente : Très mal, Mal, Très mal ; semaine du bilan : Mal, Très mal → 3 rouges dans la série, 1 cette semaine.
+    const ongoing = [
+      session(oct(12), [tresMal('presse-a-cuisses', 100)]), session(oct(14), [mal('presse-a-cuisses', 100)]), session(oct(16), [tresMal('presse-a-cuisses', 100)]),
+      session(oct(20), [mal('presse-a-cuisses', 100)]), session(oct(22), [tresMal('presse-a-cuisses', 100)]),
+    ];
+    const r = report(WEEK, ongoing, oct(26, 9));
+    expect(linesOf(r, 'En difficulté')).toEqual(['Presse à cuisses : 1 séance rouge cette semaine (série en cours : 3 rouges à 100 kg)']);
+    // Quatrième rouge dans la semaine, après un « Mal » : baisse recommandée.
+    const down = [...ongoing, session(oct(24), [mal('presse-a-cuisses', 100)]), session(oct(25, 10), [tresMal('presse-a-cuisses', 100)])];
+    const d = report(WEEK, down, oct(26, 9));
+    expect(linesOf(d, 'En difficulté')).toEqual(['Presse à cuisses : série de 4 rouges à 100 kg → poids inférieur recommandé (25 oct.)']);
+    for (const text of [reportText(r, name), reportText(d, name)]) {
+      expect(text).not.toMatch(/de suite/);
+      expect(text).toMatch(/- Presse à cuisses : (1 séance rouge cette semaine \(série en cours : 3 rouges à 100 kg\)|série de 4 rouges à 100 kg → poids inférieur recommandé \(25 oct\.\))/);
+    }
   });
 });

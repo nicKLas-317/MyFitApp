@@ -18,7 +18,7 @@ export interface Palier {
  *   `targetReps` est alors la cible à appliquer avec la nouvelle charge.
  * - Exercice au poids du corps (version 1.24.0), sans charge à changer :
  *   - `ceiling` : deux validations au plafond de la plage, la cible reste au plafond (« Plafond atteint ») ;
- *   - `reps_down` : quatre rouges de suite, cible − 1 (jamais sous la borne basse).
+ *   - `reps_down` : série de quatre rouges (§7.8), cible − 1 (jamais sous la borne basse).
  *   Exercice en secondes (version 1.25.0) : même chose par pas de 5 s (`reps_up` +5 s, `reps_down` −5 s), sans
  *   dépasser les bornes de la plage.
  */

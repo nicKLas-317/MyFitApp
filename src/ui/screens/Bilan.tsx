@@ -10,7 +10,7 @@ import { exerciseColorProps } from '../groupColors';
 const SECTIONS: { category: ProgressCategory; title: string; icon: string; hint: string }[] = [
   { category: 'progressing', title: 'En progression', icon: '↗', hint: 'Au moins un palier validé sur les 6 dernières séances.' },
   { category: 'stable', title: 'Stables', icon: '→', hint: 'Aucun palier validé sur les 6 dernières séances, sans rouges répétées.' },
-  { category: 'difficulty', title: 'En difficulté', icon: '↘', hint: 'Au moins 2 séances rouges consécutives en cours.' },
+  { category: 'difficulty', title: 'En difficulté', icon: '↘', hint: 'Série en cours d’au moins 2 séances rouges.' },
   { category: 'new', title: 'Trop tôt', icon: '…', hint: 'Une seule séance sur cet exercice.' },
 ];
 
@@ -125,7 +125,8 @@ export function Bilan() {
                       <span className="muted small">
                         {p.sessions} séance{p.sessions > 1 ? 's' : ''}
                         {p.validated > 0 && ` · ${p.validated} palier${p.validated > 1 ? 's' : ''} validé${p.validated > 1 ? 's' : ''}`}
-                        {p.redStreak >= 2 && ` · ${p.redStreak} rouges de suite`}
+                        {/* Comme la fiche (version 1.42.1) : une séance « Mal » ne coupe pas la série. */}
+                        {p.redStreak >= 2 && ` · série en cours : ${p.redStreak} rouges`}
                       </span>
                     </span>
                     <span className="bilan-chevron" aria-hidden="true">

@@ -120,7 +120,7 @@ describe('Exercices en secondes : gainage, progression par pas de 5 s (version 1
     );
     expect(text).toContain('Planche : 3×40 s → 3×45 s (13 oct.)');
     expect(text).toContain('👑 Planche : 3 × 50 s');
-    expect(text).toContain('Planche : 4ᵉ séance rouge de suite → cible −5 s recommandée (29 oct.)');
+    expect(text).toContain('Planche : série de 4 rouges → cible −5 s recommandée (29 oct.)');
     expect(text).not.toContain('0 kg');
 
     // Base existante en version 11 : la planche ajoutée une seule fois, jamais recréée après suppression.

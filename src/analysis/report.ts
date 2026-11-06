@@ -173,7 +173,10 @@ export interface ReportReds {
   variantId: string;
   /** Séances rouges pendant la période. */
   count: number;
-  /** Séances rouges de suite au même poids après la dernière séance de la période (série en cours, éventuellement commencée avant). */
+  /**
+   * Série de rouges en cours au même poids après la dernière séance de la période (compteur du moteur, séances « Mal »
+   * neutres comprises, version 1.42.0 ; éventuellement commencée avant la période).
+   */
   streak: number;
   weightKg: number;
   assisted: boolean;
@@ -516,7 +519,8 @@ export function reportSections(report: PeriodReport, variantName: (variantId: st
     });
 
     // Une ligne par exercice : son passage en « poids inférieur » s'il a eu lieu pendant la période, sinon ses séances
-    // rouges de la période, avec la série en cours quand elle a commencé avant.
+    // rouges de la période, avec la série en cours quand elle a commencé avant. Version 1.42.1 : « série de 4 rouges »,
+    // « série en cours : 3 rouges » (une séance « Mal » ne coupe pas la série : « de suite » serait inexact).
     const inThisPeriod = week ? 'cette semaine' : 'ce mois-ci';
     const difficulty = report.reds.map((r): ReportLine => {
       const decreases = report.decreases.filter((x) => x.variantId === r.variantId && x.home === r.home);
@@ -525,13 +529,13 @@ export function reportSections(report: PeriodReport, variantName: (variantId: st
           `${name(r.variantId, r.home)} : `,
           ...decreases.flatMap((d, i): ReportPart[] => [
             ...(i > 0 ? [' ; '] : []),
-            `${d.reds}ᵉ séance rouge de suite${load(d.weightKg, d.assisted, dumbbell(d.variantId))} → `,
+            `série de ${d.reds} rouges${load(d.weightKg, d.assisted, dumbbell(d.variantId))} → `,
             em(d.seconds ? 'cible −5 s recommandée' : d.bodyweight ? 'cible −1 rép. recommandée' : d.assisted ? 'plus d’aide recommandée' : 'poids inférieur recommandé'),
             ` (${formatShortDay(d.date)})`,
           ]),
         ];
       }
-      const ongoing = r.streak > r.count ? ` (${r.streak} de suite${load(r.weightKg, r.assisted, dumbbell(r.variantId))})` : '';
+      const ongoing = r.streak > r.count ? ` (série en cours : ${r.streak} rouges${load(r.weightKg, r.assisted, dumbbell(r.variantId))})` : '';
       return [`${name(r.variantId, r.home)} : `, em(`${plural(r.count, 'séance rouge', 'séances rouges')} ${inThisPeriod}`), ongoing];
     });
     sections.push({ title: 'En difficulté', lines: difficulty.length > 0 ? difficulty : [['Aucun exercice en difficulté.']] });

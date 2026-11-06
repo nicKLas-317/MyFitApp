@@ -4,6 +4,10 @@ Ce qui a changé à chaque version de MyFitApp, de la plus récente à la plus a
 
 Les commits sans changement de numéro (documentation, tests, workflow) sont rangés sous la version en cours à ce moment-là.
 
+## 1.42.1 — 6 nov. 2026
+
+- Bilans (écran et mail) et bilan de progression : « série de 4 rouges à 100 kg → poids inférieur recommandé », « (série en cours : 3 rouges à 100 kg) », « série en cours : 2 rouges », libellé « Série en cours d’au moins 2 séances rouges. » ; plus de « 4ᵉ séance rouge de suite », « 3 de suite », « rouges de suite » ni « consécutives », inexacts depuis qu'une séance « Mal » ne coupe plus la série (1.42.0)
+
 ## 1.42.0 — 6 nov. 2026
 
 - Moteur : une séance orange « Mal passé » ne remet plus le compteur de rouges à 0 (neutre, comme une séance incomplète) et laisse une baisse déjà recommandée ; avant, « Mal », « Très mal », « Mal », « Très mal »… ne menait jamais à « poids inférieur » (option B1, choisie après simulation ; aucun écart sur les vraies données)

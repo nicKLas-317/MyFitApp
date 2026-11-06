@@ -124,7 +124,7 @@ test.describe('Bilans de la semaine et du mois (§19.7)', () => {
     await expect(section('Groupes travaillés').locator('[data-group="biceps"] td')).toHaveText(['1', '2', '0']);
     // Lecteur d'écran : la phrase du mail, sous chaque échelle.
     await expect(section('Progressions')).toContainText('Tractions assistées : 3×12 avec 30 kg d’aide validé → moins d’aide, 3×8 (24 oct.)');
-    await expect(section('En difficulté')).toContainText('Presse à cuisses : 4ᵉ séance rouge de suite à 100\u00a0kg → poids inférieur recommandé (21\u00a0oct.)');
+    await expect(section('En difficulté')).toContainText('Presse à cuisses : série de 4 rouges à 100\u00a0kg → poids inférieur recommandé (21\u00a0oct.)');
     await expect(section('Poids')).toContainText('80,2 kg le 19 oct. → 79,6 kg le 25 oct.');
     // Échelle du curl aux haltères : ancienne cible 8 en pointillés, nouvelle 9 pleine ; « kg / haltère » sous le nom.
     const curl = section('Progressions').getByTestId('report-progression').filter({ hasText: 'Curl biceps haltères' });
