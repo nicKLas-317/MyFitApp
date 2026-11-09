@@ -41,7 +41,7 @@ test.describe('Bilan, graphiques et import de fichier sur Android', () => {
     await page.getByRole('navigation', { name: 'Onglets' }).getByRole('link', { name: /^Progrès/ }).click();
     const nav = page.getByRole('navigation', { name: 'Bilans' });
     const link = nav.getByRole('link', { name: 'Bilan de progression', exact: true });
-    await expect(nav.getByRole('link')).toHaveText(['Bilan de progression', 'Bilan de la semaine / du mois', 'Par groupe musculaire']);
+    await expect(nav.getByRole('link')).toHaveText(['Bilan de progression', 'Bilan de la semaine / du mois', 'Par groupe musculaire', 'Cardio']);
     const other = nav.getByRole('link', { name: 'Par groupe musculaire' });
     const [box, otherBox] = await Promise.all([link.boundingBox(), other.boundingBox()]);
     expect([box!.width, box!.height]).toEqual([otherBox!.width, otherBox!.height]);

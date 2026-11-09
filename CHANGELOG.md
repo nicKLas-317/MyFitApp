@@ -4,6 +4,10 @@ Ce qui a changé à chaque version de MyFitApp, de la plus récente à la plus a
 
 Les commits sans changement de numéro (documentation, tests, workflow) sont rangés sous la version en cours à ce moment-là.
 
+## 1.43.1 — 9 nov. 2026
+
+- Onglet Progrès : l'entrée « Cardio » passe juste sous « Par groupe musculaire », au-dessus de « Mon poids » (elle était la dernière, sous « Mon poids »)
+
 ## 1.43.0 — 9 nov. 2026
 
 - Nouvel écran « Cardio » (`#/cardio`), dernière entrée de l'onglet Progrès, sous « Mon poids » : « Cette semaine », « Ce mois », « Depuis le début » ; total de la période, puis une carte neutre par machine (rameur compris, salle et maison, machine retirée des réglages comprise), triées par temps : temps, nombre de fois, moyenne ; distance et moyenne sur les fois où elle est saisie ; répartition du temps par inclinaison pour le tapis. Sans objectif, rien sur l'accueil, dans les bilans ni le mail, aucun effet sur le reste

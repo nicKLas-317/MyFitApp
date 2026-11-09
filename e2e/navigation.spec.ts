@@ -66,6 +66,7 @@ test.describe('Barre d’onglets, mode salle et bouton retour (§3.4, §5.8)', (
       'Bilan de progression',
       'Bilan de la semaine / du mois',
       'Par groupe musculaire',
+      'Cardio',
     ]);
     await expect(page.getByRole('region', { name: 'Mon poids' }).getByRole('link', { name: 'Mon poids : pesées et graphique' })).toBeVisible();
     await tab(page, 'Plus').click();

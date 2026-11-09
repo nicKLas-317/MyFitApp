@@ -35,14 +35,14 @@ test.describe('Écran « Cardio » (version 1.43.0)', () => {
     // Rien sur l'accueil.
     await expect(page.getByRole('link', { name: 'Cardio', exact: true })).toHaveCount(0);
 
-    // Dernière entrée de l'onglet Progrès, sous « Mon poids ».
+    // Onglet Progrès : juste sous « Par groupe musculaire », au-dessus de « Mon poids » (version 1.43.1).
     await page.locator('.tab-bar a[href="#/progres"]').click();
-    const entries = page.locator('main a.btn');
-    await expect(entries.last()).toHaveText('Cardio');
+    const entries = page.getByRole('navigation', { name: 'Bilans' }).getByRole('link');
+    await expect(entries).toHaveText(['Bilan de progression', 'Bilan de la semaine / du mois', 'Par groupe musculaire', 'Cardio']);
     expect(await page.evaluate(() => {
       const weight = document.querySelector('section[aria-label="Mon poids"]')!;
       const cardio = [...document.querySelectorAll('main a')].find((a) => a.textContent === 'Cardio')!;
-      return weight.getBoundingClientRect().bottom <= cardio.getBoundingClientRect().top;
+      return cardio.getBoundingClientRect().bottom <= weight.getBoundingClientRect().top;
     })).toBe(true);
     await entries.last().click();
     await expect(page).toHaveURL(/#\/cardio$/);
@@ -98,7 +98,7 @@ test.describe('Écran « Cardio » (version 1.43.0)', () => {
     // Période gardée en revenant, « retour » vers Progrès.
     await page.locator('a.back').click();
     await expect(page).toHaveURL(/#\/progres$/);
-    await page.locator('main a.btn').last().click();
+    await page.getByRole('navigation', { name: 'Bilans' }).getByRole('link', { name: 'Cardio' }).click();
     await expect(chips.nth(2)).toHaveAttribute('aria-pressed', 'true');
     await page.goBack();
     await expect(page).toHaveURL(/#\/progres$/);
