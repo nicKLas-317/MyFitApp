@@ -1,6 +1,6 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
 import { useApp } from '../../app/store';
-import { formatMinutes, INCLINE_LABELS } from '../../cardio/model';
+import { formatMinutes, INCLINE_LABELS, INCLINES } from '../../cardio/model';
 import { CARDIO_RANGES, cardioSummary, formatKm, inclinePercents, type CardioRange, type MachineSummary } from '../../cardio/summary';
 import { periodContaining, periodTitle } from '../../analysis/report';
 import { formatShortDate } from '../../session/format';
@@ -15,8 +15,8 @@ const EMPTY: Record<CardioRange, string> = {
 };
 
 /** Segments d'une ligne : chacun reste entier, la ligne passe à la ligne entre deux segments. */
-function Parts({ parts }: { parts: (string | null | false)[] }) {
-  const shown = parts.filter((p): p is string => !!p);
+function Parts({ parts }: { parts: ReactNode[] }) {
+  const shown = parts.filter((p) => p !== null && p !== undefined && p !== false && p !== '');
   return (
     <>
       {shown.map((p, i) => (
@@ -33,37 +33,82 @@ function Parts({ parts }: { parts: (string | null | false)[] }) {
   );
 }
 
-function MachineCard({ m }: { m: MachineSummary }) {
-  const average = formatMinutes(Math.round(m.minutes / m.count));
+const percent = (part: number, total: number) => (total > 0 ? (part * 100) / total : 0);
+
+/**
+ * Carte d'une machine (version 1.44.0, maquette C) : nom et temps en grand, barre du temps proportionnelle au total de
+ * la période (la même barre blanche pour toutes les machines), une ligne de détails en petit ; pour une machine à
+ * inclinaison, une fine barre empilée neutre / moyenne / haute en dessous, avec sa légende.
+ */
+function MachineCard({ m, total }: { m: MachineSummary; total: number }) {
+  const share = Math.round(percent(m.minutes, total));
+  const partial = m.distance && m.distance.count < m.count;
+  const inclineTotal = m.inclines ? m.inclines.neutre + m.inclines.moyenne + m.inclines.haute : 0;
   return (
     <section className="frame cardio-machine" aria-label={m.name} data-testid="cardio-machine">
-      <h2 className="cardio-machine-name">{m.name}</h2>
-      <p data-testid="cardio-time">
-        <Parts parts={[formatMinutes(m.minutes), `${m.count} fois`, `moyenne ${average}`]} />
+      <div className="cardio-head">
+        <h2 className="cardio-machine-name">{m.name}</h2>
+        <strong className="cardio-machine-time nowrap" data-testid="cardio-time">
+          {formatMinutes(m.minutes)}
+        </strong>
+      </div>
+      <div className="cardio-bar" role="img" aria-label={`${share} % du temps total`} data-testid="cardio-bar">
+        <span style={{ width: `${percent(m.minutes, total)}%` }} />
+      </div>
+      <p className="cardio-details" data-testid="cardio-details">
+        <Parts
+          parts={[
+            `${m.count} fois`,
+            `moy. ${formatMinutes(Math.round(m.minutes / m.count))}`,
+            m.distance && formatKm(m.distance.km),
+            m.distance && (
+              <>
+                moy. {formatKm(Math.round((m.distance.km / m.distance.count) * 100) / 100)}
+                {partial && (
+                  <span className="cardio-part" data-testid="cardio-part">
+                    <span aria-hidden="true">
+                      {m.distance.count}/{m.count}
+                    </span>
+                    <span className="visually-hidden">
+                      {' '}
+                      (distance notée {m.distance.count} fois sur {m.count})
+                    </span>
+                  </span>
+                )}
+              </>
+            ),
+          ]}
+        />
       </p>
-      {m.distance && (
-        <p data-testid="cardio-distance">
-          <Parts
-            parts={[
-              `Distance : ${formatKm(m.distance.km)}`,
-              `moyenne ${formatKm(Math.round((m.distance.km / m.distance.count) * 100) / 100)}`,
-              m.distance.count < m.count && `sur ${m.distance.count} fois sur ${m.count}`,
-            ]}
-          />
-        </p>
-      )}
-      {m.inclines && (
-        <p data-testid="cardio-inclines">
-          <Parts parts={inclinePercents(m.inclines).map((i, k) => `${k === 0 ? 'Inclinaison : ' : ''}${INCLINE_LABELS[i.incline].toLowerCase()} ${i.percent} %`)} />
-        </p>
+      {m.inclines && inclineTotal > 0 && (
+        <>
+          <div
+            className="cardio-incline"
+            role="img"
+            aria-label={`Inclinaison : ${inclinePercents(m.inclines).map((i) => `${INCLINE_LABELS[i.incline].toLowerCase()} ${i.percent} %`).join(', ')}`}
+            data-testid="cardio-incline"
+          >
+            {INCLINES.map((i) => (
+              <span key={i} className={`incline-${i}`} style={{ width: `${percent(m.inclines![i], inclineTotal)}%` }} />
+            ))}
+          </div>
+          <p className="cardio-legend" aria-hidden="true">
+            {INCLINES.map((i) => (
+              <span key={i} className="nowrap">
+                <i className={`incline-${i}`} />
+                {INCLINE_LABELS[i].toLowerCase()}
+              </span>
+            ))}
+          </p>
+        </>
       )}
     </section>
   );
 }
 
 /**
- * Écran « Cardio » (version 1.43.0), dernière entrée de l'onglet Progrès : temps, nombre de fois, distance et
- * inclinaison par machine, pour la semaine, le mois ou depuis le début. Simple consultation, sans objectif.
+ * Écran « Cardio » (version 1.43.0 ; présentation en barres, version 1.44.0), onglet Progrès : temps, nombre de fois,
+ * distance et inclinaison par machine, pour la semaine, le mois ou depuis le début. Simple consultation, sans objectif.
  */
 export function CardioScreen() {
   const { sessions, cardioMachines } = useApp();
@@ -105,16 +150,18 @@ export function CardioScreen() {
       ) : (
         <>
           <section className="frame cardio-total" aria-label="Total" data-testid="cardio-total">
-            {label && <p className="muted small">{label}</p>}
+            {label && <p className="cardio-period">{label}</p>}
             <p>
               <span className="nowrap">
                 <strong className="cardio-total-value">{formatMinutes(summary.minutes)}</strong> ·
               </span>{' '}
-              <Parts parts={[`${summary.count} fois`, `${summary.machines.length} ${summary.machines.length > 1 ? 'machines' : 'machine'}`]} />
+              <span className="cardio-total-rest">
+                <Parts parts={[`${summary.count} fois`, `${summary.machines.length} ${summary.machines.length > 1 ? 'machines' : 'machine'}`]} />
+              </span>
             </p>
           </section>
           {summary.machines.map((m) => (
-            <MachineCard key={m.machineId} m={m} />
+            <MachineCard key={m.machineId} m={m} total={summary.minutes} />
           ))}
         </>
       )}

@@ -1025,13 +1025,94 @@ input[aria-invalid='true'] {
   margin: var(--space-1) 0;
 }
 
+.cardio-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+
 .cardio-machine-name {
+  min-width: 0;
+  margin: 0;
   font-size: var(--fs-3);
   font-weight: 700;
 }
 
-.cardio-total-value {
+.cardio-machine-time {
+  flex: none;
   font-size: var(--fs-4);
+}
+
+.cardio-period,
+.cardio-legend {
+  font-size: var(--fs-1);
+  color: var(--muted);
+}
+
+.cardio-total-value {
+  font-size: var(--fs-5);
+}
+
+.cardio-total-rest,
+.cardio-details {
+  font-size: var(--fs-2);
+  color: var(--muted);
+}
+
+/* Barre du temps : proportionnelle au total de la période, la même pour toutes les machines. */
+.cardio-bar,
+.cardio-incline {
+  display: flex;
+  height: 16px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.cardio-bar > span {
+  background: var(--text);
+}
+
+/* Inclinaison (machine à inclinaison) : fine barre empilée sur toute la largeur, du plus foncé (neutre) au blanc (haute). */
+.cardio-incline {
+  height: 8px;
+}
+
+.incline-neutre {
+  background: #6b7385;
+}
+
+.incline-moyenne {
+  background: #b4bcc8;
+}
+
+.incline-haute {
+  background: var(--text);
+}
+
+.cardio-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-2);
+}
+
+.cardio-legend i {
+  display: inline-block;
+  width: 13px;
+  height: 8px;
+  margin-right: 4px;
+  border-radius: 2px;
+  vertical-align: middle;
+}
+
+/* Distance notée seulement certaines fois : « 6/7 », signe discret. */
+.cardio-part {
+  margin-left: 4px;
+  padding: 0 var(--space-1);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: var(--fs-1);
 }
 
 .nowrap {

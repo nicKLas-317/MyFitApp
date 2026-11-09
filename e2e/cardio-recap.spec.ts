@@ -12,7 +12,7 @@ function withCardio(id: string, date: string, hour: number, cardio: Omit<CardioB
   };
 }
 
-test.describe('Écran « Cardio » (version 1.43.0)', () => {
+test.describe('Écran « Cardio » (versions 1.43.0 et 1.44.0)', () => {
   test('305. Onglet Progrès › Cardio : trois périodes, total, une carte neutre par machine (temps, fois, moyenne, distance, inclinaison), machine retirée comprise, rien ailleurs', async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-11-06T20:00:00'));
     await page.goto('./');
@@ -58,37 +58,59 @@ test.describe('Écran « Cardio » (version 1.43.0)', () => {
     const cards = page.getByTestId('cardio-machine');
     await expect(total).toHaveText('Semaine du 2 au 8 nov. 20261 h 11 · 4 fois · 2 machines');
     await expect(cards.locator('h2')).toHaveText(['Tapis de marche', 'Rameur']);
-    await expect(cards.nth(0).getByTestId('cardio-time')).toHaveText('1 h 00 · 2 fois · moyenne 30 min');
-    await expect(cards.nth(0).getByTestId('cardio-distance')).toHaveText('Distance : 1,2 km · moyenne 1,2 km · sur 1 fois sur 2');
-    await expect(cards.nth(0).getByTestId('cardio-inclines')).toHaveText('Inclinaison : neutre 25 % · moyenne 75 % · haute 0 %');
-    await expect(cards.nth(1).getByTestId('cardio-time')).toHaveText('11 min · 2 fois · moyenne 6 min');
-    await expect(cards.nth(1).getByTestId('cardio-distance')).toHaveText('Distance : 1 km · moyenne 1 km · sur 1 fois sur 2');
-    await expect(cards.nth(1).getByTestId('cardio-inclines')).toHaveCount(0);
+    // Version 1.44.0 : nom et temps en grand, barre du temps (part du total), une ligne de détails, « 1/2 » discret.
+    await expect(cards.getByTestId('cardio-time')).toHaveText(['1 h 00', '11 min']);
+    expect(await cards.getByTestId('cardio-bar').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')))).toEqual(['85 % du temps total', '15 % du temps total']);
+    await expect(cards.nth(0).getByTestId('cardio-details')).toHaveText('2 fois · moy. 30 min · 1,2 km · moy. 1,2 km1/2 (distance notée 1 fois sur 2)');
+    await expect(cards.nth(0).getByTestId('cardio-part').locator('[aria-hidden="true"]')).toHaveText('1/2');
+    await expect(cards.nth(0).getByTestId('cardio-incline')).toHaveAttribute('aria-label', 'Inclinaison : neutre 25 %, moyenne 75 %, haute 0 %');
+    await expect(cards.nth(0).locator('.cardio-legend')).toHaveText('neutremoyennehaute');
+    await expect(cards.nth(1).getByTestId('cardio-details')).toHaveText('2 fois · moy. 6 min · 1 km · moy. 1 km1/2 (distance notée 1 fois sur 2)');
+    await expect(cards.nth(1).getByTestId('cardio-incline')).toHaveCount(0);
+    await expect(cards.nth(1).locator('.cardio-legend')).toHaveCount(0);
 
     // Ce mois : le rameur du dimanche 1er en plus.
     await chips.nth(1).click();
     await expect(chips.nth(1)).toHaveAttribute('aria-pressed', 'true');
     await expect(total).toHaveText('Novembre 20261 h 21 · 5 fois · 2 machines');
-    await expect(cards.nth(1).getByTestId('cardio-distance')).toHaveText('Distance : 3 km · moyenne 1,5 km · sur 2 fois sur 3');
+    await expect(cards.nth(1).getByTestId('cardio-details')).toHaveText('3 fois · moy. 7 min · 3 km · moy. 1,5 km2/3 (distance notée 2 fois sur 3)');
 
     // Depuis le début : la machine retirée des réglages apparaît, triée par temps décroissant.
     await chips.nth(2).click();
     await expect(total).toHaveText('Depuis le 12 oct. 20262 h 21 · 7 fois · 3 machines');
     await expect(cards.locator('h2')).toHaveText(['Tapis de marche', 'Stepper', 'Rameur']);
-    await expect(cards.nth(0).getByTestId('cardio-inclines')).toHaveText('Inclinaison : neutre 19 % · moyenne 56 % · haute 25 %');
-    await expect(cards.nth(1).getByTestId('cardio-time')).toHaveText('40 min · 1 fois · moyenne 40 min');
-    await expect(cards.nth(1).getByTestId('cardio-distance')).toHaveCount(0);
+    await expect(cards.nth(0).getByTestId('cardio-incline')).toHaveAttribute('aria-label', 'Inclinaison : neutre 19 %, moyenne 56 %, haute 25 %');
+    await expect(cards.getByTestId('cardio-time')).toHaveText(['1 h 20', '40 min', '21 min']);
+    await expect(cards.nth(1).getByTestId('cardio-details')).toHaveText('1 fois · moy. 40 min');
+    await expect(cards.nth(1).getByTestId('cardio-part')).toHaveCount(0);
+    // Barres : même blanc pour toutes les machines, longueur proportionnelle au total (80, 40 et 21 min sur 141) ;
+    // inclinaison du tapis : fine barre séparée, sur toute la largeur (15, 45 et 20 min sur 80).
+    const bars = await cards.getByTestId('cardio-bar').evaluateAll((els) => els.map((e) => {
+      const fill = e.firstElementChild as HTMLElement;
+      return [Math.round((fill.getBoundingClientRect().width / e.getBoundingClientRect().width) * 1000) / 10, getComputedStyle(fill).backgroundColor, e.getBoundingClientRect().height];
+    }));
+    expect(bars).toEqual([[56.7, 'rgb(238, 240, 244)', 16], [28.4, 'rgb(238, 240, 244)', 16], [14.9, 'rgb(238, 240, 244)', 16]]);
+    const incline = await cards.nth(0).getByTestId('cardio-incline').evaluate((e) => ({
+      height: e.getBoundingClientRect().height,
+      full: Math.round(e.getBoundingClientRect().width) === Math.round(e.parentElement!.querySelector('.cardio-bar')!.getBoundingClientRect().width),
+      parts: [...e.children].map((c) => Math.round((c.getBoundingClientRect().width / e.getBoundingClientRect().width) * 1000) / 10),
+      below: e.getBoundingClientRect().top > e.parentElement!.querySelector('.cardio-details')!.getBoundingClientRect().bottom,
+    }));
+    expect(incline).toEqual({ height: 8, full: true, parts: [18.8, 56.3, 25], below: true });
 
     // Rien ne dépasse de l'écran ni des cartes : les lignes passent à la ligne entre deux éléments, jamais au milieu.
     for (const width of [412, 360, 320]) {
       await page.setViewportSize({ width, height: 800 });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `${width} px`).toBe(true);
       const outside = await cards.evaluateAll((els) =>
-        els.flatMap((card) => [...card.querySelectorAll('span')].filter((s) => s.getBoundingClientRect().right > card.getBoundingClientRect().right - 16).map((s) => s.textContent)),
+        els.flatMap((card) => [...card.querySelectorAll('span')].filter((s) => !s.closest('.visually-hidden') && s.getBoundingClientRect().right > card.getBoundingClientRect().right - 16 + 0.5).map((s) => s.textContent)),
       );
       expect(outside, `${width} px`).toEqual([]);
     }
-    await expect(cards.nth(0).getByTestId('cardio-distance').locator('.nowrap')).toHaveText(['Distance : 1,2 km ·', 'moyenne 1,2 km ·', 'sur 1 fois sur 3']);
+    // Détails sur deux lignes à 320 px, chaque élément entier, « 1/3 » collé à la moyenne de distance.
+    const details = cards.nth(0).getByTestId('cardio-details');
+    await expect(details.locator(':scope > .nowrap')).toHaveText(['3 fois ·', 'moy. 27 min ·', '1,2 km ·', 'moy. 1,2 km1/3 (distance notée 1 fois sur 3)']);
+    expect(await details.evaluate((p) => new Set([...p.querySelectorAll(':scope > .nowrap')].map((s) => Math.round(s.getBoundingClientRect().top))).size)).toBe(2);
 
     // Cartes neutres (pas de couleur de groupe), sans graphique.
     const frames = await cards.evaluateAll((els) => els.map((e) => [e.hasAttribute('data-frame'), e.hasAttribute('data-group-color'), getComputedStyle(e).borderTopColor]));
