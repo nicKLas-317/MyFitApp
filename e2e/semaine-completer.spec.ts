@@ -86,7 +86,7 @@ function layout(page: Page) {
         closest = Math.min(closest, Math.max(dx, dy));
       }
     return {
-      overflow: document.documentElement.scrollWidth - window.innerWidth,
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
       minHeight: Math.min(...taps.map((r) => r.height)),
       closest,
       outside: [...document.querySelectorAll('main .card')].filter((c) => c.getBoundingClientRect().right > window.innerWidth).length,

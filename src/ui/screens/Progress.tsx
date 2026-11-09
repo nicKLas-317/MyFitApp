@@ -7,7 +7,7 @@ import { WeighInForm } from './BodyScreen';
 
 /**
  * Onglet Progrès (§3.4) : bilans prêts en haut, puis bilan de progression, bilans de la semaine et du mois, bilan
- * par groupe musculaire et « Mon poids ». Une pesée s'enregistre directement ici, comme avant depuis l'accueil.
+ * par groupe musculaire, « Mon poids », puis « Cardio » (version 1.43.0). Une pesée s'enregistre directement ici, comme avant depuis l'accueil.
  */
 export function Progress() {
   const body = useBody();
@@ -58,6 +58,12 @@ export function Progress() {
           Mon poids : pesées et graphique
         </a>
       </section>
+      {/* Récapitulatif du cardio par machine (version 1.43.0) : dernière entrée, sans objectif. */}
+      <nav className="hub-links" aria-label="Cardio">
+        <a className="btn big" href="#/cardio">
+          Cardio
+        </a>
+      </nav>
     </main>
   );
 }

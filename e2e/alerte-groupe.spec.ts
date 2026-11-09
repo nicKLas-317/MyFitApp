@@ -64,7 +64,7 @@ function layout(page: Page) {
     return {
       minHeight: Math.min(...taps.map((r) => r.height)),
       closest,
-      overflow: document.documentElement.scrollWidth - window.innerWidth,
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
       afterRecap: !list || recap.nextElementSibling === list,
       startVisible: start.getBoundingClientRect().bottom <= nav.top,
       fontSize: list ? getComputedStyle(list.querySelector('li') ?? list).fontSize : null,
@@ -255,7 +255,7 @@ test.describe('Alerte « groupe moins travaillé »', () => {
         }).length,
       );
       expect(split, `${width} px${big ? ', texte à 115 %' : ''}`).toBe(0);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
       await restore?.();
     }
     await page.setViewportSize({ width: 412, height: 915 });

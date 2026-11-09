@@ -14,6 +14,7 @@ export function tabOf(page: string, extra?: string): Tab {
     case 'bilan-periode':
     case 'bilan-groupes':
     case 'poids':
+    case 'cardio':
       return 'progres';
     case 'exercice':
       return extra === 'evolution' ? 'progres' : 'plus';

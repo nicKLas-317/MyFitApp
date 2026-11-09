@@ -84,7 +84,7 @@ test.describe('Barre d’onglets, mode salle et bouton retour (§3.4, §5.8)', (
     await page.goto('./');
     for (const width of [412, 360, 320]) {
       await page.setViewportSize({ width, height: 800 });
-      expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), `${width} px`).toBeLessThanOrEqual(0);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), `${width} px`).toBeLessThanOrEqual(0);
       const tabs = await bar.getByRole('link').evaluateAll((els) => els.map((el) => el.getBoundingClientRect().height));
       for (const h of tabs) expect(h, `${width} px`).toBeGreaterThanOrEqual(48);
     }
@@ -138,7 +138,7 @@ test.describe('Barre d’onglets, mode salle et bouton retour (§3.4, §5.8)', (
     await test.info().attach('mode-salle', { body: await page.screenshot(), contentType: 'image/png' });
     for (const width of [360, 320]) {
       await page.setViewportSize({ width, height: 800 });
-      expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), `${width} px`).toBeLessThanOrEqual(0);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), `${width} px`).toBeLessThanOrEqual(0);
     }
     // Barre du pouce à 360 px, texte agrandi à 115 % : chaque libellé sur une ligne, dans son bouton.
     await page.setViewportSize({ width: 360, height: 800 });

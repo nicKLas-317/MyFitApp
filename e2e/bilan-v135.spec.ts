@@ -93,7 +93,7 @@ const stickNames = (page: Page) =>
 async function noOverflow(page: Page): Promise<void> {
   for (const width of [412, 360, 320]) {
     await page.setViewportSize({ width, height: 900 });
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `${width}px`).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `${width}px`).toBe(true);
     // Tableau des groupes dans son cadre ; en-têtes abrégés seulement à 320 px.
     const table = page.locator('.groups-table');
     if (await table.count()) {

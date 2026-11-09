@@ -4,6 +4,11 @@ Ce qui a changé à chaque version de MyFitApp, de la plus récente à la plus a
 
 Les commits sans changement de numéro (documentation, tests, workflow) sont rangés sous la version en cours à ce moment-là.
 
+## 1.43.0 — 9 nov. 2026
+
+- Nouvel écran « Cardio » (`#/cardio`), dernière entrée de l'onglet Progrès, sous « Mon poids » : « Cette semaine », « Ce mois », « Depuis le début » ; total de la période, puis une carte neutre par machine (rameur compris, salle et maison, machine retirée des réglages comprise), triées par temps : temps, nombre de fois, moyenne ; distance et moyenne sur les fois où elle est saisie ; répartition du temps par inclinaison pour le tapis. Sans objectif, rien sur l'accueil, dans les bilans ni le mail, aucun effet sur le reste
+- Tests : le contrôle « rien ne dépasse de l'écran » (test 225 et 21 autres contrôles) comparait la largeur de la page à `innerWidth`, qui grandit avec la page en émulation mobile (Pixel 7) : il ne voyait aucun débordement. Il la compare maintenant à la largeur de l'écran (`clientWidth`)
+
 ## 1.42.1 — 6 nov. 2026
 
 - Bilans (écran et mail) et bilan de progression : « série de 4 rouges à 100 kg → poids inférieur recommandé », « (série en cours : 3 rouges à 100 kg) », « série en cours : 2 rouges », libellé « Série en cours d’au moins 2 séances rouges. » ; plus de « 4ᵉ séance rouge de suite », « 3 de suite », « rouges de suite » ni « consécutives », inexacts depuis qu'une séance « Mal » ne coupe plus la série (1.42.0)

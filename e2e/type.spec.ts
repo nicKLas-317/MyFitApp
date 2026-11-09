@@ -6,7 +6,7 @@ import { addExercise, readExercises, reloadAfterWrites, startSession, writeSessi
 async function noOverflow(page: Page): Promise<void> {
   for (const width of [412, 360, 320]) {
     await page.setViewportSize({ width, height: 900 });
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `${width}px`).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `${width}px`).toBe(true);
   }
   await page.setViewportSize({ width: 412, height: 915 });
 }

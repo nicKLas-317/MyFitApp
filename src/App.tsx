@@ -11,6 +11,7 @@ import { UndoToast } from './ui/UndoToast';
 import { UpdatePrompt } from './ui/UpdatePrompt';
 import { Bilan } from './ui/screens/Bilan';
 import { BodyScreen } from './ui/screens/BodyScreen';
+import { CardioScreen } from './ui/screens/CardioScreen';
 import { DataScreen } from './ui/screens/DataScreen';
 import { History, HistoryDetail } from './ui/screens/History';
 import { ExerciseEdit } from './ui/screens/ExerciseEdit';
@@ -88,6 +89,8 @@ function Screen({ page, param, extra }: { page: string; param: string | undefine
       return <GroupProgress group={groupOfSegment(param)} toSets={extra === 'series'} />;
     case 'bilan-periode':
       return <PeriodReport key={`${param ?? ''}/${extra ?? ''}`} kind={kindOfSegment(param)} periodParam={extra} />;
+    case 'cardio':
+      return <CardioScreen />;
     case 'poids':
       return (
         <ErrorBoundary

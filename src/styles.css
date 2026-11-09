@@ -1005,6 +1005,40 @@ input[aria-invalid='true'] {
 }
 
 /*
+ * Écran « Cardio » (version 1.43.0) : une carte neutre par machine, sans graphique ni couleur de groupe. Chaque
+ * élément d'une ligne reste entier ; la ligne passe à la ligne entre deux éléments.
+ */
+.cardio-screen .frame {
+  display: grid;
+  gap: var(--space-1);
+  margin: var(--space-1) 0;
+}
+
+.cardio-screen .frame > * {
+  margin: 0;
+}
+
+.cardio-ranges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: var(--space-1) 0;
+}
+
+.cardio-machine-name {
+  font-size: var(--fs-3);
+  font-weight: 700;
+}
+
+.cardio-total-value {
+  font-size: var(--fs-4);
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+/*
  * Volet de fin de séance (§5.6) : fixé en bas de l'écran, toujours visible sans défiler. Tant qu'un ressenti manque,
  * l'action principale (bleue) est de le choisir.
  */

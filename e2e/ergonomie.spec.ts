@@ -168,7 +168,7 @@ function auditScreen(page: Page, scale = 1) {
       close: [...new Set(close)],
       titles,
       minChartLabel: Math.min(99, ...chartLabels.filter((n): n is number => typeof n === 'number')),
-      overflow: document.documentElement.scrollWidth - innerWidth,
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
       /** Éléments tactiles effectivement contrôlés (pour vérifier qu'aucun n'échappe au contrôle). */
       checked: targets.map(name),
     };
@@ -309,6 +309,27 @@ const SCREENS_225: [string, (page: Page) => Promise<void>][] = [
       await reloadAfterWrites(page);
       await page.goto('./#/exercice/curl-biceps-banc-incline');
       await expect(page.getByTestId('red-run')).toHaveCount(2);
+    }],
+    // Écran « Cardio » (version 1.43.0) : « Depuis le début », tapis (distance sur 1 fois sur 2, inclinaisons),
+    // rameur, machine retirée des réglages au nom long.
+    ['Cardio', async (page: Page) => {
+      await page.goto('./');
+      const sessions = await readSessions(page);
+      const [a, b] = ['sim-2026-10-19', 'sim-2026-10-15'].map((id) => sessions.find((x) => x.id === id)!);
+      await writeSessions(page, [
+        { ...a!, cardio: [
+          { id: 'c-tapis-1', machineId: 'tapis', machine: 'Tapis de marche', incline: 'haute', minutes: 20, distanceKm: 1.35 },
+          { id: 'c-rameur', machineId: 'rameur', machine: 'Rameur', minutes: 8, distanceKm: 1.6 },
+        ] },
+        { ...b!, cardio: [
+          { id: 'c-tapis-2', machineId: 'tapis', machine: 'Tapis de marche', incline: 'moyenne', minutes: 25 },
+          { id: 'c-retiree', machineId: 'cardio-escalier', machine: 'Escalier mécanique de la salle du bas', minutes: 12 },
+        ] },
+      ]);
+      await reloadAfterWrites(page);
+      await page.goto('./#/cardio');
+      await page.getByRole('group', { name: 'Période' }).getByRole('button', { name: 'Depuis le début' }).click();
+      await expect(page.getByTestId('cardio-machine')).toHaveCount(3);
     }],
     ['Accueil, activité ponctuelle ouverte', async (page: Page) => {
       await page.goto('./');

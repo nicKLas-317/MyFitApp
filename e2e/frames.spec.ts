@@ -79,7 +79,7 @@ async function checkFrames(page: Page, screen: string, minimum: number, coloring
   // Ni les pastilles de statut ni les cases du récapitulatif ne sont des cadres.
   await expect(page.locator('[data-status][data-frame], .recap-cell[data-frame]')).toHaveCount(0);
   // Rien ne dépasse de l'écran du smartphone.
-  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), `${screen} : débordement`).toBeLessThanOrEqual(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), `${screen} : débordement`).toBeLessThanOrEqual(0);
 }
 
 test.describe('Filtres du bilan et cadres de section', () => {

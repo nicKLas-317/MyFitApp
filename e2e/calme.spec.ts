@@ -56,7 +56,7 @@ async function atWidths(page: Page, check: (where: string) => Promise<void>): Pr
     const restore = large ? await largeText(page) : null;
     const where = `${width} px${large ? ', texte à 115 %' : ''}`;
     await check(where);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), where).toBeLessThanOrEqual(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), where).toBeLessThanOrEqual(0);
     await restore?.();
   }
   await page.setViewportSize({ width: 412, height: 915 });

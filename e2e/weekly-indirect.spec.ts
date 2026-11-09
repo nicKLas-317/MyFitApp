@@ -54,7 +54,7 @@ test.describe('Récapitulatif hebdomadaire : groupes secondaires (§19.6)', () =
         expect(box.left, `${width}px`).toBeGreaterThanOrEqual(frame.x);
         expect(box.right, `${width}px`).toBeLessThanOrEqual(frame.x + frame.width + 0.5);
       }
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `${width}px`).toBe(true);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `${width}px`).toBe(true);
       await test.info().attach(`recap-${width}`, { body: await recap.screenshot(), contentType: 'image/png' });
     }
   });

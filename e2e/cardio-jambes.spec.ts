@@ -72,7 +72,7 @@ test.describe('Cardio pour les jambes (version 1.41.0)', () => {
         expect(label.height, `${width}px`).toBeGreaterThanOrEqual(48);
         expect(label.right, `${width}px`).toBeLessThanOrEqual(width);
       }
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `${width}px`).toBe(true);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `${width}px`).toBe(true);
     }
     await page.setViewportSize({ width: 412, height: 915 });
     // Rameur coché, elliptique décoché : 20 + 15 + 10 = 45 → toujours ½ ; enregistré (la case de chaque machine changée).
@@ -105,7 +105,7 @@ test.describe('Cardio pour les jambes (version 1.41.0)', () => {
       const frame = (await recap.boundingBox())!;
       const cell = (await legs.boundingBox())!;
       expect(cell.x + cell.width, `${width}px`).toBeLessThanOrEqual(frame.x + frame.width + 0.5);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `${width}px`).toBe(true);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `${width}px`).toBe(true);
       await test.info().attach(`recap-${width}`, { body: await recap.screenshot(), contentType: 'image/png' });
     }
 
@@ -126,7 +126,7 @@ test.describe('Cardio pour les jambes (version 1.41.0)', () => {
       await page.setViewportSize({ width, height: 915 });
       const note = (await page.getByTestId('groups-cardio').boundingBox())!;
       expect(note.x + note.width, `${width}px`).toBeLessThanOrEqual(width);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `${width}px`).toBe(true);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `${width}px`).toBe(true);
     }
   });
 });
