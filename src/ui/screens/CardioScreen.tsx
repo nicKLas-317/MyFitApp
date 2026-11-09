@@ -88,8 +88,10 @@ function MachineCard({ m, total }: { m: MachineSummary; total: number }) {
             aria-label={`Inclinaison : ${inclinePercents(m.inclines).map((i) => `${INCLINE_LABELS[i.incline].toLowerCase()} ${i.percent} %`).join(', ')}`}
             data-testid="cardio-incline"
           >
-            {INCLINES.map((i) => (
-              <span key={i} className={`incline-${i}`} style={{ width: `${percent(m.inclines![i], inclineTotal)}%` }} />
+            {/* Un niveau sans minute n'est pas dessiné (pas de séparateur orphelin) ; largeur proportionnelle au temps,
+                séparateurs de 2 px déduits (version 1.44.1). */}
+            {INCLINES.filter((i) => m.inclines![i] > 0).map((i) => (
+              <span key={i} className={`incline-${i}`} style={{ flexGrow: m.inclines![i] }} />
             ))}
           </div>
           <p className="cardio-legend" aria-hidden="true">

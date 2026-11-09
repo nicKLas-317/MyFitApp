@@ -23,6 +23,8 @@
   --frame-grey: #b4bcc8; /* gris clair : abdominaux */
   /* Cadre neutre : tout ce qui ne concerne pas un groupe musculaire précis (§3.1). */
   --frame-neutral: #4a5163;
+  /* Gris de l'inclinaison « moyenne » et du contour « neutre » (écran Cardio, version 1.44.1). */
+  --incline-mid: #90949e;
   /* Couronne des records personnels : dorée, distincte des statuts et des couleurs de groupe. */
   --gold: #e8b631;
   --frame-width: 2px;
@@ -1061,8 +1063,7 @@ input[aria-invalid='true'] {
 }
 
 /* Barre du temps : proportionnelle au total de la période, la même pour toutes les machines. */
-.cardio-bar,
-.cardio-incline {
+.cardio-bar {
   display: flex;
   height: 16px;
   border-radius: 4px;
@@ -1074,21 +1075,36 @@ input[aria-invalid='true'] {
   background: var(--text);
 }
 
-/* Inclinaison (machine à inclinaison) : fine barre empilée sur toute la largeur, du plus foncé (neutre) au blanc (haute). */
+/*
+ * Inclinaison (machine à inclinaison, version 1.44.1) : fine barre empilée sur toute la largeur, segments séparés par
+ * 2 px du fond. Neutre : segment vide, contour gris ; moyenne : gris plein ; haute : blanc pur. Contrastes avec le fond
+ * (#0f1115) : contour et gris 6,2:1, blanc 18,9:1 ; gris et blanc entre eux 3,0:1 ; neutre et moyenne se
+ * distinguent par vide / plein (trois gris pleins ne peuvent pas tous être à 3:1 : il faudrait 27:1 du fond au blanc).
+ */
 .cardio-incline {
+  display: flex;
   height: 8px;
 }
 
+.cardio-incline > span {
+  flex-basis: 0;
+  border-radius: 2px;
+}
+
+.cardio-incline > span + span {
+  margin-left: 2px;
+}
+
 .incline-neutre {
-  background: #6b7385;
+  box-shadow: inset 0 0 0 2px var(--incline-mid);
 }
 
 .incline-moyenne {
-  background: #b4bcc8;
+  background: var(--incline-mid);
 }
 
 .incline-haute {
-  background: var(--text);
+  background: #ffffff;
 }
 
 .cardio-legend {

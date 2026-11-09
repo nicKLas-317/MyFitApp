@@ -4,6 +4,10 @@ Ce qui a changé à chaque version de MyFitApp, de la plus récente à la plus a
 
 Les commits sans changement de numéro (documentation, tests, workflow) sont rangés sous la version en cours à ce moment-là.
 
+## 1.44.1 — 9 nov. 2026
+
+- Écran « Cardio », barre d'inclinaison du tapis : neutre en segment vide avec un contour gris, moyenne gris plein (#90949e), haute blanc pur, séparateurs de 2 px, légende aux mêmes teintes ; au moins 3:1 entre deux teintes voisines et avec le fond (avant : gris moyenne et haute à 1,7:1, mal distingués sur le téléphone)
+
 ## 1.44.0 — 9 nov. 2026
 
 - Écran « Cardio » en barres (maquette C retouchée) : nom et temps en grand sur une ligne, barre du temps proportionnelle au total, la même barre blanche pour toutes les machines, une ligne de détails « 7 fois · moy. 8 min · 4,15 km · moy. 0,69 km 6/7 » (« sur 6 fois sur 7 » devient la pastille « 6/7 ») ; pour le tapis, une fine barre d'inclinaison séparée et sa légende au lieu des pourcentages. Avant : trois lignes de texte par machine

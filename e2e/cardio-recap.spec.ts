@@ -65,6 +65,8 @@ test.describe('Écran « Cardio » (versions 1.43.0 et 1.44.0)', () => {
     await expect(cards.nth(0).getByTestId('cardio-part').locator('[aria-hidden="true"]')).toHaveText('1/2');
     await expect(cards.nth(0).getByTestId('cardio-incline')).toHaveAttribute('aria-label', 'Inclinaison : neutre 25 %, moyenne 75 %, haute 0 %');
     await expect(cards.nth(0).locator('.cardio-legend')).toHaveText('neutremoyennehaute');
+    // Un niveau à 0 % (haute) n'est pas dessiné : pas de séparateur orphelin (version 1.44.1).
+    await expect(cards.nth(0).getByTestId('cardio-incline').locator('span')).toHaveCount(2);
     await expect(cards.nth(1).getByTestId('cardio-details')).toHaveText('2 fois · moy. 6 min · 1 km · moy. 1 km1/2 (distance notée 1 fois sur 2)');
     await expect(cards.nth(1).getByTestId('cardio-incline')).toHaveCount(0);
     await expect(cards.nth(1).locator('.cardio-legend')).toHaveCount(0);
@@ -90,13 +92,56 @@ test.describe('Écran « Cardio » (versions 1.43.0 et 1.44.0)', () => {
       return [Math.round((fill.getBoundingClientRect().width / e.getBoundingClientRect().width) * 1000) / 10, getComputedStyle(fill).backgroundColor, e.getBoundingClientRect().height];
     }));
     expect(bars).toEqual([[56.7, 'rgb(238, 240, 244)', 16], [28.4, 'rgb(238, 240, 244)', 16], [14.9, 'rgb(238, 240, 244)', 16]]);
-    const incline = await cards.nth(0).getByTestId('cardio-incline').evaluate((e) => ({
-      height: e.getBoundingClientRect().height,
-      full: Math.round(e.getBoundingClientRect().width) === Math.round(e.parentElement!.querySelector('.cardio-bar')!.getBoundingClientRect().width),
-      parts: [...e.children].map((c) => Math.round((c.getBoundingClientRect().width / e.getBoundingClientRect().width) * 1000) / 10),
-      below: e.getBoundingClientRect().top > e.parentElement!.querySelector('.cardio-details')!.getBoundingClientRect().bottom,
-    }));
-    expect(incline).toEqual({ height: 8, full: true, parts: [18.8, 56.3, 25], below: true });
+    const incline = await cards.nth(0).getByTestId('cardio-incline').evaluate((e) => {
+      const kids = [...e.children];
+      const widths = kids.map((c) => c.getBoundingClientRect().width);
+      const sum = widths.reduce((a, b) => a + b, 0);
+      return {
+        height: e.getBoundingClientRect().height,
+        full: Math.round(e.getBoundingClientRect().width) === Math.round(e.parentElement!.querySelector('.cardio-bar')!.getBoundingClientRect().width),
+        classes: kids.map((c) => c.className),
+        parts: widths.map((w) => (w / sum) * 100),
+        gaps: kids.slice(1).map((c, i) => Math.round((c.getBoundingClientRect().left - kids[i]!.getBoundingClientRect().right) * 10) / 10),
+        below: e.getBoundingClientRect().top > e.parentElement!.querySelector('.cardio-details')!.getBoundingClientRect().bottom,
+      };
+    });
+    expect({ ...incline, parts: undefined }).toEqual({ height: 8, full: true, classes: ['incline-neutre', 'incline-moyenne', 'incline-haute'], parts: undefined, gaps: [2, 2], below: true });
+    // Largeurs proportionnelles au temps (15, 45 et 20 min sur 80), séparateurs déduits.
+    incline.parts.forEach((p, i) => expect(Math.abs(p - [18.75, 56.25, 25][i]!), `segment ${i}`).toBeLessThan(0.5));
+
+    // Teintes (version 1.44.1) : neutre vide avec un contour gris, moyenne gris plein, haute blanc pur ; légende identique ;
+    // au moins 3:1 entre deux teintes voisines et avec le fond.
+    const tones = await cards.nth(0).evaluate((card) => {
+      const style = (sel: string) => getComputedStyle(card.querySelector(sel)!);
+      const ring = (sel: string) => /rgb\([^)]*\)/.exec(style(sel).boxShadow)?.[0] ?? '';
+      return {
+        bg: getComputedStyle(document.body).backgroundColor,
+        neutre: [style('.cardio-incline .incline-neutre').backgroundColor, ring('.cardio-incline .incline-neutre')],
+        moyenne: style('.cardio-incline .incline-moyenne').backgroundColor,
+        haute: style('.cardio-incline .incline-haute').backgroundColor,
+        legend: [style('.cardio-legend .incline-neutre').backgroundColor, ring('.cardio-legend .incline-neutre'), style('.cardio-legend .incline-moyenne').backgroundColor, style('.cardio-legend .incline-haute').backgroundColor],
+      };
+    });
+    expect(tones).toEqual({
+      bg: 'rgb(15, 17, 21)',
+      neutre: ['rgba(0, 0, 0, 0)', 'rgb(144, 148, 158)'],
+      moyenne: 'rgb(144, 148, 158)',
+      haute: 'rgb(255, 255, 255)',
+      legend: ['rgba(0, 0, 0, 0)', 'rgb(144, 148, 158)', 'rgb(144, 148, 158)', 'rgb(255, 255, 255)'],
+    });
+    const lum = (rgb: string) => {
+      const [r, g, b] = rgb.match(/\d+/g)!.slice(0, 3).map((v) => {
+        const c = Number(v) / 255;
+        return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+    };
+    const contrast = (a: string, b: string) => (Math.max(lum(a), lum(b)) + 0.05) / (Math.min(lum(a), lum(b)) + 0.05);
+    // Contour du neutre et gris de la moyenne contre le fond ; intérieur vide du neutre (le fond) contre la moyenne ;
+    // moyenne contre haute ; haute contre le fond.
+    for (const [a, b, name] of [[tones.neutre[1]!, tones.bg, 'contour neutre / fond'], [tones.moyenne, tones.bg, 'moyenne / fond'], [tones.bg, tones.moyenne, 'neutre (vide) / moyenne'], [tones.moyenne, tones.haute, 'moyenne / haute'], [tones.haute, tones.bg, 'haute / fond']] as const) {
+      expect(contrast(a, b), name).toBeGreaterThanOrEqual(3);
+    }
 
     // Rien ne dépasse de l'écran ni des cartes : les lignes passent à la ligne entre deux éléments, jamais au milieu.
     for (const width of [412, 360, 320]) {
