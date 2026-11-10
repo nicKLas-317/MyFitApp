@@ -7,4 +7,6 @@ playwright-report
 
 # Données personnelles réelles (séances, pesées, sauvegardes) : jamais versionnées.
 perso/
+# Sauvegardes exportées par l'appli, où qu'elles soient dans le dépôt (elles vont dans perso/).
+myfitapp-sauvegarde-*.json
 *.tsbuildinfo
