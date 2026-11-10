@@ -131,7 +131,8 @@ test.describe('Changer le lieu d’une séance en cours (version 1.30.0)', () =>
     await page.getByRole('button', { name: 'Retour à l’accueil' }).click();
     const recap = page.getByTestId('weekly-recap');
     await expect(recap).toContainText('2 séances · dont 1 maison');
-    await expect(recap.locator('[data-group="pectoraux"] .recap-count')).toHaveText(/^ \(1×\s+·\s+\+3\s+séries\s+maison\)$/);
+    // Version 1.45.0 : salle et maison comptent leurs séries en entier (3 + 3) ; le lieu final se lit dans l'en-tête.
+    await expect(recap.locator('[data-group="pectoraux"] .recap-count')).toHaveText(/^ \(6\s+séries\)$/);
     await page.goto('./#/exercice/pec-deck');
     await expect(page.getByTestId('next-target').first()).toHaveText('3 × 9 à 30 kg');
     await expect(page.getByTestId('sheet-home').getByTestId('next-target')).toHaveText('3 × 9 à 30 kg');

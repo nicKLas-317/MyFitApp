@@ -53,7 +53,7 @@ test.describe('Compléter une séance terminée le même jour (version 1.28.0)',
     expect(saved[0]).not.toHaveProperty('locked');
     expect(saved[0]!.performances.map((p) => p.variantId)).toEqual(['developpe-incline--halteres']);
 
-    // Complétée avec 2 séries de pompes : une seule séance, deux exercices ; récapitulatif « +5 séries maison », vert.
+    // Complétée avec 2 séries de pompes : une seule séance, deux exercices ; récapitulatif « 5 séries », orange (version 1.45.0).
     await link.click();
     await doExercise(await addExercise(page, 'pompes', 'Pompes — Classiques'), 2, 'Bien');
     await expect(incline.getByTestId('locked')).toBeVisible();
@@ -72,8 +72,9 @@ test.describe('Compléter une séance terminée le même jour (version 1.28.0)',
     await page.getByRole('button', { name: 'Retour à l’accueil' }).click();
     const recap = page.getByTestId('weekly-recap');
     await expect(recap).toContainText('1 séance · dont 1 maison');
-    await expect(recap.locator('[data-group="pectoraux"] .recap-count')).toHaveText(/^ \(\+5\s+séries\s+maison\)$/);
-    await expect(recap.locator('[data-group="pectoraux"]')).toHaveAttribute('data-color', 'vert');
+    // Version 1.45.0 : la maison compte ses séries en entier, comme la salle : 3 + 2 = 5 séries, orange.
+    await expect(recap.locator('[data-group="pectoraux"] .recap-count')).toHaveText(/^ \(5\s+séries\)$/);
+    await expect(recap.locator('[data-group="pectoraux"]')).toHaveAttribute('data-color', 'orange');
 
     // À la salle, 12 h – 12 h 30 ; complétée à 18 h depuis le détail (bouton principal), terminée à 18 h 15 : 45 min.
     await page.clock.setFixedTime(new Date('2026-10-27T12:00:00'));

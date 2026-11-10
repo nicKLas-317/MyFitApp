@@ -67,6 +67,8 @@ function layout(page: Page) {
       overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
       afterRecap: !list || recap.nextElementSibling === list,
       startVisible: start.getBoundingClientRect().bottom <= nav.top,
+      /** De combien « Démarrer » dépasse sous la barre d'onglets (négatif : marge restante), pour le message d'échec. */
+      startExcess: Math.round(start.getBoundingClientRect().bottom - nav.top),
       fontSize: list ? getComputedStyle(list.querySelector('li') ?? list).fontSize : null,
     };
   });
@@ -79,15 +81,19 @@ const SIZES = [[412, 915, false], [360, 800, false], [320, 711, false], [360, 80
 /**
  * Cas le plus chargé de l'accueil (version 1.40.0), mercredi 11 nov. 12 h : question du badminton de lundi, 7 groupes au
  * récapitulatif, 3 alertes (vacances les deux dernières semaines), séance du matin à compléter, séance pour compléter la
- * semaine, rappel de sauvegarde ; avec ou sans séance prévue. `cardio` (version 1.41.0) : 50 min de tapis dans la séance
- * du matin, « Jambes (1× · +50 min cardio) · aujourd’hui » et « · 50 min de cardio » dans l'en-tête.
+ * semaine, rappel de sauvegarde ; avec ou sans séance prévue. Version 1.45.0 : la séance du matin a quatre exercices de
+ * jambes (12 séries : un nombre à deux chiffres dans la case, « Jambes (12 séries) · aujourd’hui »). `cardio` (version
+ * 1.41.0) : 50 min de tapis en plus dans la séance du matin, « Jambes (15 séries · +50 min cardio) · aujourd’hui » et
+ * « · 50 min de cardio » dans l'en-tête.
  */
 async function openLoaded(page: Page, withPlan: boolean, cardio = false): Promise<void> {
   await open(page, { vacations: ['2026-10-26', '2026-11-02'], dosDown: [], pecDown: [] });
   const t = new Date(2026, 10, 11, 8).getTime();
   const morning: Session = {
     id: 'matin-11', name: defaultSessionName(t), date: '2026-11-11', startedAt: t, endedAt: t + 3_600_000, createdAt: t, updatedAt: t, origin: 'app', state: 'done',
-    performances: [{ variantId: 'presse-a-cuisses', weightKg: 60, targetReps: 10, plannedSets: 3, reps: [10, 10, 10], feeling: 'bien' }],
+    performances: ['presse-a-cuisses', 'leg-extension', 'leg-curl', 'adducteurs-machine'].map((variantId) => (
+      { variantId, weightKg: 60, targetReps: 10, plannedSets: 3, reps: [10, 10, 10], feeling: 'bien' as const }
+    )),
     ...(cardio ? { cardio: [{ id: 'matin-11-tapis', machineId: 'tapis', machine: 'Tapis de marche', incline: 'neutre' as const, minutes: 50 }] } : {}),
   };
   const plan: SessionPlan | null = withPlan
@@ -101,7 +107,7 @@ async function openLoaded(page: Page, withPlan: boolean, cardio = false): Promis
         open.onsuccess = () => {
           const tx = open.result.transaction('meta', 'readwrite');
           const meta = tx.objectStore('meta');
-          meta.put({ groups: ['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes', 'abdominaux'], redThreshold: 2 }, 'weeklyRecap');
+          meta.put({ groups: ['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes', 'abdominaux'], redSets: 10 }, 'weeklyRecap');
           for (const key of ['activities', 'lastExportAt', 'plan']) meta.delete(key);
           if (plan) meta.put(plan, 'plan');
           tx.oncomplete = () => (open.result.close(), resolve());
@@ -291,7 +297,8 @@ test.describe('Alerte « groupe moins travaillé »', () => {
       await openLoaded(page, withPlan);
       const label = withPlan ? 'avec séance prévue' : 'sans séance prévue';
       await expect(page.locator('.activity-banner')).toContainText('Badminton lundi soir');
-      await expect(page.getByTestId('weekly-recap').locator('.recap-cell')).toHaveCount(7);
+      await expect(page.getByTestId('weekly-recap').locator('.recap-cell[data-group]')).toHaveCount(7);
+      await expect(page.getByTestId('weekly-recap').locator('[data-group="jambes"]')).toHaveText('Jambes (12\u00a0séries) · aujourd’hui');
       await expect(page.getByTestId('group-alerts-summary')).toHaveText('3 groupes sous ta moyenne : Pectoraux, Dos, Épaules');
       await expect(page.getByRole('button', { name: 'Compléter la séance de ce matin' })).toBeVisible();
       await expect(page.getByTestId('week-suggestion')).toBeVisible();
@@ -303,7 +310,7 @@ test.describe('Alerte « groupe moins travaillé »', () => {
         const restore = big ? await largeText(page) : null;
         const l = await layout(page);
         const size = `${label}, ${width} × ${height} px${big ? ', texte à 115 %' : ''}`;
-        expect(l, size).toMatchObject({ afterRecap: true, startVisible: true });
+        expect(l, `${size} ${JSON.stringify(l)}`).toMatchObject({ afterRecap: true, startVisible: true });
         expect(l.minHeight, size).toBeGreaterThanOrEqual(48);
         expect(l.closest, size).toBeGreaterThanOrEqual(8);
         expect(l.overflow, size).toBeLessThanOrEqual(0);
@@ -313,11 +320,11 @@ test.describe('Alerte « groupe moins travaillé »', () => {
     }
     // Avec 50 min de tapis dans la séance du matin (versions 1.41.0 et 1.41.1) : « Démarrer » à l'écran à toutes les
     // tailles. Le titre du récapitulatif n'est raccourci que s'il le faut : complet à 412 × 915, 360 × 800 et 360 × 800
-    // avec le texte à 115 % (« Démarrer » y tient déjà) ; à 320 × 711, sans le cardio (puis sans les noms de jours si
-    // besoin).
+    // avec le texte à 115 % (« Démarrer » y tient déjà) ; à 320 × 711, sans le cardio, puis sans les noms de jours, puis
+    // (version 1.45.0, forme « compact ») la case Jambes sans « +50 min cardio ».
     for (const withPlan of [false, true]) {
       await openLoaded(page, withPlan, true);
-      await expect(page.getByTestId('weekly-recap').locator('[data-group="jambes"]')).toHaveText('Jambes (1× · +50\u00a0min\u00a0cardio) · aujourd’hui');
+      await expect(page.getByTestId('weekly-recap').locator('[data-group="jambes"]')).toHaveText('Jambes (15\u00a0séries · +50\u00a0min\u00a0cardio) · aujourd’hui');
       for (const [width, height, big] of SIZES) {
         await page.setViewportSize({ width, height });
         const restore = big ? await largeText(page) : null;
@@ -328,11 +335,16 @@ test.describe('Alerte « groupe moins travaillé »', () => {
         else await expect(title, size).toHaveAttribute('data-form', 'full');
         const form = await title.getAttribute('data-form');
         await expect(title, size).toHaveText(
-          form === 'short' ? /^Semaine du 9 au 15\snov\.\s: 2\sséances$/ : /^Semaine du lun\.\s9 au dim\.\s15\snov\.\s: 2\sséances(\s·\s50\smin\sde cardio)?$/,
+          form === 'short' || form === 'compact' ? /^Semaine du 9 au 15\snov\.\s: 2\sséances$/ : /^Semaine du lun\.\s9 au dim\.\s15\snov\.\s: 2\sséances(\s·\s50\smin\sde cardio)?$/,
         );
         if (form === 'noCardio') await expect(title, size).not.toContainText('cardio');
+        // Forme « compact » (version 1.45.0) : la case Jambes sans la mention du cardio (ses 3 séries restent comptées).
+        await expect(page.getByTestId('weekly-recap').locator('[data-group="jambes"]'), size).toHaveText(
+          form === 'compact' ? 'Jambes (15\u00a0séries) · aujourd’hui' : 'Jambes (15\u00a0séries · +50\u00a0min\u00a0cardio) · aujourd’hui',
+        );
+        if (width !== 320) expect(form, size).not.toBe('compact');
         const l = await layout(page);
-        expect(l, size).toMatchObject({ afterRecap: true, startVisible: true });
+        expect(l, `${size} ${JSON.stringify(l)}`).toMatchObject({ afterRecap: true, startVisible: true });
         expect(l.minHeight, size).toBeGreaterThanOrEqual(48);
         expect(l.closest, size).toBeGreaterThanOrEqual(8);
         expect(l.overflow, size).toBeLessThanOrEqual(0);

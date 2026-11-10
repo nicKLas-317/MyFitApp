@@ -22,7 +22,7 @@ async function noOverflow(page: Page): Promise<void> {
 }
 
 test.describe('Activités habituelles hors salle', () => {
-  test('202. Badminton : question après 22 h 30 le lundi, « Oui » compté en indirect le mardi, historique, bilan, suppression, « Non », sans réponse jusqu’au dimanche, désactivation, export ; format smartphone', async ({ page }) => {
+  test('202. Badminton : question après 22 h 30 le lundi, « Oui » compté (3 séries) le mardi, historique, bilan, suppression, « Non », sans réponse jusqu’au dimanche, désactivation, export ; format smartphone', async ({ page }) => {
     // Lundi 22 h : pas encore de question.
     await openAt(page, '2026-10-19', '22:00');
     await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
@@ -42,15 +42,16 @@ test.describe('Activités habituelles hors salle', () => {
     await banner(page).getByRole('button', { name: 'Oui' }).click();
     await expect(banner(page)).toHaveCount(0);
     await expect(recapTitle(page)).toContainText(/0\s+séance · 1\s+activité/);
-    await expect(recapCell(page, 'jambes')).toContainText(/\+1\s+indirect/);
+    // Version 1.45.0 : une activité confirmée compte 3 séries pour chacun de ses groupes, avec son nom.
+    await expect(recapCell(page, 'jambes')).toContainText(/3\s+séries\s+·\s+badminton/);
     await expect(recapCell(page, 'jambes')).toContainText('aujourd’hui');
 
-    // Mardi : jambes et épaules « +1 indirect · hier », vertes ; pas de question.
+    // Mardi : jambes et épaules « 3 séries · badminton · hier », orange (3 séries) ; pas de question.
     await openAt(page, '2026-10-20', '09:00');
     await expect(banner(page)).toHaveCount(0);
     for (const g of ['jambes', 'epaules']) {
-      await expect(recapCell(page, g)).toHaveText(/^(Jambes|Épaules) \(\+1\s+indirect\) · hier$/);
-      await expect(recapCell(page, g)).toHaveAttribute('data-color', 'vert');
+      await expect(recapCell(page, g)).toHaveText(/^(Jambes|Épaules) \(3\s+séries\s+·\s+badminton\) · hier$/);
+      await expect(recapCell(page, g)).toHaveAttribute('data-color', 'orange');
     }
     await expect(recapCell(page, 'dos')).toHaveText('Dos');
     await test.info().attach('accueil-mardi', { body: await page.screenshot(), contentType: 'image/png' });
@@ -224,9 +225,9 @@ test.describe('Activités habituelles hors salle', () => {
     await form.getByRole('button', { name: 'Enregistrer l’activité' }).click();
     await expect(form).toHaveCount(0);
     await expect(page.getByRole('status').filter({ hasText: 'Activité enregistrée' })).toHaveText('Activité enregistrée : Futsal · 1 h 15, 23 oct. 2026.');
-    // Comptée comme une activité confirmée : en-tête et travail indirect « aujourd'hui ».
+    // Comptée comme une activité confirmée : en-tête et 3 séries « aujourd'hui » (version 1.45.0).
     await expect(recapTitle(page)).toContainText(/0\s+séance · 1\s+activité/);
-    await expect(recapCell(page, 'jambes')).toContainText(/\+1\s+indirect/);
+    await expect(recapCell(page, 'jambes')).toContainText(/3\s+séries\s+·\s+futsal/);
     await expect(recapCell(page, 'jambes')).toContainText('aujourd’hui');
     await expect(banner(page)).toContainText('Badminton lundi soir');
 
@@ -249,7 +250,7 @@ test.describe('Activités habituelles hors salle', () => {
     await form.getByRole('button', { name: 'Enregistrer l’activité' }).click();
     await expect(page.getByRole('status').filter({ hasText: 'Activité enregistrée' })).toHaveText('Activité enregistrée : Escalade · 1 h 30, 21 oct. 2026.');
     await expect(recapTitle(page)).toContainText(/0\s+séance · 2\s+activités/);
-    await expect(recapCell(page, 'dos')).toContainText(/\+1\s+indirect/);
+    await expect(recapCell(page, 'dos')).toHaveText(/^Dos \(3\s+séries\s+·\s+escalade\)$/);
     // Hors habitude active, la plus récente en tête (futsal du 23, escalade du 21), puis le badminton.
     await add.click();
     await expect(choices.getByRole('button')).toHaveText(['Futsal', 'Escalade', 'Badminton', 'Autre']);

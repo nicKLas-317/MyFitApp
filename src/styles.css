@@ -2623,7 +2623,8 @@ fieldset.frame > legend + * {
 
 /*
  * Groupes travaillés (version 1.37.0) : bâtons verticaux au-dessus du tableau, à la couleur du groupe ; noms entiers,
- * courts, ou courts sur deux rangs alternés (jamais inclinés) selon la place ; tableau sans barre, case vide pour zéro.
+ * courts, ou courts sur deux rangs alternés (jamais inclinés) selon la place ; tableau sans barre, case vide pour zéro,
+ * total en séries sous le nom du groupe (version 1.45.0).
  */
 .groups-sticks {
   display: grid;
@@ -2708,6 +2709,15 @@ fieldset.frame > legend + * {
 .groups-table tbody .groups-name {
   font-size: var(--fs-2);
   font-weight: 600;
+}
+
+/* Total du groupe en séries, sous son nom (version 1.45.0). */
+.groups-sets {
+  display: block;
+  font-size: var(--fs-1);
+  font-weight: 400;
+  color: var(--muted);
+  line-height: 1.2;
 }
 
 .groups-num {

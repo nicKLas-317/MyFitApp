@@ -39,7 +39,7 @@ const recapOf = (sessions: Session[], machines: readonly CardioMachine[] = MACHI
 const legs = (sessions: Session[], machines: readonly CardioMachine[] = MACHINES, now = NOW) => recapOf(sessions, machines, now).cells.find((c) => c.group === 'jambes')!;
 
 describe('Cardio pour les jambes, version 1.41.0', () => {
-  it('295. Toutes les machines sauf le rameur (réglable, nouvelles machines comprises) ; à partir de 45 min dans la semaine, salle et maison confondues : jambes +½, « +45 min cardio », au plus ½, sans le plafond de 1 par jour ; rien en dessous', () => {
+  it('295. Toutes les machines sauf le rameur (réglable, nouvelles machines comprises) ; à partir de 45 min dans la semaine, salle et maison confondues : jambes +3 séries (version 1.45.0), « +45 min cardio », au plus 3, sans plafond par jour ; rien en dessous', () => {
     // Réglage : coché par défaut, décoché pour le rameur ; une nouvelle machine compte ; une liste enregistrée avant la
     // version 1.41.0 (sans la case) : le rameur, même renommé, ne compte pas.
     expect(DEFAULT_CARDIO_MACHINES.map((m) => [m.id, machineCountsForLegs(m)])).toEqual([
@@ -54,10 +54,12 @@ describe('Cardio pour les jambes, version 1.41.0', () => {
       { id: 'tapis', name: 'Tapis', incline: true },
     ]);
 
-    // 20 min de tapis lundi + 25 min de vélo jeudi à la maison : 45 min → jambes ½ (vert), « +45 min cardio ».
+    // 20 min de tapis lundi + 25 min de vélo jeudi à la maison : 45 min → jambes 3 séries (orange à partir de 3,
+    // version 1.45.0), « +45 min cardio ».
+    const nb = '\u00a0';
     const base = [session('a', 26, [['tapis', 20]]), session('b', 29, [['velo', 25]], [], { home: true })];
-    expect(legs(base)).toMatchObject({ count: 0, indirect: 0, cardio: 45, score: 0.5, color: 'vert', recency: null });
-    expect(recapCountLabel(legs(base))).toBe('+45 min cardio');
+    expect(legs(base)).toMatchObject({ count: 0, indirect: 0, cardio: 45, score: 3, color: 'orange', recency: null });
+    expect(recapCountLabel(legs(base))).toBe(`3${nb}séries · +45${nb}min${nb}cardio`);
     expect(LEG_CARDIO_MINUTES).toBe(45);
     // 44 min : rien (ni score ni mention).
     const short = [session('a', 26, [['tapis', 20]]), session('b', 29, [['velo', 24]])];
@@ -66,7 +68,7 @@ describe('Cardio pour les jambes, version 1.41.0', () => {
     // Le rameur ne compte pas : 60 min de rameur + 30 de tapis → 30, rien ; le total réel affiché ne compte que les
     // machines prises en compte (elliptique, autre, nouvelle machine comprises).
     expect(legs([session('r', 27, [['rameur', 60], ['tapis', 30]])])).not.toHaveProperty('cardio');
-    expect(legs([session('e', 27, [['rameur', 60], ['elliptique', 15], ['autre', 10], ['marches', 20]])])).toMatchObject({ cardio: 45, score: 0.5 });
+    expect(legs([session('e', 27, [['rameur', 60], ['elliptique', 15], ['autre', 10], ['marches', 20]])])).toMatchObject({ cardio: 45, score: 3 });
     // Réglage changé : le rameur coché compte, le tapis décoché ne compte plus.
     const changed = MACHINES.map((m) => (m.id === 'rameur' ? { ...m, legs: true } : m.id === 'tapis' ? { ...m, legs: false } : m));
     expect(legs([session('r', 27, [['rameur', 50]])], changed)).toMatchObject({ cardio: 50 });
@@ -74,15 +76,15 @@ describe('Cardio pour les jambes, version 1.41.0', () => {
     // Une machine retirée de la liste depuis : règle par défaut (le tapis compte, le rameur non).
     expect(legCardioMinutes([session('a', 26, [['tapis', 20], ['rameur', 30]])], [], () => true)).toBe(20);
 
-    // Plafond : ½ par semaine, quel que soit le total (200 min → ½, total réel affiché).
-    expect(legs([session('a', 26, [['tapis', 100]]), session('b', 28, [['velo', 100]])])).toMatchObject({ cardio: 200, score: 0.5 });
-    // Sans plafond de 1 par jour : leg extension à la salle (1) et 50 min de tapis le même jour → 1,5, orange.
+    // Plafond : 3 séries par semaine, quel que soit le total (200 min → 3, total réel affiché).
+    expect(legs([session('a', 26, [['tapis', 100]]), session('b', 28, [['velo', 100]])])).toMatchObject({ cardio: 200, score: 3 });
+    // Sans plafond par jour : leg extension à la salle (3 séries) et 50 min de tapis le même jour → 6, orange.
     const sameDay = [session('j', 28, [['tapis', 50]], [p('leg-extension')])];
-    expect(legs(sameDay)).toMatchObject({ count: 1, cardio: 50, score: 1.5, color: 'orange', recency: null });
-    expect(recapCountLabel(legs(sameDay))).toBe('1× · +50 min cardio');
-    // Avec du travail indirect (badminton…) et des séries à la maison : mentions dans l'ordre, seuils inchangés.
+    expect(legs(sameDay)).toMatchObject({ count: 1, cardio: 50, score: 6, color: 'orange', recency: null });
+    expect(recapCountLabel(legs(sameDay))).toBe(`6${nb}séries · +50${nb}min${nb}cardio`);
+    // Avec des séries à la maison (en entier, version 1.45.0) et une autre séance : 3 + 3 + 3 + 3 = 12, rouge.
     const all = [...sameDay, session('h', 29, [], [p('mollets-machine')], { home: true }), session('k', 27, [], [p('leg-extension')])];
-    expect(legs(all)).toMatchObject({ count: 2, cardio: 50, score: 2.5 + 0.25, color: 'rouge' });
+    expect(legs(all)).toMatchObject({ count: 2, cardio: 50, score: 12, color: 'rouge' });
 
     // Semaine du lundi au dimanche : le cardio de la semaine précédente ne compte pas ; une séance en cours non plus.
     expect(legs([session('old', 25, [['tapis', 60]])])).not.toHaveProperty('cardio');
@@ -99,7 +101,7 @@ describe('Cardio pour les jambes, version 1.41.0', () => {
     expect(recapTitle(recapOf([chest]))).toBe('Semaine du lun. 26 oct. au dim. 1 nov. : 1 séance · 1 h 00 de cardio');
   });
 
-  it('296. Bilans de la semaine et du mois (½ par semaine sur le mois), texte du mail, séance pour compléter la semaine ; aucun effet sur les séries par semaine, l’indice, l’alerte ni le moteur', () => {
+  it('296. Bilans de la semaine et du mois (3 séries par semaine sur le mois, version 1.45.0), texte du mail, séance pour compléter la semaine ; aucun effet sur les séries par semaine, l’indice, l’alerte ni le moteur', () => {
     // Octobre 2026 : semaine du 5 (50 min), du 12 (30 min : rien), du 19 (tapis 40 + rameur 20 : rien), du 26 (62 min,
     // dont 20 le 1er novembre, hors du mois : 42 dans octobre, rien). Semaine du 28 sept. : 45 min le 1er octobre.
     const sessions = [
@@ -121,32 +123,33 @@ describe('Cardio pour les jambes, version 1.41.0', () => {
     };
     const legsOf = (r: ReturnType<typeof reportOf>) => ({ group: r.report.groups.find((g) => g.group === 'jambes'), bar: r.screen.bars.find((b) => b.group === 'jambes') });
 
-    // Semaine du 5 octobre : 50 min (salle et maison) → « Jambes : +50 min cardio », bâton ½ ; jambes travaillées.
+    // Semaine du 5 octobre : 50 min (salle et maison) → « Jambes : 3 séries (+50 min cardio) », bâton 3 ; jambes
+    // travaillées.
     const w5 = reportOf(parsePeriodKey('week', '2026-10-05')!);
-    expect(legsOf(w5)).toEqual({ group: { group: 'jambes', count: 0, indirect: 0, cardio: 50 }, bar: { group: 'jambes', direct: 0, indirect: 0, home: 0, cardio: 0.5 } });
-    expect(w5.text).toContain('- Jambes : +50 min cardio');
+    expect(legsOf(w5)).toEqual({ group: { group: 'jambes', count: 0, indirect: 0, cardio: 50, sets: 3 }, bar: { group: 'jambes', sets: 3 } });
+    expect(w5.text).toContain('- Jambes : 3 séries (+50 min cardio)');
     expect(w5.text).not.toMatch(/Non travaillés : [^\n]*Jambes/);
-    // Semaine du 19 : 40 min (le rameur ne compte pas) → rien de plus que la séance de jambes.
+    // Semaine du 19 : 40 min (le rameur ne compte pas) → rien de plus que la séance de jambes (3 séries).
     const w19 = reportOf(parsePeriodKey('week', '2026-10-19')!);
-    expect(legsOf(w19).group).toEqual({ group: 'jambes', count: 1, indirect: 0 });
-    expect(w19.text).toContain('- Jambes : 1×\n');
-    // Semaine du 26 : 62 min sur toute la semaine → ½, comme le récapitulatif.
+    expect(legsOf(w19).group).toEqual({ group: 'jambes', count: 1, indirect: 0, sets: 3 });
+    expect(w19.text).toContain('- Jambes : 3 séries (1 séance)\n');
+    // Semaine du 26 : 62 min sur toute la semaine → 3 séries, comme le récapitulatif.
     const w26 = reportOf(parsePeriodKey('week', '2026-10-26')!);
-    expect(legsOf(w26).group).toMatchObject({ cardio: 62 });
-    expect(legsOf(w26).bar).toMatchObject({ cardio: 0.5 });
-    expect(legs(sessions, MACHINES, new Date(2026, 10, 1, 20).getTime())).toMatchObject({ cardio: 62, score: 0.5 });
+    expect(legsOf(w26).group).toMatchObject({ cardio: 62, sets: 3 });
+    expect(legsOf(w26).bar).toEqual({ group: 'jambes', sets: 3 });
+    expect(legs(sessions, MACHINES, new Date(2026, 10, 1, 20).getTime())).toMatchObject({ cardio: 62, score: 3 });
 
     // Octobre : semaine par semaine, sur la partie de chaque semaine comprise dans le mois : le 1er (45), la semaine du
-    // 5 (50) ; pas celle du 26 (42 en octobre). 95 min, 2 semaines → bâton 1.
+    // 5 (50) ; pas celle du 26 (42 en octobre). 95 min, 2 semaines → 6 séries, plus les 3 du leg extension : bâton 9.
     const oct = reportOf(parsePeriodKey('month', '2026-10')!);
     expect(legsOf(oct)).toEqual({
-      group: { group: 'jambes', count: 1, indirect: 0, cardio: 95, cardioWeeks: 2 },
-      bar: { group: 'jambes', direct: 1, indirect: 0, home: 0, cardio: 1 },
+      group: { group: 'jambes', count: 1, indirect: 0, cardio: 95, cardioWeeks: 2, sets: 9 },
+      bar: { group: 'jambes', sets: 9 },
     });
-    expect(oct.text).toContain('- Jambes : 1× · +95 min cardio (2 semaines)');
+    expect(oct.text).toContain('- Jambes : 9 séries (1 séance, +95 min cardio sur 2 semaines)');
     // Rameur coché, tapis décoché : la semaine du 19 compte le rameur (20 min, rien), plus rien d'autre en octobre.
     const changed = MACHINES.map((m) => (m.id === 'tapis' ? { ...m, legs: false } : m));
-    expect(legsOf(reportOf(parsePeriodKey('month', '2026-10')!, changed)).group).toEqual({ group: 'jambes', count: 1, indirect: 0 });
+    expect(legsOf(reportOf(parsePeriodKey('month', '2026-10')!, changed)).group).toEqual({ group: 'jambes', count: 1, indirect: 0, sets: 3 });
 
     // Aucun effet sur les séries par semaine, l'indice par groupe, l'alerte ni le moteur : identiques sans cardio.
     const noCardio = sessions.map((s) => ({ ...s, cardio: undefined }));
@@ -166,27 +169,38 @@ describe('Cardio pour les jambes, version 1.41.0', () => {
       session('l', 26, [['tapis', 40]], [p('leg-extension'), p('tirage-vertical'), p('developpe-epaules-machine')]),
       session('m', 27, [], [p('chest-press'), p('curl-biceps-halteres', 12), p('extension-triceps-poulie')]),
     ];
-    const suggest = (sessions: Session[], machines: readonly CardioMachine[] = MACHINES) =>
-      weekSuggestion({ sessions, exercises: LIB, settings: SETTINGS, recap: DEFAULT_RECAP_SETTINGS, machines, now })!;
+    const suggest = (sessions: Session[], redSets = DEFAULT_RECAP_SETTINGS.redSets) =>
+      weekSuggestion({ sessions, exercises: LIB, settings: SETTINGS, recap: { ...DEFAULT_RECAP_SETTINGS, redSets }, machines: MACHINES, now })!;
     // L'échauffement proposé (tapis 40 min, le premier cardio de la dernière séance à la salle) porte la semaine à
-    // 80 min : les jambes (1 + ½ de cardio + l'exercice proposé) atteignent l'objectif.
+    // 80 min : les jambes (3 séries + le leg extension proposé, 3 + 3 de cardio) arrivent à 9 séries, sous 10, à
+    // l'objectif avec un seuil de 9 (version 1.45.0).
     const s = suggest(week);
     expect(s.cardio).toMatchObject({ machineId: 'tapis', minutes: 40 });
-    expect(s.exercises.map((e) => e.group)).toContain('jambes');
-    expect(s.reached).toContain('jambes');
-    // Avec déjà 50 min de tapis cette semaine, les jambes sont à 1,5 : à ½ de l'objectif, complétées par un groupe
-    // secondaire si possible, sinon un exercice ; sans le tapis (décoché), elles restent à 1.
+    expect(s.exercises.filter((e) => e.group === 'jambes').map((e) => e.variantId)).toEqual(['leg-extension']);
+    expect(s.remaining).toContain('jambes');
+    expect(suggest(week, 9).reached).toContain('jambes');
+    // Contre-test : sans cardio à la salle, pas d'échauffement : 3 + 3 = 6, sous 9.
+    const noCardio = suggest(week.map(({ cardio: _c, ...x }) => x), 9);
+    expect(noCardio.cardio).toBeNull();
+    expect(noCardio.remaining).toContain('jambes');
+    // Avec déjà 50 min de tapis cette semaine, les jambes sont à 6 séries ; sans le tapis (décoché), à 3.
     const more = [...week.slice(0, 1).map((x) => ({ ...x, cardio: [{ ...x.cardio![0]!, minutes: 50 }] })), week[1]!];
     const score = (machines: readonly CardioMachine[]) => weeklyRecap(more, LIB, now, DEFAULT_RECAP_SETTINGS, [], machines).cells.find((c) => c.group === 'jambes')!.score;
-    expect(score(MACHINES)).toBe(1.5);
-    expect(score(MACHINES.map((m) => (m.id === 'tapis' ? { ...m, legs: false } : m)))).toBe(1);
+    expect(score(MACHINES)).toBe(6);
+    expect(score(MACHINES.map((m) => (m.id === 'tapis' ? { ...m, legs: false } : m)))).toBe(3);
   });
 
   it('298. Titre du récapitulatif raccourci (version 1.41.1) : sans « · N min de cardio », puis sans les noms de jours', () => {
     const nb = '\u00a0';
     const week = recapOf([session('a', 26, [['tapis', 50]], [p('leg-extension')]), session('b', 27, [], [p('pompes', 0)], { home: true })], MACHINES, new Date(2026, 10, 1, 20).getTime());
-    expect(RECAP_TITLE_FORMS).toEqual(['full', 'noCardio', 'short']);
-    expect(RECAP_TITLE_FORMS.map((f) => recapTitle(week, f))).toEqual([
+    // `compact` (version 1.45.0) : le titre `short` (seule la case Jambes change, sans la mention du cardio).
+    expect(RECAP_TITLE_FORMS).toEqual(['full', 'noCardio', 'short', 'compact']);
+    expect(recapTitle(week, 'compact')).toBe(recapTitle(week, 'short'));
+    // Et la case Jambes sans « +50 min cardio » (ses 3 séries de cardio restent comptées : 3 + 3 = 6).
+    const legCell = week.cells.find((c) => c.group === 'jambes')!;
+    expect(recapCountLabel(legCell)).toBe(`6${nb}séries · +50${nb}min${nb}cardio`);
+    expect(recapCountLabel(legCell, false)).toBe(`6${nb}séries`);
+    expect(RECAP_TITLE_FORMS.slice(0, 3).map((f) => recapTitle(week, f))).toEqual([
       `Semaine du lun.${nb}26${nb}oct. au dim.${nb}1${nb}nov.${nb}: 2${nb}séances · dont${nb}1${nb}maison · 50${nb}min${nb}de cardio`,
       `Semaine du lun.${nb}26${nb}oct. au dim.${nb}1${nb}nov.${nb}: 2${nb}séances · dont${nb}1${nb}maison`,
       `Semaine du 26${nb}oct. au 1${nb}nov.${nb}: 2${nb}séances · dont${nb}1${nb}maison`,

@@ -6,6 +6,7 @@ import { useBody } from '../../body/store';
 import type { CardioMachine } from '../../domain/types';
 import { machineCountsForLegs, machineListErrors, newMachine, type MachineListError } from '../../cardio/model';
 import { isValidEmail } from '../../analysis/report';
+import { RED_SETS_MAX, RED_SETS_MIN } from '../../analysis/weekly';
 import { HABIT_GROUPS, WEEKDAY_LABELS, WEEKDAYS, habitErrors, newHabit, type Habit, type HabitError, type Weekday } from '../../activities/model';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
 import { Stepper } from '../ExerciseCard';
@@ -117,7 +118,7 @@ function HeightField() {
 
 const RECAP_CHOICES = MAIN_GROUPS;
 
-/** Récapitulatif hebdomadaire de l'accueil (§19.6) : groupes affichés et seuil du rouge. */
+/** Récapitulatif hebdomadaire de l'accueil (§19.6) : groupes affichés et seuil du rouge, en séries (6 à 20, version 1.45.0). */
 function RecapSettingsField() {
   const { recapSettings, setRecapSettings } = useApp();
   const [failed, setFailed] = useState(false);
@@ -146,11 +147,11 @@ function RecapSettingsField() {
         })}
       </div>
       <Stepper
-        label="Rouge à partir de (séances)"
-        value={recapSettings.redThreshold}
-        min={2}
-        max={7}
-        onChange={(redThreshold) => void save({ ...recapSettings, redThreshold })}
+        label="Rouge à partir de (séries)"
+        value={recapSettings.redSets}
+        min={RED_SETS_MIN}
+        max={RED_SETS_MAX}
+        onChange={(redSets) => void save({ ...recapSettings, redSets })}
       />
       {failed && (
         <p className="field-error" role="alert">
@@ -224,7 +225,7 @@ const MACHINE_ERRORS: Record<MachineListError, string> = {
  * Machines de cardio proposées pendant la séance. Renommer ou retirer une machine ne modifie pas
  * les séances déjà enregistrées : chaque bloc garde le nom de sa machine.
  * « Compte pour les jambes » (version 1.41.0) : cochée par défaut, décochée pour le rameur ; ses minutes comptent pour
- * les jambes du récapitulatif (½ à partir de 45 min dans la semaine).
+ * les jambes du récapitulatif (3 séries à partir de 45 min dans la semaine, version 1.45.0).
  */
 function CardioMachinesField() {
   const { cardioMachines, setCardioMachines } = useApp();

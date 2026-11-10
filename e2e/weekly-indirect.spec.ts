@@ -11,7 +11,7 @@ function done(id: string, iso: string, variantIds: string[]): Session {
 }
 
 test.describe('Récapitulatif hebdomadaire : groupes secondaires (§19.6)', () => {
-  test('187. Travail indirect affiché sans fraction, vert sous 1, couleur et tri selon le score, « hier » compris ; lisible à 412, 360 et 320 px', async ({ page }) => {
+  test('187. Travail indirect compté pour moitié en séries, vert sous 3 séries, couleur et tri selon le score, « hier » compris ; lisible à 412, 360 et 320 px', async ({ page }) => {
     // Vendredi 23 octobre 2026, 9 h : curl le lundi, développé couché le mardi, tractions assistées jeudi soir.
     await page.clock.setFixedTime(new Date('2026-10-23T09:00:00'));
     await page.goto('./');
@@ -25,19 +25,23 @@ test.describe('Récapitulatif hebdomadaire : groupes secondaires (§19.6)', () =
     const recap = page.getByTestId('weekly-recap');
     await expect(recap.getByRole('heading')).toHaveText(/: 3\sséances$/);
     const cell = (g: string) => recap.locator(`[data-group="${g}"]`);
-    // Biceps : 1 + ½ = 1,5 → orange ; dos : 1 ; triceps et épaules : ½ chacun (développé couché) → vert, avec la mention.
-    await expect(cell('biceps')).toHaveText('Biceps (1× · +1 indirect) · hier');
+    // Version 1.45.0 : score en séries, indirectes ÷ 2. Biceps : 3 (curl) + 3 ÷ 2 (tractions) = 4,5 → orange ;
+    // dos 3 et pectoraux 3 → orange ; triceps et épaules : 3 ÷ 2 (développé couché) = 1,5 → vert.
+    await expect(cell('biceps')).toHaveText('Biceps (4,5 séries) · hier');
     await expect(cell('biceps')).toHaveAttribute('data-color', 'orange');
-    await expect(cell('dos')).toHaveText('Dos (1×) · hier');
-    await expect(cell('pectoraux')).toHaveText('Pectoraux (1×)');
-    await expect(cell('triceps')).toHaveText('Triceps (+1 indirect)');
-    await expect(cell('epaules')).toHaveText('Épaules (+1 indirect)');
+    await expect(cell('dos')).toHaveText('Dos (3 séries) · hier');
+    await expect(cell('dos')).toHaveAttribute('data-color', 'orange');
+    await expect(cell('pectoraux')).toHaveText('Pectoraux (3 séries)');
+    await expect(cell('pectoraux')).toHaveAttribute('data-color', 'orange');
+    await expect(cell('triceps')).toHaveText('Triceps (1,5 série)');
+    await expect(cell('epaules')).toHaveText('Épaules (1,5 série)');
     await expect(cell('triceps')).toHaveAttribute('data-color', 'vert');
     await expect(cell('epaules')).toHaveAttribute('data-color', 'vert');
     await expect(cell('jambes')).toHaveText('Jambes');
     await expect(cell('jambes')).toHaveAttribute('data-color', 'vert');
-    // Tri selon le score : le vert sans rien d'abord, puis les verts avec de l'indirect, puis les orange.
-    expect(await recap.locator('li').evaluateAll((els) => els.map((e) => e.getAttribute('data-group')))).toEqual(
+    // Tri : le vert sans rien d'abord, puis les verts avec de l'indirect, puis les orange (« hier » en dernier, puis
+    // score croissant : dos 3 avant biceps 4,5).
+    expect(await recap.locator('li[data-group]').evaluateAll((els) => els.map((e) => e.getAttribute('data-group')))).toEqual(
       ['jambes', 'epaules', 'triceps', 'pectoraux', 'dos', 'biceps'],
     );
 
@@ -50,7 +54,7 @@ test.describe('Récapitulatif hebdomadaire : groupes secondaires (§19.6)', () =
     for (const width of [412, 360, 320]) {
       await page.setViewportSize({ width, height: 915 });
       const frame = (await recap.boundingBox())!;
-      for (const box of await recap.locator('li').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().toJSON() as DOMRect))) {
+      for (const box of await recap.locator('li[data-group]').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().toJSON() as DOMRect))) {
         expect(box.left, `${width}px`).toBeGreaterThanOrEqual(frame.x);
         expect(box.right, `${width}px`).toBeLessThanOrEqual(frame.x + frame.width + 0.5);
       }

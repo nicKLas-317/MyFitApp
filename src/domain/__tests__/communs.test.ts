@@ -6,6 +6,7 @@ import { countsAsWork } from '../performance';
 import { MUSCLE_GROUP_LABELS, SEED_EXERCISES } from '../../library/seed';
 import { buildEngineSettings } from '../../library/catalog';
 import { DEFAULT_RECAP_SETTINGS, groupScore, weeklyRecap } from '../../analysis/weekly';
+import { groupWeeklySets } from '../../analysis/groups';
 import { weekSuggestion } from '../../plan/suggest';
 import { weekHistory, WEEK_NOW } from '../../plan/__tests__/completer-simulation';
 
@@ -40,11 +41,15 @@ describe('Calendrier, groupes et travail : une seule définition (version 1.41.3
     expect(recapGroupOf(undefined, shown)).toBeNull();
   });
 
-  it('300. Score d’un groupe : le même calcul pour le récapitulatif et les bâtons des bilans', () => {
-    expect(groupScore({ direct: 1, indirect: 0.5, home: 0.25, cardio: 0.5 })).toBe(2.25);
-    const cells = weeklyRecap(weekHistory(), SEED_EXERCISES, WEEK_NOW).cells;
+  it('300. Score d’un groupe : le même calcul pour le récapitulatif et les bâtons des bilans (en séries, version 1.45.0)', () => {
+    // Séries, plus 3 par activité confirmée et 3 par semaine à 45 min de cardio des jambes.
+    expect(groupScore({ sets: 4.5, activities: 1, cardioWeeks: 1 })).toBe(10.5);
+    expect(groupScore({ sets: 0, activities: 2, cardioWeeks: 0 })).toBe(6);
+    const sessions = weekHistory();
+    const cells = weeklyRecap(sessions, SEED_EXERCISES, WEEK_NOW).cells;
     for (const c of cells) {
-      expect(c.score).toBe(groupScore({ direct: c.count, indirect: c.indirect / 2, home: Math.min(0.5, (c.home ?? 0) / 12), cardio: c.cardio ? 0.5 : 0 }));
+      const sets = groupWeeklySets(sessions, SEED_EXERCISES, c.group, WEEK_NOW).weeks.at(-1)!.total;
+      expect(c.score, c.group).toBe(groupScore({ sets, activities: c.activities.length, cardioWeeks: c.cardio ? 1 : 0 }));
     }
   });
 
@@ -64,7 +69,13 @@ describe('Calendrier, groupes et travail : une seule définition (version 1.41.3
     };
     expect(eve.performances.some((p) => isDos(p.variantId))).toBe(true);
     const sessions = history.map((s) => (s.id === eve.id ? partialEve : s));
-    const s = weekSuggestion({ sessions, exercises: lib, settings: buildEngineSettings(lib), recap: DEFAULT_RECAP_SETTINGS, now: WEEK_NOW });
-    expect(s?.skipped.filter((x) => x.reason === 'veille').map((x) => x.group)).toEqual(['dos']);
+    const veille = (list: Session[]) =>
+      weekSuggestion({ sessions: list, exercises: lib, settings: buildEngineSettings(lib), recap: DEFAULT_RECAP_SETTINGS, now: WEEK_NOW })
+        ?.skipped.filter((x) => x.reason === 'veille')
+        .map((x) => x.group);
+    // Mêmes groupes écartés que sans performance partielle, le dos compris (version 1.45.0 : d'autres groupes, sous
+    // l'objectif de 10 séries, peuvent l'être aussi).
+    expect(veille(sessions)).toContain('dos');
+    expect(veille(sessions)).toEqual(veille(history));
   });
 });

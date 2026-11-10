@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import departJson from '../../../docs/exemples/depart-exemple.json?raw';
 import type { Exercise, Session } from '../../domain/types';
 import { rebuildProfile } from '../../engine';
-import { weeklyRecap } from '../../analysis/weekly';
+import { recapCountLabel, weeklyRecap } from '../../analysis/weekly';
 import { buildEngineSettings, displayName, groupGrips, indexVariants, type GripEntry, type VariantRef } from '../catalog';
 import { SEED_EXERCISES, SEED_VERSION } from '../seed';
 import { buildSearchIndex } from '../search';
@@ -66,7 +66,7 @@ describe('Prises (§4.3.1)', () => {
     expect(choiceOf('Développé couché')).toBe('developpe-couche');
   });
 
-  it('135. Tirage vertical prise moyenne le lundi, prise très large le jeudi : « Dos (2×) » et deux historiques séparés', () => {
+  it('135. Tirage vertical prise moyenne le lundi, prise très large le jeudi : « Dos (6 séries) » et deux historiques séparés', () => {
     const at = (d: number) => new Date(2026, 9, d, 18).getTime();
     const session = (id: string, d: number, variantId: string, weightKg: number): Session => ({
       id, name: id, date: `2026-10-${d}`, startedAt: at(d), endedAt: at(d) + 3_600_000, createdAt: at(d), updatedAt: at(d), origin: 'app', state: 'done',
@@ -74,7 +74,9 @@ describe('Prises (§4.3.1)', () => {
     });
     const sessions = [session('lundi', 12, TV, 40), session('jeudi', 15, LARGE, 35)];
     const dos = weeklyRecap(sessions, LIB, at(16)).cells.find((c) => c.group === 'dos')!;
-    expect([dos.color, dos.count]).toEqual(['rouge', 2]);
+    // Les deux prises comptent dans « Dos » : 3 + 3 séries (version 1.45.0), orange.
+    expect([dos.color, dos.count, dos.score]).toEqual(['orange', 2, 6]);
+    expect(recapCountLabel(dos)).toBe('6\u00a0séries');
     const profile = rebuildProfile(sessions, buildEngineSettings(LIB)).profile.variants;
     expect(profile[TV]).toMatchObject({ palier: { weightKg: 40, targetReps: 8 }, greenStreak: 1, lastSessionId: 'lundi' });
     expect(profile[LARGE]).toMatchObject({ palier: { weightKg: 35, targetReps: 8 }, greenStreak: 1, lastSessionId: 'jeudi' });

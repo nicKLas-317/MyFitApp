@@ -61,7 +61,7 @@ test.describe('Cardio', () => {
 
     await expect(recapTitle(page)).toContainText(/1\s+séance · 35\s+min\s+de cardio/);
     // Le cardio n'entre dans aucun groupe : seuls les pectoraux sont comptés.
-    await expect(page.locator('.recap-cell:not([data-color="vert"])')).toHaveCount(1);
+    await expect(page.locator('.recap-cell[data-group]:not([data-color="vert"])')).toHaveCount(1);
 
     await openScreen(page, 'Historique');
     await expect(page.locator('.session-link')).toContainText('1 ex. · 35 min cardio');
@@ -96,7 +96,7 @@ test.describe('Cardio', () => {
     await page.getByRole('button', { name: 'Garder ce nom' }).click();
     await expect(page.getByRole('button', { name: 'Démarrer une séance' })).toBeVisible();
     await expect(recapTitle(page)).toContainText(/1\s+séance · 25\s+min\s+de cardio/);
-    await expect(page.locator('.recap-cell:not([data-color="vert"])')).toHaveCount(0);
+    await expect(page.locator('.recap-cell[data-group]:not([data-color="vert"])')).toHaveCount(0);
   });
 
   test('116. Import de notes : « incliné » sans niveau demande de choisir, puis le cardio est importé', async ({ page }) => {

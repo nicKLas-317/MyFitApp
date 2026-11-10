@@ -65,11 +65,13 @@ test.describe('Abdos au poids du corps (§4.0, version 1.24.0)', () => {
     await expect(page.getByRole('main')).toContainText('10 · 10 · 10');
     await expect(page.getByRole('main')).not.toContainText(/\b0 kg/);
 
-    // Récapitulatif : abdominaux, 2 séances cette semaine, aucun autre groupe compté.
+    // Récapitulatif : abdominaux, 2 séances de 3 séries cette semaine (version 1.45.0 : 6 séries, orange), aucun
+    // autre groupe compté.
     await page.goto('./');
     const abdos = page.getByTestId('weekly-recap').locator('[data-group="abdominaux"]');
     await expect(abdos).toContainText('Abdominaux');
-    await expect(abdos.locator('.recap-count')).toHaveText('(2×)');
+    await expect(abdos.locator('.recap-count')).toHaveText('(6 séries)');
+    await expect(abdos).toHaveAttribute('data-color', 'orange');
     await expect(page.getByTestId('weekly-recap').locator('[data-group="jambes"] .recap-count')).toHaveCount(0);
 
     // À 360 px, la carte tient dans l'écran.

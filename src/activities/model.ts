@@ -3,7 +3,8 @@
  * que l'utilisateur confirme en un geste, « Oui » ou « Non », après l'heure de fin. Aucune saisie.
  * Activités ponctuelles (ex. futsal de temps en temps) : saisies à la main depuis l'accueil (« + Activité »), sans
  * question hebdomadaire ; elles comptent ensuite exactement comme une activité habituelle confirmée.
- * Une activité confirmée compte comme travail indirect au récapitulatif et figure dans l'historique et les bilans ;
+ * Une activité confirmée compte 3 séries par groupe sollicité au récapitulatif (version 1.45.0), et figure dans
+ * l'historique et les bilans (colonne « Indirect ») ;
  * ce n'est pas une séance de salle et elle n'a aucun effet sur le moteur de progression. Fonctions pures.
  */
 import type { MuscleGroup } from '../domain/types';

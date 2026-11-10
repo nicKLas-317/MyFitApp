@@ -107,12 +107,13 @@ describe('Activités habituelles hors salle', () => {
     expect(sanitizeActivities([yes, { ...yes, id: 'bad', status: 'peut-être' }])).toEqual([yes]);
   });
 
-  it('199. Récapitulatif : badminton lundi → jambes et épaules « +1 indirect · hier » le mardi ; en-tête « 3 séances · 1 activité · 45 min de cardio » ; au plus 1 par jour et par groupe', () => {
+  it('199. Récapitulatif : badminton lundi → jambes et épaules « 3 séries · badminton · hier » le mardi (version 1.45.0) ; en-tête « 3 séances · 1 activité · 45 min de cardio » ; plus de plafond par jour', () => {
     const monday = [badminton('2026-10-19')];
     const tuesday = weeklyRecap([], LIB, at(20, 9), undefined, monday);
     for (const g of ['jambes', 'epaules']) {
-      expect(cell(tuesday, g)).toMatchObject({ count: 0, indirect: 1, score: 0.5, color: 'vert', recency: 'yesterday' });
-      expect(nb(recapCountLabel(cell(tuesday, g)))).toBe('+1 indirect');
+      // 3 séries par activité confirmée et par groupe sollicité (version 1.45.0) : orange.
+      expect(cell(tuesday, g)).toMatchObject({ count: 0, indirect: 1, activities: ['Badminton'], score: 3, color: 'orange', recency: 'yesterday' });
+      expect(nb(recapCountLabel(cell(tuesday, g)))).toBe('3 séries · badminton');
     }
     expect(cell(tuesday, 'dos')).toMatchObject({ indirect: 0, recency: null });
     // Lundi 23 h : « aujourd'hui ».
@@ -124,18 +125,19 @@ describe('Activités habituelles hors salle', () => {
     expect(nb(recapTitle(r))).toBe('Semaine du lun. 19 au dim. 25 oct. : 3 séances · 1 activité · 45 min de cardio');
     expect(nb(recapTitle(weeklyRecap(week, LIB, at(23, 9))))).toBe('Semaine du lun. 19 au dim. 25 oct. : 3 séances · 45 min de cardio');
     expect(nb(recapTitle(weeklyRecap([], LIB, at(20, 9), undefined, monday)))).toBe('Semaine du lun. 19 au dim. 25 oct. : 0 séance · 1 activité');
-    // Avec une séance le même jour : jambes travaillées en direct → l'activité n'ajoute rien (1 au plus) ;
-    // épaules seulement secondaires (développé couché) → ½ + ½ = 1.
+    // Avec une séance le même jour, plus de plafond de 1 par jour (version 1.45.0) : jambes travaillées en direct
+    // (presse, 3 séries) + badminton (3) = 6 ; épaules seulement secondaires (développé couché, 1,5) + 3 = 4,5.
     const sameDay = weeklyRecap([session(at(19, 18), ['presse-a-cuisses', 'developpe-couche'])], LIB, at(20, 9), undefined, monday);
-    expect(cell(sameDay, 'jambes')).toMatchObject({ count: 1, indirect: 0, score: 1 });
-    expect(cell(sameDay, 'epaules')).toMatchObject({ count: 0, indirect: 2, score: 1, color: 'orange' });
+    expect(cell(sameDay, 'jambes')).toMatchObject({ count: 1, indirect: 1, score: 6, color: 'orange' });
+    expect(nb(recapCountLabel(cell(sameDay, 'jambes')))).toBe('6 séries · badminton');
+    expect(cell(sameDay, 'epaules')).toMatchObject({ count: 0, indirect: 2, score: 4.5, color: 'orange' });
     // Deux badmintons dans la semaine (lundis 12 et 19 : semaines différentes) : seul celui de la semaine compte,
     // mais « hier » vaut aussi pour la semaine précédente.
     const prev = weeklyRecap([], LIB, at(26, 9), undefined, [badminton('2026-10-19'), badminton('2026-10-12')]);
-    expect(cell(prev, 'jambes')).toMatchObject({ indirect: 0, recency: null });
+    expect(cell(prev, 'jambes')).toMatchObject({ indirect: 0, activities: [], score: 0, recency: null });
     // Activité de dimanche soir, vue le lundi : « hier », semaine précédente.
     const sunday: ActivityRecord = { ...badminton('2026-10-25'), id: 'act-x', date: '2026-10-25' };
-    expect(cell(weeklyRecap([], LIB, at(26, 9), undefined, [sunday]), 'jambes')).toMatchObject({ indirect: 0, recency: 'yesterday' });
+    expect(cell(weeklyRecap([], LIB, at(26, 9), undefined, [sunday]), 'jambes')).toMatchObject({ indirect: 0, score: 0, recency: 'yesterday' });
   });
 
   it('200. Bilan de la période : « Activités : Badminton ×4, 6 h 00 », groupes indirects, texte du mail ; séances, durée et moteur inchangés', () => {
@@ -148,8 +150,10 @@ describe('Activités habituelles hors salle', () => {
     expect(r.activities).toEqual([{ name: 'Badminton', count: 4, minutes: 360 }]);
     const lines = (title: string) => reportSections(r, name).find((s) => s.title === title)!.lines.map(lineText);
     expect(lines('Séances')).toContain('Activités : Badminton ×4, 6 h 00');
-    // Une seule séance indirecte par semaine reste ½ : quatre lundis de badminton → +4 indirect.
-    expect(lines('Groupes travaillés')).toEqual(['Pectoraux : 1×', 'Dos : 1×', 'Biceps : +1 indirect', 'Jambes : +4 indirect', 'Épaules : +4 indirect', 'Non travaillés : Triceps'].sort((a, b) => order(a) - order(b)));
+    // En séries (version 1.45.0) : quatre lundis de badminton → 12 séries (3 par activité), +4 indirect.
+    expect(lines('Groupes travaillés')).toEqual(
+      ['Pectoraux : 3 séries (1 séance)', 'Dos : 3 séries (1 séance)', 'Biceps : 1,5 série (+1 indirect)', 'Jambes : 12 séries (+4 indirect)', 'Épaules : 12 séries (+4 indirect)', 'Non travaillés : Triceps'].sort((a, b) => order(a) - order(b)),
+    );
     expect(reportText(r, name)).toContain('\n- Activités : Badminton ×4, 6 h 00\n');
     // Sans activité : rien de plus, séances et durée identiques.
     const without = buildReport(month, { ...input, groups: [...input.groups] });
@@ -268,9 +272,10 @@ describe('Activités ponctuelles (« + Activité »)', () => {
 
   it('239. Comptée comme une activité habituelle confirmée : récapitulatif, bilans, mail, historique ; sauvegarde ; aucun effet sur le moteur', () => {
     const r = futsal('2026-10-23', 60, ['jambes']);
-    // Récapitulatif : travail indirect, « aujourd'hui », « · 1 activité » dans l'en-tête.
+    // Récapitulatif : 3 séries (version 1.45.0), « aujourd'hui », « · 1 activité » dans l'en-tête.
     const recap = weeklyRecap([], LIB, at(23, 22), undefined, [r]);
-    expect(cell(recap, 'jambes')).toMatchObject({ count: 0, indirect: 1, score: 0.5, recency: 'today' });
+    expect(cell(recap, 'jambes')).toMatchObject({ count: 0, indirect: 1, activities: ['Futsal'], score: 3, recency: 'today' });
+    expect(nb(recapCountLabel(cell(recap, 'jambes')))).toBe('3 séries · futsal');
     expect(nb(recapTitle(recap))).toBe('Semaine du lun. 19 au dim. 25 oct. : 0 séance · 1 activité');
     expect(cell(weeklyRecap([], LIB, at(24, 9), undefined, [r]), 'jambes').recency).toBe('yesterday');
     // Bilan de la semaine et texte du mail.
@@ -281,7 +286,7 @@ describe('Activités ponctuelles (« + Activité »)', () => {
     });
     expect(report.activities).toEqual([{ name: 'Badminton', count: 1, minutes: 90 }, { name: 'Futsal', count: 1, minutes: 60 }]);
     expect(reportText(report, name)).toContain('\n- Activités : Badminton ×1, 1 h 30 ; Futsal ×1, 1 h 00\n');
-    expect(reportSections(report, name).find((x) => x.title === 'Groupes travaillés')!.lines.map(lineText)).toContain('Jambes : +2 indirect');
+    expect(reportSections(report, name).find((x) => x.title === 'Groupes travaillés')!.lines.map(lineText)).toContain('Jambes : 6 séries (+2 indirect)');
     // Sauvegarde : exportée et réimportée telle quelle (format 4 inchangé).
     const backup = buildBackup({ sessions: [], exercises: LIB, activities: [r] }, at(25));
     const parsed = parseJsonImport(JSON.stringify(backup), LIB, '2026-10-25');

@@ -99,9 +99,9 @@ describe('Type d’un exercice et la chaise (version 1.31.0)', () => {
 
     // Récapitulatif : jambes ; les abdominaux (secondaire) en indirect quand ils sont affichés.
     const now = new Date(2026, 9, 14, 20).getTime();
-    const cells = weeklyRecap([chaise(12, 45)], LIB, now, { groups: ['jambes', 'abdominaux'], redThreshold: 2 }).cells;
-    expect(cells.find((c) => c.group === 'jambes')).toMatchObject({ count: 1 });
-    expect(cells.find((c) => c.group === 'abdominaux')).toMatchObject({ count: 0, indirect: 1 });
+    const cells = weeklyRecap([chaise(12, 45)], LIB, now, { groups: ['jambes', 'abdominaux'], redSets: 10 }).cells;
+    expect(cells.find((c) => c.group === 'jambes')).toMatchObject({ count: 1, score: 3 });
+    expect(cells.find((c) => c.group === 'abdominaux')).toMatchObject({ count: 0, indirect: 1, score: 1.5 });
 
     // Base existante en version 13 : la chaise ajoutée une seule fois, jamais recréée après suppression.
     const repo = new Repository(await openAppDb(`test-v14-${Math.random()}`));

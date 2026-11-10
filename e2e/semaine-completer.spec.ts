@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Session, SessionPlan } from '../src/domain/types';
-import { weekHistory, WEEK_NOW } from '../src/plan/__tests__/completer-simulation';
+import { CURRENT_WEEK, weekHistory, WEEK_NOW } from '../src/plan/__tests__/completer-simulation';
 import { exerciseCard, readSessions, reloadAfterWrites, tabBar, writeSessions } from './helpers';
 
 /** Taille de police Android agrandie (simulation) : tout le texte à 115 %. */
@@ -69,7 +69,7 @@ const line = (page: Page) => page.getByTestId('week-suggestion');
 const pills = (page: Page) => line(page).locator('.group-pill');
 const items = (page: Page) => page.getByRole('list', { name: 'Séance proposée' }).getByRole('listitem');
 const planItems = (plan: SessionPlan | null) => plan?.items.map((i) => (i.kind === 'cardio' ? `cardio:${i.block.machine}:${i.block.minutes}` : i.variantId));
-const SUGGESTED = ['cardio:Tapis de marche:10', 'leg-extension', 'elevations-laterales', 'extension-triceps-poulie', 'curl-biceps-halteres'];
+const SUGGESTED = ['cardio:Tapis de marche:10', 'leg-extension', 'presse-a-cuisses', 'elevations-laterales', 'extension-triceps-poulie', 'curl-biceps-halteres'];
 const MINE: SessionPlan = { id: 'mon-plan', createdAt: WEEK_NOW - 3_600_000, updatedAt: WEEK_NOW - 3_600_000, items: [{ kind: 'exercise', variantId: 'pec-deck' }] };
 
 /** Géométrie : débordement, éléments tactiles (hauteur, écart), cartes dans l'écran. */
@@ -95,13 +95,14 @@ function layout(page: Page) {
 }
 
 test.describe('Séance pour compléter la semaine', () => {
-  test('294. Carte avec ses groupes en pastilles au-dessus de « Préparer ma prochaine séance » ; écran avec l’échauffement, les exercices et la cible du moteur ; « En faire ma séance prévue », « Remplacer ma séance prévue » ; « Démarrer cette séance » sans toucher à la séance prévue ; recalculée après la séance ; rien le lundi avant une séance à la salle', async ({ page }) => {
-    // Jeudi 12 nov., 9 h : pectoraux 2, dos 1 (travaillé hier), épaules, biceps, triceps 1,5, jambes 1.
+  test('294. Carte avec ses groupes en pastilles au-dessus de « Préparer ma prochaine séance » ; écran avec l’échauffement, les exercices et la cible du moteur (objectif en séries, version 1.45.0) ; « En faire ma séance prévue », « Remplacer ma séance prévue » ; « Démarrer cette séance » sans toucher à la séance prévue ; recalculée après la séance ; rien le lundi avant une séance à la salle', async ({ page }) => {
+    // Jeudi 12 nov., 9 h, en séries (version 1.45.0) : pectoraux 9 et dos 3 (travaillés hier), épaules, triceps,
+    // jambes 6, biceps 4,5 ; objectif 10.
     await open(page);
-    // Carte cliquable (version 1.40.0 ; ligne discrète en 1.39.0) : titre, « D’ici dimanche · 4 exercices » (1.40.1), groupes
+    // Carte cliquable (version 1.40.0 ; ligne discrète en 1.39.0) : titre, « D’ici dimanche · 5 exercices » (1.40.1), groupes
     // en pastilles de leur couleur ; juste au-dessus de « Préparer ma prochaine séance » et « + Activité ».
     await expect(line(page).locator('.action-card-title')).toHaveText('Séance pour compléter la semaine');
-    await expect(line(page).locator('.action-card-sub')).toHaveText('D’ici dimanche · 4\u00a0exercices');
+    await expect(line(page).locator('.action-card-sub')).toHaveText('D’ici dimanche · 5\u00a0exercices');
     await expect(pills(page)).toHaveText(['Jambes', 'Épaules', 'Triceps', 'Biceps']);
     const colors = await pills(page).evaluateAll((els) =>
       els.map((el) => {
@@ -127,18 +128,20 @@ test.describe('Séance pour compléter la semaine', () => {
     await expect(page).toHaveURL(/#\/seance-prevue\/suggestion$/);
     await expect(page.getByRole('heading', { name: 'Compléter la semaine' })).toBeVisible();
     await expect(tabBar(page).getByRole('link', { name: /^Séance/ })).toHaveAttribute('aria-current', 'page');
-    await expect(page.getByText('À faire d’ici dimanche, à la salle : les groupes de ton récapitulatif encore sous 2 séances cette semaine.')).toBeVisible();
+    await expect(page.getByText('À faire d’ici dimanche, à la salle : les groupes de ton récapitulatif encore sous 10\u00a0séries cette semaine.')).toBeVisible();
+    // Les jambes (6 + 3 = 9) ont un 2ᵉ exercice, la presse ; les autres groupes n'en ont pas d'autre déjà fait.
     await expect(items(page)).toHaveText([
       'Échauffement · Tapis de marche · inclinaison neutre · 10 min',
       /^Leg extension3 × 11 à 40 kg/,
+      /^Presse à cuisses3 × 11 à 40 kg/,
       /^Élévations latérales haltères3 × 11 à 8 kg \/ haltère/,
       /^Extension triceps poulie — Corde3 × 11 à 40 kg/,
       /^Curl biceps haltères3 × 11 à 10 kg \/ haltère/,
     ]);
     await expect(items(page).nth(1).getByTestId('progress-marker')).toHaveText('↑ +1 rép.');
-    expect(await items(page).evaluateAll((els) => els.map((el) => el.getAttribute('data-group-color')))).toEqual([null, 'jambes', 'epaules', 'triceps', 'biceps']);
+    expect(await items(page).evaluateAll((els) => els.map((el) => el.getAttribute('data-group-color')))).toEqual([null, 'jambes', 'jambes', 'epaules', 'triceps', 'biceps']);
     await expect(page.getByTestId('suggest-notes')).toHaveText(
-      'Avec cette séance, à l’objectif : Épaules, Biceps, Triceps, Jambes.Encore sous l’objectif : Dos.Pas cette fois (séance à la salle hier) : Dos.',
+      'Avec cette séance, à l’objectif : Jambes.Encore sous l’objectif : Pectoraux, Dos, Épaules, Biceps, Triceps.Pas cette fois (séance à la salle hier) : Pectoraux, Dos.',
     );
     for (const [width, scale] of [[412, 1], [360, 1], [320, 1], [360, 1.15]] as const) {
       await page.setViewportSize({ width, height: 800 });
@@ -155,7 +158,7 @@ test.describe('Séance pour compléter la semaine', () => {
     // et plus de ligne (le plan la reprend).
     await page.getByRole('button', { name: 'En faire ma séance prévue' }).click();
     await expect(page).toHaveURL(/#\/seance-prevue$/);
-    await expect(page.getByRole('list', { name: 'Exercices et cardio prévus' }).getByRole('listitem')).toHaveCount(5);
+    await expect(page.getByRole('list', { name: 'Exercices et cardio prévus' }).getByRole('listitem')).toHaveCount(6);
     expect(planItems(await readPlan(page))).toEqual(SUGGESTED);
     await page.goto('./');
     await expect(page.getByRole('button', { name: 'Démarrer la séance prévue' })).toBeVisible();
@@ -186,7 +189,7 @@ test.describe('Séance pour compléter la semaine', () => {
     await page.getByRole('button', { name: 'Démarrer cette séance' }).click();
     await expect(page.getByTestId('chrono')).toBeVisible();
     await expect(page.locator('.cards > *')).toHaveText([
-      /^Prévu Tapis de marche · inclinaison neutre · 10 min/, /^Leg extension/, /^Élévations latérales haltères/, /^Extension triceps poulie/, /^Curl biceps haltères/,
+      /^Prévu Tapis de marche · inclinaison neutre · 10 min/, /^Leg extension/, /^Presse à cuisses/, /^Élévations latérales haltères/, /^Extension triceps poulie/, /^Curl biceps haltères/,
     ]);
     await page.getByRole('button', { name: 'Valider le cardio prévu : Tapis de marche · inclinaison neutre · 10 min' }).click();
     const legs = exerciseCard(page, 'Leg extension');
@@ -202,13 +205,27 @@ test.describe('Séance pour compléter la semaine', () => {
     expect(done.cardio).toMatchObject([{ machine: 'Tapis de marche', minutes: 10 }]);
     expect((await readPlan(page))?.id).toBe('mon-plan');
     await page.getByRole('button', { name: 'Retour à l’accueil' }).click();
-    // Recalculée après la séance (pour demain, toujours « D’ici dimanche ») : jambes à l'objectif ; le dos a son tirage (qui complète le biceps).
+    // Recalculée après la séance (pour demain, toujours « D’ici dimanche ») : les jambes, travaillées aujourd'hui, sont
+    // écartées ; un exercice pour chaque autre groupe, un 2ᵉ tirage pour le dos : 6 exercices.
     await expect(page.getByRole('button', { name: 'Démarrer la séance prévue' })).toBeVisible();
-    await expect(line(page).locator('.action-card-sub')).toHaveText('D’ici dimanche · 4\u00a0exercices');
-    await expect(pills(page)).toHaveText(['Dos', 'Épaules', 'Triceps']);
+    await expect(line(page).locator('.action-card-sub')).toHaveText('D’ici dimanche · 6\u00a0exercices');
+    await expect(pills(page)).toHaveText(['Pectoraux', 'Dos', 'Épaules', 'Triceps', 'Biceps']);
     await line(page).click();
     await expect(page.getByText('À faire d’ici dimanche, à la salle', { exact: false })).toBeVisible();
+    await expect(page.getByTestId('suggest-notes')).toHaveText(
+      'Avec cette séance, à l’objectif : Pectoraux, Épaules, Biceps, Triceps.Encore sous l’objectif : Dos, Jambes.Pas cette fois (séance à la salle aujourd’hui) : Jambes.',
+    );
+
+    // Groupe complété par un groupe secondaire (version 1.45.0) : biceps à 9 (curls à la salle et à la maison), il lui
+    // manque 1 série, au plus la moitié des 3 séries du tirage proposé.
+    await open(page, weekHistory([
+      CURRENT_WEEK[0]!,
+      { date: '2026-11-10', variants: ['presse-a-cuisses', 'curl-biceps-halteres'] },
+      { date: '2026-11-11', hour: 8, variants: ['curl-biceps-halteres', 'curl-biceps-poulie-corde'], home: true },
+    ]));
+    await line(page).click();
     await expect(page.getByTestId('suggest-notes')).toContainText('Biceps : complété par Tirage horizontal machine (appui pectoral) — Prise moyenne (groupe secondaire).');
+    await expect(items(page)).toHaveCount(7);
 
     // Lundi matin, avant une séance à la salle : rien.
     await open(page, weekHistory([]), new Date(2026, 10, 9, 9).getTime());
@@ -219,6 +236,6 @@ test.describe('Séance pour compléter la semaine', () => {
     await open(page, weekHistory(), new Date(2026, 10, 15, 9).getTime());
     await expect(line(page).locator('.action-card-sub')).toHaveText(/^Aujourd’hui · \d+ exercices?$/);
     await line(page).click();
-    await expect(page.getByText('À faire aujourd’hui, à la salle : les groupes de ton récapitulatif encore sous 2 séances cette semaine.')).toBeVisible();
+    await expect(page.getByText('À faire aujourd’hui, à la salle : les groupes de ton récapitulatif encore sous 10\u00a0séries cette semaine.')).toBeVisible();
   });
 });

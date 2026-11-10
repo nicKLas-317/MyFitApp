@@ -82,7 +82,7 @@ test.describe('Import et export', () => {
     await expect(preview(page).getByText('Importer quand même ce doublon.')).toBeVisible();
   });
 
-  test('§16.11 et 43. Export puis réimport : aucun doublon, restauration identique sur un autre appareil', async ({ page, browser }) => {
+  test('§16.11 et 43. Export puis réimport : aucun doublon, restauration identique sur un autre appareil', async ({ page, browser, baseURL }) => {
     await openData(page);
     await analyzeNotes(page, 'Seated row\n3x8x52kg ++\n\nLeg curl\n3x10x40kg +');
     await preview(page).getByLabel('Date de la séance').fill('2026-10-01');
@@ -106,7 +106,8 @@ test.describe('Import et export', () => {
     expect(await readSessions(page)).toEqual(original);
 
     // Autre appareil : base vide, restauration complète.
-    const other = await browser.newContext({ baseURL: 'http://localhost:4173/MyFitApp/', locale: 'fr-FR', timezoneId: 'Europe/Paris' });
+    // Adresse de la configuration (port 4173 par défaut), pas une adresse écrite en dur.
+    const other = await browser.newContext({ baseURL, locale: 'fr-FR', timezoneId: 'Europe/Paris' });
     const page2 = await other.newPage();
     await openData(page2);
     await page2.getByLabel('Fichier à importer').setInputFiles(file);

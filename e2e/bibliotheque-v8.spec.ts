@@ -49,7 +49,11 @@ test.describe('Bibliothèque version 8 (§4.0)', () => {
     const [session] = await readSessions(page);
     expect(session!.performances.map((p) => [p.variantId, p.weightKg])).toEqual([['tractions-assistees', 30], ['squat-kettlebell', 16]]);
     const recap = page.getByTestId('weekly-recap');
-    await expect(recap.locator('[data-group="dos"]')).toHaveText('Dos (1×) · aujourd’hui');
-    await expect(recap.locator('[data-group="jambes"]')).toHaveText('Jambes (1×) · aujourd’hui');
+    // En séries (version 1.45.0) : 3 séries de tractions pour le dos, 3 de squat pour les jambes (orange dès 3),
+    // le biceps (secondaire des tractions) pour moitié.
+    await expect(recap.locator('[data-group="dos"]')).toHaveText('Dos (3 séries) · aujourd’hui');
+    await expect(recap.locator('[data-group="dos"]')).toHaveAttribute('data-color', 'orange');
+    await expect(recap.locator('[data-group="jambes"]')).toHaveText('Jambes (3 séries) · aujourd’hui');
+    await expect(recap.locator('[data-group="biceps"]')).toHaveText('Biceps (1,5 série) · aujourd’hui');
   });
 });

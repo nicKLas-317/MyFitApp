@@ -329,7 +329,7 @@ export const SEED_GROUP_UPDATES: Readonly<Record<number, Readonly<Record<string,
   5: {
     'presse-a-cuisses': { from: ['quadriceps', 'ischio-jambiers'], to: ['quadriceps'] },
   },
-  // Version 10 : un groupe secondaire doit être réellement sollicité (il compte ½ dans le récapitulatif, §19.6).
+  // Version 10 : un groupe secondaire doit être réellement sollicité (la moitié de ses séries compte dans le récapitulatif, §19.6).
   // Les écartés isolent les pectoraux : l'avant de l'épaule n'y travaille que peu.
   10: {
     'pec-deck': { from: ['epaules'], to: [] },

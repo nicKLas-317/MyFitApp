@@ -6,8 +6,8 @@
  *   vertical, tirage horizontal, curl haltères, presse, leg extension, puis rameur 5 min), samedi 10 h à la maison
  *   (crunch au sol, au poids du corps).
  * - Semaine en cours (9 nov.) : lundi comme d'habitude ; mardi presse, leg extension et curl ; mercredi tirage vertical
- *   et chest press. Jeudi 12 nov. à 9 h : pectoraux 2, dos 1 (travaillé hier), épaules, biceps et triceps 1,5,
- *   jambes 1.
+ *   et chest press. Jeudi 12 nov. à 9 h, en séries (version 1.45.0) : pectoraux 9 et dos 3 (travaillés hier),
+ *   épaules, triceps et jambes 6, biceps 4,5 ; objectif 10.
  */
 import type { CardioBlock, Performance, Session } from '../../domain/types';
 import { defaultSessionName } from '../../session/format';

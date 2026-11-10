@@ -28,7 +28,7 @@ test.describe('Changer la date d’une séance passée (version 1.41.4)', () => 
     // Accueil : la séance compte dans la semaine du 26 (avant la version 1.41.4, elle restait dans l'ancienne semaine).
     await page.goto('./');
     await expect(recap.getByRole('heading')).toHaveText(/: 1\sséance$/);
-    await expect(recap.locator('[data-group="pectoraux"]')).toHaveText('Pectoraux (1×)');
+    await expect(recap.locator('[data-group="pectoraux"]')).toHaveText('Pectoraux (3 séries)');
     // Bilan de la semaine du 26 : une séance ; recherche dans l'historique par la nouvelle date.
     await page.goto('./#/bilan-periode/semaine/2026-10-26');
     await expect(page.getByTestId('report-text')).toContainText('1 séance');

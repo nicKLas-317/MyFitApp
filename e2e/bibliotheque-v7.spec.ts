@@ -34,7 +34,7 @@ test.describe('Bibliothèque version 7 (§4.0)', () => {
     }
     expect(sources[0]).not.toBe(sources[1]);
 
-    // Séance : les trois machines comptent une fois dans « Jambes ».
+    // Séance : les trois machines comptent dans « Jambes », leurs séries additionnées (version 1.45.0 : 9 séries).
     await startSession(page);
     for (const [query, name] of [['mollets', 'Mollets machine — Debout'], ['abducteurs', 'Abducteurs machine'], ['adducteurs', 'Adducteurs machine']] as const) {
       const card = await addExercise(page, query, name, '40');
@@ -46,7 +46,8 @@ test.describe('Bibliothèque version 7 (§4.0)', () => {
     const [session] = await readSessions(page);
     expect(session!.performances.map((p) => p.variantId)).toEqual(['mollets-machine', 'abducteurs-machine', 'adducteurs-machine']);
     const recap = page.getByTestId('weekly-recap');
-    await expect(recap.locator('[data-group="jambes"]')).toHaveText('Jambes (1×) · aujourd’hui');
+    await expect(recap.locator('[data-group="jambes"]')).toHaveText('Jambes (9 séries) · aujourd’hui');
+    await expect(recap.locator('[data-group="jambes"]')).toHaveAttribute('data-color', 'orange');
     await expect(recap.locator('[data-group="mollets"], [data-group="fessiers"], [data-group="adducteurs"]')).toHaveCount(0);
     // La bibliothèque enregistrée contient bien les quatre exercices.
     const stored = (await readExercises(page)).map((e) => e.id);

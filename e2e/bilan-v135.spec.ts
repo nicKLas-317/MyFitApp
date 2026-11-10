@@ -17,7 +17,7 @@ function session(d: number, perfs: [string, number, number][], home = false, car
 }
 
 // Première séance le lundi 12 octobre. Semaine du 19 : la salle le 20, la maison le 21 (5 séries de pectoraux) et le 22
-// (6 séries : 11 en tout, plafonnées à ½), futsal le 23. Planche deux fois verte à 20 s : 25 s.
+// (6 séries : 11 en tout, comptées en entier depuis la version 1.45.0), futsal le 23. Planche deux fois verte à 20 s : 25 s.
 const SESSIONS: Session[] = [
   session(12, [['chest-press', 3, 10]], false, 10),
   session(20, [['chest-press', 3, 10], ['planche', 3, 20]], false, 20),
@@ -49,7 +49,7 @@ const tile = (page: Page, label: string) => section(page, 'Séances').locator(`[
 const rungs = (card: ReturnType<Page['locator']>) => card.locator('.rung').evaluateAll((els) => els.map((e) => `${e.textContent}:${e.className.split(' ')[1]}`).join(' '));
 /**
  * Un groupe : chiffres de sa ligne du tableau Séances / Indirect / Maison (« » pour une case vide, lue « 0 »), total de
- * son bâton en séances et sa hauteur rapportée au plus grand (version 1.37.0).
+ * son bâton en séries (version 1.45.0) et sa hauteur rapportée au plus grand (version 1.37.0).
  */
 const groupRow = (page: Page, group: string) =>
   section(page, 'Groupes travaillés').evaluate((sec, g) => {
@@ -106,7 +106,7 @@ async function noOverflow(page: Page): Promise<void> {
 }
 
 test.describe('Bilan de la période, version 1.35.0', () => {
-  test('285. Tuiles comparées (même portion en cours, rien la première période), barres des groupes, calendrier du mois, échelles de cycle ; mail inchangé', async ({ page }) => {
+  test('285. Tuiles comparées (même portion en cours, rien la première période), bâtons des groupes en séries, calendrier du mois, échelles de cycle ; texte du mail', async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-11-02T09:00:00'));
     await page.goto('./');
     await writeSessions(page, SESSIONS);
@@ -122,10 +122,10 @@ test.describe('Bilan de la période, version 1.35.0', () => {
     await expect(tile(page, 'Activités')).toHaveText(/^Activités1Futsal ×1, 1\sh\s00▲ \+1$/);
     // Pas de calendrier pour la semaine.
     await expect(page.getByTestId('report-calendar')).toHaveCount(0);
-    // Groupes (versions 1.36.0 et 1.37.0) : pectoraux 1 séance, 11 séries à la maison plafonnées à ½ (total 1,5, le plus
-    // haut bâton) ; jambes ½ (futsal) ; dos non travaillé : cases vides, bâton vide.
-    expect(await groupRow(page, 'pectoraux')).toEqual({ cells: ['1', '', '11'], total: 1.5, height: 1 });
-    expect(await groupRow(page, 'jambes')).toEqual({ cells: ['', '1', ''], total: 0.5, height: 0.333 });
+    // Groupes (versions 1.36.0, 1.37.0 et 1.45.0) : pectoraux 1 séance (3 séries) et 11 séries à la maison, en entier
+    // (total 14, le plus haut bâton) ; jambes 3 séries (futsal) ; dos non travaillé : cases vides, bâton vide.
+    expect(await groupRow(page, 'pectoraux')).toEqual({ cells: ['1', '', '11'], total: 14, height: 1 });
+    expect(await groupRow(page, 'jambes')).toEqual({ cells: ['', '1', ''], total: 3, height: 0.214 });
     expect(await groupRow(page, 'dos')).toEqual({ cells: ['', '', ''], total: 0, height: 0 });
     await expect(section(page, 'Groupes travaillés').locator('tr[data-group="dos"]')).toHaveAttribute('data-idle', 'true');
     // Case vide : rien d'affiché, « 0 » pour le lecteur d'écran ; en-têtes complets à 412 px ; plus de mini-barre.
@@ -146,10 +146,10 @@ test.describe('Bilan de la période, version 1.35.0', () => {
     // Lecteur d'écran : la phrase du mail ; l'échelle est masquée.
     await expect(card('Planche').locator('.visually-hidden')).toHaveText('Planche : 3×20 s → 3×25 s (22 oct.)');
     await expect(card('Planche').getByTestId('ladder')).toHaveAttribute('aria-hidden', 'true');
-    // Le mail ne change pas : phrases, comparaisons et groupes en texte.
+    // Le mail : phrases et comparaisons ; groupes en séries, puis le détail (version 1.45.0).
     const text = (await page.getByTestId('report-text').textContent())!;
     expect(text).toContain('SÉANCES\n- 3 séances (dont 2 à la maison), +2 par rapport à la semaine précédente\n- Durée en salle : 1 h 00, autant que la semaine précédente\n- Cardio : 20 min (Tapis de marche 20 min)\n- Activités : Futsal ×1, 1 h 00\n');
-    expect(text).toContain('- Pectoraux : 1× · +11 séries maison\n');
+    expect(text).toContain('- Pectoraux : 14 séries (1 séance, +11 séries maison)\n');
     await noOverflow(page);
     await test.info().attach('bilan-semaine', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
 
@@ -178,8 +178,8 @@ test.describe('Bilan de la période, version 1.35.0', () => {
     await expect(calendar.locator('li.cal-out')).toHaveCount(3);
     const [calBox, tilesBox] = [(await calendar.boundingBox())!, (await section(page, 'Séances').locator('.kpis').boundingBox())!];
     expect(calBox.y + calBox.height).toBeLessThan(tilesBox.y);
-    // Maison plafonnée à ½ par semaine : ½ (semaine du 19) + 3/12 (semaine du 26), pas 14/12.
-    expect((await groupRow(page, 'pectoraux')).total).toBe(2.75);
+    // Maison en entier, sans plafond (version 1.45.0) : 3 + 3 séries à la salle, 14 à la maison.
+    expect((await groupRow(page, 'pectoraux')).total).toBe(20);
     expect((await groupRow(page, 'pectoraux')).height).toBe(1);
     expect((await groupRow(page, 'pectoraux')).cells).toEqual(['2', '', '14']);
     await noOverflow(page);
@@ -210,11 +210,11 @@ test.describe('Bilan de la période, version 1.35.0', () => {
     expect(await chart.locator('.groups-stick').evaluateAll((els) => els.map((e) => e.getAttribute('data-group')))).toEqual(['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes']);
     // Lecteur d'écran : les totaux par groupe ; pas de valeur écrite au-dessus des bâtons.
     await expect(chart).toHaveAttribute('role', 'img');
-    await expect(chart).toHaveAttribute('aria-label', 'Total par groupe, en séances : pectoraux 1,5, dos 0, épaules 0,5, biceps 0, triceps 0,5, jambes 0,5.');
+    await expect(chart).toHaveAttribute('aria-label', 'Total par groupe, en séries : pectoraux 14, dos 0, épaules 4, biceps 0, triceps 4, jambes 3.');
     expect(await chart.evaluate((c) => [...c.querySelectorAll('.groups-stick-label:not(.groups-stick-spacer)')].map((l) => l.textContent).join(' '))).toBe((await chart.innerText()).replace(/\s+/g, ' ').trim());
     // Hauteur = total ; le plus travaillé occupe toute la hauteur (96 px).
     expect(await chart.locator('.groups-stick[data-group="pectoraux"] .groups-stick-track > span').evaluate((e) => e.getBoundingClientRect().height)).toBe(96);
-    expect(await groupRow(page, 'epaules')).toMatchObject({ total: 0.5, height: 0.333 });
+    expect(await groupRow(page, 'epaules')).toMatchObject({ total: 4, height: 0.286 });
     // Groupe non travaillé : bâton vide (pointillés), nom grisé.
     const dos = chart.locator('.groups-stick[data-group="dos"]');
     expect(await dos.locator('.groups-stick-track').evaluate((e) => getComputedStyle(e).borderTopStyle)).toBe('dashed');
@@ -244,7 +244,7 @@ test.describe('Bilan de la période, version 1.35.0', () => {
           const open = indexedDB.open('myfitapp');
           open.onsuccess = () => {
             const tx = open.result.transaction('meta', 'readwrite');
-            tx.objectStore('meta').put({ groups: ['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes', 'abdominaux'], redThreshold: 2 }, 'weeklyRecap');
+            tx.objectStore('meta').put({ groups: ['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes', 'abdominaux'], redSets: 10 }, 'weeklyRecap');
             tx.oncomplete = () => (open.result.close(), resolve());
             tx.onerror = () => reject(tx.error);
           };
@@ -262,5 +262,77 @@ test.describe('Bilan de la période, version 1.35.0', () => {
     await large.evaluate((el) => (el as Element).remove());
     await page.setViewportSize({ width: 320, height: 900 });
     await expect(chart).toHaveAttribute('data-labels', 'short');
+  });
+
+  test('308. Bilan en séries (version 1.45.0) : « N séries » en petit gris sous le nom du groupe, bâtons proportionnels aux séries, phrase du cardio des jambes en séries, texte du mail ; rien ne dépasse à 412, 360 et 320 px', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-11-02T09:00:00'));
+    await page.goto('./');
+    // Les séances du test 285, plus 30 min de tapis seul le 24 : 50 min dans la semaine du 19 → +3 séries aux jambes.
+    await writeSessions(page, [...SESSIONS, session(24, [], false, 30)]);
+    await writeActivities(page);
+    await reloadAfterWrites(page);
+    await page.goto('./#/bilan-periode/semaine/2026-10-19');
+    const sec = section(page, 'Groupes travaillés');
+    const sets = sec.getByTestId('group-sets');
+    // Sous le nom : total en séries des groupes travaillés seulement, 13 px, poids normal, gris (--muted).
+    await expect(sets).toHaveText([/^14\sséries$/, /^4\sséries$/, /^4\sséries$/, /^6\sséries$/]);
+    await expect(sec.locator('tr[data-group="dos"] [data-testid="group-sets"]')).toHaveCount(0);
+    const style = await sets.first().evaluate((e) => {
+      const cs = getComputedStyle(e);
+      const name = e.parentElement!.getBoundingClientRect();
+      const box = e.getBoundingClientRect();
+      return { size: cs.fontSize, weight: cs.fontWeight, color: cs.color, display: cs.display, below: box.top > name.top + 8 };
+    });
+    expect(style).toEqual({ size: '13px', weight: '400', color: 'rgb(154, 161, 176)', display: 'block', below: true });
+    // Hauteur des bâtons proportionnelle aux séries affichées sous les noms (le plus travaillé : 96 px).
+    const sticks = await sec.evaluate((el) =>
+      [...el.querySelectorAll<HTMLElement>('.groups-stick')].map((st) => {
+        const shown = el.querySelector(`tr[data-group="${st.dataset.group}"] [data-testid="group-sets"]`)?.textContent ?? '0';
+        return { group: st.dataset.group, sets: parseFloat(shown.replace(',', '.')), height: st.querySelector('.groups-stick-track > span')!.getBoundingClientRect().height };
+      }),
+    );
+    expect(sticks.map((x) => [x.group, x.sets])).toEqual([['pectoraux', 14], ['dos', 0], ['epaules', 4], ['biceps', 0], ['triceps', 4], ['jambes', 6]]);
+    for (const x of sticks) expect(Math.abs(x.height - (96 * x.sets) / 14), x.group).toBeLessThan(0.5);
+    await expect(page.getByTestId('groups-chart')).toHaveAttribute('aria-label', 'Total par groupe, en séries : pectoraux 14, dos 0, épaules 4, biceps 0, triceps 4, jambes 6.');
+    // Cardio des jambes : 3 séries pour la semaine ; texte du mail en séries, sans « 1× » ni « ½ ».
+    await expect(page.getByTestId('groups-cardio')).toHaveText('Jambes\u00a0: +3\u00a0séries pour 50\u00a0min de cardio.');
+    const text = (await page.getByTestId('report-text').textContent())!;
+    expect(text).toContain('GROUPES TRAVAILLÉS\n- Pectoraux : 14 séries (1 séance, +11 séries maison)\n- Épaules : 4 séries (+1 indirect)\n- Triceps : 4 séries (+1 indirect)\n- Jambes : 6 séries (+1 indirect, +50 min cardio)\n- Non travaillés : Dos, Biceps\n');
+    expect(text).not.toMatch(/1×|½/);
+
+    // Dans le cadre, sur une ligne, à 412, 360 et 320 px, et à 320 px avec le texte agrandi à 115 %.
+    const inFrame = async (label: string) => {
+      const boxes = await sets.evaluateAll((els) =>
+        els.map((e) => {
+          const r = document.createRange();
+          r.selectNodeContents(e);
+          return { right: e.getBoundingClientRect().right, lines: new Set([...r.getClientRects()].map((b) => Math.round(b.top))).size };
+        }),
+      );
+      const frame = (await sec.boundingBox())!;
+      for (const b of boxes) {
+        expect(b.lines, label).toBe(1);
+        expect(b.right, label).toBeLessThanOrEqual(frame.x + frame.width - 16);
+      }
+    };
+    await noOverflow(page);
+    for (const width of [412, 360, 320]) {
+      await page.setViewportSize({ width, height: 900 });
+      await inFrame(`${width}px`);
+    }
+    const large = await page.addStyleTag({ content: ':root { font-size: calc(17px * 1.15) !important; }' });
+    await page.setViewportSize({ width: 320, height: 900 });
+    await inFrame('320px, texte agrandi');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+    await large.evaluate((el) => (el as Element).remove());
+    await page.setViewportSize({ width: 412, height: 915 });
+    await test.info().attach('bilan-series-semaine', { body: await sec.screenshot(), contentType: 'image/png' });
+
+    // Mois : 3 séries par semaine à 45 min ou plus (une seule ici, la semaine du 19).
+    await page.goto('./#/bilan-periode/mois/2026-10');
+    await expect(page.getByTestId('groups-cardio')).toHaveText('Jambes\u00a0: +3\u00a0séries pour le cardio, 1\u00a0semaine à 45\u00a0min ou plus (50\u00a0min).');
+    await expect(sec.locator('tr[data-group="pectoraux"] [data-testid="group-sets"]')).toHaveText(/^20\sséries$/);
+    await expect(page.getByTestId('report-text')).toContainText('- Jambes : 6 séries (+1 indirect, +50 min cardio sur 1 semaine)\n');
+    await noOverflow(page);
   });
 });

@@ -54,7 +54,7 @@ const month = parsePeriodKey('month', '2026-10')!;
 const bar = (s: ReturnType<typeof screenOf>['screen'], group: string) => s.bars.find((b) => b.group === group);
 
 describe('Écran du bilan, version 1.35.0', () => {
-  it('284. Première période suivie, cardio et activités comparés, barres avec la maison plafonnée à ½ par semaine, jours du mois, échelles de cycle ; texte du mail inchangé', () => {
+  it('284. Première période suivie, cardio et activités comparés, bâtons en séries (version 1.45.0), jours du mois, échelles de cycle', () => {
     // Période précédente entièrement avant la première séance : pas d'écart (« Première semaine suivie », « Premier mois suivi »).
     expect(screenOf(week('2026-10-12')).report.first).toBe(true);
     expect(screenOf(month).report.first).toBe(true);
@@ -68,13 +68,14 @@ describe('Écran du bilan, version 1.35.0', () => {
     expect(inProgress.report.first).toBe(false);
     expect(inProgress.screen).toMatchObject({ cardio: { now: 20, before: 10 }, activities: { now: 1, before: 0 } });
 
-    // Pectoraux, semaine du 19 : 1 séance à la salle, 11 séries à la maison plafonnées à ½ ; jambes : ½ (futsal).
-    expect(bar(w19.screen, 'pectoraux')).toEqual({ group: 'pectoraux', direct: 1, indirect: 0, home: 0.5, cardio: 0 });
-    expect(bar(w19.screen, 'jambes')).toEqual({ group: 'jambes', direct: 0, indirect: 0.5, home: 0, cardio: 0 });
-    expect(bar(w19.screen, 'dos')).toEqual({ group: 'dos', direct: 0, indirect: 0, home: 0, cardio: 0 });
-    // Octobre : le plafond s'applique semaine par semaine (½ + 3/12), pas au mois (14/12).
+    // Version 1.45.0 : bâtons en séries, la maison en entier. Pectoraux, semaine du 19 : 3 séries à la salle + 11 à la
+    // maison = 14 (en séances, plafonnées : 1,5) ; jambes : 3 séries (futsal).
+    expect(bar(w19.screen, 'pectoraux')).toEqual({ group: 'pectoraux', sets: 14 });
+    expect(bar(w19.screen, 'jambes')).toEqual({ group: 'jambes', sets: 3 });
+    expect(bar(w19.screen, 'dos')).toEqual({ group: 'dos', sets: 0 });
+    // Octobre : 6 séries à la salle + 14 à la maison, sans plafond (avant : ½ + 3/12 par semaine).
     const oc = screenOf(month);
-    expect(bar(oc.screen, 'pectoraux')).toEqual({ group: 'pectoraux', direct: 2, indirect: 0, home: 0.75, cardio: 0 });
+    expect(bar(oc.screen, 'pectoraux')).toEqual({ group: 'pectoraux', sets: 20 });
     expect(oc.report.groups.find((g) => g.group === 'pectoraux')).toMatchObject({ count: 2, home: 14 });
 
     // Jours du mois : un par jour, séances à la salle, à la maison, activités.

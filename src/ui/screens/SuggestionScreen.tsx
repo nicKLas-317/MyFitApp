@@ -77,8 +77,8 @@ export function SuggestionScreen() {
     <main className="screen tab-screen suggest-screen">
       {header}
       <p className="muted">
-        À faire {suggestionDueToday(s) ? 'aujourd’hui' : 'd’ici dimanche'}, à la salle : les groupes de ton récapitulatif encore sous {recapSettings.redThreshold}
-        {' '}séances cette semaine.
+        À faire {suggestionDueToday(s) ? 'aujourd’hui' : 'd’ici dimanche'}, à la salle : les groupes de ton récapitulatif encore sous {recapSettings.redSets}
+        {' '}séries cette semaine.
       </p>
       {failed && (
         <p className="field-error" role="alert">

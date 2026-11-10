@@ -194,7 +194,7 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
     expect(rebuildProfile(sessions, SETTINGS)).toEqual(before);
   });
 
-  it('191. Comparaison avec la période précédente, durée, cardio par machine, groupes directs et indirects (semaine et mois)', () => {
+  it('191. Comparaison avec la période précédente, durée, cardio par machine, groupes en séries, directs et indirects (semaine et mois)', () => {
     const sessions = octoberHistory();
     const r = report(WEEK, sessions, oct(26, 9));
     expect(linesOf(r, 'Séances')).toEqual([
@@ -202,7 +202,14 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
       'Durée en salle : 4 h 00, +1 h 00 par rapport à la semaine précédente',
       'Cardio : 40 min (Tapis de marche 30 min, Rameur 10 min)',
     ]);
-    expect(linesOf(r, 'Groupes travaillés')).toEqual(['Pectoraux : 1×', 'Dos : 2×', 'Biceps : 1× · +2 indirect', 'Jambes : 3×', 'Non travaillés : Épaules, Triceps']);
+    // Version 1.45.0 : total en séries (directes, indirectes ÷ 2), puis le détail en séances.
+    expect(linesOf(r, 'Groupes travaillés')).toEqual([
+      'Pectoraux : 3 séries (1 séance)',
+      'Dos : 6 séries (2 séances)',
+      'Biceps : 6 séries (1 séance, +2 indirect)',
+      'Jambes : 9 séries (3 séances)',
+      'Non travaillés : Épaules, Triceps',
+    ]);
     // Moins de séances, autant, durée plus courte, séance importée sans heure.
     const fewer = report(WEEK, [...sessions.slice(0, 3), session(oct(20), [green('pec-deck', 30)], { minutes: 25 }), session(oct(22), [green('pec-deck', 30)], { noTime: true })], oct(26, 9));
     expect(linesOf(fewer, 'Séances')!.slice(0, 2)).toEqual([
@@ -215,10 +222,16 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
       'Durée en salle : 3 h 00, autant que la semaine précédente',
       'Cardio : aucun',
     ]);
-    // Mois : séances par groupe sur tout le mois, comparaison avec le mois précédent.
+    // Mois : séries et séances par groupe sur tout le mois, comparaison avec le mois précédent.
     const month = report(periodContaining('month', oct(1)), [session(at(9, 30), [green('pec-deck', 30)]), ...sessions], at(11, 2));
     expect(linesOf(month, 'Séances')![0]).toBe('7 séances, +6 par rapport au mois précédent');
-    expect(linesOf(month, 'Groupes travaillés')).toEqual(['Pectoraux : 1×', 'Dos : 2×', 'Biceps : 2× · +2 indirect', 'Jambes : 6×', 'Non travaillés : Épaules, Triceps']);
+    expect(linesOf(month, 'Groupes travaillés')).toEqual([
+      'Pectoraux : 3 séries (1 séance)',
+      'Dos : 6 séries (2 séances)',
+      'Biceps : 9 séries (2 séances, +2 indirect)',
+      'Jambes : 18 séries (6 séances)',
+      'Non travaillés : Épaules, Triceps',
+    ]);
   });
 
   it('237. Durées inconnues jamais comptées pour 0 min ; période en cours comparée à la même portion de la précédente ; période terminée à la précédente entière', () => {
@@ -281,10 +294,10 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
         '- Cardio : 40 min (Tapis de marche 30 min, Rameur 10 min)',
         '',
         'GROUPES TRAVAILLÉS',
-        '- Pectoraux : 1×',
-        '- Dos : 2×',
-        '- Biceps : 1× · +2 indirect',
-        '- Jambes : 3×',
+        '- Pectoraux : 3 séries (1 séance)',
+        '- Dos : 6 séries (2 séances)',
+        '- Biceps : 6 séries (1 séance, +2 indirect)',
+        '- Jambes : 9 séries (3 séances)',
         '- Non travaillés : Épaules, Triceps',
         '',
         'PROGRESSIONS',

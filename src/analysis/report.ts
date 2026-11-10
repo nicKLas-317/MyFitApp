@@ -14,7 +14,7 @@ import { formatDurationLong, formatKg, formatLoad, formatShortDay, plural } from
 import { elapsedMs } from '../session/ops';
 import { isPalierValidated } from './progress';
 import { computeRecords, formatRecord, type RecordBreak } from './records';
-import { groupWork, HOME_WEEK_CAP, LEG_CARDIO_BONUS, LEG_CARDIO_GROUP, legCardioWeek, workParts } from './weekly';
+import { groupScore, groupSeries, groupWork, LEG_CARDIO_GROUP, legCardioWeek, setsLabel, workParts } from './weekly';
 
 export type ReportKind = 'week' | 'month';
 
@@ -198,11 +198,13 @@ export interface PeriodReport {
   /** Activités habituelles confirmées (hors salle) par nom : nombre et durée totale, dans l'ordre de la première. */
   activities: { name: string; count: number; minutes: number }[];
   /**
-   * Groupes affichés au récapitulatif, dans leur ordre : séances directes, indirectes et à la maison (absent sans) ;
-   * pour les jambes, minutes de cardio comptées (version 1.41.0 : semaines à 45 min ou plus, absent sans) et, sur un
-   * mois, nombre de ces semaines.
+   * Groupes affichés au récapitulatif, dans leur ordre : séances directes, indirectes et séries à la maison (absent
+   * sans) ; pour les jambes, minutes de cardio comptées (version 1.41.0 : semaines à 45 min ou plus, absent sans) et,
+   * sur un mois, nombre de ces semaines. `sets` (version 1.45.0) : total en séries, comme le récapitulatif (séries du
+   * graphique « Séries par semaine », 3 par activité confirmée, 3 par semaine à 45 min de cardio pour les jambes, semaine
+   * par semaine sur un mois).
    */
-  groups: { group: MuscleGroup; count: number; indirect: number; home?: number; cardio?: number; cardioWeeks?: number }[];
+  groups: { group: MuscleGroup; count: number; indirect: number; home?: number; cardio?: number; cardioWeeks?: number; sets: number }[];
   progressions: ReportProgression[];
   /** Records battus pendant la période : le dernier de chaque exercice-variante, dans l'ordre chronologique. */
   records: RecordBreak[];
@@ -250,7 +252,7 @@ function weekSpans(period: Pick<ReportPeriod, 'start' | 'next'>): { start: Date;
 
 /**
  * Cardio des jambes d'une période (version 1.41.0), semaine par semaine : minutes des semaines qui atteignent 45 min
- * (sur leur partie comprise dans la période) et nombre de ces semaines, chacune valant ½.
+ * (sur leur partie comprise dans la période) et nombre de ces semaines, chacune valant 3 séries (version 1.45.0).
  */
 function legCardioOf(sessions: readonly Session[], machines: readonly CardioMachine[], period: Pick<ReportPeriod, 'start' | 'next'>): { minutes: number; weeks: number } {
   let minutes = 0;
@@ -298,10 +300,13 @@ export function buildReport(period: ReportPeriod, input: ReportInput): PeriodRep
     activities.set(a.name, { ...entry, count: entry.count + 1, minutes: entry.minutes + activityMinutes(a) });
   }
   const legCardio = legCardioOf(sessions, input.machines ?? [], period);
+  const series = groupSeries(sessions, exercises, input.groups, (t) => containsTime(period, t), done);
   const groups = input.groups.map((group) => {
     const home = work.homes.get(group) ?? 0;
-    const cardio = group === LEG_CARDIO_GROUP && legCardio.weeks > 0 ? { cardio: legCardio.minutes, ...(period.kind === 'month' ? { cardioWeeks: legCardio.weeks } : {}) } : {};
-    return { group, count: work.counts.get(group) ?? 0, indirect: work.indirects.get(group) ?? 0, ...(home > 0 ? { home } : {}), ...cardio };
+    const legs = group === LEG_CARDIO_GROUP ? legCardio.weeks : 0;
+    const cardio = legs > 0 ? { cardio: legCardio.minutes, ...(period.kind === 'month' ? { cardioWeeks: legCardio.weeks } : {}) } : {};
+    const sets = groupScore({ sets: series.sets.get(group) ?? 0, activities: series.activities.get(group)?.length ?? 0, cardioWeeks: legs });
+    return { group, count: work.counts.get(group) ?? 0, indirect: work.indirects.get(group) ?? 0, ...(home > 0 ? { home } : {}), ...cardio, sets };
   });
 
   // Évaluations du moteur, dans l'ordre du rejeu : paliers validés, rouges et passages en « poids inférieur ».
@@ -489,9 +494,20 @@ export function reportSections(report: PeriodReport, variantName: (variantId: st
   const sections: ReportSection[] = [{ title: 'Séances', lines: sessionsLines }];
 
   if (totals.sessionCount > 0 || report.activities.length > 0) {
-    const worked = report.groups.filter((g) => g.count > 0 || g.indirect > 0 || !!g.home || !!g.cardio);
-    const idle = report.groups.filter((g) => g.count === 0 && g.indirect === 0 && !g.home && !g.cardio);
-    const lines: ReportLine[] = worked.map((g) => [`${MUSCLE_GROUP_LABELS[g.group]} : ${workParts(g).join(' · ')}`]);
+    const isIdle = (g: PeriodReport['groups'][number]) => g.count === 0 && g.indirect === 0 && !g.home && !g.cardio && g.sets === 0;
+    const worked = report.groups.filter((g) => !isIdle(g));
+    const idle = report.groups.filter(isIdle);
+    // Version 1.45.0 : le total en séries, puis le détail : « Pectoraux : 6,5 séries (1 séance, +2 séries maison) » ;
+    // sur un mois, « Jambes : 12 séries (1 séance, +100 min cardio sur 2 semaines) » (pas de parenthèses imbriquées).
+    const detail = (g: PeriodReport['groups'][number]) => {
+      const parts = workParts(g);
+      if (g.cardio && g.cardioWeeks) parts[parts.length - 1] += ` sur ${plural(g.cardioWeeks, 'semaine')}`;
+      return parts.join(', ');
+    };
+    const lines: ReportLine[] = worked.map((g) => {
+      const d = detail(g);
+      return [`${MUSCLE_GROUP_LABELS[g.group]} : ${setsLabel(g.sets)}${d ? ` (${d})` : ''}`];
+    });
     if (idle.length > 0) lines.push([em(`Non travaillés : ${idle.map((g) => MUSCLE_GROUP_LABELS[g.group]).join(', ')}`)]);
     sections.push({ title: 'Groupes travaillés', lines });
   }
@@ -693,11 +709,10 @@ export interface ReportScreen {
   cardio: { now: number; before: number };
   activities: { now: number; before: number };
   /**
-   * Longueur de la barre de chaque groupe, en séances, avec les règles du récapitulatif : 1 par séance directe, ½ par
-   * séance indirecte (activités comprises), maison à 1/12 par série plafonnée à ½ par semaine (§19.6), ½ par semaine
-   * à 45 min de cardio ou plus pour les jambes (version 1.41.0).
+   * Longueur de la barre de chaque groupe, en séries (version 1.45.0), avec les règles du récapitulatif : séries du
+   * graphique « Séries par semaine », 3 par activité confirmée, 3 par semaine à 45 min de cardio pour les jambes.
    */
-  bars: { group: MuscleGroup; direct: number; indirect: number; home: number; cardio: number }[];
+  bars: { group: MuscleGroup; sets: number }[];
   /** Chaque jour de la période : séances à la salle, à la maison, activités confirmées. */
   days: { date: string; gym: number; home: number; activities: number }[];
   /** Échelle de cycle de chaque progression, dans l'ordre de `report.progressions`. */
@@ -714,20 +729,7 @@ export function buildReportScreen(report: PeriodReport, input: ReportInput): Rep
     done.filter((s) => inside(span)(sessionStartTime(s))).reduce((n, s) => n + cardioMinutes(s), 0);
   const activitiesIn = (span: Pick<ReportPeriod, 'start' | 'next'>) => activities.filter((a) => inside(span)(activityStart(a))).length;
 
-  // Maison plafonnée à ½ par semaine : semaine par semaine, sur la partie de chaque semaine comprise dans la période.
-  const home = new Map<MuscleGroup, number>();
-  for (const span of weekSpans(period)) {
-    const work = groupWork(input.sessions, input.exercises, input.groups, inside(span), activities);
-    for (const [g, v] of work.homeScores) home.set(g, (home.get(g) ?? 0) + Math.min(HOME_WEEK_CAP, v));
-  }
-  const legWeeks = legCardioOf(input.sessions, input.machines ?? [], period).weeks;
-  const bars = report.groups.map((g) => ({
-    group: g.group,
-    direct: g.count,
-    indirect: g.indirect / 2,
-    home: home.get(g.group) ?? 0,
-    cardio: g.group === LEG_CARDIO_GROUP ? legWeeks * LEG_CARDIO_BONUS : 0,
-  }));
+  const bars = report.groups.map((g) => ({ group: g.group, sets: g.sets }));
 
   const days: ReportScreen['days'] = [];
   for (let d = new Date(period.start); d < period.next; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)) {

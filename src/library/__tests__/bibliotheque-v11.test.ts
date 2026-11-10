@@ -53,13 +53,13 @@ describe('Bibliothèque version 11 : abdominaux au poids du corps (§4.0)', () =
     expect(matchExercise('Heel touches', LIB)).toMatchObject({ confidence: 'certain', suggestion: 'crunch-oblique-touche-talons' });
     expect(matchExercise('Relevés de jambes allongé', LIB)).toMatchObject({ confidence: 'certain', suggestion: 'releves-jambes-allonge' });
 
-    // Récapitulatif avec « Abdominaux » activé : une séance d'abdos compte 1, sans toucher aux jambes.
+    // Récapitulatif avec « Abdominaux » activé : une séance d'abdos compte ses séries, sans toucher aux jambes.
     const recap = weeklyRecap([done('releves-jambes-allonge', '2026-10-27', 0)], LIB, new Date('2026-10-28T12:00:00').getTime(), {
       groups: ['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes', 'abdominaux'],
-      redThreshold: 2,
+      redSets: 10,
     });
-    expect(recap.cells.find((c) => c.group === 'abdominaux')).toMatchObject({ count: 1, indirect: 0 });
-    expect(recap.cells.find((c) => c.group === 'jambes')).toMatchObject({ count: 0, indirect: 0 });
+    expect(recap.cells.find((c) => c.group === 'abdominaux')).toMatchObject({ count: 1, indirect: 0, score: 3 });
+    expect(recap.cells.find((c) => c.group === 'jambes')).toMatchObject({ count: 0, indirect: 0, score: 0 });
   });
 
   it('250. Base existante (version 10) : les trois exercices ajoutés une seule fois ; sauvegarde : charge nulle au poids du corps seulement', async () => {

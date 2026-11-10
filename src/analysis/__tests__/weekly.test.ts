@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Session } from '../../domain/types';
 import { SEED_EXERCISES } from '../../library/seed';
-import { recapTitle, weeklyRecap, type WeeklyRecap } from '../weekly';
+import { DEFAULT_RECAP_SETTINGS, recapTitle, weeklyRecap, type WeeklyRecap } from '../weekly';
 import { weekStart } from '../../domain/calendar';
 
 const LIB = [...SEED_EXERCISES];
@@ -45,22 +45,23 @@ describe('Récapitulatif hebdomadaire (§19.6)', () => {
     expect(cell(weeklyRecap([monday, sunday], LIB, at(18, 23, 50)), 'dos').count).toBe(1);
   });
 
-  it('91. Le groupe principal compte une fois par séance ; un groupe secondaire n’est qu’indirect ; les abdominaux sont absents', () => {
-    // Tirage vertical : dos (biceps en secondaire). Deux exercices de dos dans la même séance : 1 séance.
+  it('91. Le groupe principal compte ses séries, un groupe secondaire la moitié des siennes (version 1.45.0) ; les abdominaux sont absents', () => {
     const r = weeklyRecap([session(at(13), ['tirage-vertical', 'tirage-horizontal', 'crunch-machine'])], LIB, at(16));
-    expect(cell(r, 'dos').count).toBe(1);
-    expect(cell(r, 'biceps')).toMatchObject({ count: 0, indirect: 1, score: 0.5 });
+    expect(cell(r, 'dos')).toMatchObject({ count: 1, score: 6 });
+    // Biceps : deux tirages, 3 séries chacun, en groupe secondaire : 3 séries.
+    expect(cell(r, 'biceps')).toMatchObject({ count: 0, indirect: 1, score: 3, color: 'orange' });
     expect(r.cells.map((c) => c.group).sort()).toEqual(['biceps', 'dos', 'epaules', 'jambes', 'pectoraux', 'triceps']);
   });
 
-  it('92. Couleurs : vert = 0, orange = 1, rouge à partir du seuil (2 par défaut, réglable)', () => {
-    const sessions = [session(at(12), ['pec-deck', 'leg-curl']), session(at(13), ['chest-press'])];
+  it('92. Couleurs en séries (version 1.45.0) : vert sous 3, orange de 3, rouge à partir du seuil (10 par défaut, réglable)', () => {
+    const sessions = [session(at(12), ['pec-deck', 'chest-press', 'leg-curl']), session(at(13), ['ecarte-couche-halteres', 'developpe-couche'])];
     const r = weeklyRecap(sessions, LIB, at(16));
-    expect(cell(r, 'pectoraux')).toMatchObject({ count: 2, color: 'rouge' });
-    expect(cell(r, 'jambes')).toMatchObject({ count: 1, color: 'orange' });
-    expect(cell(r, 'dos')).toMatchObject({ count: 0, color: 'vert' });
-    const r3 = weeklyRecap(sessions, LIB, at(16), { groups: ['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes'], redThreshold: 3 });
-    expect(cell(r3, 'pectoraux').color).toBe('orange');
+    expect(cell(r, 'pectoraux')).toMatchObject({ count: 2, score: 12, color: 'rouge' });
+    expect(cell(r, 'jambes')).toMatchObject({ count: 1, score: 3, color: 'orange' });
+    expect(cell(r, 'triceps')).toMatchObject({ count: 0, indirect: 2, score: 3, color: 'orange' });
+    expect(cell(r, 'dos')).toMatchObject({ count: 0, score: 0, color: 'vert' });
+    expect(cell(weeklyRecap(sessions, LIB, at(16), { ...DEFAULT_RECAP_SETTINGS, redSets: 13 }), 'pectoraux').color).toBe('orange');
+    expect(cell(weeklyRecap(sessions, LIB, at(16), { ...DEFAULT_RECAP_SETTINGS, redSets: 12 }), 'pectoraux').color).toBe('rouge');
   });
 
   it('93. « aujourd’hui » ou « hier » pour un groupe travaillé il y a moins de 48 heures, même la semaine précédente', () => {
@@ -75,24 +76,23 @@ describe('Récapitulatif hebdomadaire (§19.6)', () => {
     const now = at(16, 9);
     const r = weeklyRecap(
       [
-        session(at(12), ['pec-deck', 'elevations-laterales', 'extension-triceps-poulie']),
-        session(at(13), ['tirage-vertical']),
-        session(at(15), ['elevations-laterales', 'extension-triceps-poulie', 'tirage-horizontal']),
-        session(at(14), ['chest-press']),
+        session(at(12), ['pec-deck', 'leg-curl', 'extension-triceps-poulie']),
+        session(at(13), ['pull-over-poulie']),
+        session(at(15), ['elevations-laterales', 'tirage-horizontal']),
+        session(at(14), ['chest-press', 'developpe-couche', 'ecarte-couche-halteres']),
       ],
       LIB,
       now,
     );
-    // Biceps : deux tirages (secondaire) → score 1, orange. Épaules et triceps : 2 directes + chest press indirect.
     expect(view(r)).toEqual([
-      ['jambes', 'vert', 0, null],
-      ['biceps', 'orange', 0, 'yesterday'],
+      ['biceps', 'vert', 0, 'yesterday'],
+      ['jambes', 'orange', 1, null],
+      ['triceps', 'orange', 1, null],
+      ['dos', 'orange', 2, 'yesterday'],
+      ['epaules', 'orange', 1, 'yesterday'],
       ['pectoraux', 'rouge', 2, null],
-      ['dos', 'rouge', 2, 'yesterday'],
-      ['epaules', 'rouge', 2, 'yesterday'],
-      ['triceps', 'rouge', 2, 'yesterday'],
     ]);
-    expect(r.cells.map((c) => c.score)).toEqual([0, 1, 2, 2, 2.5, 2.5]);
+    expect(r.cells.map((c) => c.score)).toEqual([1.5, 3, 6, 6, 6, 12]);
   });
 
   it('95. Semaine vide : tous les groupes verts, « 0 séance »', () => {

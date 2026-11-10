@@ -2,7 +2,8 @@
  * Cardio, version minimale : blocs « machine, inclinaison (tapis), durée, distance facultative » dans une séance.
  * Simple enregistrement : ni progression, ni couleur, ni ressenti, ni calories, aucun effet sur le moteur.
  * Seule exception (version 1.41.0) : les minutes des machines qui comptent pour les jambes (toutes sauf le rameur,
- * par défaut) donnent ½ aux jambes du récapitulatif à partir de 45 min dans la semaine (`legCardioMinutes`, analysis/weekly).
+ * par défaut) donnent 3 séries aux jambes du récapitulatif à partir de 45 min dans la semaine (version 1.45.0,
+ * `legCardioMinutes`, analysis/weekly).
  * Fonctions pures.
  */
 import type { CardioBlock, CardioMachine, Incline, Session } from '../domain/types';

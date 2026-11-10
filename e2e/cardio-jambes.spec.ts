@@ -41,7 +41,8 @@ test.describe('Cardio pour les jambes (version 1.41.0)', () => {
     await expect(recap.getByRole('heading')).toHaveText(/: 2\sséances · 50\smin\sde cardio$/);
     await expect(legs).toHaveText('Jambes');
 
-    // Une séance de cardio seul, 10 min de vélo : 45 min → « Jambes (+45 min cardio) », vert (½).
+    // Une séance de cardio seul, 10 min de vélo : 45 min → « Jambes (3 séries · +45 min cardio) », orange (version 1.45.0 :
+    // 3 séries, orange à partir de 3).
     await startSession(page);
     await page.getByRole('button', { name: 'Ajouter du cardio' }).click();
     const form = page.getByRole('form', { name: 'Cardio' });
@@ -50,11 +51,11 @@ test.describe('Cardio pour les jambes (version 1.41.0)', () => {
     await form.getByRole('button', { name: 'Valider', exact: true }).click();
     await finishSession(page);
     await page.getByRole('button', { name: 'Retour à l’accueil' }).click();
-    await expect(legs).toHaveText('Jambes (+45 min cardio)');
-    await expect(legs).toHaveAttribute('data-color', 'vert');
+    await expect(legs).toHaveText('Jambes (3 séries · +45 min cardio)');
+    await expect(legs).toHaveAttribute('data-color', 'orange');
     // Aucune autre case ne change ; pas de « hier » / « aujourd'hui » pour le cardio.
-    await expect(recap.locator('[data-group="pectoraux"]')).toHaveText('Pectoraux (1×)');
-    await expect(recap.locator('[data-group="dos"]')).toHaveText('Dos (1×) · hier');
+    await expect(recap.locator('[data-group="pectoraux"]')).toHaveText('Pectoraux (3 séries)');
+    await expect(recap.locator('[data-group="dos"]')).toHaveText('Dos (3 séries) · hier');
 
     // Réglages : « Compte pour les jambes », cochée par défaut, décochée pour le rameur ; une nouvelle machine est cochée.
     await page.goto('./#/reglages');
@@ -75,7 +76,7 @@ test.describe('Cardio pour les jambes (version 1.41.0)', () => {
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `${width}px`).toBe(true);
     }
     await page.setViewportSize({ width: 412, height: 915 });
-    // Rameur coché, elliptique décoché : 20 + 15 + 10 = 45 → toujours ½ ; enregistré (la case de chaque machine changée).
+    // Rameur coché, elliptique décoché : 20 + 15 + 10 = 45 → toujours 3 séries ; enregistré (la case de chaque machine changée).
     await legsBox('Rameur').check();
     await legsBox('Vélo elliptique').uncheck();
     await machines.getByRole('button', { name: 'Enregistrer les machines' }).click();
@@ -97,7 +98,7 @@ test.describe('Cardio pour les jambes (version 1.41.0)', () => {
     await legsBox('Tapis de marche').check();
     await machines.getByRole('button', { name: 'Enregistrer les machines' }).click();
     await page.goto('./');
-    await expect(legs).toHaveText('Jambes (+45 min cardio)');
+    await expect(legs).toHaveText('Jambes (3 séries · +45 min cardio)');
 
     // Le récapitulatif reste dans son cadre, sans défilement horizontal.
     for (const width of [412, 360, 320]) {
@@ -109,19 +110,19 @@ test.describe('Cardio pour les jambes (version 1.41.0)', () => {
       await test.info().attach(`recap-${width}`, { body: await recap.screenshot(), contentType: 'image/png' });
     }
 
-    // Bilan de la semaine : bâton des jambes à ½, phrase sous le tableau, texte du mail.
+    // Bilan de la semaine : bâton des jambes à 3 séries, phrase sous le tableau, texte du mail (version 1.45.0).
     await page.setViewportSize({ width: 412, height: 915 });
     await page.goto('./#/bilan-periode/semaine/2026-10-26');
     const chart = page.getByTestId('groups-chart');
-    await expect(chart.locator('[data-group="jambes"]')).toHaveAttribute('data-total', '0.5');
+    await expect(chart.locator('[data-group="jambes"]')).toHaveAttribute('data-total', '3');
     await expect(chart.locator('[data-group="jambes"]')).not.toHaveClass(/groups-idle/);
-    await expect(page.getByTestId('groups-cardio')).toHaveText('Jambes : +½ pour 45 min de cardio.');
-    await expect(page.getByTestId('report-text')).toContainText('- Jambes : +45 min cardio\n');
+    await expect(page.getByTestId('groups-cardio')).toHaveText('Jambes : +3 séries pour 45 min de cardio.');
+    await expect(page.getByTestId('report-text')).toContainText('- Jambes : 3 séries (+45 min cardio)\n');
     await expect(page.getByTestId('report-text')).not.toContainText('Non travaillés : Jambes');
-    // Bilan du mois : ½ par semaine, ici une seule semaine.
+    // Bilan du mois : 3 séries par semaine, ici une seule semaine.
     await page.goto('./#/bilan-periode/mois/2026-10');
-    await expect(page.getByTestId('groups-cardio')).toHaveText('Jambes : +½ pour le cardio, 1 semaine à 45 min ou plus (45 min).');
-    await expect(page.getByTestId('report-text')).toContainText('- Jambes : +45 min cardio (1 semaine)\n');
+    await expect(page.getByTestId('groups-cardio')).toHaveText('Jambes : +3 séries pour le cardio, 1 semaine à 45 min ou plus (45 min).');
+    await expect(page.getByTestId('report-text')).toContainText('- Jambes : 3 séries (+45 min cardio sur 1 semaine)\n');
     for (const width of [412, 360, 320]) {
       await page.setViewportSize({ width, height: 915 });
       const note = (await page.getByTestId('groups-cardio').boundingBox())!;

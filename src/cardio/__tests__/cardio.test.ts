@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
 import type { CardioMachine, Exercise, Session } from '../../domain/types';
 import { createSessionFromTemplate, DEFAULT_VARIANT_CONFIG, rebuildProfile } from '../../engine';
-import { recapTitle, weeklyRecap } from '../../analysis/weekly';
+import { recapTitle, sanitizeRecapSettings, weeklyRecap } from '../../analysis/weekly';
 import { buildEngineSettings } from '../../library/catalog';
 import { SEED_EXERCISES } from '../../library/seed';
 import { addExercise, finishSession, missingFeelings, recordSet, setFeeling, startSession } from '../../session/ops';
@@ -295,6 +295,8 @@ describe('Cardio : sauvegarde, migration et réglages', () => {
     expect(parsed.backup.schemaVersion).toBe(SCHEMA_VERSION);
     expect(parsed.backup.sessions).toEqual([old]);
     expect(parsed.backup.settings).toEqual({ weeklyRecap: { groups: ['dos'], redThreshold: 3 } });
+    // Restauré, l'ancien seuil en séances est converti en séries (version 1.45.0 : 3 séances → 15 séries).
+    expect(sanitizeRecapSettings(parsed.backup.settings.weeklyRecap)).toEqual({ groups: ['dos'], redSets: 15 });
     // Format plus récent : refusé, rien n'est importé.
     expect(parseJsonImport(JSON.stringify({ ...v2, schemaVersion: SCHEMA_VERSION + 1 }), LIB, TODAY).kind).toBe('error');
 

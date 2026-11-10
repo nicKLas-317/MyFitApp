@@ -1,7 +1,7 @@
 /**
- * Écran du bilan de la semaine ou du mois (§19.7, version 1.35.0) : tuiles des séances, barres des groupes, calendrier
- * du mois, échelles de cycle des progressions. Affichage seulement : le texte du mail est inchangé. Pas de vert, d'orange
- * ni de rouge : couleurs des groupes et neutre.
+ * Écran du bilan de la semaine ou du mois (§19.7, version 1.35.0) : tuiles des séances, bâtons des groupes (en séries,
+ * version 1.45.0), calendrier du mois, échelles de cycle des progressions. Affichage seulement : le texte du mail est
+ * à part (`reportText`). Pas de vert, d'orange ni de rouge : couleurs des groupes et neutre.
  */
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { formatMinutes } from '../cardio/model';
@@ -15,7 +15,7 @@ import {
   type ReportScreen,
   type ReportSection,
 } from '../analysis/report';
-import { groupScore, LEG_CARDIO_MINUTES } from '../analysis/weekly';
+import { LEG_CARDIO_MINUTES, LEG_CARDIO_SETS, setsLabel } from '../analysis/weekly';
 import { MUSCLE_GROUP_LABELS } from '../library/seed';
 import { parseIsoDay } from '../domain/calendar';
 import { formatDecimal, formatDurationLong, localDate, plural as pluralWith } from '../session/format';
@@ -196,15 +196,16 @@ export function stickLabels(column: number, full: readonly number[], short: read
 
 /**
  * Groupes travaillés (version 1.37.0) : un diagramme en bâtons verticaux au-dessus d'un petit tableau. Un bâton par
- * groupe affiché au récapitulatif, dans son ordre (fixe), à la couleur du groupe ; hauteur = total en séances, avec les
- * règles du récapitulatif (séance 1, indirect ½, maison 1/12 par série plafonnée à ½ par semaine) ; le plus travaillé
- * occupe toute la hauteur ; pas de valeur au-dessus (le tableau donne les chiffres). Groupe non travaillé : bâton vide,
- * nom en gris. Tableau : Séances / Indirect / Maison (séries), case vide pour zéro ; en-têtes abrégés à 320 px.
- * Cardio des jambes (version 1.41.0) : ½ par semaine à 45 min ou plus, compris dans le bâton des jambes et donné par
- * une phrase sous le tableau (« Jambes : +½ pour 62 min de cardio. »).
+ * groupe affiché au récapitulatif, dans son ordre (fixe), à la couleur du groupe ; hauteur = total en séries (version
+ * 1.45.0), comme le récapitulatif : séries du graphique « Séries par semaine » (directes, indirectes ÷ 2, maison en
+ * entier), 3 par activité confirmée, 3 par semaine à 45 min de cardio pour les jambes ; le plus travaillé occupe toute
+ * la hauteur ; pas de valeur au-dessus. Groupe non travaillé : bâton vide, nom en gris. Tableau : sous le nom de chaque
+ * groupe, son total (« 6,5 séries », en petit gris, version 1.45.0), puis Séances / Indirect / Maison (séries), case vide
+ * pour zéro ; en-têtes abrégés à 320 px. Cardio des jambes : compris dans le bâton et donné par une phrase sous le
+ * tableau (« Jambes : +3 séries pour 62 min de cardio. »).
  */
 export function ReportGroups({ report, screen }: { report: PeriodReport; screen: ReportScreen }) {
-  const totals = screen.bars.map(groupScore);
+  const totals = screen.bars.map((b) => b.sets);
   const max = Math.max(...totals);
   const chartRef = useRef<HTMLDivElement>(null);
   const [labels, setLabels] = useState<StickLabels>('staggered');
@@ -230,7 +231,7 @@ export function ReportGroups({ report, screen }: { report: PeriodReport; screen:
     observer.observe(label);
     return () => observer.disconnect();
   }, [key]);
-  const summary = `Total par groupe, en séances : ${report.groups
+  const summary = `Total par groupe, en séries : ${report.groups
     .map((g, i) => `${MUSCLE_GROUP_LABELS[g.group].toLowerCase()} ${formatDecimal(totals[i]!)}`)
     .join(', ')}.`;
   const head = (long: ReactNode, short: string, label: string) => (
@@ -249,7 +250,7 @@ export function ReportGroups({ report, screen }: { report: PeriodReport; screen:
       {n > 0 ? n : <span className="visually-hidden">0</span>}
     </td>
   );
-  const idleOf = (g: PeriodReport['groups'][number]) => g.count === 0 && g.indirect === 0 && !g.home && !g.cardio;
+  const idleOf = (g: PeriodReport['groups'][number]) => g.count === 0 && g.indirect === 0 && !g.home && !g.cardio && g.sets === 0;
   const legs = report.groups.find((g) => g.cardio);
   return (
     <section className="frame report-section" aria-label="Groupes travaillés">
@@ -299,6 +300,11 @@ export function ReportGroups({ report, screen }: { report: PeriodReport; screen:
               <tr key={g.group} data-testid="group-row" data-group={g.group} data-idle={idle || undefined} className={idle ? 'groups-idle' : undefined}>
                 <th scope="row" className="groups-name">
                   {MUSCLE_GROUP_LABELS[g.group]}
+                  {g.sets > 0 && (
+                    <span className="groups-sets" data-testid="group-sets">
+                      {setsLabel(g.sets, NB)}
+                    </span>
+                  )}
                 </th>
                 {cell(g.count, 'seances')}
                 {cell(g.indirect, 'indirect')}
@@ -313,20 +319,14 @@ export function ReportGroups({ report, screen }: { report: PeriodReport; screen:
   );
 }
 
-/** « ½ », « 1 », « 1½ » : poids du cardio des jambes. */
-function halves(weeks: number): string {
-  const whole = Math.floor(weeks / 2);
-  return `${whole > 0 ? whole : ''}${weeks % 2 === 1 ? '½' : ''}`;
-}
-
 /**
- * Cardio des jambes sous le tableau (version 1.41.0) : « Jambes : +½ pour 62 min de cardio. » (semaine), « Jambes : +1
- * pour le cardio, 2 semaines à 45 min ou plus (150 min). » (mois).
+ * Cardio des jambes sous le tableau (version 1.45.0 : 3 séries par semaine à 45 min ou plus) : « Jambes : +3 séries pour
+ * 62 min de cardio. » (semaine), « Jambes : +6 séries pour le cardio, 2 semaines à 45 min ou plus (95 min). » (mois).
  */
 export function legCardioSentence(minutes: number, weeks?: number): string {
   const nb = '\u00a0';
-  if (!weeks) return `Jambes${nb}: +½ pour ${minutes}${nb}min de cardio.`;
-  return `Jambes${nb}: +${halves(weeks)} pour le cardio, ${weeks}${nb}semaine${weeks > 1 ? 's' : ''} à ${LEG_CARDIO_MINUTES}${nb}min ou plus (${minutes}${nb}min).`;
+  if (!weeks) return `Jambes${nb}: +${setsLabel(LEG_CARDIO_SETS, nb)} pour ${minutes}${nb}min de cardio.`;
+  return `Jambes${nb}: +${setsLabel(LEG_CARDIO_SETS * weeks, nb)} pour le cardio, ${weeks}${nb}semaine${weeks > 1 ? 's' : ''} à ${LEG_CARDIO_MINUTES}${nb}min ou plus (${minutes}${nb}min).`;
 }
 
 function Ladder({ steps }: { steps: LadderStep[] }) {
