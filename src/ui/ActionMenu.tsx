@@ -10,7 +10,9 @@ export interface MenuAction {
 
 /**
  * Menu « ⋯ » des actions secondaires d'une carte (ajuster, voir la fiche, corriger, retirer) : elles ne sont plus
- * affichées en permanence sous le pouce. Le menu se ferme après un choix, par Échap ou par un appui ailleurs.
+ * affichées en permanence sous le pouce. Le menu se ferme après un choix, par Échap ou par un appui ailleurs. Depuis la
+ * version 1.48.0, cet appui ailleurs ne fait que fermer le menu (fond transparent dessous) : il n'ouvre jamais par
+ * erreur ce qui se trouve sous le panneau ou à côté (la fiche d'un exercice de la carte suivante, par exemple).
  */
 export function ActionMenu({ label, actions }: { label: string; actions: MenuAction[] }) {
   const [open, setOpen] = useState(false);
@@ -41,6 +43,7 @@ export function ActionMenu({ label, actions }: { label: string; actions: MenuAct
       >
         ⋯
       </button>
+      {open && <div className="menu-backdrop" aria-hidden="true" onClick={() => setOpen(false)} />}
       {open && (
         <div className="menu-panel" role="menu" aria-label={`Actions : ${label}`}>
           {actions.map((a) =>

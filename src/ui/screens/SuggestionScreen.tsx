@@ -10,7 +10,8 @@ import { formatCardio } from '../../cardio/model';
 import { plannedPerformance, startFromPlan } from '../../plan/model';
 import { SUGGEST_MAX, suggestionDueToday, suggestionPlan, type SkipReason } from '../../plan/suggest';
 import { groupColorProps } from '../groupColors';
-import { ExercisePicto } from '../Pictogram';
+import { SheetLink } from '../SheetLink';
+import { useEntryMemory } from '../../app/entryMemory';
 import { cardHint, NextTarget } from '../TargetSummary';
 import { useWeekSuggestion } from '../WeekSuggestion';
 
@@ -25,7 +26,13 @@ const names = (groups: readonly MuscleGroup[]) => groups.map((g) => MUSCLE_GROUP
 export function SuggestionScreen() {
   const { active, plan, savePlan, variants, ctxFor, commit, recapSettings } = useApp();
   const suggestion = useWeekSuggestion();
-  const [confirmReplace, setConfirmReplace] = useState(false);
+  // Confirmation « Remplacer ma séance prévue » ouverte : retrouvée au retour d'une fiche (version 1.48.0).
+  const memory = useEntryMemory('suggestion', () => ({ confirmReplace: false }));
+  const [confirmReplace, setConfirmReplaceState] = useState(memory.confirmReplace);
+  const setConfirmReplace = (on: boolean) => {
+    setConfirmReplaceState(on);
+    memory.confirmReplace = on;
+  };
   const [failed, setFailed] = useState(false);
 
   const header = (
@@ -102,10 +109,8 @@ export function SuggestionScreen() {
           const { hint } = p ? cardHint(ctx.state, ctx.cfg.assisted, p, ctx.cfg.seconds) : { hint: null };
           return (
             <li key={e.variantId} className="card plan-item" data-variant={e.variantId} aria-label={name} {...(ref ? groupColorProps(ref.exercise.primaryGroup) : {})}>
-              <div className="plan-name">
-                {ref && <ExercisePicto exercise={ref.exercise} variantId={ref.variant.id} />}
-                <strong>{name}</strong>
-              </div>
+              {/* Vignette et nom : la fiche (version 1.48.0). */}
+              <SheetLink variantId={e.variantId} exercise={ref?.exercise} name={name} className="plan-name" />
               <div className="plan-target-text">
                 {p ? (
                   <NextTarget

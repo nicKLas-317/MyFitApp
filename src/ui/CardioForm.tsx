@@ -165,6 +165,17 @@ interface ItemProps extends Omit<ListProps, 'blocks'> {
   removeQuestion?: string;
   /** Sous le bloc (flèches de la séance prévue). */
   children?: ReactNode;
+  /**
+   * Correction en cours gardée hors du composant (version 1.48.0, séance prévue) : retrouvée, avec sa saisie, en
+   * revenant d'une fiche.
+   */
+  editMemory?: CardioEditMemory;
+}
+
+/** Bloc en cours de correction (son identifiant) et sa saisie. */
+export interface CardioEditMemory {
+  editing: string | null;
+  form: CardioFormMemory;
 }
 
 /** Un bloc de cardio enregistré : « Corriger » et « Retirer » (après confirmation) dans son menu « ⋯ ». */
@@ -179,8 +190,16 @@ export function CardioItem({
   prefix,
   removeQuestion = 'Retirer ce cardio de la séance ?',
   children,
+  editMemory,
 }: ItemProps) {
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditingState] = useState(editMemory?.editing === b.id);
+  const setEditing = (on: boolean) => {
+    setEditingState(on);
+    if (editMemory) {
+      editMemory.editing = on ? b.id : null;
+      editMemory.form.current = null;
+    }
+  };
   const [removing, setRemoving] = useState(false);
   if (editing) {
     return (
@@ -189,6 +208,7 @@ export function CardioItem({
           machines={machines}
           initial={b}
           newId={newId}
+          memory={editMemory?.form}
           onCancel={() => setEditing(false)}
           onSave={(next) => {
             setEditing(false);

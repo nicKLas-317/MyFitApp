@@ -291,6 +291,52 @@ fieldset.frame > legend {
   padding: 0 var(--space-1);
 }
 
+/*
+ * Carte « Ma séance prévue » (version 1.48.0) : le bouton du titre s'étend sur toute la carte (ouvre la préparation) ;
+ * le nom de chaque exercice est un lien vers sa fiche, au-dessus de lui, 48 px de haut, à 8 px au moins du suivant.
+ */
+.plan-summary {
+  position: relative;
+}
+
+.plan-summary-open {
+  min-height: var(--tap);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.plan-summary-open::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.plan-summary .plan-names {
+  /* Noms à la suite, séparés par « · » ; 8 px au moins entre deux noms, sur la ligne comme d'une ligne à l'autre. */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.plan-summary-link {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  min-height: var(--tap);
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--frame-neutral);
+  text-underline-offset: 3px;
+}
+
 /* Groupes de la séance pour compléter la semaine : pastilles à la couleur du groupe (§3.2). */
 .group-pills {
   display: flex;
@@ -362,6 +408,28 @@ fieldset.frame > legend {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+}
+
+/*
+ * Vignette et nom d'un exercice de la séance prévue ou de la suggestion (version 1.48.0) : lien vers la fiche, limité
+ * à la vignette et au nom (pas toute la ligne), 48 px de haut au moins ; le menu « ⋯ » reste à droite.
+ */
+.sheet-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap);
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.sheet-link.plan-name {
+  flex: 0 1 auto;
+}
+
+.card-head > .sheet-link + .action-menu {
+  margin-left: auto;
 }
 
 /* Cible à gauche, « ↑ » « ↓ » à droite ; si la place manque, les flèches passent dessous. */
@@ -579,6 +647,13 @@ div.card-header {
   font-size: var(--fs-4);
   line-height: 1;
   cursor: pointer;
+}
+
+/* Menu ouvert (version 1.48.0) : un appui hors du panneau ne fait que le fermer. Sous le panneau, sous les barres fixes. */
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
 }
 
 .menu-panel {

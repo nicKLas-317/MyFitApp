@@ -13,13 +13,49 @@ interface NavState {
   from?: string;
   /** Entrée de garde (séance en cours) : même adresse que l'onglet Séance. */
   guard?: boolean;
+  /**
+   * Identifiant de l'entrée (version 1.48.0) : un écran qui retrouve la même clé est revenu à la même entrée (retour),
+   * pas rouvert ; il peut alors reprendre sa position de défilement et sa saisie en cours.
+   */
+  key?: string;
 }
+
+const newKey = () => Math.random().toString(36).slice(2, 10);
 
 const HOME = '#/';
 
 function state(): NavState | null {
   const s = window.history.state as NavState | null;
   return s && typeof s.depth === 'number' ? s : null;
+}
+
+/**
+ * Clé de l'entrée courante de l'historique ; une entrée qui n'en a pas (posée par une version antérieure, ou adresse
+ * changée hors de l'appli) en reçoit une, sans changer sa profondeur.
+ */
+export function entryKey(): string {
+  const current = state();
+  if (current?.key) return current.key;
+  const key = newKey();
+  window.history.replaceState({ ...(current ?? { depth: 0 }), key } satisfies NavState, '', window.location.hash || HOME);
+  return key;
+}
+
+/**
+ * Position de défilement de chaque entrée de l'historique (version 1.48.0), suivie en continu et notée en la quittant :
+ * un retour rend exactement la position où l'on était ; une entrée neuve s'ouvre en haut. Remplace la restauration du
+ * navigateur (`scrollRestoration` « manual »), qui arrivait après l'appli, à quelques pixels près.
+ */
+const positions = new Map<string, number>();
+
+/** Note la position de l'entrée courante (à chaque défilement, et avant de la quitter). */
+export function rememberScroll(): void {
+  positions.set(entryKey(), window.scrollY);
+}
+
+/** Position d'un écran qui s'ouvre : celle de son entrée si l'on y revient, sinon le haut. */
+export function scrollOnOpen(): number {
+  return positions.get(entryKey()) ?? 0;
 }
 
 /** Profondeur de l'entrée courante (0 : onglet Séance, ou adresse ouverte sans historique). */
@@ -37,19 +73,22 @@ function emit(): void {
 /** Ouvre un écran par-dessus l'écran courant. */
 export function push(hash: string): void {
   if (hash === window.location.hash) return;
-  window.history.pushState({ depth: depth() + 1, from: window.location.hash } satisfies NavState, '', hash);
+  rememberScroll();
+  window.history.pushState({ depth: depth() + 1, from: window.location.hash, key: newKey() } satisfies NavState, '', hash);
   emit();
 }
 
 /** Remplace l'écran courant (changement de période, de groupe, création puis fiche…). */
 export function replace(hash: string): void {
   if (hash === window.location.hash) return;
-  window.history.replaceState({ ...(state() ?? { depth: 0 }), guard: false } satisfies NavState, '', hash);
+  // Nouvel écran à la même place : nouvelle clé (rien à reprendre de l'écran remplacé).
+  window.history.replaceState({ ...(state() ?? { depth: 0 }), guard: false, key: newKey() } satisfies NavState, '', hash);
   emit();
 }
 
 /** Revient de `n` entrées, puis exécute `then` une fois arrivé. */
 function back(n: number, then?: () => void): void {
+  rememberScroll();
   if (then) window.addEventListener('popstate', then, { once: true });
   window.history.go(-n);
 }
@@ -99,7 +138,7 @@ export function setSessionActive(active: boolean): void {
 /** Pose l'entrée de garde si l'on est sur l'onglet Séance pendant une séance. */
 export function armExitGuard(): void {
   if (depth() === 0 && isHome(window.location.hash) && sessionActive) {
-    window.history.pushState({ depth: 1, from: HOME, guard: true } satisfies NavState, '', HOME);
+    window.history.pushState({ depth: 1, from: HOME, guard: true, key: newKey() } satisfies NavState, '', HOME);
   }
 }
 
@@ -108,10 +147,13 @@ export function armExitGuard(): void {
  * des liens internes (onglets, flèches « ‹ », écrans), et garde de sortie pendant une séance.
  */
 export function initNavigation(): void {
+  // Défilement géré par l'appli (`scrollOnOpen`), sans la restauration du navigateur.
+  if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual';
+  window.addEventListener('scroll', rememberScroll, { passive: true });
   if (!state()) {
     const hash = window.location.hash;
-    window.history.replaceState({ depth: 0 } satisfies NavState, '', HOME);
-    if (!isHome(hash)) window.history.pushState({ depth: 1, from: HOME } satisfies NavState, '', hash);
+    window.history.replaceState({ depth: 0, key: newKey() } satisfies NavState, '', HOME);
+    if (!isHome(hash)) window.history.pushState({ depth: 1, from: HOME, key: newKey() } satisfies NavState, '', hash);
   }
   // « Retour » jusqu'à l'onglet Séance pendant une séance : la garde est reposée, l'appli reste ouverte.
   window.addEventListener('popstate', armExitGuard);

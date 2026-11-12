@@ -18,9 +18,10 @@ import {
   updatePlanCardio,
 } from '../../plan/model';
 import { ActionMenu, ConfirmRemove } from '../ActionMenu';
-import { CardioForm, CardioItem } from '../CardioForm';
+import { CardioForm, CardioItem, type CardioEditMemory, type CardioFormMemory } from '../CardioForm';
+import { useEntryMemory } from '../../app/entryMemory';
+import { SheetLink } from '../SheetLink';
 import { groupColorProps } from '../groupColors';
-import { ExercisePicto } from '../Pictogram';
 import { cardHint, NextTarget } from '../TargetSummary';
 
 /**
@@ -30,8 +31,24 @@ import { cardHint, NextTarget } from '../TargetSummary';
  */
 export function PlanScreen() {
   const { plan, savePlan, variants, ctxFor, cardioMachines } = useApp();
-  const [addingCardio, setAddingCardio] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  // Saisie en cours (cardio ajouté ou corrigé, suppression à confirmer), retrouvée au retour d'une fiche (version 1.48.0).
+  const memory = useEntryMemory('seance-prevue', () => ({
+    adding: false,
+    cardio: { current: null } as CardioFormMemory,
+    edit: { editing: null, form: { current: null } } as CardioEditMemory,
+    confirmDelete: false,
+  }));
+  const [addingCardio, setAddingCardioState] = useState(memory.adding);
+  const setAddingCardio = (on: boolean) => {
+    setAddingCardioState(on);
+    memory.adding = on;
+    if (!on) memory.cardio.current = null;
+  };
+  const [confirmDelete, setConfirmDeleteState] = useState(memory.confirmDelete);
+  const setConfirmDelete = (on: boolean) => {
+    setConfirmDeleteState(on);
+    memory.confirmDelete = on;
+  };
   const [failed, setFailed] = useState(false);
 
   async function save(next: SessionPlan | null) {
@@ -87,6 +104,7 @@ export function PlanScreen() {
                   machines={cardioMachines}
                   newId={newId}
                   removeQuestion="Retirer ce cardio de la séance prévue ?"
+                  editMemory={memory.edit}
                   onSave={(block) => void save(plan && updatePlanCardio(plan, block, now()))}
                   onRemove={(block) => void save(plan && removePlanCardio(plan, block.id, now()))}
                 >
@@ -108,10 +126,8 @@ export function PlanScreen() {
                 {...(ref ? groupColorProps(ref.exercise.primaryGroup) : {})}
               >
                 <div className="card-head">
-                  <div className="plan-name">
-                    {ref && <ExercisePicto exercise={ref.exercise} variantId={ref.variant.id} />}
-                    <strong>{name}</strong>
-                  </div>
+                  {/* Vignette et nom : la fiche (version 1.48.0) ; le reste de la carte ne change pas. */}
+                  <SheetLink variantId={item.variantId} exercise={ref?.exercise} name={name} className="plan-name" />
                   <ActionMenu
                     label={name}
                     actions={[
@@ -147,6 +163,7 @@ export function PlanScreen() {
         <CardioForm
           machines={cardioMachines}
           newId={newId}
+          memory={memory.cardio}
           onCancel={() => setAddingCardio(false)}
           onSave={(block) => {
             setAddingCardio(false);

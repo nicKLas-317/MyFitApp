@@ -1,10 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useLayoutEffect } from 'react';
 import { AppProvider, useApp } from './app/store';
-import { armExitGuard, setSessionActive } from './app/navigation';
+import { armExitGuard, scrollOnOpen, setSessionActive } from './app/navigation';
 import { BodyProvider } from './body/store';
 import { ErrorBoundary } from './ui/ErrorBoundary';
 import { useHashRoute } from './app/hooks';
-import { useFrames } from './ui/frames';
+import { markFrames, useFrames } from './ui/frames';
 import { ForgottenDialog } from './ui/ForgottenDialog';
 import { SaveErrorBanner } from './ui/SaveIndicator';
 import { UndoToast } from './ui/UndoToast';
@@ -34,9 +34,13 @@ function Router() {
   const [page = '', param, extra] = useHashRoute();
   const { active } = useApp();
   useFrames();
-  // Chaque écran s'ouvre en haut : la position de défilement de l'écran précédent ne s'applique pas.
-  useEffect(() => {
-    window.scrollTo(0, 0);
+  // Chaque écran neuf s'ouvre en haut : la position de défilement de l'écran précédent ne s'applique pas. Au retour
+  // vers un écran (bouton « ‹ » ou retour d'Android), sa position exacte (version 1.48.0). Avant l'affichage, pour ne
+  // jamais montrer l'écran ailleurs.
+  useLayoutEffect(() => {
+    // Cadres posés d'abord (sinon ils arrivent juste après, et la page glisse de 2 px par carte).
+    markFrames(document);
+    window.scrollTo(0, scrollOnOpen());
   }, [page]);
   // Séance en cours : « retour » sur l'onglet Séance ne ferme pas l'appli (§3.4).
   const sessionActive = !!active;

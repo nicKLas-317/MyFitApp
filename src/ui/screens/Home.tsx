@@ -113,18 +113,31 @@ export function Home() {
       <div className="home-actions">
         {completeButton}
         {!active && plan && (
-          // Carte « Ma séance prévue » (version 1.40.0) : tout le cadre ouvre la préparation.
-          <button type="button" className="card action-card plan-summary" aria-label={`Ma séance prévue : ${planNames}`} onClick={() => navigate('seance-prevue')}>
+          // Carte « Ma séance prévue » (version 1.40.0) : le cadre ouvre la préparation ; le nom d'un exercice, sa fiche
+          // (version 1.48.0). Le bouton du titre couvre toute la carte (sauf les noms, au-dessus de lui).
+          <div className="card action-card plan-summary">
             <span className="action-card-text">
-              <span className="action-card-title">Ma séance prévue</span>
+              <button type="button" className="plan-summary-open" aria-label={`Ma séance prévue : ${planNames}`} onClick={() => navigate('seance-prevue')}>
+                <span className="action-card-title">Ma séance prévue</span>
+              </button>
               <span className="action-card-sub plan-names" data-testid="plan-summary">
-                {planNames}
+                {plan.items.flatMap((e, i) => [
+                  // Le texte du résumé reste « Chest press · Pec deck » (lecteur d'écran, recherche) ; l'écart est celui de la ligne.
+                  ...(i > 0 ? [<span key={`sep-${i}`} aria-hidden="true">{' · '}</span>] : []),
+                  e.kind === 'cardio' ? (
+                    <span key={e.block.id}>{formatCardio(e.block)}</span>
+                  ) : (
+                    <a key={e.variantId} className="plan-summary-link" href={`#/exercice/${encodeURIComponent(e.variantId)}`}>
+                      {displayName(variants.get(e.variantId))}
+                    </a>
+                  ),
+                ])}
               </span>
             </span>
             <span className="action-card-chevron" aria-hidden="true">
               ›
             </span>
-          </button>
+          </div>
         )}
         {/* Séance pour compléter la semaine (version 1.39.0) : à côté de la séance prévue, jamais à sa place. */}
         <WeekSuggestionCard />
