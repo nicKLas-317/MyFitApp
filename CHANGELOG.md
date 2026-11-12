@@ -4,9 +4,14 @@ Ce qui a changé à chaque version de MyFitApp, de la plus récente à la plus a
 
 Les commits sans changement de numéro (documentation, tests, workflow) sont rangés sous la version en cours à ce moment-là.
 
+## 1.48.1 — 12 nov. 2026
+
+- Carte « Ma séance prévue » de l'accueil : de nouveau un seul bouton vers la préparation, sans lien vers les fiches, avec son allure d'avant. Les liens vers la fiche restent dans le détail de la séance prévue (préparation) et dans la séance pour compléter la semaine
+- Historique : en 1.48.0, chaque nom d'exercice de la carte de l'accueil était un lien (lignes plus hautes, noms soulignés)
+
 ## 1.48.0 — 12 nov. 2026
 
-- Séance prévue → fiche de l'exercice : dans la préparation, la carte « Ma séance prévue » de l'accueil et la séance pour compléter la semaine, un appui sur la vignette ou le nom d'un exercice ouvre sa fiche (zone limitée à la vignette et au nom, 48 px ; sur l'accueil, chaque nom est un lien, le reste de la carte ouvre toujours la préparation). Le retour (bouton ou geste d'Android, flèche « ‹ ») ramène exactement où l'on était : même position, ordre, cardio en cours d'ajout ou de correction, confirmation ouverte. Pendant la séance à la salle, rien ne change (« Voir la fiche de l'exercice » reste dans le menu de la carte)
+- Séance prévue → fiche de l'exercice : dans la préparation, la carte « Ma séance prévue » de l'accueil et la séance pour compléter la semaine, un appui sur la vignette ou le nom d'un exercice ouvre sa fiche (zone limitée à la vignette et au nom, 48 px ; sur l'accueil, chaque nom est un lien, le reste de la carte ouvre toujours la préparation ; retiré de l'accueil en 1.48.1). Le retour (bouton ou geste d'Android, flèche « ‹ ») ramène exactement où l'on était : même position, ordre, cardio en cours d'ajout ou de correction, confirmation ouverte. Pendant la séance à la salle, rien ne change (« Voir la fiche de l'exercice » reste dans le menu de la carte)
 - Partout : « retour » rend la position de défilement exacte de l'écran (l'appli la gère seule, plus le navigateur, qui la rétablissait à quelques pixels près), un écran ouvert autrement s'ouvre en haut ; menu « ⋯ » ouvert : un appui ailleurs ne fait que le fermer, sans activer ce qui est dessous ou à côté
 
 ## 1.47.1 — 12 nov. 2026

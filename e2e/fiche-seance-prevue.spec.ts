@@ -165,37 +165,15 @@ test.describe('Fiche depuis la séance prévue (version 1.48.0)', () => {
     expect(await scrollY(page)).toBe(0);
   });
 
-  test('314. Accueil : le nom d’un exercice de « Ma séance prévue » ouvre sa fiche, le reste de la carte la préparation ; suggestion : vignette ou nom → fiche, retour au même endroit ; séance à la salle inchangée', async ({ page }) => {
+  test('314. Accueil : la carte « Ma séance prévue » reste un seul bouton, sans lien (version 1.48.1) ; suggestion : vignette ou nom → fiche, retour au même endroit ; séance à la salle inchangée', async ({ page }) => {
     await open(page);
     const summary = page.getByTestId('plan-summary');
     await expect(summary).toHaveText('Tapis de marche · inclinaison neutre · 10 min · Chest press · Pec deck · Leg extension · Élévations latérales haltères · Extension triceps poulie — Corde · Curl biceps haltères');
-    // Un lien par exercice (pas pour le cardio), 48 px de haut, à 8 px au moins l'un de l'autre, à 412, 360 et 320 px.
-    await expect(summary.getByRole('link')).toHaveCount(6);
-    for (const width of [412, 360, 320]) {
-      await page.setViewportSize({ width, height: 800 });
-      const boxes = await summary.getByRole('link').evaluateAll((links) => links.map((l) => l.getBoundingClientRect().toJSON() as DOMRect));
-      for (const b of boxes) expect(b.height, `${width} px`).toBeGreaterThanOrEqual(48);
-      for (let i = 0; i < boxes.length; i++)
-        for (let j = i + 1; j < boxes.length; j++) {
-          const [a, b] = [boxes[i]!, boxes[j]!];
-          const gap = Math.max(Math.max(a.left, b.left) - Math.min(a.right, b.right), Math.max(a.top, b.top) - Math.min(a.bottom, b.bottom));
-          expect(gap, `${width} px`).toBeGreaterThanOrEqual(7.5);
-        }
-    }
-    await page.setViewportSize({ width: 412, height: 600 });
-    // Nom → fiche ; retour → l'accueil.
-    await summary.getByRole('link', { name: 'Leg extension' }).click();
-    await expect(page).toHaveURL(/#\/exercice\/leg-extension$/);
-    await page.goBack();
-    await expect(page.getByTestId('plan-summary')).toBeVisible();
-    // Titre, cardio ou séparateur : la préparation, comme avant.
-    await page.getByRole('button', { name: /^Ma séance prévue/ }).click();
-    await expect(page).toHaveURL(/#\/seance-prevue$/);
-    await page.goBack();
-    // Le texte du cardio est sous la zone du bouton de la carte : un appui du doigt à cet endroit.
-    await summary.scrollIntoViewIfNeeded();
-    const cardio = (await summary.getByText('Tapis de marche · inclinaison neutre · 10 min').boundingBox())!;
-    await page.mouse.click(cardio.x + cardio.width / 2, cardio.y + cardio.height / 2);
+    // Aucun lien vers une fiche : toute la carte ouvre la préparation, comme en version 1.40.0.
+    await expect(page.locator('.home-actions a')).toHaveCount(0);
+    const cardButton = page.getByRole('button', { name: /^Ma séance prévue : / });
+    await expect(cardButton).toHaveClass(/plan-summary/);
+    await summary.getByText('Leg extension', { exact: false }).click();
     await expect(page).toHaveURL(/#\/seance-prevue$/);
     await page.goBack();
 
