@@ -9,4 +9,6 @@ playwright-report
 perso/
 # Sauvegardes exportées par l'appli, où qu'elles soient dans le dépôt (elles vont dans perso/).
 myfitapp-sauvegarde-*.json
+# Exports pour le coach (version 1.46.0) : mêmes données personnelles, même règle.
+myfitapp-coach-*.json
 *.tsbuildinfo

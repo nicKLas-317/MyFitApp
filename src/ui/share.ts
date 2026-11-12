@@ -1,4 +1,5 @@
 import { mailtoUrl } from '../analysis/report';
+import { downloadFile } from './download';
 
 export type SendResult = 'shared' | 'mailto' | 'cancelled';
 
@@ -46,4 +47,26 @@ export async function copyText(text: string): Promise<boolean> {
   } finally {
     area.remove();
   }
+}
+
+export type FileShareResult = 'shared' | 'downloaded' | 'cancelled';
+
+/**
+ * Partage un fichier par le partage natif d'Android (Web Share API, avec le fichier) quand le navigateur l'accepte ;
+ * sinon, ou si le partage échoue, le télécharge (version 1.46.0, export pour le coach). Un partage annulé ne
+ * télécharge rien.
+ */
+export async function shareFile(name: string, text: string, type: string, title: string): Promise<FileShareResult> {
+  const file = new File([text], name, { type });
+  if (typeof navigator.share === 'function' && typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title });
+      return 'shared';
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return 'cancelled';
+      // Partage refusé : téléchargement.
+    }
+  }
+  downloadFile(file, name);
+  return 'downloaded';
 }

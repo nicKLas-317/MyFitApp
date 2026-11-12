@@ -999,6 +999,29 @@ input[aria-invalid='true'] {
   margin: 0;
 }
 
+/* Onglet Progrès : « Partager pour le coach » (version 1.46.0), la semaine exportée en petit sous le libellé. */
+.coach-share {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0 0 var(--space-2);
+}
+
+.coach-share > p {
+  margin: 0;
+}
+
+.coach-button {
+  flex-direction: column;
+  gap: 0;
+  padding: var(--space-1) var(--space-2);
+}
+
+.coach-week {
+  font-size: var(--fs-1);
+  font-weight: 400;
+  color: var(--muted);
+}
+
 /* Onglets Progrès et Plus : liens vers les écrans de l'onglet, au style des boutons. */
 .hub-links {
   display: grid;

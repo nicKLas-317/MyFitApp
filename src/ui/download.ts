@@ -13,14 +13,18 @@ export function downloadBackup(data: {
   plan?: SessionPlan | null;
 }): number {
   const now = Date.now();
-  const blob = new Blob([JSON.stringify(buildBackup(data, now), null, 2)], { type: 'application/json' });
+  downloadFile(new Blob([JSON.stringify(buildBackup(data, now), null, 2)], { type: 'application/json' }), backupFileName(now));
+  return now;
+}
+
+/** Télécharge un fichier (sauvegarde, export pour le coach). */
+export function downloadFile(blob: Blob, name: string): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = backupFileName(now);
+  a.download = name;
   document.body.append(a);
   a.click();
   a.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
-  return now;
 }
