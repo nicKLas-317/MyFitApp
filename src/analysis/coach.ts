@@ -33,7 +33,7 @@ import { alertFigures, groupAlert, type IgnoredAlerts } from './groupAlerts';
 import { GROUP_VIEW_GROUPS, groupIndex, SETS_ONLY_GROUPS } from './groups';
 import { analyzeProgress } from './progress';
 import { computeRecords, formatRecordWithDate } from './records';
-import { buildReport, lineText, periodContaining, periodKey, periodLastDay, periodTitle, reportSections, reportText, shiftPeriod, type ReportPeriod } from './report';
+import { buildReport, lineText, parsePeriodKey, periodContaining, periodKey, periodLastDay, periodTitle, reportSections, reportText, shiftPeriod, type ReportPeriod } from './report';
 import {
   ACTIVITY_SETS,
   groupScore,
@@ -102,6 +102,14 @@ export function coachFileName(period: ReportPeriod): string {
 export function coachShareTitle(period: ReportPeriod): string {
   const title = periodTitle(period);
   return `MyFitApp — données pour le coach, ${title.charAt(0).toLowerCase()}${title.slice(1)}`;
+}
+
+/**
+ * Semaine déjà envoyée au coach (version 1.47.0), mémorisée sur l'appareil seulement (méta `coachSent`) : clé du lundi
+ * (« 2026-11-09 »), ou null. Une valeur invalide est ignorée.
+ */
+export function sanitizeCoachSent(value: unknown): string | null {
+  return typeof value === 'string' && parsePeriodKey('week', value) !== null ? value : null;
 }
 
 /** Le bouton n'est proposé que si une séance a été terminée avant la semaine en cours (sinon rien à exporter). */

@@ -1,12 +1,10 @@
 import { useState } from 'react';
-import { useApp } from '../../app/store';
 import { useBody } from '../../body/store';
-import { EMPTY_BODY } from '../../body/model';
-import { coachExportText, coachFileName, coachShareTitle, coachWeek, coachWeekLabel, hasCoachWeek } from '../../analysis/coach';
+import { coachWeekLabel } from '../../analysis/coach';
 import { formatKg, formatShortDay, localDate } from '../../session/format';
 import { ReportBanner } from '../ReportBanner';
 import { GroupAlerts } from '../GroupAlerts';
-import { shareFile } from '../share';
+import { useCoachExport } from '../coachExport';
 import { WeighInForm } from './BodyScreen';
 
 /**
@@ -75,37 +73,17 @@ export function Progress() {
 /**
  * « Partager pour le coach » (version 1.46.0, §19.13) : la dernière semaine terminée, quel que soit le bilan affiché,
  * dans un fichier JSON à donner à un assistant ; partage natif d'Android avec le fichier, sinon téléchargement.
- * Proposé seulement quand une séance a été terminée avant la semaine en cours.
+ * Proposé seulement quand une séance a été terminée avant la semaine en cours. Même export que le rappel du bandeau du
+ * bilan de la semaine (version 1.47.0).
  */
 function CoachShare() {
-  const { sessions, exercises, settings, recapSettings, activities, habits, cardioMachines, ignoredAlerts } = useApp();
-  const body = useBody();
+  const coach = useCoachExport();
   const [message, setMessage] = useState<string | null>(null);
-  const now = Date.now();
-  if (!hasCoachWeek(sessions, now)) return null;
-  const period = coachWeek(now);
+  if (!coach.available) return null;
 
   async function share() {
-    const at = Date.now();
-    const week = coachWeek(at);
-    const data = body.status === 'ready' ? body.data : EMPTY_BODY;
-    const text = coachExportText({
-      sessions,
-      exercises,
-      settings,
-      recap: recapSettings,
-      activities,
-      habits,
-      machines: cardioMachines,
-      weighIns: data.weighIns,
-      heightCm: data.heightCm,
-      ignoredAlerts,
-      appVersion: __APP_VERSION__,
-      now: at,
-    });
-    const name = coachFileName(week);
-    const result = await shareFile(name, text, 'application/json', coachShareTitle(week));
-    setMessage(result === 'shared' ? 'Fichier partagé.' : result === 'downloaded' ? `Fichier téléchargé : ${name}.` : null);
+    const result = await coach.share();
+    setMessage(result === 'shared' ? 'Fichier partagé.' : result === 'downloaded' ? `Fichier téléchargé : ${coach.fileName}.` : null);
   }
 
   return (
@@ -113,7 +91,7 @@ function CoachShare() {
       <button type="button" className="btn big coach-button" onClick={() => void share()}>
         <span>Partager pour le coach</span>
         <span className="coach-week" data-testid="coach-week">
-          {coachWeekLabel(period)}
+          {coachWeekLabel(coach.period)}
         </span>
       </button>
       {message && (

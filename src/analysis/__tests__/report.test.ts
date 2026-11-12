@@ -370,7 +370,7 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
     expect(keys(oct(26, 9), {}, { ...DEFAULT_REPORT_SETTINGS, weekBanner: false })).toEqual([]);
     expect(keys(at(11, 2, 8), {}, { ...DEFAULT_REPORT_SETTINGS, monthBanner: false })).toEqual(['week:2026-10-26']);
     // Réglages lus en base ou importés : adresse invalide écartée, valeurs par défaut sinon.
-    expect(sanitizeReportSettings({ weekBanner: false, email: ` ${ADDRESS} ` })).toEqual({ weekBanner: false, monthBanner: true, email: ADDRESS });
+    expect(sanitizeReportSettings({ weekBanner: false, email: ` ${ADDRESS} ` })).toEqual({ weekBanner: false, monthBanner: true, email: ADDRESS, coachReminder: true });
     expect(sanitizeReportSettings({ email: 'pas une adresse' }).email).toBe('');
     expect(sanitizeReportSettings(null)).toEqual(DEFAULT_REPORT_SETTINGS);
   });

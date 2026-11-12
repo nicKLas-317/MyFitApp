@@ -198,6 +198,11 @@ function ReportSettingsField() {
         <input type="checkbox" checked={shown.monthBanner} onChange={(e) => void save({ ...shown, monthBanner: e.target.checked })} />
         <span>Signaler le bilan du mois (pastille sur Progrès)</span>
       </label>
+      {/* Bouton « Partager pour le coach » du bandeau du bilan de la semaine (version 1.47.0). */}
+      <label className="check-line">
+        <input type="checkbox" checked={shown.coachReminder} onChange={(e) => void save({ ...shown, coachReminder: e.target.checked })} />
+        <span>Rappel de l’export coach</span>
+      </label>
       <label htmlFor="report-email">Adresse e-mail (facultative, préremplie dans le mail)</label>
       <div className="row">
         <input id="report-email" type="email" inputMode="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />

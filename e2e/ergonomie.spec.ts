@@ -279,6 +279,25 @@ const SCREENS_225: [string, (page: Page) => Promise<void>][] = [
       ['Réglages', './#/reglages'],
       ['Données', './#/donnees'],
     ] as const).map(([screen, url]) => [screen, (page: Page) => page.goto(url).then(() => undefined)] as [string, (page: Page) => Promise<void>]),
+    // Bandeau du bilan de la semaine avec « Envoyé au coach ✓ » (version 1.47.0) ; avec le bouton « Partager pour le
+    // coach », c'est l'écran « Progrès ».
+    ['Progrès, envoyé au coach', async (page: Page) => {
+      await page.evaluate(
+        () =>
+          new Promise<void>((resolve, reject) => {
+            const open = indexedDB.open('myfitapp');
+            open.onsuccess = () => {
+              const tx = open.result.transaction('meta', 'readwrite');
+              tx.objectStore('meta').put('2026-10-12', 'coachSent');
+              tx.oncomplete = () => (open.result.close(), resolve());
+              tx.onerror = () => reject(tx.error);
+            };
+          }),
+      );
+      await page.goto('./#/progres');
+      await page.reload();
+      await expect(page.getByTestId('coach-sent')).toHaveText('Envoyé au coach ✓');
+    }],
     // Type de l'exercice (version 1.31.0) : création avec « Durée (secondes) » choisi ; « Modifier » d'un exercice sans
     // historique (types proposés) ; « Modifier un exercice » (chest press, déjà réalisé) affiche le type figé.
     ['Nouvel exercice, type durée', async (page: Page) => {

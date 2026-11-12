@@ -2917,6 +2917,16 @@ fieldset.frame > legend + * {
   flex-wrap: wrap;
 }
 
+/* Rappel de l'export pour le coach (version 1.47.0) : sur sa propre ligne, sous « Voir » et « Plus tard ». */
+.report-banner .coach-reminder,
+.report-banner .coach-sent {
+  flex-basis: 100%;
+}
+
+.report-banner .coach-sent {
+  font-weight: 600;
+}
+
 .activity-banner .report-message {
   flex-basis: 100%;
 }

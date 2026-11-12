@@ -4,6 +4,10 @@ Ce qui a changé à chaque version de MyFitApp, de la plus récente à la plus a
 
 Les commits sans changement de numéro (documentation, tests, workflow) sont rangés sous la version en cours à ce moment-là.
 
+## 1.47.0 — 12 nov. 2026
+
+- Rappel de l'export pour le coach : le bandeau « Ton bilan de la semaine est prêt » (onglet Progrès, chaque lundi) porte un bouton « Partager pour le coach », qui lance le même export que le bouton sous « Cardio » (dernière semaine terminée). Une fois le fichier partagé ou téléchargé, il devient « Envoyé au coach ✓ » pour cette semaine, mémorisé sur l'appareil (un envoi par le bouton sous « Cardio » compte aussi). Réglages › Bilans : case « Rappel de l'export coach », cochée par défaut, pour le masquer ; gardée dans la sauvegarde. Le bouton sous « Cardio » ne change pas
+
 ## 1.46.0 — 12 nov. 2026
 
 - Export « coach » : dans l'onglet Progrès, sous les bilans, un bouton secondaire « Partager pour le coach », avec la semaine concernée en petit (« Semaine du 9 au 15 nov. »). Il exporte toujours la dernière semaine terminée (lundi – dimanche), quel que soit le bilan affiché, dans un fichier `myfitapp-coach-AAAA-MM-JJ.json` (date du lundi), partagé par le partage d'Android avec le fichier, sinon téléchargé. Contenu, arrêté au dimanche soir : règles utiles à l'interprétation (avec le seuil du rouge réglé), contexte (première séance, séances, semaines suivies, habitudes, taille et dernières pesées), la semaine en détail (séances, performances avec statut et séance de départ, cardio, activités, pesées), son récapitulatif en séries détaillé et le texte de son bilan (identique au mail), les exercices des 8 dernières semaines (cible et recommandation, série de rouges, record, 5 dernières performances), la tendance sur 8 semaines (séries par groupe, séances, cardio, activités, indice par groupe) et les signaux (alertes, difficultés, paliers validés, records, séance pour compléter la semaine). Clés en français, aucun identifiant interne, JSON compact (une performance par ligne). L'export complet ne change pas ; `myfitapp-coach-*.json` est ignoré par git comme les sauvegardes

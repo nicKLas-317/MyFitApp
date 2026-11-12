@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useApp } from '../app/store';
 import { navigate, useNow } from '../app/hooks';
 import { pendingReports, periodKey, type ReportPeriod } from '../analysis/report';
+import { useCoachExport } from './coachExport';
 
 /** Bilans remis à plus tard pendant cette ouverture de l'appli : ils reviennent à la prochaine. */
 const postponed = new Set<string>();
@@ -35,29 +36,49 @@ export function usePendingReports(): ReportPeriod[] {
   return pendingReports(sessions, now, reportSettings, reportSeen).filter((p) => !postponed.has(idOf(p)));
 }
 
-/** Bandeau en haut de l'onglet Progrès : « Ton bilan de la semaine est prêt », « Voir » ou « Plus tard ». */
+/**
+ * Bandeau en haut de l'onglet Progrès : « Ton bilan de la semaine est prêt », « Voir » ou « Plus tard ». Celui de la
+ * semaine porte aussi le rappel de l'export pour le coach (version 1.47.0, §19.13) : « Partager pour le coach », puis
+ * « Envoyé au coach ✓ » une fois le fichier partagé ou téléchargé ; masqué par le réglage « Rappel de l'export coach ».
+ */
 export function ReportBanner() {
   const pending = usePendingReports();
+  const { reportSettings, coachSent } = useApp();
+  const coach = useCoachExport();
   if (pending.length === 0) return null;
   return (
     <>
-      {pending.map((p) => (
-        <div key={idOf(p)} className="banner info report-banner" role="status" data-report={p.kind}>
-          <span>{TEXTS[p.kind]}</span>
-          <span className="row">
-            <button type="button" className="btn primary" onClick={() => navigate('bilan-periode', p.kind === 'week' ? 'semaine' : 'mois', periodKey(p))}>
-              Voir
-            </button>
-            <button
-              type="button"
-              className="btn"
-              onClick={() => postpone(p)}
-            >
-              Plus tard
-            </button>
-          </span>
-        </div>
-      ))}
+      {pending.map((p) => {
+        // Le bilan signalé est celui de la dernière semaine terminée : la semaine de l'export.
+        const reminder = p.kind === 'week' && reportSettings.coachReminder && coach.available && periodKey(p) === periodKey(coach.period);
+        return (
+          <div key={idOf(p)} className="banner info report-banner" role="status" data-report={p.kind}>
+            <span>{TEXTS[p.kind]}</span>
+            <span className="row">
+              <button type="button" className="btn primary" onClick={() => navigate('bilan-periode', p.kind === 'week' ? 'semaine' : 'mois', periodKey(p))}>
+                Voir
+              </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => postpone(p)}
+              >
+                Plus tard
+              </button>
+            </span>
+            {reminder &&
+              (coachSent === periodKey(p) ? (
+                <span className="coach-sent" data-testid="coach-sent">
+                  Envoyé au coach ✓
+                </span>
+              ) : (
+                <button type="button" className="btn coach-reminder" onClick={() => void coach.share()}>
+                  Partager pour le coach
+                </button>
+              ))}
+          </div>
+        );
+      })}
     </>
   );
 }

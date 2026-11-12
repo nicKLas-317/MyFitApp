@@ -5,7 +5,8 @@ import { rebuildProfile, resolveConfig, trackKey, type EngineSettings, type Repl
 import { buildEngineSettings, indexVariants, type VariantRef } from '../library/catalog';
 import { exerciseHasHistory } from '../library/edit';
 import { DEFAULT_RECAP_SETTINGS, sanitizeRecapSettings, type WeeklyRecapSettings } from '../analysis/weekly';
-import { DEFAULT_REPORT_SETTINGS, markSeen, sanitizeReportSeen, sanitizeReportSettings, type ReportPeriod, type ReportSeen, type ReportSettings } from '../analysis/report';
+import { DEFAULT_REPORT_SETTINGS, markSeen, periodKey, sanitizeReportSeen, sanitizeReportSettings, type ReportPeriod, type ReportSeen, type ReportSettings } from '../analysis/report';
+import { sanitizeCoachSent } from '../analysis/coach';
 import { computeRecords, type Records } from '../analysis/records';
 import { ignoreAlert, sanitizeIgnoredAlerts, type GroupAlert, type IgnoredAlerts } from '../analysis/groupAlerts';
 import { answer, sanitizeActivities, sanitizeHabits, type ActivityRecord, type Habit, type Occurrence } from '../activities/model';
@@ -52,6 +53,12 @@ interface AppValue {
   /** Dernières périodes terminées dont le bilan a été ouvert : leur bandeau n'est plus affiché. */
   reportSeen: ReportSeen;
   markReportSeen(period: ReportPeriod): Promise<void>;
+  /**
+   * Dernière semaine envoyée au coach (version 1.47.0, clé du lundi), mémorisée sur l'appareil seulement : le bandeau du
+   * bilan de la semaine affiche alors « Envoyé au coach ✓ ».
+   */
+  coachSent: string | null;
+  markCoachSent(period: ReportPeriod): Promise<void>;
   /** Alertes « groupe moins travaillé » ignorées (version 1.38.0), mémorisées sur l'appareil seulement. */
   ignoredAlerts: IgnoredAlerts;
   ignoreGroupAlert(alert: GroupAlert): Promise<void>;
@@ -146,6 +153,7 @@ interface StoredData {
   machinesOutdated: boolean;
   reports: ReportSettings;
   reportSeen: ReportSeen;
+  coachSent: string | null;
   ignoredAlerts: IgnoredAlerts;
   habits: Habit[];
   activities: ActivityRecord[];
@@ -153,7 +161,7 @@ interface StoredData {
 }
 
 async function loadStored(repo: Repository): Promise<StoredData> {
-  const [sessions, exercises, exportedAt, recap, machines, machinesVersion, reports, seen, habits, activities, plan, ignored] = await Promise.all([
+  const [sessions, exercises, exportedAt, recap, machines, machinesVersion, reports, seen, habits, activities, plan, ignored, coachSent] = await Promise.all([
     repo.loadSessions(),
     repo.loadExercises(),
     repo.getMeta<number>('lastExportAt'),
@@ -166,6 +174,7 @@ async function loadStored(repo: Repository): Promise<StoredData> {
     repo.getMeta<unknown>('activities'),
     repo.getMeta<unknown>('plan'),
     repo.getMeta<unknown>('groupAlertsIgnored'),
+    repo.getMeta<unknown>('coachSent'),
   ]);
   // Installation antérieure au cardio : aucune liste enregistrée, la liste par défaut s'applique.
   // Liste enregistrée par une version antérieure : les nouvelles machines sont ajoutées une seule fois.
@@ -180,6 +189,7 @@ async function loadStored(repo: Repository): Promise<StoredData> {
     machinesOutdated,
     reports: sanitizeReportSettings(reports),
     reportSeen: sanitizeReportSeen(seen),
+    coachSent: sanitizeCoachSent(coachSent),
     ignoredAlerts: sanitizeIgnoredAlerts(ignored),
     habits: sanitizeHabits(habits),
     activities: sanitizeActivities(activities),
@@ -203,6 +213,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [reportSettings, setReportState] = useState<ReportSettings>(DEFAULT_REPORT_SETTINGS);
   const [reportSeen, setReportSeen] = useState<ReportSeen>({});
   const reportSeenRef = useRef<ReportSeen>({});
+  const [coachSent, setCoachSent] = useState<string | null>(null);
   const [ignoredAlerts, setIgnoredAlerts] = useState<IgnoredAlerts>({});
   const ignoredAlertsRef = useRef<IgnoredAlerts>({});
   const [habits, setHabitsState] = useState<Habit[]>(() => sanitizeHabits(undefined));
@@ -231,6 +242,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setReportState(keep(stored.reports));
     reportSeenRef.current = stored.reportSeen;
     setReportSeen(keep(stored.reportSeen));
+    setCoachSent(stored.coachSent);
     ignoredAlertsRef.current = stored.ignoredAlerts;
     setIgnoredAlerts(keep(stored.ignoredAlerts));
     setHabitsState(keep(stored.habits));
@@ -603,6 +615,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [writeMeta],
   );
 
+  const markCoachSent = useCallback(
+    async (period: ReportPeriod): Promise<void> => {
+      const key = periodKey(period);
+      setCoachSent(key);
+      // Une relecture de la base commencée avant ne doit pas rétablir l'ancienne valeur.
+      localChanges.current++;
+      // Un échec est sans gravité : le bouton du bandeau réapparaîtra à la prochaine ouverture.
+      await writeMeta([['coachSent', key]], () => {});
+    },
+    [writeMeta],
+  );
+
   const ignoreGroupAlert = useCallback(
     async (alert: GroupAlert): Promise<void> => {
       const next = ignoreAlert(ignoredAlertsRef.current, alert);
@@ -665,6 +689,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setReportSettings,
     reportSeen,
     markReportSeen,
+    coachSent,
+    markCoachSent,
     ignoredAlerts,
     ignoreGroupAlert,
     habits,

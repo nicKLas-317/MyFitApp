@@ -593,9 +593,14 @@ export interface ReportSettings {
   monthBanner: boolean;
   /** Adresse préremplie dans le lien mailto, facultative. */
   email: string;
+  /**
+   * Rappel de l'export pour le coach (version 1.47.0, §19.13) : bouton « Partager pour le coach » dans le bandeau du
+   * bilan de la semaine. Coché par défaut ; absent d'une sauvegarde antérieure : coché.
+   */
+  coachReminder: boolean;
 }
 
-export const DEFAULT_REPORT_SETTINGS: ReportSettings = { weekBanner: true, monthBanner: true, email: '' };
+export const DEFAULT_REPORT_SETTINGS: ReportSettings = { weekBanner: true, monthBanner: true, email: '', coachReminder: true };
 
 export function isValidEmail(email: string): boolean {
   return email === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -609,6 +614,7 @@ export function sanitizeReportSettings(value: unknown): ReportSettings {
     weekBanner: typeof v.weekBanner === 'boolean' ? v.weekBanner : true,
     monthBanner: typeof v.monthBanner === 'boolean' ? v.monthBanner : true,
     email,
+    coachReminder: typeof v.coachReminder === 'boolean' ? v.coachReminder : true,
   };
 }
 

@@ -17,11 +17,13 @@ import {
   coachWeek,
   coachWeekLabel,
   hasCoachWeek,
+  sanitizeCoachSent,
   type CoachInput,
 } from '../coach';
 import { groupAlert } from '../groupAlerts';
 import { groupIndex } from '../groups';
-import { buildReport, reportText } from '../report';
+import { buildReport, DEFAULT_REPORT_SETTINGS, reportText, sanitizeReportSettings } from '../report';
+import { buildBackup, parseJsonImport } from '../../transfer/backup';
 import { DEFAULT_RECAP_SETTINGS, weeklyRecap } from '../weekly';
 import { alertHistory, ALERT_NOW } from './alertes-simulation';
 import { simulatedHistory } from './simulation';
@@ -269,5 +271,24 @@ describe('Export pour le coach (version 1.46.0)', () => {
     const perf = { exercice: 'Tirage horizontal machine (appui pectoral)', variante: 'Prise moyenne', groupe: 'Dos', groupes_secondaires: ['Biceps'], type: 'charge', charge_kg: 52, cible: 9, series: [9, 9, 9], ressenti: 'bien', statut: 'vert' };
     expect(coachJson({ exercices: [perf] }).split('\n')).toHaveLength(5);
     expect(coachJson({ exercices: [perf] }).split('\n')[2]!.trim()).toBe(`${coachJson(perf)}`);
+  });
+
+  it('312. Rappel dans le bandeau : réglage « Rappel de l’export coach » coché par défaut, gardé dans la sauvegarde ; semaine envoyée mémorisée sur l’appareil seulement', () => {
+    // Réglage : coché par défaut, et pour une sauvegarde antérieure (sans le champ) ou une valeur invalide.
+    expect(DEFAULT_REPORT_SETTINGS.coachReminder).toBe(true);
+    expect(sanitizeReportSettings(undefined).coachReminder).toBe(true);
+    expect(sanitizeReportSettings({ weekBanner: true, monthBanner: true, email: '' }).coachReminder).toBe(true);
+    expect(sanitizeReportSettings({ coachReminder: 'non' }).coachReminder).toBe(true);
+    expect(sanitizeReportSettings({ coachReminder: false })).toEqual({ ...DEFAULT_REPORT_SETTINGS, coachReminder: false });
+    // Dans la sauvegarde (réglages des bilans), relu à l'identique ; la semaine envoyée n'y est pas.
+    const backup = buildBackup({ sessions: [], exercises: LIB, settings: { reports: { ...DEFAULT_REPORT_SETTINGS, coachReminder: false } } }, NOW);
+    const text = JSON.stringify(backup);
+    expect(text).not.toContain('coachSent');
+    const parsed = parseJsonImport(text, SEED_EXERCISES, '2026-10-26');
+    if (parsed.kind !== 'backup') throw new Error('sauvegarde illisible');
+    expect(sanitizeReportSettings(parsed.backup.settings.reports).coachReminder).toBe(false);
+    // Semaine envoyée : un lundi valide, sinon rien.
+    expect(sanitizeCoachSent('2026-11-09')).toBe('2026-11-09');
+    for (const bad of ['2026-11-10', '2026-11', 42, null, undefined, {}]) expect(sanitizeCoachSent(bad), String(bad)).toBeNull();
   });
 });
