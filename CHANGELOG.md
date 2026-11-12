@@ -4,6 +4,11 @@ Ce qui a changé à chaque version de MyFitApp, de la plus récente à la plus a
 
 Les commits sans changement de numéro (documentation, tests, workflow) sont rangés sous la version en cours à ce moment-là.
 
+## 1.47.1 — 12 nov. 2026
+
+- Export pour le coach en fichier texte : `myfitapp-coach-AAAA-MM-JJ.txt` (`text/plain`), même contenu (JSON lisible), pour le bouton sous « Cardio » comme pour celui du bandeau du lundi ; téléchargement en secours si le partage n'est pas disponible. `.gitignore` : `myfitapp-coach-*.txt` en plus de `.json`
+- Historique : en 1.46.0 et 1.47.0, l'export était un `.json` (`application/json`) que Chrome sur Android refusait de partager : il le téléchargeait (« Télécharger de nouveau le fichier ? »)
+
 ## 1.47.0 — 12 nov. 2026
 
 - Rappel de l'export pour le coach : le bandeau « Ton bilan de la semaine est prêt » (onglet Progrès, chaque lundi) porte un bouton « Partager pour le coach », qui lance le même export que le bouton sous « Cardio » (dernière semaine terminée). Une fois le fichier partagé ou téléchargé, il devient « Envoyé au coach ✓ » pour cette semaine, mémorisé sur l'appareil (un envoi par le bouton sous « Cardio » compte aussi). Réglages › Bilans : case « Rappel de l'export coach », cochée par défaut, pour le masquer ; gardée dans la sauvegarde. Le bouton sous « Cardio » ne change pas

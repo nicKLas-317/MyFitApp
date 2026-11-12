@@ -48,7 +48,8 @@ export function useCoachExport(): CoachExport {
         appVersion: __APP_VERSION__,
         now: at,
       });
-      const result = await shareFile(coachFileName(week), text, 'application/json', coachShareTitle(week));
+      // Texte brut (version 1.47.1) : un .json n'est pas partageable par Chrome sur Android ; le contenu reste du JSON.
+      const result = await shareFile(coachFileName(week), text, 'text/plain', coachShareTitle(week));
       if (result !== 'cancelled') await markCoachSent(week);
       return result;
     },

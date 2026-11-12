@@ -7,8 +7,9 @@ type Shared = { name: string; type: string; title: string; text: string };
 
 /**
  * Partage natif simulé (Web Share API avec fichier) : `shareMode` choisit le comportement du navigateur — fichier
- * accepté, fichier refusé par `canShare` (téléchargement), ou partage annulé par l'utilisateur. Le contenu d'un
- * fichier téléchargé est relevé quand l'appli crée son adresse (`URL.createObjectURL`).
+ * accepté, fichier refusé par `canShare` (téléchargement), ou partage annulé par l'utilisateur. Comme Chrome sur
+ * Android (essai sur le téléphone, 12 novembre 2026), un fichier .json n'est jamais partageable : un .txt l'est. Le
+ * contenu d'un fichier téléchargé est relevé quand l'appli crée son adresse (`URL.createObjectURL`).
  */
 async function mockShare(page: Page): Promise<void> {
   await page.addInitScript(() => {
@@ -19,7 +20,11 @@ async function mockShare(page: Page): Promise<void> {
     w.downloads = [];
     const create = URL.createObjectURL.bind(URL);
     URL.createObjectURL = (blob: Blob) => (w.downloads.push(blob.text()), create(blob));
-    Object.defineProperty(navigator, 'canShare', { configurable: true, value: (data: { files?: File[] }) => w.shareMode !== 'refuse' && (data.files?.length ?? 0) > 0 });
+    const shareable = (f: File) => !f.name.endsWith('.json') && f.type !== 'application/json';
+    Object.defineProperty(navigator, 'canShare', {
+      configurable: true,
+      value: (data: { files?: File[] }) => w.shareMode !== 'refuse' && (data.files?.length ?? 0) > 0 && data.files!.every(shareable),
+    });
     Object.defineProperty(navigator, 'share', {
       configurable: true,
       value: async (data: { files: File[]; title: string }) => {
@@ -106,7 +111,7 @@ test.describe('Partager pour le coach (version 1.46.0)', () => {
     await button.click();
     await expect(page.locator('.coach-share').getByRole('status')).toHaveText('Fichier partagé.');
     const [file] = await shared(page);
-    expect(file).toMatchObject({ name: 'myfitapp-coach-2026-10-19.json', type: 'application/json', title: 'MyFitApp — données pour le coach, semaine du 19 au 25 oct. 2026' });
+    expect(file).toMatchObject({ name: 'myfitapp-coach-2026-10-19.txt', type: 'text/plain', title: 'MyFitApp — données pour le coach, semaine du 19 au 25 oct. 2026' });
     const data = JSON.parse(file!.text);
     expect(data.periode).toMatchObject({ du: '2026-10-19', au: '2026-10-25' });
     expect(data.version_appli).toMatch(/^\d+\.\d+\.\d+$/);
@@ -140,10 +145,10 @@ test.describe('Partager pour le coach (version 1.46.0)', () => {
     // Fichier refusé par le navigateur : téléchargement, même nom, même contenu.
     await setMode(page, 'refuse');
     const [download] = await Promise.all([page.waitForEvent('download'), button.click()]);
-    expect(download.suggestedFilename()).toBe('myfitapp-coach-2026-10-19.json');
+    expect(download.suggestedFilename()).toBe('myfitapp-coach-2026-10-19.txt');
     const text = await page.evaluate(() => (window as unknown as { downloads: Promise<string>[] }).downloads.at(-1)!);
     expect({ ...JSON.parse(text), genere_le: null }).toEqual({ ...data, genere_le: null });
-    await expect(page.locator('.coach-share').getByRole('status')).toHaveText('Fichier téléchargé : myfitapp-coach-2026-10-19.json.');
+    await expect(page.locator('.coach-share').getByRole('status')).toHaveText('Fichier téléchargé : myfitapp-coach-2026-10-19.txt.');
 
     // Le dimanche soir, la semaine en cours n'est pas terminée : c'est la précédente qui est exportée.
     await page.clock.setFixedTime(new Date('2026-10-25T20:00:00'));
@@ -151,7 +156,7 @@ test.describe('Partager pour le coach (version 1.46.0)', () => {
     await expect(page.getByTestId('coach-week')).toHaveText('Semaine du 12 au 18 oct.');
     await setMode(page, 'share');
     await page.locator('.coach-share').getByRole('button', { name: /^Partager pour le coach/ }).click();
-    await expect.poll(async () => (await shared(page)).at(-1)?.name).toBe('myfitapp-coach-2026-10-12.json');
+    await expect.poll(async () => (await shared(page)).at(-1)?.name).toBe('myfitapp-coach-2026-10-12.txt');
   });
 
   test('313. Bandeau du bilan de la semaine : « Partager pour le coach », puis « Envoyé au coach ✓ » mémorisé pour la semaine ; réglage « Rappel de l’export coach » ; le bouton sous « Cardio » ne change pas', async ({ page }) => {
@@ -186,7 +191,8 @@ test.describe('Partager pour le coach (version 1.46.0)', () => {
     await expect(week.getByTestId('coach-sent')).toHaveText('Envoyé au coach ✓');
     await expect(remind).toHaveCount(0);
     const [fromBanner] = await shared(page);
-    expect(fromBanner!.name).toBe('myfitapp-coach-2026-10-19.json');
+    expect(fromBanner!.name).toBe('myfitapp-coach-2026-10-19.txt');
+    expect(fromBanner!.type).toBe('text/plain');
     expect(await readMeta(page, 'coachSent')).toBe('2026-10-19');
     await page.reload();
     await expect(week.getByTestId('coach-sent')).toHaveText('Envoyé au coach ✓');
@@ -227,7 +233,7 @@ test.describe('Partager pour le coach (version 1.46.0)', () => {
     expect(await readMeta(page, 'coachSent')).toBe('2026-10-19');
     await setMode(page, 'refuse');
     const [download] = await Promise.all([page.waitForEvent('download'), remind.click()]);
-    expect(download.suggestedFilename()).toBe('myfitapp-coach-2026-10-26.json');
+    expect(download.suggestedFilename()).toBe('myfitapp-coach-2026-10-26.txt');
     await expect(week.getByTestId('coach-sent')).toHaveText('Envoyé au coach ✓');
     expect(await readMeta(page, 'coachSent')).toBe('2026-10-26');
 

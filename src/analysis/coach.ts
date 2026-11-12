@@ -93,9 +93,12 @@ export function coachWeekLabel(period: ReportPeriod): string {
   return `Semaine du ${start.getMonth() !== end.getMonth() ? DAY_MONTH.format(start) : DAY.format(start)} au ${DAY_MONTH.format(end)}`;
 }
 
-/** « myfitapp-coach-2026-11-09.json » : date du lundi de la semaine exportée. */
+/**
+ * « myfitapp-coach-2026-11-09.txt » : date du lundi de la semaine exportée. En .txt (version 1.47.1) : Chrome sur
+ * Android refuse de partager un fichier .json (il le télécharge) ; le contenu reste du JSON lisible.
+ */
 export function coachFileName(period: ReportPeriod): string {
-  return `myfitapp-coach-${periodKey(period)}.json`;
+  return `myfitapp-coach-${periodKey(period)}.txt`;
 }
 
 /** Titre du partage : « MyFitApp — données pour le coach, semaine du 9 au 15 nov. 2026 ». */

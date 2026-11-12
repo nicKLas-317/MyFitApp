@@ -107,10 +107,10 @@ describe('Export pour le coach (version 1.46.0)', () => {
   it('310. Semaine exportée, nom du fichier, libellé ; contenu complet, arrêté au dimanche soir, mêmes chiffres que l’appli ; JSON compact relu à l’identique', () => {
     // La dernière semaine terminée, quel que soit le jour : lundi 16 novembre → du 9 au 15 ; dimanche 15 au soir → du 2 au 8.
     const week = coachWeek(new Date(2026, 10, 16, 9).getTime());
-    expect(coachFileName(week)).toBe('myfitapp-coach-2026-11-09.json');
+    expect(coachFileName(week)).toBe('myfitapp-coach-2026-11-09.txt');
     expect(coachWeekLabel(week)).toBe('Semaine du 9 au 15 nov.');
     expect(coachShareTitle(week)).toBe('MyFitApp — données pour le coach, semaine du 9 au 15 nov. 2026');
-    expect(coachFileName(coachWeek(new Date(2026, 10, 15, 23, 30).getTime()))).toBe('myfitapp-coach-2026-11-02.json');
+    expect(coachFileName(coachWeek(new Date(2026, 10, 15, 23, 30).getTime()))).toBe('myfitapp-coach-2026-11-02.txt');
     expect(coachWeekLabel(coachWeek(new Date(2026, 10, 3).getTime()))).toBe('Semaine du 26 oct. au 1 nov.');
     expect(coachWeekLabel(coachWeek(new Date(2027, 0, 5).getTime()))).toBe('Semaine du 28 déc. 2026 au 3 janv. 2027');
     // Bouton proposé seulement avec une séance terminée avant la semaine en cours.
