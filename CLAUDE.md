@@ -14,6 +14,14 @@ Les six phases d'origine (moteur, séance, import et export, bibliothèque, anal
 6. **Publier** : commit avec l'identité et les fichiers nommés (§22), vérification (`perso/verifier-historique.sh` et identités, §22), push direct sur `main`, puis contrôle du workflow et du bundle déployé (§21). Jamais de réécriture d'historique ni de push forcé sans validation explicite.
 7. **Rendre compte** : ce qui est fait, ce qui est testé (avec les chiffres réels), les choix signalés, ce qui reste à vérifier sur le téléphone (§16) ; le compte rendu se termine par « Dernier commit publié : <commit> ».
 
+**Gros fichiers : découpés au fil de l'eau (précision validée, 13 novembre 2026)**. Quand une demande doit modifier l'un de ces fichiers, il est d'abord découpé, dans une version corrective séparée (1.x.y+1), publiée avant la version de la demande :
+
+- `src/analysis/report.ts`, `src/app/store.tsx`, `src/transfer/backup.ts`, `src/transfer/draft.ts`, `src/analysis/coach.ts` ;
+- découpage seul, **sans changement de comportement** : mêmes calculs, mêmes écrans, mêmes données, même sauvegarde ; les tests existants passent sans autre modification que leurs chemins d'import ;
+- tests complets (étape 4 : types, unitaires, bout en bout à l'heure de Paris et en UTC) et tests sur les vraies données (§22), puis publication comme toute version (étape 6) ;
+- ensuite seulement, la demande, dans sa propre version, sans attendre de validation entre les deux ; un seul compte rendu pour les deux versions. Une demande qui modifie plusieurs de ces fichiers les découpe dans la même version corrective ;
+- un fichier découpé sort de cette liste, dans le commit de son découpage. Pas de découpage préventif, ni d'autres fichiers.
+
 ## 1. Objectif général
 
 Développer une application personnelle de suivi de musculation appelée **MyFitApp**.

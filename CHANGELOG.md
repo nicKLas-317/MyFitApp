@@ -8,6 +8,7 @@ Les commits sans changement de numéro (documentation, tests, workflow) sont ran
 
 - Carte « Ma séance prévue » de l'accueil : de nouveau un seul bouton vers la préparation, sans lien vers les fiches, avec son allure d'avant. Les liens vers la fiche restent dans le détail de la séance prévue (préparation) et dans la séance pour compléter la semaine
 - Historique : en 1.48.0, chaque nom d'exercice de la carte de l'accueil était un lien (lignes plus hautes, noms soulignés)
+- CLAUDE.md §0 : les gros fichiers (`report.ts`, `store.tsx`, `backup.ts`, `draft.ts`, `coach.ts`) sont découpés au fil de l'eau, chacun dans une version corrective séparée, sans changement de comportement, avant la première demande qui le modifie
 
 ## 1.48.0 — 12 nov. 2026
 
