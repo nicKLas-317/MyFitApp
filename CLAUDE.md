@@ -20,7 +20,8 @@ Les six phases d'origine (moteur, séance, import et export, bibliothèque, anal
 - découpage seul, **sans changement de comportement** : mêmes calculs, mêmes écrans, mêmes données, même sauvegarde ; les tests existants passent sans autre modification que leurs chemins d'import ;
 - tests complets (étape 4 : types, unitaires, bout en bout à l'heure de Paris et en UTC) et tests sur les vraies données (§22), puis publication comme toute version (étape 6) ;
 - ensuite seulement, la demande, dans sa propre version, sans attendre de validation entre les deux ; un seul compte rendu pour les deux versions. Une demande qui modifie plusieurs de ces fichiers les découpe dans la même version corrective ;
-- un fichier découpé sort de cette liste, dans le commit de son découpage. Pas de découpage préventif, ni d'autres fichiers.
+- un fichier découpé sort de cette liste, dans le commit de son découpage. Pas de découpage préventif, ni d'autres fichiers ;
+- **exception, correctif urgent** (perte ou corruption de données, appli inutilisable, saisie bloquée) : il passe directement, sans découpage préalable ; le fichier est découpé aussitôt après, dans la version suivante, aux mêmes conditions.
 
 ## 1. Objectif général
 
