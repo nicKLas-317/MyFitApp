@@ -25,6 +25,7 @@ import { ActionMenu, ConfirmRemove } from './ActionMenu';
 import { Crown } from './Crown';
 import { beatsRecord } from '../analysis/records';
 import { WeightField } from './WeightField';
+import { SetsHintLine } from './SetsHintLine';
 
 /**
  * Répétitions ajustées (− / +) de la série en cours, pas encore validées : gardées le temps de l'ouverture de l'appli,
@@ -149,6 +150,11 @@ export function ExerciseCard({ session, performance: p, open, locked = false, on
             seconds={seconds}
             perDumbbell={dumbbell}
           />
+
+          {/* « Tu fais souvent 2 séries : passer à 2 ? » (version 1.49.0), tant qu'aucune série n'est faite. */}
+          {!locked && done === 0 && (
+            <SetsHintLine variantId={p.variantId} home={home} onAccepted={(n) => void commit(setPlannedSets(session, p.variantId, n, now()))} />
+          )}
 
           {!ctx.cfg.bodyweight && (
             <WeightField

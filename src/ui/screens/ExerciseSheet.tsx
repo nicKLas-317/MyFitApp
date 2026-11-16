@@ -17,6 +17,7 @@ import { groupColorProps } from '../groupColors';
 import { equipmentLabel, ExercisePicto } from '../Pictogram';
 import { StatusBadge } from '../StatusBadge';
 import { recommendedTarget, TargetSummary } from '../TargetSummary';
+import { SetsHintLine } from '../SetsHintLine';
 import { Crown } from '../Crown';
 import { recordKeys } from '../../analysis/records';
 
@@ -129,6 +130,7 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
           seconds={ctx.cfg.seconds}
           perDumbbell={dumbbell}
         />
+        <SetsHintLine variantId={variantId} home={false} />
       </section>
       {homeState && (
         <section className="card sheet-status" aria-label="À la maison" data-testid="sheet-home">
@@ -143,6 +145,7 @@ export function ExerciseSheet({ variantId, fromBilan = false }: { variantId: str
             redRun
             perDumbbell={dumbbell}
           />
+          <SetsHintLine variantId={variantId} home />
         </section>
       )}
 

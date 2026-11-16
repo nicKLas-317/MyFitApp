@@ -9,6 +9,7 @@ import type { WeeklyRecapSettings } from '../analysis/weekly';
 import type { ReportPeriod, ReportSeen, ReportSettings } from '../analysis/report';
 import type { Records } from '../analysis/records';
 import type { GroupAlert, IgnoredAlerts } from '../analysis/groupAlerts';
+import type { SetsHint, SetsHintDismissed } from '../analysis/setsHint';
 import type { ActivityRecord, Habit, Occurrence } from '../activities/model';
 import type { RemovedPerformance, VariantContext } from '../session/ops';
 import type { PersistState } from '../storage/db';
@@ -60,6 +61,9 @@ export interface AppValue {
   /** Alertes « groupe moins travaillé » ignorées (version 1.38.0), mémorisées sur l'appareil seulement. */
   ignoredAlerts: IgnoredAlerts;
   ignoreGroupAlert(alert: GroupAlert): Promise<void>;
+  /** Propositions d'ajuster le nombre de séries refusées (« Non », version 1.49.0), mémorisées sur l'appareil seulement. */
+  setsHintDismissed: SetsHintDismissed;
+  dismissSetsHint(hint: SetsHint): Promise<void>;
   /** Activités habituelles hors salle (badminton…), modifiables dans les réglages. */
   habits: Habit[];
   setHabits(next: Habit[]): Promise<boolean>;

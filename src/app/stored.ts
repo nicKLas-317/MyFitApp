@@ -8,6 +8,7 @@ import { sanitizeRecapSettings, type WeeklyRecapSettings } from '../analysis/wee
 import { sanitizeReportSeen, sanitizeReportSettings, type ReportSeen, type ReportSettings } from '../analysis/report';
 import { sanitizeCoachSent } from '../analysis/coach';
 import { sanitizeIgnoredAlerts, type IgnoredAlerts } from '../analysis/groupAlerts';
+import { sanitizeSetsHintDismissed, type SetsHintDismissed } from '../analysis/setsHint';
 import { sanitizeActivities, sanitizeHabits, type ActivityRecord, type Habit } from '../activities/model';
 import { sanitizePlan } from '../plan/model';
 import type { PersistState, Repository } from '../storage/db';
@@ -38,13 +39,14 @@ export interface StoredData {
   reportSeen: ReportSeen;
   coachSent: string | null;
   ignoredAlerts: IgnoredAlerts;
+  setsHintDismissed: SetsHintDismissed;
   habits: Habit[];
   activities: ActivityRecord[];
   plan: SessionPlan | null;
 }
 
 export async function loadStored(repo: Repository): Promise<StoredData> {
-  const [sessions, exercises, exportedAt, recap, machines, machinesVersion, reports, seen, habits, activities, plan, ignored, coachSent] = await Promise.all([
+  const [sessions, exercises, exportedAt, recap, machines, machinesVersion, reports, seen, habits, activities, plan, ignored, coachSent, setsHints] = await Promise.all([
     repo.loadSessions(),
     repo.loadExercises(),
     repo.getMeta<number>('lastExportAt'),
@@ -58,6 +60,7 @@ export async function loadStored(repo: Repository): Promise<StoredData> {
     repo.getMeta<unknown>('plan'),
     repo.getMeta<unknown>('groupAlertsIgnored'),
     repo.getMeta<unknown>('coachSent'),
+    repo.getMeta<unknown>('setsHintDismissed'),
   ]);
   // Installation antérieure au cardio : aucune liste enregistrée, la liste par défaut s'applique.
   // Liste enregistrée par une version antérieure : les nouvelles machines sont ajoutées une seule fois.
@@ -74,6 +77,7 @@ export async function loadStored(repo: Repository): Promise<StoredData> {
     reportSeen: sanitizeReportSeen(seen),
     coachSent: sanitizeCoachSent(coachSent),
     ignoredAlerts: sanitizeIgnoredAlerts(ignored),
+    setsHintDismissed: sanitizeSetsHintDismissed(setsHints),
     habits: sanitizeHabits(habits),
     activities: sanitizeActivities(activities),
     plan: sanitizePlan(plan),

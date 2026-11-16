@@ -1290,6 +1290,44 @@ input[aria-invalid='true'] {
   background: var(--surface);
 }
 
+/*
+ * Ajout d'un exercice (version 1.49.0) : intertitres discrets « Favoris », « Récents », « Tous les exercices » (13 px,
+ * gris), qui ne sont pas des titres de section.
+ */
+.pick-tier {
+  font-size: var(--fs-1);
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--muted);
+  margin: var(--space-2) 0 var(--space-1);
+}
+
+.pick-tier-section:first-of-type .pick-tier {
+  margin-top: var(--space-1);
+}
+
+/* Proposition d'ajuster le nombre de séries (version 1.49.0) : une ligne discrète, « Oui » et « Non » à droite. */
+.sets-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  margin: var(--space-1) 0 0;
+}
+
+.sets-hint-text {
+  flex: 1 1 12em;
+  margin: 0;
+  font-size: var(--fs-2);
+  color: var(--muted);
+}
+
+.sets-hint-actions {
+  display: flex;
+  flex: none;
+  gap: var(--space-1);
+}
+
 .pick-button {
   width: 100%;
   display: flex;

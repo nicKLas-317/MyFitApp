@@ -3,6 +3,7 @@ import type { Exercise, MuscleGroup } from '../../domain/types';
 import { useApp } from '../../app/store';
 import { displayName, groupGrips, variantLabel, type VariantRef } from '../../library/catalog';
 import { buildSearchIndex, perDumbbell, recentVariantIds, searchWithInfo, type MatchField } from '../../library/search';
+import { libraryOrder, pickerTiers, PICK_TIER_TITLES, recentAt } from '../../library/pickerOrder';
 import { gripOf } from '../../library/text';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
 import { formatKg } from '../../session/format';
@@ -24,8 +25,14 @@ interface Props {
   note?(ref: VariantRef): string | null;
   /** Lien de création proposé quand rien ne correspond. */
   createHref(query: string): string;
-  /** Séance à la maison (version 1.26.0) : récents de la maison d'abord, charge et statut du suivi de la maison. */
+  /** Séance à la maison (version 1.26.0) : charge et statut du suivi de la maison. */
   home?: boolean;
+  /**
+   * Ajout d'un exercice (version 1.49.0, §5.16) : favoris, puis exercices faits au lieu de la séance (`home`), du plus
+   * récent au plus ancien, puis tous les autres, chacun une seule fois, aussi dans les résultats d'une recherche. Sans
+   * lui (bibliothèque), récents, favoris, puis les groupes.
+   */
+  pickerOrder?: boolean;
 }
 
 /** Exercice-variante d'une liste, avec le champ qui l'a fait trouver. */
@@ -39,15 +46,17 @@ const memory: { group: MuscleGroup | null } = { group: null };
 
 /**
  * Liste des exercices : résultats de recherche, ou puces de filtre par groupe, récents, favoris et bibliothèque par
- * groupe (§4.2). Les prises d'un même exercice sont regroupées en une entrée.
+ * groupe (§4.2) ; pour l'ajout d'un exercice (`pickerOrder`, version 1.49.0), favoris, récents du lieu et tous les
+ * autres, recherche comprise (§5.16). Les prises d'un même exercice sont regroupées en une entrée.
  */
-export function ExerciseBrowser({ query, onPick, below, aside, note, createHref, home = false }: Props) {
+export function ExerciseBrowser({ query, onPick, below, aside, note, createHref, home = false, pickerOrder = false }: Props) {
   const { exercises, sessions, variants } = useApp();
   const index = useMemo(() => buildSearchIndex(exercises), [exercises]);
   const { results, ignored } = useMemo(() => searchWithInfo(index, query), [index, query]);
   const [chosen, setChosen] = useState<MuscleGroup | null>(memory.group);
   const trimmed = query.trim();
   const shared = { onPick, below, aside, note, home };
+  const recentHere = useMemo(() => (pickerOrder ? recentAt(sessions, home) : []), [pickerOrder, sessions, home]);
 
   const list = (items: Listed[], label?: string) => (
     <ul className="pick-list" aria-label={label}>
@@ -61,7 +70,17 @@ export function ExerciseBrowser({ query, onPick, below, aside, note, createHref,
     </ul>
   );
 
+  /** Ajout d'un exercice : favoris, récents du lieu, puis les autres, chacun sous son intertitre discret (§5.16). */
+  const tiered = (items: Listed[]) =>
+    pickerTiers(items, (i) => i.ref, recentHere).map((t) => (
+      <section key={t.tier} className="pick-tier-section" data-tier={t.tier}>
+        <h2 className="pick-tier">{PICK_TIER_TITLES[t.tier]}</h2>
+        {list(t.items, PICK_TIER_TITLES[t.tier])}
+      </section>
+    ));
+
   if (trimmed) {
+    const found: Listed[] = results.map((r) => ({ ref: { exercise: r.entry.exercise, variant: r.entry.variant }, via: r.via }));
     return results.length > 0 ? (
       <>
         {ignored.length > 0 && (
@@ -69,7 +88,7 @@ export function ExerciseBrowser({ query, onPick, below, aside, note, createHref,
             Mot{ignored.length > 1 ? 's' : ''} non reconnu{ignored.length > 1 ? 's' : ''}, ignoré{ignored.length > 1 ? 's' : ''} : {ignored.join(', ')}
           </p>
         )}
-        {list(results.map((r) => ({ ref: { exercise: r.entry.exercise, variant: r.entry.variant }, via: r.via })), 'Résultats')}
+        {pickerOrder ? tiered(found) : list(found, 'Résultats')}
       </>
     ) : (
       <div className="no-result">
@@ -89,23 +108,34 @@ export function ExerciseBrowser({ query, onPick, below, aside, note, createHref,
     setChosen(g);
   };
   const inGroup = (r: VariantRef) => !group || r.exercise.primaryGroup === group;
+  const chips = (
+    <div className="chip-row group-filters" role="group" aria-label="Filtrer par groupe musculaire">
+      <button type="button" className="chip" aria-pressed={!group} onClick={() => choose(null)}>
+        Tous
+      </button>
+      {groups.map((g) => (
+        <button key={g} type="button" className="chip" aria-pressed={group === g} onClick={() => choose(group === g ? null : g)}>
+          {MUSCLE_GROUP_LABELS[g]}
+        </button>
+      ))}
+    </div>
+  );
+  if (pickerOrder) {
+    return (
+      <>
+        {chips}
+        {tiered(libraryOrder(visible.filter(inGroup)).map((ref) => ({ ref })))}
+      </>
+    );
+  }
   const favorites = visible.filter((r) => r.variant.favorite && inGroup(r));
-  const recent = recentVariantIds(sessions, undefined, home)
+  const recent = recentVariantIds(sessions)
     .map((id) => variants.get(id))
     .filter((r): r is VariantRef => !!r && !r.exercise.archived && !r.variant.archived && inGroup(r));
 
   return (
     <>
-      <div className="chip-row group-filters" role="group" aria-label="Filtrer par groupe musculaire">
-        <button type="button" className="chip" aria-pressed={!group} onClick={() => choose(null)}>
-          Tous
-        </button>
-        {groups.map((g) => (
-          <button key={g} type="button" className="chip" aria-pressed={group === g} onClick={() => choose(group === g ? null : g)}>
-            {MUSCLE_GROUP_LABELS[g]}
-          </button>
-        ))}
-      </div>
+      {chips}
       {recent.length > 0 && (
         <section>
           <h2 className="section-title">Récents</h2>

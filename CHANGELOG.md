@@ -4,6 +4,12 @@ Ce qui a changé à chaque version de MyFitApp, de la plus récente à la plus a
 
 Les commits sans changement de numéro (documentation, tests, workflow) sont rangés sous la version en cours à ce moment-là.
 
+## 1.49.0 — 16 nov. 2026
+
+- Ajout d'un exercice (en séance et dans la préparation de la séance prévue) : d'abord les favoris, puis les exercices déjà faits au lieu de la séance, du plus récent au plus ancien (à la salle : séances à la salle ; à la maison : séances à la maison ; séance prévue : salle), puis tous les autres dans l'ordre de la bibliothèque, chacun une seule fois, sous des intertitres discrets « Favoris », « Récents », « Tous les exercices ». Même ordre dans les résultats d'une recherche (pertinence à l'intérieur de chaque part) et avec un filtre par groupe. La bibliothèque (onglet Plus) ne change pas
+- Proposition d'ajuster le nombre de séries : un exercice fait 3 séances de suite (même suivi) avec le même nombre de séries, inférieur à son nombre de séries standard, propose sur sa fiche et sur sa carte en séance « Tu fais souvent 2 séries : passer à 2 ? ». « Oui » change le nombre de séries standard de l'exercice (rien d'autre, ni la cible ni l'historique) ; « Non » la masque jusqu'à 3 nouvelles séances (mémorisé sur l'appareil). Jamais à la hausse
+- Historique : l'écran d'ajout était celui de la bibliothèque : « Récents » (6 au plus ; à la maison, ceux de la maison puis ceux de la salle ; à la salle, toutes les séances) avant « Favoris », puis les groupes avec leurs titres, un exercice pouvant figurer trois fois ; dans une recherche, un favori ne passait devant qu'à pertinence égale
+
 ## 1.48.2 — 16 nov. 2026
 
 - Découpage de `src/app/store.tsx` (741 lignes), sans changement de comportement : types de l'état de l'appli dans `src/app/appTypes.ts`, lecture de la base dans `src/app/stored.ts` (`loadStored`), réglages, activités, séance prévue et mémoire de l'appareil dans `src/app/useStoredMeta.ts` ; `store.tsx` (414 lignes) garde le fournisseur, les séances, la bibliothèque, l'enregistrement et la relecture entre fenêtres. Préalable à la version 1.49.0 (règle des gros fichiers, CLAUDE.md §0) ; `store.tsx` sort de la liste

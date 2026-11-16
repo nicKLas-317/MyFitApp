@@ -4,7 +4,7 @@ import type { Session, SessionPlan } from '../src/domain/types';
 import { simulatedHistory } from '../src/analysis/__tests__/simulation';
 import { ALERT_NOW, alertHistory } from '../src/analysis/__tests__/alertes-simulation';
 import { weekHistory, WEEK_NOW } from '../src/plan/__tests__/completer-simulation';
-import { activeSession, addExercise, cardAction, doExercise, finishSheet, openSettingsSection, readSessions, reloadAfterWrites, startSession, validateSets, writeSessions } from './helpers';
+import { activeSession, addExercise, cardAction, doExercise, finishSheet, openSettingsSection, readSessions, reloadAfterWrites, startSession, validateSets, waitForWrites, writeSessions } from './helpers';
 
 /** Fond d'un bouton principal (bleu) et cadre neutre. */
 const ACCENT = 'rgb(91, 157, 255)';
@@ -252,6 +252,32 @@ async function addLegCardio(page: Page): Promise<void> {
   await reloadAfterWrites(page);
 }
 
+/** Pec deck en favori (version 1.49.0), depuis sa fiche ; sans effet s'il l'est déjà. */
+async function favoritePecDeck(page: Page): Promise<void> {
+  await page.goto('./#/exercice/pec-deck');
+  const star = page.getByRole('button', { name: 'Favori' });
+  if ((await star.getAttribute('aria-pressed')) !== 'true') await star.click();
+  await expect(star).toHaveAttribute('aria-pressed', 'true');
+  await waitForWrites(page);
+}
+
+/** Crunch au sol fait 3 fois à 2 séries sur 3 (version 1.49.0) ; `active` : une séance en cours avec le crunch, sans série. */
+async function crunchTwice(page: Page, active = false): Promise<void> {
+  const crunch = (id: string, date: string, state: 'done' | 'active' = 'done'): Session => {
+    const start = new Date(`${date}T${state === 'active' ? '19:15' : '08:00'}:00`).getTime();
+    return {
+      id, name: 'Séance', date, startedAt: start, endedAt: state === 'active' ? null : start + 3_600_000, createdAt: start, updatedAt: start, origin: 'app', state,
+      performances: [{ variantId: 'crunch-sol', weightKg: 0, targetReps: 10, plannedSets: 3, reps: state === 'active' ? [] : [10, 10], feeling: state === 'active' ? 'inconnu' : 'bien' }],
+    };
+  };
+  await page.goto('./');
+  await writeSessions(page, [
+    crunch('crunch-1', '2026-10-13'), crunch('crunch-2', '2026-10-15'), crunch('crunch-3', '2026-10-17'),
+    ...(active ? [crunch('crunch-en-cours', '2026-10-22', 'active')] : []),
+  ]);
+  await reloadAfterWrites(page);
+}
+
 /** Les quatre tailles du test 225 : 412, 360 et 320 px, puis 360 px avec le texte agrandi à 115 %. */
 const SIZES_225 = [[412, 1], [360, 1], [320, 1], [360, 1.15]] as const;
 
@@ -421,6 +447,30 @@ const SCREENS_225: [string, (page: Page) => Promise<void>][] = [
     ['Ajout à la séance prévue', async (page: Page) => {
       await page.goto('./#/seance-prevue/ajouter');
       await setPlan(page, PLAN);
+    }],
+    // Ordre de la liste d'ajout (version 1.49.0) : « Favoris » (pec deck), « Récents », « Tous les exercices », puis
+    // les mêmes parts dans les résultats d'une recherche.
+    ['Ajout d’un exercice, favoris et récents', async (page: Page) => {
+      await favoritePecDeck(page);
+      await page.goto('./#/seance-prevue/ajouter');
+      await expect(page.locator('.pick-tier')).toHaveText(['Favoris', 'Récents', 'Tous les exercices']);
+    }],
+    ['Ajout d’un exercice, recherche', async (page: Page) => {
+      await favoritePecDeck(page);
+      await page.goto('./#/seance-prevue/ajouter');
+      await page.getByRole('searchbox', { name: 'Rechercher un exercice' }).fill('pec');
+      await expect(page.locator('.pick-tier').first()).toHaveText('Favoris');
+    }],
+    // Proposition d'ajuster le nombre de séries (version 1.49.0) : crunch au sol fait 3 fois à 2 séries sur 3.
+    ['Fiche, proposition du nombre de séries', async (page: Page) => {
+      await crunchTwice(page);
+      await page.goto('./#/exercice/crunch-sol');
+      await expect(page.getByTestId('sets-hint')).toBeVisible();
+    }],
+    ['Séance, proposition du nombre de séries', async (page: Page) => {
+      await crunchTwice(page, true);
+      await page.goto('./#/seance');
+      await expect(page.locator('article[aria-label="Crunch au sol"]').getByTestId('sets-hint')).toBeVisible();
     }],
     ['Séance prévue vide', async (page: Page) => {
       await page.goto('./#/seance-prevue');

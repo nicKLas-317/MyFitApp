@@ -8,6 +8,7 @@ import { CARDIO_MACHINES_VERSION, sanitizeCardioMachines } from '../cardio/model
 import { DEFAULT_RECAP_SETTINGS, type WeeklyRecapSettings } from '../analysis/weekly';
 import { DEFAULT_REPORT_SETTINGS, markSeen, periodKey, type ReportPeriod, type ReportSeen, type ReportSettings } from '../analysis/report';
 import { ignoreAlert, type GroupAlert, type IgnoredAlerts } from '../analysis/groupAlerts';
+import { dismissSetsHint as dismissHint, type SetsHint, type SetsHintDismissed } from '../analysis/setsHint';
 import { answer, sanitizeHabits, type ActivityRecord, type Habit, type Occurrence } from '../activities/model';
 import type { StoredData } from './stored';
 
@@ -24,6 +25,8 @@ export function useStoredMeta(writeMeta: WriteMeta, localChanges: MutableRefObje
   const [coachSent, setCoachSent] = useState<string | null>(null);
   const [ignoredAlerts, setIgnoredAlerts] = useState<IgnoredAlerts>({});
   const ignoredAlertsRef = useRef<IgnoredAlerts>({});
+  const [setsHintDismissed, setSetsHintDismissed] = useState<SetsHintDismissed>({});
+  const setsHintDismissedRef = useRef<SetsHintDismissed>({});
   const [habits, setHabitsState] = useState<Habit[]>(() => sanitizeHabits(undefined));
   const [activities, setActivitiesState] = useState<ActivityRecord[]>([]);
   const activitiesRef = useRef<ActivityRecord[]>([]);
@@ -45,6 +48,8 @@ export function useStoredMeta(writeMeta: WriteMeta, localChanges: MutableRefObje
     setCoachSent(stored.coachSent);
     ignoredAlertsRef.current = stored.ignoredAlerts;
     setIgnoredAlerts(keep(stored.ignoredAlerts));
+    setsHintDismissedRef.current = stored.setsHintDismissed;
+    setSetsHintDismissed(keep(stored.setsHintDismissed));
     setHabitsState(keep(stored.habits));
     activitiesRef.current = stored.activities;
     setActivitiesState(keep(stored.activities));
@@ -157,6 +162,19 @@ export function useStoredMeta(writeMeta: WriteMeta, localChanges: MutableRefObje
     [writeMeta, localChanges],
   );
 
+  const dismissSetsHint = useCallback(
+    async (hint: SetsHint): Promise<void> => {
+      const next = dismissHint(setsHintDismissedRef.current, hint);
+      setsHintDismissedRef.current = next;
+      setSetsHintDismissed(next);
+      // Une relecture de la base commencée avant ne doit pas rétablir l'ancienne valeur.
+      localChanges.current++;
+      // Un échec est sans gravité : la proposition réapparaîtra à la prochaine ouverture.
+      await writeMeta([['setsHintDismissed', next]], () => {});
+    },
+    [writeMeta, localChanges],
+  );
+
   const generalSettings = useMemo(
     () => ({ weeklyRecap: recapSettings, cardioMachines, cardioMachinesVersion: CARDIO_MACHINES_VERSION, reports: reportSettings, habits }),
     [recapSettings, cardioMachines, reportSettings, habits],
@@ -181,6 +199,8 @@ export function useStoredMeta(writeMeta: WriteMeta, localChanges: MutableRefObje
       markCoachSent,
       ignoredAlerts,
       ignoreGroupAlert,
+      setsHintDismissed,
+      dismissSetsHint,
       habits,
       setHabits,
       activities,

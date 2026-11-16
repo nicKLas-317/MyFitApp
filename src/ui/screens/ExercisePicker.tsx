@@ -168,6 +168,7 @@ export function ExercisePicker({ variantId, forPlan = false }: { variantId?: str
           }
           createHref={(q) => `#/nouvel-exercice/${encodeURIComponent(q)}/${forPlan ? 'prevue' : 'seance'}`}
           home={home}
+          pickerOrder
         />
       )}
     </main>
