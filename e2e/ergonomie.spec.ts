@@ -448,8 +448,8 @@ const SCREENS_225: [string, (page: Page) => Promise<void>][] = [
       await page.goto('./#/seance-prevue/ajouter');
       await setPlan(page, PLAN);
     }],
-    // Ordre de la liste d'ajout (version 1.49.0) : « Favoris » (pec deck), « Récents », « Tous les exercices », puis
-    // les mêmes parts dans les résultats d'une recherche.
+    // Ordre de la liste d'ajout (version 1.49.0) : « Favoris » (pec deck), « Récents », « Tous les exercices » ; puis
+    // les résultats d'une recherche, par pertinence, sans intertitres (version 1.49.1).
     ['Ajout d’un exercice, favoris et récents', async (page: Page) => {
       await favoritePecDeck(page);
       await page.goto('./#/seance-prevue/ajouter');
@@ -459,7 +459,7 @@ const SCREENS_225: [string, (page: Page) => Promise<void>][] = [
       await favoritePecDeck(page);
       await page.goto('./#/seance-prevue/ajouter');
       await page.getByRole('searchbox', { name: 'Rechercher un exercice' }).fill('pec');
-      await expect(page.locator('.pick-tier').first()).toHaveText('Favoris');
+      await expect(page.getByRole('list', { name: 'Résultats' })).toBeVisible();
     }],
     // Proposition d'ajuster le nombre de séries (version 1.49.0) : crunch au sol fait 3 fois à 2 séries sur 3.
     ['Fiche, proposition du nombre de séries', async (page: Page) => {

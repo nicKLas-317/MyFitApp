@@ -4,6 +4,11 @@ Ce qui a changé à chaque version de MyFitApp, de la plus récente à la plus a
 
 Les commits sans changement de numéro (documentation, tests, workflow) sont rangés sous la version en cours à ce moment-là.
 
+## 1.49.1 — 16 nov. 2026
+
+- Ajout d'un exercice, recherche : dès qu'un texte est tapé, l'ordre suit d'abord la pertinence (« shoulder press » : le développé épaules machine avant le chest press, même fait récemment) ; les favoris, puis les exercices faits au lieu de la séance, ne départagent que des résultats de même pertinence. Une seule liste, sans intertitres. Sans texte (liste complète ou filtre par groupe), l'ordre « Favoris / Récents / Tous les exercices » ne change pas
+- Historique : en 1.49.0, les résultats d'une recherche étaient répartis en « Favoris / Récents / Tous les exercices », un favori ou un récent moins pertinent passant avant le meilleur résultat
+
 ## 1.49.0 — 16 nov. 2026
 
 - Ajout d'un exercice (en séance et dans la préparation de la séance prévue) : d'abord les favoris, puis les exercices déjà faits au lieu de la séance, du plus récent au plus ancien (à la salle : séances à la salle ; à la maison : séances à la maison ; séance prévue : salle), puis tous les autres dans l'ordre de la bibliothèque, chacun une seule fois, sous des intertitres discrets « Favoris », « Récents », « Tous les exercices ». Même ordre dans les résultats d'une recherche (pertinence à l'intérieur de chaque part) et avec un filtre par groupe. La bibliothèque (onglet Plus) ne change pas

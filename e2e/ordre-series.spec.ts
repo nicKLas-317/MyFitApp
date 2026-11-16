@@ -35,6 +35,11 @@ function tiers(page: Page): Promise<{ title: string; ids: string[] }[]> {
   );
 }
 
+/** Résultats d'une recherche, dans l'ordre affiché. */
+function results(page: Page): Promise<string[]> {
+  return page.getByRole('list', { name: 'Résultats' }).locator('li.pick-item[data-variant], button.grip-chip[data-variant]').evaluateAll((items) => items.map((e) => e.getAttribute('data-variant')!));
+}
+
 async function expectEachOnce(page: Page): Promise<void> {
   const all = (await tiers(page)).flatMap((t) => t.ids);
   expect(new Set(all).size, 'chaque exercice-variante une seule fois').toBe(all.length);
@@ -47,7 +52,7 @@ const SALLE = [
 ];
 
 test.describe('Ordre de la liste d’ajout d’un exercice (version 1.49.0)', () => {
-  test('315. Favoris, récents du lieu, puis tous les exercices ; recherche et filtre dans le même ordre ; bibliothèque inchangée', async ({ page }) => {
+  test('315. Favoris, récents du lieu, puis tous les exercices, aussi avec un filtre ; recherche par pertinence, favoris puis récents à égalité ; bibliothèque inchangée', async ({ page }) => {
     await seed(page, SALLE);
     // Favori : le pec deck, depuis sa fiche.
     await page.goto('./#/exercice/pec-deck');
@@ -81,14 +86,15 @@ test.describe('Ordre de la liste d’ajout d’un exercice (version 1.49.0)', ()
     expect(t[1]!.ids).not.toContain('chest-press');
     await page.getByRole('group', { name: 'Filtrer par groupe musculaire' }).getByRole('button', { name: 'Tous' }).click();
 
-    // Recherche « pectoraux » : favori, récent, puis les autres résultats par pertinence.
-    await page.getByRole('searchbox', { name: 'Rechercher un exercice' }).fill('pectoraux');
-    await expect(page.locator('.pick-tier')).toHaveText(['Favoris', 'Récents', 'Tous les exercices']);
-    t = await tiers(page);
-    expect(t[0]!.ids).toEqual(['pec-deck']);
-    expect(t[1]!.ids).toEqual(['chest-press']);
-    expect(t[2]!.ids).toContain('developpe-couche');
-    await expectEachOnce(page);
+    // Recherche (version 1.49.1) : la pertinence d'abord, sans intertitres. « shoulder press » : le développé épaules
+    // machine et le développé militaire avant le chest press, fait récemment ; le chest press en tête des résultats de
+    // même pertinence que lui.
+    await page.getByRole('searchbox', { name: 'Rechercher un exercice' }).fill('shoulder press');
+    await expect(page.getByRole('list', { name: 'Résultats' })).toBeVisible();
+    await expect(page.locator('.pick-tier')).toHaveCount(0);
+    expect(await results(page)).toEqual([
+      'developpe-epaules-machine', 'developpe-militaire-halteres', 'chest-press', 'developpe-couche', 'developpe-couche-halteres', 'developpe-incline', 'developpe-incline--halteres',
+    ]);
     // Un appui ajoute toujours l'exercice.
     await page.getByRole('button', { name: /^Chest press/ }).click();
     await expect(page.locator('article[aria-label="Chest press"]')).toBeVisible();
@@ -103,6 +109,14 @@ test.describe('Ordre de la liste d’ajout d’un exercice (version 1.49.0)', ()
     expect(t[1]!.ids).toEqual(['curl-biceps-halteres', 'crunch-sol']);
     expect(t[2]!.ids).toContain('leg-extension');
     await expectEachOnce(page);
+    // « curl biceps » à la maison : cinq curls de même pertinence, le curl aux haltères (fait à la maison) en tête ;
+    // le marteau et le pupitre, moins pertinents, en dernier.
+    await page.getByRole('searchbox', { name: 'Rechercher un exercice' }).fill('curl biceps');
+    await expect(page.locator('.pick-tier')).toHaveCount(0);
+    expect(await results(page)).toEqual([
+      'curl-biceps-halteres', 'curl-biceps-banc-incline', 'curl-biceps-barre-droite', 'curl-biceps-barre-ez', 'curl-biceps-poulie-corde', 'curl-marteau', 'curl-pupitre',
+    ]);
+    await page.getByRole('searchbox', { name: 'Rechercher un exercice' }).fill('');
 
     // Préparation de la séance prévue : toujours à la salle.
     await page.goto('./#/seance-prevue/ajouter');

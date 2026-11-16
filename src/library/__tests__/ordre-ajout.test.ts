@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Exercise, Session } from '../../domain/types';
 import { indexVariants, type VariantRef } from '../catalog';
-import { libraryOrder, pickerTiers, recentAt } from '../pickerOrder';
+import { libraryOrder, pickerSearchOrder, pickerTiers, recentAt } from '../pickerOrder';
 import { buildSearchIndex, searchWithInfo } from '../search';
 import { SEED_EXERCISES } from '../seed';
 
@@ -56,16 +56,7 @@ describe('Ordre de la liste d’ajout d’un exercice (version 1.49.0)', () => {
     expect(bare.map((t) => t.tier)).toEqual(['tous']);
   });
 
-  it('315. Recherche et filtre par groupe : le même ordre à l’intérieur des résultats', () => {
-    // « curl » : par pertinence, puis favoris, récents et autres.
-    const results = searchWithInfo(index, 'curl').results.map((r) => ({ exercise: r.entry.exercise, variant: r.entry.variant }));
-    const tiers = pickerTiers(results, (r) => r, recentAt(sessions, true));
-    expect(tiers.map((t) => t.tier)).toEqual(['favoris', 'recents', 'tous']);
-    expect(ids(tiers[0]!.items)).toEqual(['leg-curl']);
-    expect(ids(tiers[1]!.items)).toEqual(['curl-biceps-halteres']);
-    // Les autres gardent l'ordre de la recherche.
-    expect(ids(tiers[2]!.items)).toEqual(ids(results).filter((id) => id !== 'leg-curl' && id !== 'curl-biceps-halteres'));
-    // Filtre « Pectoraux » : favoris, récents et autres du groupe seulement.
+  it('315. Filtre par groupe, sans texte : favoris, récents, puis les autres du groupe', () => {
     const pecs = all.filter((r) => r.exercise.primaryGroup === 'pectoraux');
     const byGroup = pickerTiers(pecs, (r) => r, recentAt(sessions, false));
     expect(ids(byGroup[0]!.items)).toEqual(['pec-deck']);
@@ -74,5 +65,29 @@ describe('Ordre de la liste d’ajout d’un exercice (version 1.49.0)', () => {
     // Doublon dans la liste donnée : gardé une fois.
     const twice = pickerTiers([refs.get('pec-deck')!, refs.get('pec-deck')!], (r) => r, []);
     expect(twice.flatMap((t) => ids(t.items))).toEqual(['pec-deck']);
+  });
+
+  it('315. Recherche (version 1.49.1) : la pertinence d’abord ; favoris puis récents seulement à pertinence égale', () => {
+    const search = (list: readonly Exercise[], query: string, recent: string[]) =>
+      pickerSearchOrder(searchWithInfo(buildSearchIndex(list), query).results, (r) => r.entry, (r) => r.score, recent).map((r) => r.entry.variant.id);
+    // « shoulder press » : le chest press, fait récemment et même en favori, reste après le développé épaules machine
+    // et le développé militaire, plus pertinents ; parmi les résultats de même pertinence, favori puis récent d'abord.
+    const shoulder = favorite(SEED_EXERCISES, ['developpe-incline', 'chest-press']);
+    expect(search(SEED_EXERCISES, 'shoulder press', ['chest-press'])).toEqual([
+      'developpe-epaules-machine', 'developpe-militaire-halteres', 'chest-press', 'developpe-couche', 'developpe-couche-halteres', 'developpe-incline', 'developpe-incline--halteres',
+    ]);
+    expect(search(favorite(SEED_EXERCISES, ['developpe-incline']), 'shoulder press', ['chest-press'])).toEqual([
+      'developpe-epaules-machine', 'developpe-militaire-halteres', 'developpe-incline', 'chest-press', 'developpe-couche', 'developpe-couche-halteres', 'developpe-incline--halteres',
+    ]);
+    expect(search(shoulder, 'shoulder press', [])[0]).toBe('developpe-epaules-machine');
+    // « curl biceps » : cinq curls de même pertinence, puis le marteau et le pupitre, moins pertinents. Favori (poulie
+    // corde), puis récents du plus récent au plus ancien (haltères, barre droite), puis l'ordre de la recherche ; le
+    // curl marteau, favori, reste après les plus pertinents.
+    const curls = favorite(SEED_EXERCISES, ['curl-biceps-poulie-corde', 'curl-marteau']);
+    expect(search(curls, 'curl biceps', ['curl-biceps-halteres', 'leg-extension', 'curl-biceps-barre-droite'])).toEqual([
+      'curl-biceps-poulie-corde', 'curl-biceps-halteres', 'curl-biceps-barre-droite', 'curl-biceps-banc-incline', 'curl-biceps-barre-ez', 'curl-marteau', 'curl-pupitre',
+    ]);
+    // Sans favori ni récent : l'ordre de la recherche, inchangé.
+    expect(search(SEED_EXERCISES, 'curl biceps', [])).toEqual(searchWithInfo(buildSearchIndex(SEED_EXERCISES), 'curl biceps').results.map((r) => r.entry.variant.id));
   });
 });

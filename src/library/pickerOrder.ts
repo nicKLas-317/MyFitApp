@@ -31,7 +31,7 @@ export function recentAt(sessions: readonly Session[], home: boolean): string[] 
 }
 
 /**
- * Répartit une liste déjà ordonnée (bibliothèque par groupe, ou résultats d'une recherche par pertinence) : favoris dans
+ * Répartit une liste déjà ordonnée (bibliothèque par groupe, liste complète ou filtrée, sans texte) : favoris dans
  * cet ordre, puis les autres exercices faits, du plus récent au plus ancien (`recent`), puis le reste dans cet ordre.
  * Chaque exercice-variante une seule fois ; seules les parts non vides sont renvoyées.
  */
@@ -67,4 +67,24 @@ const GROUP_ORDER = Object.keys(MUSCLE_GROUP_LABELS) as MuscleGroup[];
 export function libraryOrder(refs: readonly VariantRef[]): VariantRef[] {
   const rank = (r: VariantRef) => GROUP_ORDER.indexOf(r.exercise.primaryGroup);
   return [...refs].sort((a, b) => rank(a) - rank(b) || displayName(a).localeCompare(displayName(b), 'fr'));
+}
+
+/**
+ * Résultats d'une recherche dans la liste d'ajout (version 1.49.1) : la pertinence d'abord ; à pertinence égale, les
+ * favoris, puis les exercices faits au lieu de la séance, du plus récent au plus ancien (`recent`), puis l'ordre de la
+ * recherche (nom, variante standard d'abord). Sans texte, l'ordre « Favoris / Récents / Tous » (`pickerTiers`) reste.
+ */
+export function pickerSearchOrder<T>(results: readonly T[], refOf: (item: T) => VariantRef, scoreOf: (item: T) => number, recent: readonly string[]): T[] {
+  const rank = new Map(recent.map((id, i) => [id, i]));
+  const recency = (item: T) => rank.get(refOf(item).variant.id) ?? Number.POSITIVE_INFINITY;
+  return results
+    .map((item, i) => ({ item, i }))
+    .sort(
+      (a, b) =>
+        scoreOf(b.item) - scoreOf(a.item) ||
+        Number(!!refOf(b.item).variant.favorite) - Number(!!refOf(a.item).variant.favorite) ||
+        (recency(a.item) === recency(b.item) ? 0 : recency(a.item) < recency(b.item) ? -1 : 1) ||
+        a.i - b.i,
+    )
+    .map((x) => x.item);
 }

@@ -3,7 +3,7 @@ import type { Exercise, MuscleGroup } from '../../domain/types';
 import { useApp } from '../../app/store';
 import { displayName, groupGrips, variantLabel, type VariantRef } from '../../library/catalog';
 import { buildSearchIndex, perDumbbell, recentVariantIds, searchWithInfo, type MatchField } from '../../library/search';
-import { libraryOrder, pickerTiers, PICK_TIER_TITLES, recentAt } from '../../library/pickerOrder';
+import { libraryOrder, pickerSearchOrder, pickerTiers, PICK_TIER_TITLES, recentAt } from '../../library/pickerOrder';
 import { gripOf } from '../../library/text';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
 import { formatKg } from '../../session/format';
@@ -29,8 +29,9 @@ interface Props {
   home?: boolean;
   /**
    * Ajout d'un exercice (version 1.49.0, §5.16) : favoris, puis exercices faits au lieu de la séance (`home`), du plus
-   * récent au plus ancien, puis tous les autres, chacun une seule fois, aussi dans les résultats d'une recherche. Sans
-   * lui (bibliothèque), récents, favoris, puis les groupes.
+   * récent au plus ancien, puis tous les autres, chacun une seule fois. Dans une recherche (version 1.49.1), la
+   * pertinence d'abord, favoris puis récents à pertinence égale. Sans lui (bibliothèque), récents, favoris, puis les
+   * groupes.
    */
   pickerOrder?: boolean;
 }
@@ -47,7 +48,7 @@ const memory: { group: MuscleGroup | null } = { group: null };
 /**
  * Liste des exercices : résultats de recherche, ou puces de filtre par groupe, récents, favoris et bibliothèque par
  * groupe (§4.2) ; pour l'ajout d'un exercice (`pickerOrder`, version 1.49.0), favoris, récents du lieu et tous les
- * autres, recherche comprise (§5.16). Les prises d'un même exercice sont regroupées en une entrée.
+ * autres ; dans une recherche, la pertinence d'abord (§5.16, version 1.49.1). Les prises d'un même exercice sont regroupées en une entrée.
  */
 export function ExerciseBrowser({ query, onPick, below, aside, note, createHref, home = false, pickerOrder = false }: Props) {
   const { exercises, sessions, variants } = useApp();
@@ -80,7 +81,9 @@ export function ExerciseBrowser({ query, onPick, below, aside, note, createHref,
     ));
 
   if (trimmed) {
-    const found: Listed[] = results.map((r) => ({ ref: { exercise: r.entry.exercise, variant: r.entry.variant }, via: r.via }));
+    // Ajout d'un exercice (version 1.49.1) : la pertinence d'abord, favoris puis récents du lieu à pertinence égale.
+    const ordered = pickerOrder ? pickerSearchOrder(results, (r) => r.entry, (r) => r.score, recentHere) : results;
+    const found: Listed[] = ordered.map((r) => ({ ref: { exercise: r.entry.exercise, variant: r.entry.variant }, via: r.via }));
     return results.length > 0 ? (
       <>
         {ignored.length > 0 && (
@@ -88,7 +91,7 @@ export function ExerciseBrowser({ query, onPick, below, aside, note, createHref,
             Mot{ignored.length > 1 ? 's' : ''} non reconnu{ignored.length > 1 ? 's' : ''}, ignoré{ignored.length > 1 ? 's' : ''} : {ignored.join(', ')}
           </p>
         )}
-        {pickerOrder ? tiered(found) : list(found, 'Résultats')}
+        {list(found, 'Résultats')}
       </>
     ) : (
       <div className="no-result">
