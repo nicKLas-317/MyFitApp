@@ -4,6 +4,10 @@ Ce qui a changé à chaque version de MyFitApp, de la plus récente à la plus a
 
 Les commits sans changement de numéro (documentation, tests, workflow) sont rangés sous la version en cours à ce moment-là.
 
+## 1.48.2 — 16 nov. 2026
+
+- Découpage de `src/app/store.tsx` (741 lignes), sans changement de comportement : types de l'état de l'appli dans `src/app/appTypes.ts`, lecture de la base dans `src/app/stored.ts` (`loadStored`), réglages, activités, séance prévue et mémoire de l'appareil dans `src/app/useStoredMeta.ts` ; `store.tsx` (414 lignes) garde le fournisseur, les séances, la bibliothèque, l'enregistrement et la relecture entre fenêtres. Préalable à la version 1.49.0 (règle des gros fichiers, CLAUDE.md §0) ; `store.tsx` sort de la liste
+
 ## 1.48.1 — 12 nov. 2026
 
 - Carte « Ma séance prévue » de l'accueil : de nouveau un seul bouton vers la préparation, sans lien vers les fiches, avec son allure d'avant. Les liens vers la fiche restent dans le détail de la séance prévue (préparation) et dans la séance pour compléter la semaine
