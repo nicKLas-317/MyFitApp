@@ -71,7 +71,8 @@ test.describe('Séries par semaine, version 1.34.0', () => {
       const totals = [...svg.querySelectorAll('[data-total]')];
       const order = line!.compareDocumentPosition(totals[0]!) & Node.DOCUMENT_POSITION_FOLLOWING;
       const halo = totals.map((t) => getComputedStyle(t)).map((c) => `${c.paintOrder} ${c.strokeWidth} ${c.stroke === getComputedStyle(svg).backgroundColor}`);
-      // Semaine en cours : la dernière barre, plus transparente, avec un contour, « en cours » sous sa date.
+      // Semaine en cours : la dernière barre, mêmes teintes que les autres (version 1.49.2), contour en pointillés,
+      // « en cours » sous sa date.
       const current = svg.querySelector('g[data-current]')!;
       const opacity = (sel: string) => [...svg.querySelectorAll(sel)].map((r) => getComputedStyle(r).opacity);
       const date = box([...svg.querySelectorAll('[data-date]')].at(-1)!);
@@ -83,13 +84,15 @@ test.describe('Séries par semaine, version 1.34.0', () => {
         currentOpacity: [...current.querySelectorAll('rect.bar-main')].map((r) => getComputedStyle(r).opacity),
         doneOpacity: [...new Set(opacity('g[data-main]:not([data-current]) rect.bar-main'))],
         outline: getComputedStyle(current.querySelector('rect.bar-outline')!).fill,
+        outlineDashed: getComputedStyle(current.querySelector('rect.bar-outline')!).strokeDasharray !== 'none',
         sameRow: new Set([...svg.querySelectorAll('[data-date]')].map((t) => Math.round(box(t).top))).size === 1,
         enCours: below.top >= date.bottom - 1 && Math.abs((below.left + below.right) / 2 - (date.left + date.right) / 2) < 1,
         dashed: getComputedStyle(line!).strokeDasharray,
         lineY: box(line!).top,
         half: tall.bottom - tall.height / 2,
         overlaps: others.filter((o) => o.left < l.right && l.left < o.right && o.top < l.bottom && l.top < o.bottom).length,
-        widest: Math.max(...[...svg.querySelectorAll('rect')].map((r) => box(r).width)),
+        // Barres seulement : le contour de la semaine en cours les déborde de quelques pixels (version 1.49.2).
+        widest: Math.max(...[...svg.querySelectorAll('rect.bar-main, rect.bar-extra')].map((r) => box(r).width)),
       };
     });
     expect(geometry.dashed).not.toBe('none');
@@ -97,7 +100,7 @@ test.describe('Séries par semaine, version 1.34.0', () => {
     expect(geometry.overlaps).toBe(0);
     expect(geometry.order).toBeTruthy();
     expect(geometry.halo).toEqual(['stroke 4px true']);
-    expect(geometry).toMatchObject({ currentIndex: 4, currentOpacity: ['0.45'], doneOpacity: ['1'], outline: 'none', sameRow: true, enCours: true });
+    expect(geometry).toMatchObject({ currentIndex: 4, currentOpacity: ['1'], doneOpacity: ['1'], outline: 'none', outlineDashed: true, sameRow: true, enCours: true });
     await expect(chart(page).getByTestId('bar-current')).toHaveText('en cours');
     // Peu de semaines : barres plafonnées à 32 px.
     expect(geometry.widest).toBeLessThanOrEqual(32);

@@ -4,6 +4,11 @@ Ce qui a changé à chaque version de MyFitApp, de la plus récente à la plus a
 
 Les commits sans changement de numéro (documentation, tests, workflow) sont rangés sous la version en cours à ce moment-là.
 
+## 1.49.2 — 17 nov. 2026
+
+- Bilan par groupe musculaire, « Séries par semaine » : la barre de la semaine en cours garde les mêmes teintes que les autres semaines (direct plein, indirect clair) ; elle se distingue par un contour en pointillés à la couleur du groupe, autour de la barre (son total au-dessus), et par « en cours » sous sa date. Aucun calcul ne change
+- Historique : depuis la version 1.34.0, la semaine en cours était plus transparente (opacité 0,45, contour plein collé à la barre) et ressemblait à une barre d'indirect (clair, 0,4) : 3 séries directes faites à la maison le 17 novembre semblaient comptées en indirect, alors que le récapitulatif, les bilans et le graphique les comptaient bien en direct
+
 ## 1.49.1 — 16 nov. 2026
 
 - Ajout d'un exercice, recherche : dès qu'un texte est tapé, l'ordre suit d'abord la pertinence (« shoulder press » : le développé épaules machine avant le chest press, même fait récemment) ; les favoris, puis les exercices faits au lieu de la séance, ne départagent que des résultats de même pertinence. Une seule liste, sans intertitres. Sans texte (liste complète ou filtre par groupe), l'ordre « Favoris / Récents / Tous les exercices » ne change pas

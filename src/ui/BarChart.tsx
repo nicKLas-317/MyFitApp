@@ -7,7 +7,10 @@ import { formatDecimal } from '../session/format';
  * Moyenne (version 1.34.0) : ligne horizontale en pointillés, étiquetée dans une bande au-dessus des barres (un trait
  * pointillé puis « Moyenne : 9,2 »), pour ne jamais recouvrir une barre ni un total. Ordre de dessin : barres, moyenne,
  * puis étiquettes, détourées de la couleur du fond : la ligne s'interrompt sous un total qu'elle traverse.
- * Semaine en cours (`current`, la dernière barre) : plus transparente, avec un contour, et « en cours » sous la date.
+ * Semaine en cours (`current`, la dernière barre) : mêmes teintes que les autres semaines (direct plein, indirect clair),
+ * entourée d'un contour en pointillés à la couleur du groupe, à `OUTLINE_GAP` px de la barre, et « en cours » sous la
+ * date, son total au-dessus du contour (version 1.49.2 : en 1.34.0, plus transparente, elle ressemblait à une barre
+ * d'indirect).
  */
 export interface BarDatum {
   /** Libellé court de l'abscisse (« 5 oct. »). */
@@ -37,6 +40,8 @@ const LEGEND = 20;
 const LINE = 16;
 /** Largeur minimale d'une colonne pour écrire le total de chaque barre ; en dessous, une barre sur deux. */
 const TOTAL_SLOT = 28;
+/** Écart entre la barre de la semaine en cours et son contour en pointillés (version 1.49.2). */
+const OUTLINE_GAP = 2.5;
 const fmt = formatDecimal;
 
 export function BarChart({ data, label, average = null, current = false, testId }: Props) {
@@ -80,9 +85,18 @@ export function BarChart({ data, label, average = null, current = false, testId 
         const now = current && i === data.length - 1;
         return (
           <g key={i} data-main={d.main} data-extra={d.extra} data-current={now || undefined}>
-            {d.main > 0 && <rect className={`bar-main${now ? ' bar-current' : ''}`} x={x} y={base - h(d.main)} width={width} height={h(d.main)} rx={2} />}
-            {d.extra > 0 && <rect className={`bar-extra${now ? ' bar-current' : ''}`} x={x} y={base - h(total)} width={width} height={h(d.extra)} rx={2} />}
-            {now && total > 0 && <rect className="bar-outline" x={x + 0.75} y={base - h(total) + 0.75} width={width - 1.5} height={h(total) - 1.5} rx={2} />}
+            {d.main > 0 && <rect className="bar-main" x={x} y={base - h(d.main)} width={width} height={h(d.main)} rx={2} />}
+            {d.extra > 0 && <rect className="bar-extra" x={x} y={base - h(total)} width={width} height={h(d.extra)} rx={2} />}
+            {now && total > 0 && (
+              <rect
+                className="bar-outline"
+                x={x - OUTLINE_GAP}
+                y={base - h(total) - OUTLINE_GAP}
+                width={width + 2 * OUTLINE_GAP}
+                height={h(total) + OUTLINE_GAP}
+                rx={3}
+              />
+            )}
           </g>
         );
       })}
@@ -102,7 +116,7 @@ export function BarChart({ data, label, average = null, current = false, testId 
         return (
           <g key={i} data-labels={i}>
             {total > 0 && totalShown(i) && (
-              <text className="chart-label chart-halo" x={x} y={base - h(total) - 4} textAnchor="middle" data-total>
+              <text className="chart-label chart-halo" x={x} y={base - h(total) - (now ? OUTLINE_GAP + 6 : 4)} textAnchor="middle" data-total>
                 {fmt(total)}
               </text>
             )}

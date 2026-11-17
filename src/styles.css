@@ -3112,18 +3112,12 @@ fieldset.frame > legend + * {
   opacity: 0.4;
 }
 
-.bar-current.bar-main {
-  opacity: 0.45;
-}
-
-.bar-current.bar-extra {
-  opacity: 0.2;
-}
-
+/* Semaine en cours (version 1.49.2) : mêmes teintes que les autres semaines, contour en pointillés autour de la barre. */
 .bar-outline {
   fill: none;
   stroke: var(--group-color);
   stroke-width: 1.5;
+  stroke-dasharray: 3 2;
 }
 
 /* Étiquette détourée de la couleur du fond : une ligne qui la traverse s'interrompt sous elle. */
