@@ -169,7 +169,7 @@ test.describe('Historique, analyse et Mon poids', () => {
     await expect(page.getByText('Sauvegarde téléchargée.')).toBeVisible();
   });
 
-  test('43. L’export contient taille et pesées ; l’import les restaure sur un autre appareil', async ({ page, browser }) => {
+  test('43. L’export contient taille et pesées ; l’import les restaure sur un autre appareil', async ({ page, browser, baseURL }) => {
     await seed(page, SESSIONS);
     await page.goto('./#/reglages');
     await page.getByLabel('Taille (cm)').fill('178');
@@ -189,7 +189,8 @@ test.describe('Historique, analyse et Mon poids', () => {
     const backup = JSON.parse(await importedText(page));
     expect(backup.bodyTracking).toEqual({ heightCm: 178, weighIns: [{ date: '2026-10-01', weightKg: 79.2 }] });
 
-    const other = await browser.newContext({ baseURL: 'http://localhost:4173/MyFitApp/', locale: 'fr-FR', timezoneId: 'Europe/Paris' });
+    // Autre appareil : même adresse que la configuration (port d'une passe parallèle compris).
+    const other = await browser.newContext({ baseURL, locale: 'fr-FR', timezoneId: 'Europe/Paris' });
     const page2 = await other.newPage();
     await page2.goto('./#/donnees');
     await page2.getByLabel('Fichier à importer').setInputFiles(file);

@@ -8,6 +8,7 @@ Les commits sans changement de numéro (documentation, tests, workflow) sont ran
 
 - Bilan par groupe musculaire, « Séries par semaine » : la barre de la semaine en cours garde les mêmes teintes que les autres semaines (direct plein, indirect clair) ; elle se distingue par un contour en pointillés à la couleur du groupe, autour de la barre (son total au-dessus), et par « en cours » sous sa date. Aucun calcul ne change
 - Historique : depuis la version 1.34.0, la semaine en cours était plus transparente (opacité 0,45, contour plein collé à la barre) et ressemblait à une barre d'indirect (clair, 0,4) : 3 séries directes faites à la maison le 17 novembre semblaient comptées en indirect, alors que le récapitulatif, les bilans et le graphique les comptaient bien en direct
+- Test 43 (bout en bout) : le second appareil s'ouvre à l'adresse de la configuration (`baseURL`), comme le test de `data.spec.ts`, au lieu de `localhost:4173` écrit en dur : il passe aussi dans les passes parallèles (autres ports). Ce qu'il vérifie ne change pas
 
 ## 1.49.1 — 16 nov. 2026
 
