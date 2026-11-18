@@ -7,10 +7,10 @@
  */
 import { activityMinutes, activityStart, doneActivities, WEEKDAY_LABELS, type ActivityRecord, type Habit } from '../activities/model';
 import type { WeighIn } from '../body/model';
-import { cardioOf, formatCardio, machineCountsForLegs } from '../cardio/model';
-import { localDate, parseIsoDay, sessionStartTime, weekStart } from '../domain/calendar';
+import { cardioOf, formatCardio } from '../cardio/model';
+import { localDate, sessionStartTime, weekStart } from '../domain/calendar';
 import { MAIN_GROUPS, parentGroup, recapGroupOf } from '../domain/muscleGroups';
-import type { CardioMachine, Exercise, Feeling, MuscleGroup, Performance, Session, Status, VariantConfig } from '../domain/types';
+import type { CardioMachine, Exercise, MuscleGroup, Performance, Session, Status } from '../domain/types';
 import {
   HOME_SUFFIX,
   rebuildProfile,
@@ -20,13 +20,15 @@ import {
   variantOfTrack,
   type EngineSettings,
   type Evaluation,
-  type ProgressState,
 } from '../engine';
 import { displayName, indexVariants, variantLabel, type VariantRef } from '../library/catalog';
 import { perDumbbell } from '../library/search';
-import { MUSCLE_GROUP_LABELS } from '../library/seed';
 import { weekSuggestion, SUGGEST_MAX, type SkipReason } from '../plan/suggest';
-import { formatLoad, formatSetsReps } from '../session/format';
+import { coachWeek, DAY_MONTH_YEAR } from './coachPeriod';
+import { clock, FEELINGS, groupLabel, loadField, nextTargetText, rangeText, recommendationText, round1, typeOf, weekday } from './coachFormat';
+import { coachJson } from './coachJson';
+import { coachRules } from './coachRules';
+import { formatLoad } from '../session/format';
 import { elapsedMs } from '../session/ops';
 import { sessionTitle } from '../session/title';
 import { alertFigures, groupAlert, type IgnoredAlerts } from './groupAlerts';
@@ -34,17 +36,15 @@ import { GROUP_VIEW_GROUPS, groupIndex, SETS_ONLY_GROUPS } from './groups';
 import { analyzeProgress } from './progress';
 import { computeRecords, formatRecordWithDate } from './records';
 import { buildReport, lineText, reportSections, reportText } from './report';
-import { parsePeriodKey, periodContaining, periodKey, periodLastDay, periodTitle, shiftPeriod, type ReportPeriod } from './reportPeriod';
+import { periodLastDay, periodTitle, shiftPeriod, type ReportPeriod } from './reportPeriod';
 import {
   ACTIVITY_SETS,
   groupScore,
   groupSeries,
   groupWork,
   LEG_CARDIO_GROUP,
-  LEG_CARDIO_MINUTES,
   LEG_CARDIO_SETS,
   legCardioWeek,
-  ORANGE_SETS,
   recapColor,
   type WeeklyRecapSettings,
 } from './weekly';
@@ -72,150 +72,6 @@ export interface CoachInput {
   ignoredAlerts: IgnoredAlerts;
   appVersion: string;
   now: number;
-}
-
-// ——— Semaine exportée ————————————————————————————————————————————
-
-/** Dernière semaine terminée (lundi 0 h 00 – dimanche) : exporté le lundi 16 novembre, du 9 au 15. */
-export function coachWeek(now: number): ReportPeriod {
-  return shiftPeriod(periodContaining('week', now), -1);
-}
-
-const DAY = new Intl.DateTimeFormat('fr-FR', { day: 'numeric' });
-const DAY_MONTH = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' });
-const DAY_MONTH_YEAR = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
-const WEEKDAY = new Intl.DateTimeFormat('fr-FR', { weekday: 'long' });
-
-/** Libellé du bouton : « Semaine du 9 au 15 nov. », « du 26 oct. au 1 nov. », l'année seulement à cheval sur deux ans. */
-export function coachWeekLabel(period: ReportPeriod): string {
-  const start = period.start;
-  const end = periodLastDay(period);
-  if (start.getFullYear() !== end.getFullYear()) return `Semaine du ${DAY_MONTH_YEAR.format(start)} au ${DAY_MONTH_YEAR.format(end)}`;
-  return `Semaine du ${start.getMonth() !== end.getMonth() ? DAY_MONTH.format(start) : DAY.format(start)} au ${DAY_MONTH.format(end)}`;
-}
-
-/**
- * « myfitapp-coach-2026-11-09.txt » : date du lundi de la semaine exportée. En .txt (version 1.47.1) : Chrome sur
- * Android refuse de partager un fichier .json (il le télécharge) ; le contenu reste du JSON lisible.
- */
-export function coachFileName(period: ReportPeriod): string {
-  return `myfitapp-coach-${periodKey(period)}.txt`;
-}
-
-/** Titre du partage : « MyFitApp — données pour le coach, semaine du 9 au 15 nov. 2026 ». */
-export function coachShareTitle(period: ReportPeriod): string {
-  const title = periodTitle(period);
-  return `MyFitApp — données pour le coach, ${title.charAt(0).toLowerCase()}${title.slice(1)}`;
-}
-
-/**
- * Semaine déjà envoyée au coach (version 1.47.0), mémorisée sur l'appareil seulement (méta `coachSent`) : clé du lundi
- * (« 2026-11-09 »), ou null. Une valeur invalide est ignorée.
- */
-export function sanitizeCoachSent(value: unknown): string | null {
-  return typeof value === 'string' && parsePeriodKey('week', value) !== null ? value : null;
-}
-
-/** Le bouton n'est proposé que si une séance a été terminée avant la semaine en cours (sinon rien à exporter). */
-export function hasCoachWeek(sessions: readonly Session[], now: number): boolean {
-  const current = weekStart(new Date(now)).getTime();
-  return sessions.some((s) => s.state === 'done' && sessionStartTime(s) < current);
-}
-
-// ——— Mise en forme ———————————————————————————————————————————————
-
-const round1 = (n: number) => Math.round(n * 10) / 10;
-const pad = (n: number) => String(n).padStart(2, '0');
-const clock = (ts: number) => {
-  const d = new Date(ts);
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-};
-const weekday = (date: string) => WEEKDAY.format(parseIsoDay(date));
-const groupLabel = (g: MuscleGroup) => MUSCLE_GROUP_LABELS[g];
-
-const FEELINGS: Record<Feeling, string> = {
-  tres_bien: 'très bien',
-  bien: 'bien',
-  moyen: 'moyen',
-  mal: 'mal',
-  tres_mal: 'très mal',
-  inconnu: 'non renseigné',
-};
-
-type CoachType = 'charge' | 'haltères' | 'assisté' | 'poids du corps' | 'durée';
-
-function typeOf(cfg: VariantConfig, ref: VariantRef | undefined): CoachType {
-  if (cfg.seconds) return 'durée';
-  if (cfg.bodyweight) return 'poids du corps';
-  if (cfg.assisted) return 'assisté';
-  return perDumbbell(ref) ? 'haltères' : 'charge';
-}
-
-/** Charge sous une clé explicite : aucune pour le poids du corps et la durée. */
-function loadField(type: CoachType, kg: number): Record<string, number> {
-  if (type === 'charge') return { charge_kg: kg };
-  if (type === 'haltères') return { charge_kg_par_haltere: kg };
-  if (type === 'assisté') return { aide_kg: kg };
-  return {};
-}
-
-/** « 3 × 9 à 73 kg », « 3 × 9 avec 23 kg d’aide », « 3 × 9 à 12 kg / haltère », « 3 × 25 », « 3 × 45 s ». */
-function targetText(sets: number, reps: number, kg: number, type: CoachType): string {
-  const load = type === 'poids du corps' || type === 'durée' ? '' : formatLoad(kg, type === 'assisté', type === 'haltères');
-  return `${formatSetsReps(sets, reps, type === 'durée')}${load}`;
-}
-
-/** Recommandation du moteur, en mots. */
-function recommendationText(state: ProgressState, type: CoachType): string {
-  const rec = state.recommendation;
-  const step = rec.targetReps - state.palier.targetReps;
-  const unit = type === 'durée' ? ' s' : step > 1 || step < -1 ? ' répétitions' : ' répétition';
-  switch (rec.kind) {
-    case 'reps_up':
-      return `+${step}${unit}`;
-    case 'reps_down':
-      return `−${-step}${unit}`;
-    case 'weight_up':
-      return type === 'assisté' ? 'moins d’aide' : 'poids supérieur';
-    case 'weight_down':
-      return type === 'assisté' ? 'plus d’aide' : 'poids inférieur';
-    case 'ceiling':
-      return 'plafond atteint : garder le palier';
-    default:
-      return 'garder le palier';
-  }
-}
-
-/** Prochaine cible : avec la charge du palier, ou « poids supérieur, puis 3 × 8 » (la charge est à choisir). */
-function nextTargetText(state: ProgressState, type: CoachType): string {
-  const rec = state.recommendation;
-  if (rec.kind === 'weight_up' || rec.kind === 'weight_down') return `${recommendationText(state, type)}, puis ${formatSetsReps(rec.plannedSets, rec.targetReps, type === 'durée')}`;
-  return targetText(rec.plannedSets, rec.targetReps, state.palier.weightKg, type);
-}
-
-/** Plage du suivi (celle de la maison pour le suivi de la maison). */
-function rangeText(cfg: Pick<VariantConfig, 'minReps' | 'maxReps'>, type: CoachType): string {
-  return type === 'durée' ? `${cfg.minReps} à ${cfg.maxReps} s` : `${cfg.minReps} à ${cfg.maxReps} répétitions`;
-}
-
-// ——— Règles ————————————————————————————————————————————————————
-
-/** Règles utiles à l'interprétation, avec le réglage actuel du seuil du rouge. */
-export function coachRules(recap: WeeklyRecapSettings, machines: readonly CardioMachine[]): string[] {
-  const noLegs = machines.filter((m) => !machineCountsForLegs(m)).map((m) => m.name.toLowerCase());
-  return [
-    'Statut de chaque performance (un exercice dans une séance), première règle qui s’applique : moins de séries que prévu → orange ; au moins 2 séries sous la cible → rouge ; ressenti « très mal » → rouge ; exactement 1 série sous la cible → orange ; toutes les séries à la cible avec un ressenti « moyen », « mal » ou « non renseigné » → orange ; toutes à la cible avec « bien » ou « très bien » → vert. Les répétitions ne dépassent jamais la cible : l’utilisateur s’arrête à la cible, même s’il pourrait en faire plus.',
-    'Progression, par exercice et par suivi : 3 séries de 8 à 12 répétitions par défaut (réglage propre à chaque exercice sinon, « plage »). Palier = charge + cible. 2 séances vertes consécutives et standard au même palier → cible +1 répétition, même charge. À la cible haute (12), 2 vertes → « poids supérieur » : l’utilisateur choisit la nouvelle charge (l’appli ne propose jamais de valeur) et repart à 8 répétitions. 4 séances rouges au même poids (« série de rouges en cours ») → « poids inférieur », cible conservée ; de 1 à 3 rouges, rien ne change. Une séance orange « mal » ne coupe pas la série de rouges ; une verte, ou une autre orange complète, la remet à 0.',
-    'Séance standard : complète, avec le nombre de séries standard et la cible attendue. Une séance non standard (séries ou cible changées à la main, recommandation refusée) ne valide jamais rien. Séance de départ : charge changée sans que l’appli le recommande ; nouveau palier, elle ne valide rien, la suivante peut valider.',
-    'Types d’exercice : « charge » (charge_kg) ; « haltères » : charge_kg_par_haltere est la charge d’UN haltère, jamais le total des deux ; « assisté » (dips et tractions assistés) : aide_kg est une aide, moins d’aide = plus dur, « moins d’aide » remplace « poids supérieur » ; « poids du corps » : pas de charge, progression par les répétitions (10 à 40 par défaut) ; « durée » (gainage) : cible et séries en secondes, progression de 5 s. Ne jamais additionner ni comparer les charges de deux exercices différents.',
-    'Salle et maison : un exercice à charge a deux suivis séparés (haltères légers à la maison, charges non comparables), la maison avec une plage de 8 à 15 répétitions ; au poids du corps et en durée, un seul suivi. À la maison, l’heure et la durée ne sont pas significatives (séance souvent saisie après coup) : elles ne sont pas données.',
-    `Séries par semaine (lundi – dimanche) et par groupe : chaque série d’un exercice dont c’est le groupe principal compte 1, groupe secondaire ½ ; salle et maison comptent pareil ; chaque activité confirmée (badminton…) compte ${ACTIVITY_SETS} séries pour chacun de ses groupes ; ${LEG_CARDIO_MINUTES} min de cardio ou plus dans la semaine comptent ${LEG_CARDIO_SETS} séries pour les jambes, une fois par semaine${noLegs.length > 0 ? ` (sauf ${noLegs.join(', ')})` : ''}.`,
-    `Couleur du récapitulatif de la semaine, par groupe, d’après ses séries : vert sous ${ORANGE_SETS}, orange de ${ORANGE_SETS} jusqu’au seuil du rouge, rouge à partir de ${recap.redSets} séries (réglage actuel de l’utilisateur, 10 par défaut). Ici, rouge = volume de la semaine atteint, vert = groupe peu ou pas travaillé : ces couleurs ne jugent pas la qualité, contrairement aux statuts des performances.`,
-    'Indice de progression d’un groupe (base 100) : force estimée (formule d’Epley, sur la moins bonne série) de chaque exercice dont c’est le groupe principal, rapportée à sa première séance complète, puis moyenne des exercices ; séances à la salle seulement ; exercices assistés : charge réelle = poids du corps − aide. L’appli ne l’affiche qu’à partir de 6 séances sur 3 semaines (« indice_seuil_atteint »). Pas d’indice pour les abdominaux.',
-    'Alerte « groupe moins travaillé » : les séries des 2 dernières semaines terminées sont toutes les deux sous la moyenne des semaines d’avant (4 semaines de référence au moins).',
-    `Séance pour compléter la semaine : proposée par l’appli pour amener les groupes du récapitulatif à ${recap.redSets} séries, avec des exercices déjà faits à la salle ; ${SUGGEST_MAX} exercices au plus, 2 par groupe, les groupes travaillés à la salle la veille écartés, les abdominaux en bonus.`,
-    'Ressentis : très bien, bien, moyen, mal, très mal, non renseigné (« symbole » : symbole d’origine d’une séance importée de notes, « += » = moyen). Une performance « partielle » (importée, charge sans répétitions) n’a pas de statut.',
-  ];
 }
 
 // ——— Construction ————————————————————————————————————————————————
@@ -611,44 +467,6 @@ export function buildCoachExport(input: CoachInput) {
 }
 
 export type CoachExport = ReturnType<typeof buildCoachExport>;
-
-// ——— JSON compact et lisible ———————————————————————————————————————
-
-/** Largeur au-delà de laquelle un objet ou une liste passe sur plusieurs lignes… */
-const LINE_WIDTH = 110;
-/** … sauf un objet sans sous-objet (une performance, une semaine de séries), gardé sur une ligne jusqu'à cette longueur. */
-const RECORD_WIDTH = 360;
-
-function inline(value: unknown): string {
-  if (Array.isArray(value)) return value.length === 0 ? '[]' : `[${value.map(inline).join(', ')}]`;
-  if (value !== null && typeof value === 'object') {
-    const entries = Object.entries(value).filter(([, v]) => v !== undefined);
-    return entries.length === 0 ? '{}' : `{ ${entries.map(([k, v]) => `${JSON.stringify(k)}: ${inline(v)}`).join(', ')} }`;
-  }
-  return JSON.stringify(value);
-}
-
-/** Objet dont les valeurs sont des nombres, des textes ou des listes de nombres et de textes. */
-function isFlatRecord(value: object): boolean {
-  return (
-    !Array.isArray(value) &&
-    Object.values(value).every((v) => v === null || typeof v !== 'object' || (Array.isArray(v) && v.every((x) => x === null || typeof x !== 'object')))
-  );
-}
-
-/**
- * JSON indenté, mais une liste ou un objet qui tient sur une ligne y reste, et une performance (objet sans sous-objet)
- * aussi : lisible sans défiler, nettement plus court qu'un JSON indenté partout. Se relit avec JSON.parse.
- */
-export function coachJson(value: unknown, indent = ''): string {
-  if (value === null || typeof value !== 'object') return JSON.stringify(value);
-  const flat = inline(value);
-  if (indent.length + flat.length <= LINE_WIDTH || (isFlatRecord(value) && indent.length + flat.length <= RECORD_WIDTH)) return flat;
-  const inner = `${indent}  `;
-  if (Array.isArray(value)) return `[\n${value.map((v) => inner + coachJson(v, inner)).join(',\n')}\n${indent}]`;
-  const entries = Object.entries(value).filter(([, v]) => v !== undefined);
-  return `{\n${entries.map(([k, v]) => `${inner}${JSON.stringify(k)}: ${coachJson(v, inner)}`).join(',\n')}\n${indent}}`;
-}
 
 /** Texte du fichier. */
 export function coachExportText(input: CoachInput): string {

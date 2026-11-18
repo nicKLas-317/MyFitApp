@@ -6,7 +6,7 @@ import type { CardioMachine, Exercise, Session, SessionPlan } from '../domain/ty
 import { CARDIO_MACHINES_VERSION, sanitizeCardioMachines, upgradeCardioMachines } from '../cardio/model';
 import { sanitizeRecapSettings, type WeeklyRecapSettings } from '../analysis/weekly';
 import { sanitizeReportSeen, sanitizeReportSettings, type ReportSeen, type ReportSettings } from '../analysis/reportSettings';
-import { sanitizeCoachSent } from '../analysis/coach';
+import { sanitizeCoachSent } from '../analysis/coachPeriod';
 import { sanitizeIgnoredAlerts, type IgnoredAlerts } from '../analysis/groupAlerts';
 import { sanitizeSetsHintDismissed, type SetsHintDismissed } from '../analysis/setsHint';
 import { sanitizeActivities, sanitizeHabits, type ActivityRecord, type Habit } from '../activities/model';

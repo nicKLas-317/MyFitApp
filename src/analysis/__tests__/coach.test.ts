@@ -8,18 +8,9 @@ import { buildEngineSettings, displayName, indexVariants } from '../../library/c
 import { MUSCLE_GROUP_LABELS, SEED_EXERCISES } from '../../library/seed';
 import { perDumbbell } from '../../library/search';
 import { weekSuggestion } from '../../plan/suggest';
-import {
-  buildCoachExport,
-  coachExportText,
-  coachFileName,
-  coachJson,
-  coachShareTitle,
-  coachWeek,
-  coachWeekLabel,
-  hasCoachWeek,
-  sanitizeCoachSent,
-  type CoachInput,
-} from '../coach';
+import { buildCoachExport, coachExportText, type CoachInput } from '../coach';
+import { coachJson } from '../coachJson';
+import { coachFileName, coachShareTitle, coachWeek, coachWeekLabel, hasCoachWeek, sanitizeCoachSent } from '../coachPeriod';
 import { groupAlert } from '../groupAlerts';
 import { groupIndex } from '../groups';
 import { buildReport, reportText } from '../report';

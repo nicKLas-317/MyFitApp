@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useBody } from '../../body/store';
-import { coachWeekLabel } from '../../analysis/coach';
+import { coachWeekLabel } from '../../analysis/coachPeriod';
 import { formatKg, formatShortDay, localDate } from '../../session/format';
 import { ReportBanner } from '../ReportBanner';
 import { GroupAlerts } from '../GroupAlerts';

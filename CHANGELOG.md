@@ -4,6 +4,10 @@ Ce qui a changé à chaque version de MyFitApp, de la plus récente à la plus a
 
 Les commits sans changement de numéro (documentation, tests, workflow) sont rangés sous la version en cours à ce moment-là.
 
+## 1.50.1 — 18 nov. 2026
+
+- Découpage de `src/analysis/coach.ts` (656 lignes), sans changement de comportement : semaine exportée, libellé, nom du fichier, titre du partage et semaine envoyée dans `src/analysis/coachPeriod.ts`, mise en forme des valeurs (heures, ressentis, types, charges, cibles, recommandations) dans `src/analysis/coachFormat.ts`, règles dans `src/analysis/coachRules.ts`, JSON compact dans `src/analysis/coachJson.ts` ; `coach.ts` (474 lignes) garde la construction de l'export. Préalable à la version 1.51.0 (règle des gros fichiers, CLAUDE.md §0) ; `coach.ts` sort de la liste
+
 ## 1.50.0 — 18 nov. 2026
 
 - Bilans de la semaine et du mois : une période en cours est comparée à la période précédente entière, comme une période terminée, pour tous les chiffres comparés (séances, durée en salle, cardio, activités), à l'écran comme dans le mail. Novembre au 17 : badminton ×1 contre futsal ×1 sur tout octobre, « = autant » ; en début de mois ou de semaine, les écarts sont négatifs et se rattrapent au fil de la période

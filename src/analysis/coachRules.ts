@@ -1,0 +1,26 @@
+/**
+ * Export « coach » (§19.13) : les règles utiles à l'interprétation, en tête du fichier (version 1.50.1 : découpé de
+ * coach.ts, sans changement de comportement).
+ */
+import { machineCountsForLegs } from '../cardio/model';
+import type { CardioMachine } from '../domain/types';
+import { SUGGEST_MAX } from '../plan/suggest';
+import { ACTIVITY_SETS, LEG_CARDIO_MINUTES, LEG_CARDIO_SETS, ORANGE_SETS, type WeeklyRecapSettings } from './weekly';
+
+/** Règles utiles à l'interprétation, avec le réglage actuel du seuil du rouge. */
+export function coachRules(recap: WeeklyRecapSettings, machines: readonly CardioMachine[]): string[] {
+  const noLegs = machines.filter((m) => !machineCountsForLegs(m)).map((m) => m.name.toLowerCase());
+  return [
+    'Statut de chaque performance (un exercice dans une séance), première règle qui s’applique : moins de séries que prévu → orange ; au moins 2 séries sous la cible → rouge ; ressenti « très mal » → rouge ; exactement 1 série sous la cible → orange ; toutes les séries à la cible avec un ressenti « moyen », « mal » ou « non renseigné » → orange ; toutes à la cible avec « bien » ou « très bien » → vert. Les répétitions ne dépassent jamais la cible : l’utilisateur s’arrête à la cible, même s’il pourrait en faire plus.',
+    'Progression, par exercice et par suivi : 3 séries de 8 à 12 répétitions par défaut (réglage propre à chaque exercice sinon, « plage »). Palier = charge + cible. 2 séances vertes consécutives et standard au même palier → cible +1 répétition, même charge. À la cible haute (12), 2 vertes → « poids supérieur » : l’utilisateur choisit la nouvelle charge (l’appli ne propose jamais de valeur) et repart à 8 répétitions. 4 séances rouges au même poids (« série de rouges en cours ») → « poids inférieur », cible conservée ; de 1 à 3 rouges, rien ne change. Une séance orange « mal » ne coupe pas la série de rouges ; une verte, ou une autre orange complète, la remet à 0.',
+    'Séance standard : complète, avec le nombre de séries standard et la cible attendue. Une séance non standard (séries ou cible changées à la main, recommandation refusée) ne valide jamais rien. Séance de départ : charge changée sans que l’appli le recommande ; nouveau palier, elle ne valide rien, la suivante peut valider.',
+    'Types d’exercice : « charge » (charge_kg) ; « haltères » : charge_kg_par_haltere est la charge d’UN haltère, jamais le total des deux ; « assisté » (dips et tractions assistés) : aide_kg est une aide, moins d’aide = plus dur, « moins d’aide » remplace « poids supérieur » ; « poids du corps » : pas de charge, progression par les répétitions (10 à 40 par défaut) ; « durée » (gainage) : cible et séries en secondes, progression de 5 s. Ne jamais additionner ni comparer les charges de deux exercices différents.',
+    'Salle et maison : un exercice à charge a deux suivis séparés (haltères légers à la maison, charges non comparables), la maison avec une plage de 8 à 15 répétitions ; au poids du corps et en durée, un seul suivi. À la maison, l’heure et la durée ne sont pas significatives (séance souvent saisie après coup) : elles ne sont pas données.',
+    `Séries par semaine (lundi – dimanche) et par groupe : chaque série d’un exercice dont c’est le groupe principal compte 1, groupe secondaire ½ ; salle et maison comptent pareil ; chaque activité confirmée (badminton…) compte ${ACTIVITY_SETS} séries pour chacun de ses groupes ; ${LEG_CARDIO_MINUTES} min de cardio ou plus dans la semaine comptent ${LEG_CARDIO_SETS} séries pour les jambes, une fois par semaine${noLegs.length > 0 ? ` (sauf ${noLegs.join(', ')})` : ''}.`,
+    `Couleur du récapitulatif de la semaine, par groupe, d’après ses séries : vert sous ${ORANGE_SETS}, orange de ${ORANGE_SETS} jusqu’au seuil du rouge, rouge à partir de ${recap.redSets} séries (réglage actuel de l’utilisateur, 10 par défaut). Ici, rouge = volume de la semaine atteint, vert = groupe peu ou pas travaillé : ces couleurs ne jugent pas la qualité, contrairement aux statuts des performances.`,
+    'Indice de progression d’un groupe (base 100) : force estimée (formule d’Epley, sur la moins bonne série) de chaque exercice dont c’est le groupe principal, rapportée à sa première séance complète, puis moyenne des exercices ; séances à la salle seulement ; exercices assistés : charge réelle = poids du corps − aide. L’appli ne l’affiche qu’à partir de 6 séances sur 3 semaines (« indice_seuil_atteint »). Pas d’indice pour les abdominaux.',
+    'Alerte « groupe moins travaillé » : les séries des 2 dernières semaines terminées sont toutes les deux sous la moyenne des semaines d’avant (4 semaines de référence au moins).',
+    `Séance pour compléter la semaine : proposée par l’appli pour amener les groupes du récapitulatif à ${recap.redSets} séries, avec des exercices déjà faits à la salle ; ${SUGGEST_MAX} exercices au plus, 2 par groupe, les groupes travaillés à la salle la veille écartés, les abdominaux en bonus.`,
+    'Ressentis : très bien, bien, moyen, mal, très mal, non renseigné (« symbole » : symbole d’origine d’une séance importée de notes, « += » = moyen). Une performance « partielle » (importée, charge sans répétitions) n’a pas de statut.',
+  ];
+}
