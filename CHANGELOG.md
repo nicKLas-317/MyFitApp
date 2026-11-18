@@ -4,6 +4,12 @@ Ce qui a changé à chaque version de MyFitApp, de la plus récente à la plus a
 
 Les commits sans changement de numéro (documentation, tests, workflow) sont rangés sous la version en cours à ce moment-là.
 
+## 1.52.0 — 18 nov. 2026
+
+- Alerte « groupe moins travaillé » en bandeau, le même sur l'onglet Séance et dans Progrès : fond jaune (#f7d046, distinct de l'orange du récapitulatif), texte foncé (#1f1a00, contraste 11,7:1), coins arrondis comme les cartes, petit triangle d'avertissement à gauche. Même texte, appui toujours vers les séries du groupe
+- « Ignorer » devient une croix « ✕ » à droite dans le bandeau (48 × 48 px), toujours nommée « Ignorer l’alerte : <groupe> » pour le lecteur d'écran, même comportement : avec le mot, le texte passait sur 3 lignes à 320 px dans le cas le plus chargé de l'accueil (« Démarrer » 3 px sous la barre d'onglets) et le titre du récapitulatif se raccourcissait à 360 px avec le texte à 115 %
+- Tests : 291 et 319 (bandeau, contraste, croix, même style sur les deux écrans) ; 225 (accueil et Progrès avec le bandeau)
+
 ## 1.51.0 — 18 nov. 2026
 
 - Alerte « groupe moins travaillé », nouvelle règle : un groupe est en alerte quand son score de la semaine (celui du récapitulatif : séries directes, indirectes ½, maison, activités, cardio des jambes) est sous 6 séries sur chacune des 2 dernières semaines terminées. Plus de comparaison à la moyenne, plus de condition de 6 semaines terminées ni de 4 semaines de référence : l'alerte est possible dès 2 semaines terminées. Abdominaux jamais concernés

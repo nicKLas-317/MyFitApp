@@ -122,7 +122,7 @@ async function openLoaded(page: Page, withPlan: boolean, cardio = false): Promis
 }
 
 test.describe('Alerte « groupe moins travaillé »', () => {
-  test('291. Ligne discrète sous le récapitulatif et pastille sur Progrès ; un appui ouvre les séries du groupe ; « Ignorer » jusqu’à la semaine suivante encore sous le seuil, le groupe suivant à sa place ; une seule ligne ; une semaine terminée seulement : rien ; cas le plus chargé : « Démarrer » à l’écran sans défiler', async ({ page }) => {
+  test('291. Bandeau jaune sous le récapitulatif (version 1.52.0) et pastille sur Progrès ; un appui ouvre les séries du groupe ; croix « Ignorer » jusqu’à la semaine suivante encore sous le seuil, le groupe suivant à sa place ; une seule ligne ; une semaine terminée seulement : rien ; cas le plus chargé : « Démarrer » à l’écran sans défiler', async ({ page }) => {
     // Dos sous 6 séries 2 semaines, pectoraux 1 semaine seulement, vacances fin septembre : le dos seul.
     await open(page);
     const line = alerts(page).getByRole('listitem');
@@ -130,7 +130,7 @@ test.describe('Alerte « groupe moins travaillé »', () => {
     await expect(line).toHaveAttribute('data-group', 'dos');
     // Ses chiffres (version 1.51.0) : les séries des 2 semaines, la plus ancienne d'abord, et le seuil.
     await expect(line.getByRole('link')).toHaveText('Dos : 3 et 3 séries ces 2 semaines (sous 6)');
-    // Sans soulignement, seul le nom en gras ; toute la ligne est le lien.
+    // Sans soulignement, seul le nom en gras ; tout le texte est le lien.
     const look = await line.getByRole('link').evaluate((a) => ({
       underline: [a, ...a.querySelectorAll('*')].some((e) => getComputedStyle(e).textDecorationLine.includes('underline')),
       bold: getComputedStyle(a.querySelector('strong')!).fontWeight,
@@ -145,7 +145,36 @@ test.describe('Alerte « groupe moins travaillé »', () => {
     }));
     expect(look).toEqual({ underline: false, bold: '700', rest: '400', covers: true });
     await expect(line.getByRole('link')).toHaveAttribute('href', '#/bilan-groupes/dos/series');
-    await expect(line.getByRole('button', { name: 'Ignorer l’alerte : Dos' })).toHaveText('Ignorer');
+    // Bandeau (version 1.52.0) : fond jaune, texte foncé (contraste AA au moins), coins arrondis, icône d'avertissement
+    // à gauche, croix « Ignorer » à droite dans le bandeau (sans texte visible, nommée pour le lecteur d'écran, 48 px).
+    const ignore = line.getByRole('button', { name: 'Ignorer l’alerte : Dos' });
+    await expect(ignore).toHaveText('');
+    const banner = await line.evaluate((li) => {
+      const rgb = (c: string) => c.match(/\d+/g)!.slice(0, 3).map(Number);
+      const lum = (c: string) => {
+        const [r, g, b] = rgb(c).map((v) => (v / 255 <= 0.03928 ? v / 255 / 12.92 : ((v / 255 + 0.055) / 1.055) ** 2.4));
+        return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+      };
+      const ratio = (a: string, b: string) => {
+        const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
+        return (x! + 0.05) / (y! + 0.05);
+      };
+      const style = getComputedStyle(li);
+      const box = li.getBoundingClientRect();
+      const icon = li.querySelector('.group-alert-icon')!.getBoundingClientRect();
+      const link = li.querySelector('a')!;
+      const cross = li.querySelector('button')!.getBoundingClientRect();
+      return {
+        background: style.backgroundColor,
+        radius: style.borderTopLeftRadius,
+        text: ratio(getComputedStyle(link).color, style.backgroundColor) >= 4.5 && ratio(getComputedStyle(link.querySelector('strong')!).color, style.backgroundColor) >= 4.5,
+        cross: ratio(getComputedStyle(li.querySelector('button')!).color, style.backgroundColor) >= 3,
+        iconLeft: icon.left >= box.left && icon.right <= link.querySelector('span')!.getBoundingClientRect().left,
+        crossRight: cross.right <= box.right + 0.5 && cross.left >= link.getBoundingClientRect().right,
+        crossSize: [Math.round(cross.width), Math.round(cross.height)],
+      };
+    });
+    expect(banner).toEqual({ background: 'rgb(247, 208, 70)', radius: '14px', text: true, cross: true, iconLeft: true, crossRight: true, crossSize: [48, 48] });
     // Pastille sur l'onglet Progrès, nommée pour le lecteur d'écran.
     await expect(tabBar(page).getByTestId('group-alert-badge')).toBeVisible();
     await expect(tabBar(page).getByRole('link', { name: 'Progrès : groupe moins travaillé' })).toBeVisible();
@@ -354,7 +383,7 @@ test.describe('Alerte « groupe moins travaillé »', () => {
     await expect(page.getByTestId('weekly-recap').getByRole('heading')).toHaveAttribute('data-form', 'full');
     await page.setViewportSize({ width: 412, height: 915 });
   });
-  test('319. Seuil de l’alerte réglable (6 par défaut, de 3 à 9), strictement sous le seuil les 2 semaines ; score du récapitulatif : une activité du groupe compte ; abdominaux jamais', async ({ page }) => {
+  test('319. Seuil de l’alerte réglable (6 par défaut, de 3 à 9), strictement sous le seuil les 2 semaines ; score du récapitulatif : une activité du groupe compte ; abdominaux jamais ; même bandeau sur l’accueil et dans Progrès (version 1.52.0)', async ({ page }) => {
     await open(page);
     await expect(alerts(page).getByRole('link')).toHaveText('Dos : 3 et 3 séries ces 2 semaines (sous 6)');
     const readRecap = () =>
@@ -417,6 +446,24 @@ test.describe('Alerte « groupe moins travaillé »', () => {
     await page.goto('./');
     await expect(alerts(page).getByRole('listitem')).toHaveCount(1);
     await expect(alerts(page).getByRole('link')).toHaveText('Dos : 3 et 3 séries ces 2 semaines (sous 9)');
+    // Même bandeau sur l'accueil et dans Progrès (version 1.52.0) : fond, texte, coins, icône et croix identiques.
+    const look = () =>
+      alerts(page).getByRole('listitem').evaluate((li) => {
+        const s = getComputedStyle(li);
+        const b = li.querySelector('button')!;
+        return {
+          background: s.backgroundColor, color: getComputedStyle(li.querySelector('a')!).color, radius: s.borderTopLeftRadius, padding: s.padding,
+          icon: li.querySelectorAll('.group-alert-icon').length, cross: [b.getAttribute('aria-label'), b.textContent, Math.round(b.getBoundingClientRect().width), Math.round(b.getBoundingClientRect().height)],
+        };
+      });
+    const home = await look();
+    expect(home).toMatchObject({ icon: 1, cross: ['Ignorer l’alerte : Dos', '', 48, 48] });
+    await tabBar(page).getByRole('link', { name: /^Progrès/ }).click();
+    await expect(page.getByRole('heading', { name: 'Progrès', exact: true })).toBeVisible();
+    expect(await look()).toEqual(home);
+    // La croix ignore l'alerte, comme le mot « Ignorer » avant : le groupe suivant prend la place (les pectoraux).
+    await alerts(page).getByRole('button', { name: 'Ignorer l’alerte : Dos' }).click();
+    await expect(alerts(page).getByRole('link')).toHaveText('Pectoraux : 6 et 3 séries ces 2 semaines (sous 9)');
 
     // Score du récapitulatif (version 1.51.0) : une escalade (dos) chaque semaine en baisse, 3 + 3 = 6 séries, plus
     // d'alerte au seuil de 6 ; le graphique, lui, n'a que les séries (3 et 3).

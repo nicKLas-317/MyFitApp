@@ -24,9 +24,21 @@ export function useGroupAlerts(): GroupAlert[] {
 /**
  * Une ligne discrète, sous le récapitulatif de l'onglet Séance et en haut de l'onglet Progrès : un appui ouvre les
  * séries par semaine du groupe, « Ignorer » la masque jusqu'à la semaine suivante encore sous le seuil. Neutre comme le
- * récapitulatif : ni couleur de groupe, ni vert, orange ou rouge. Version 1.51.0 : une seule alerte, donc plus de ligne
- * de résumé sur l'onglet Séance (version 1.40.0, à partir de 2 groupes).
+ * récapitulatif jusqu'à la version 1.51.0 ; depuis la version 1.52.0, un bandeau jaune (texte foncé, icône
+ * d'avertissement), le même sur les deux onglets, ni couleur de groupe, ni vert, orange ou rouge. Version 1.51.0 : une
+ * seule alerte, donc plus de ligne de résumé sur l'onglet Séance (version 1.40.0, à partir de 2 groupes).
  */
+/** Petit triangle d'avertissement, décoratif (le texte dit tout). */
+function WarningIcon() {
+  return (
+    <svg className="group-alert-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M12 2.5 1.5 21h21L12 2.5z" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
+      <path d="M12 9v5.5" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+      <circle cx="12" cy="17.6" r="1.4" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function GroupAlerts() {
   const alerts = useGroupAlerts();
   const { ignoreGroupAlert } = useApp();
@@ -36,13 +48,18 @@ export function GroupAlerts() {
       {alerts.map((a) => (
         <li key={a.group} className="group-alert" data-group={a.group}>
           <a className="link group-alert-link" href={routeHash('bilan-groupes', a.group, 'series')}>
+            <WarningIcon />
             <span>
               <strong className="group-alert-name">{MUSCLE_GROUP_LABELS[a.group]}</strong>
               {`\u00a0: ${alertFigures(a)}`}
             </span>
           </a>
+          {/* Version 1.52.0 : une croix au lieu du mot « Ignorer » (le texte tient sur 2 lignes à 320 px, §3.7) ; même nom
+              pour le lecteur d'écran, zone d'appui de 48 px. */}
           <button type="button" className="link group-alert-ignore" aria-label={`Ignorer l’alerte : ${MUSCLE_GROUP_LABELS[a.group]}`} onClick={() => void ignoreGroupAlert(a)}>
-            Ignorer
+            <svg className="group-alert-cross" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
+            </svg>
           </button>
         </li>
       ))}

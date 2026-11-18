@@ -948,7 +948,7 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
 
   test('225. Accueil avec une alerte', async ({ page }) => {
     // Alerte « groupe moins travaillé » (version 1.51.0 : une seule ligne ; vacances les deux dernières semaines, tous les
-    // groupes sous le seuil, le plus bas affiché avec « Ignorer »).
+    // groupes sous le seuil, le plus bas affiché ; bandeau jaune avec la croix « Ignorer » depuis la version 1.52.0).
     await page.clock.setFixedTime(new Date(ALERT_NOW));
     await page.goto('./');
     await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
@@ -979,7 +979,7 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
   });
 
   test('225. Progrès avec une alerte', async ({ page }) => {
-    // Alerte « groupe moins travaillé » (version 1.51.0) : une seule ligne avec « Ignorer » (vacances les deux dernières
+    // Alerte « groupe moins travaillé » (version 1.51.0) : un seul bandeau avec la croix « Ignorer » (version 1.52.0) (vacances les deux dernières
     // semaines).
     await page.clock.setFixedTime(new Date(ALERT_NOW));
     await page.goto('./');

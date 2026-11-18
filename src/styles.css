@@ -27,6 +27,10 @@
   --incline-mid: #90949e;
   /* Couronne des records personnels : dorée, distincte des statuts et des couleurs de groupe. */
   --gold: #e8b631;
+  /* Bandeau de l'alerte « groupe moins travaillé » (version 1.52.0) : jaune, distinct de l'orange des statuts et du
+     récapitulatif (--orange), texte foncé (11,7:1). */
+  --alert-bg: #f7d046;
+  --alert-text: #1f1a00;
   --frame-width: 2px;
   --tap: 48px;
   /*
@@ -2216,9 +2220,9 @@ fieldset {
 }
 
 /*
- * Alerte « groupe moins travaillé » (version 1.38.0 ; une seule ligne depuis la version 1.51.0) : sous le
- * récapitulatif (et en haut de l'onglet Progrès), neutre ; le texte ouvre le graphique, « Ignorer » à droite, 8 px
- * entre les deux.
+ * Alerte « groupe moins travaillé » (version 1.38.0 ; une seule depuis la version 1.51.0 ; bandeau depuis la version
+ * 1.52.0) : sous le récapitulatif et en haut de l'onglet Progrès, même bandeau jaune (texte foncé, coins arrondis,
+ * icône d'avertissement) ; le texte ouvre le graphique, la croix « Ignorer » (48 × 48 px) à droite dans le bandeau.
  */
 .group-alerts {
   list-style: none;
@@ -2235,8 +2239,12 @@ fieldset {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-1) var(--space-2);
+  gap: 0 var(--space-1);
+  padding: 0 var(--space-1);
   font-size: var(--fs-2);
+  background: var(--alert-bg);
+  color: var(--alert-text);
+  border-radius: var(--radius);
 }
 
 .group-alert + .group-alert {
@@ -2245,17 +2253,36 @@ fieldset {
 
 .group-alert-link {
   flex: 1 1 12em;
-  color: var(--muted);
-  /* Version 1.38.1 : pas de soulignement ; seul le nom du groupe ressort (gras, blanc), toute la ligne reste cliquable. */
+  gap: var(--space-1);
+  color: var(--alert-text);
+  /* Pas de soulignement ; seul le nom du groupe ressort (gras), tout le texte reste cliquable. */
   text-decoration: none;
 }
 
+.group-alert-icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+
 .group-alert-name {
-  color: var(--text);
+  color: var(--alert-text);
 }
 
 .group-alert-ignore {
   flex: none;
+  justify-content: center;
+  min-width: var(--tap);
+  color: var(--alert-text);
+}
+
+.group-alert-cross {
+  width: 18px;
+  height: 18px;
+}
+
+.group-alert :focus-visible {
+  outline-color: var(--alert-text);
 }
 
 /* Résumé de la semaine : une phrase, pas un titre de section. */
