@@ -5,7 +5,8 @@ import { buildEngineSettings, displayName, indexVariants } from '../../library/c
 import { SEED_EXERCISES } from '../../library/seed';
 import { correctPerformance } from '../../history/ops';
 import { beatsRecord, computeRecords, countsForRecord, formatRecord, formatRecordWithDate, recordKeys } from '../records';
-import { buildReport, lineText, periodContaining, reportSections, reportText } from '../report';
+import { buildReport, lineText, reportSections, reportText } from '../report';
+import { periodContaining } from '../reportPeriod';
 import { DEFAULT_RECAP_SETTINGS } from '../weekly';
 
 const LIB: Exercise[] = [...SEED_EXERCISES];

@@ -4,7 +4,9 @@ import type { Exercise, Session } from '../../domain/types';
 import { rebuildProfile } from '../../engine';
 import { buildEngineSettings, displayName, indexVariants } from '../../library/catalog';
 import { SEED_EXERCISES } from '../../library/seed';
-import { buildReport, buildReportScreen, ladderSteps, parsePeriodKey, progressionMeta, reportText, type ReportInput, type ReportPeriod } from '../report';
+import { buildReport, reportText, type ReportInput } from '../report';
+import { parsePeriodKey, type ReportPeriod } from '../reportPeriod';
+import { buildReportScreen, ladderSteps, progressionMeta } from '../reportScreen';
 import { DEFAULT_RECAP_SETTINGS } from '../weekly';
 
 const LIB: Exercise[] = [...SEED_EXERCISES];

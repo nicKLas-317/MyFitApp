@@ -33,7 +33,8 @@ import { alertFigures, groupAlert, type IgnoredAlerts } from './groupAlerts';
 import { GROUP_VIEW_GROUPS, groupIndex, SETS_ONLY_GROUPS } from './groups';
 import { analyzeProgress } from './progress';
 import { computeRecords, formatRecordWithDate } from './records';
-import { buildReport, lineText, parsePeriodKey, periodContaining, periodKey, periodLastDay, periodTitle, reportSections, reportText, shiftPeriod, type ReportPeriod } from './report';
+import { buildReport, lineText, reportSections, reportText } from './report';
+import { parsePeriodKey, periodContaining, periodKey, periodLastDay, periodTitle, shiftPeriod, type ReportPeriod } from './reportPeriod';
 import {
   ACTIVITY_SETS,
   groupScore,

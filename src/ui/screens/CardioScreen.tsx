@@ -2,7 +2,7 @@ import { Fragment, useState, type ReactNode } from 'react';
 import { useApp } from '../../app/store';
 import { formatMinutes, INCLINE_LABELS, INCLINES } from '../../cardio/model';
 import { CARDIO_RANGES, cardioSummary, formatKm, inclinePercents, type CardioRange, type MachineSummary } from '../../cardio/summary';
-import { periodContaining, periodTitle } from '../../analysis/report';
+import { periodContaining, periodTitle } from '../../analysis/reportPeriod';
 import { formatShortDate } from '../../session/format';
 
 /** Période choisie, gardée le temps de l'ouverture de l'appli (comme le filtre de la bibliothèque). */

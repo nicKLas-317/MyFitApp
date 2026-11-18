@@ -4,25 +4,18 @@ import type { CardioBlock, Exercise, Feeling, Session } from '../../domain/types
 import { rebuildProfile } from '../../engine';
 import { buildEngineSettings, displayName, indexVariants } from '../../library/catalog';
 import { SEED_EXERCISES } from '../../library/seed';
+import { buildReport, mailtoUrl, reportSections, lineText, reportText } from '../report';
 import {
-  buildReport,
-  DEFAULT_REPORT_SETTINGS,
   defaultPeriod,
   mailSubject,
-  mailtoUrl,
-  markSeen,
   parsePeriodKey,
-  pendingReports,
   periodContaining,
   periodKey,
   periodTitle,
-  reportSections,
-  lineText,
-  reportText,
-  sanitizeReportSettings,
   shiftPeriod,
   type ReportPeriod,
-} from '../report';
+} from '../reportPeriod';
+import { DEFAULT_REPORT_SETTINGS, markSeen, pendingReports, sanitizeReportSettings } from '../reportSettings';
 import { DEFAULT_RECAP_SETTINGS } from '../weekly';
 import { formalForms } from '../../ui/__tests__/vouvoiement';
 

@@ -4,6 +4,10 @@ Ce qui a changé à chaque version de MyFitApp, de la plus récente à la plus a
 
 Les commits sans changement de numéro (documentation, tests, workflow) sont rangés sous la version en cours à ce moment-là.
 
+## 1.49.3 — 18 nov. 2026
+
+- Découpage de `src/analysis/report.ts` (766 lignes), sans changement de comportement : périodes des bilans (semaine, mois, clés, titres, objet du mail, période par défaut) dans `src/analysis/reportPeriod.ts`, réglages des bilans et bilans à signaler dans `src/analysis/reportSettings.ts`, données de l'écran du bilan (tuiles, bâtons, calendrier, échelles) dans `src/analysis/reportScreen.ts` ; `report.ts` (504 lignes) garde le calcul du bilan, ses sections et le texte du mail. Préalable à la version 1.50.0 (règle des gros fichiers, CLAUDE.md §0) ; `report.ts` sort de la liste
+
 ## 1.49.2 — 17 nov. 2026
 
 - Bilan par groupe musculaire, « Séries par semaine » : la barre de la semaine en cours garde les mêmes teintes que les autres semaines (direct plein, indirect clair) ; elle se distingue par un contour en pointillés à la couleur du groupe, autour de la barre (son total au-dessus), et par « en cours » sous sa date. Aucun calcul ne change

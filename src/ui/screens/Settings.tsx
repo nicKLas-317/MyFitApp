@@ -5,7 +5,7 @@ import { parseHeight } from '../../body/model';
 import { useBody } from '../../body/store';
 import type { CardioMachine } from '../../domain/types';
 import { machineCountsForLegs, machineListErrors, newMachine, type MachineListError } from '../../cardio/model';
-import { isValidEmail } from '../../analysis/report';
+import { isValidEmail } from '../../analysis/reportSettings';
 import { RED_SETS_MAX, RED_SETS_MIN } from '../../analysis/weekly';
 import { HABIT_GROUPS, WEEKDAY_LABELS, WEEKDAYS, habitErrors, newHabit, type Habit, type HabitError, type Weekday } from '../../activities/model';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';

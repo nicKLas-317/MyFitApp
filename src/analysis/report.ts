@@ -5,9 +5,9 @@
  */
 import type { WeighIn } from '../body/model';
 import { activityMinutes, activityStart, doneActivities, type ActivityRecord } from '../activities/model';
-import { cardioMinutes, cardioOf, formatMinutes } from '../cardio/model';
+import { cardioOf, formatMinutes } from '../cardio/model';
 import type { CardioMachine, Exercise, MuscleGroup, Session } from '../domain/types';
-import { evaluationTrack, HOME_SUFFIX, repStep, resolveConfig, type EngineSettings, type Evaluation, type Palier } from '../engine';
+import { evaluationTrack, HOME_SUFFIX, resolveConfig, type EngineSettings, type Evaluation, type Palier } from '../engine';
 import { MUSCLE_GROUP_LABELS } from '../library/seed';
 import { localDate, sessionStartTime, weekStart } from '../domain/calendar';
 import { formatDurationLong, formatKg, formatLoad, formatShortDay, plural } from '../session/format';
@@ -15,91 +15,10 @@ import { elapsedMs } from '../session/ops';
 import { isPalierValidated } from './progress';
 import { computeRecords, formatRecord, type RecordBreak } from './records';
 import { groupScore, groupSeries, groupWork, LEG_CARDIO_GROUP, legCardioWeek, setsLabel, workParts } from './weekly';
+import { containsTime, inPeriod, mailSubject, periodLastDay, shiftPeriod, type ReportPeriod } from './reportPeriod';
 
-export type ReportKind = 'week' | 'month';
-
-/** Période d'un bilan : semaine du lundi 0 h 00 au dimanche, ou mois calendaire, heure locale. */
-export interface ReportPeriod {
-  kind: ReportKind;
-  /** Premier jour, 0 h 00. */
-  start: Date;
-  /** Premier jour de la période suivante, 0 h 00 (borne exclue). */
-  next: Date;
-}
-
-function makePeriod(kind: ReportKind, start: Date): ReportPeriod {
-  const next = new Date(start);
-  if (kind === 'week') next.setDate(next.getDate() + 7);
-  else next.setMonth(next.getMonth() + 1);
-  return { kind, start, next };
-}
-
-/** Période contenant l'instant `ts`. */
-export function periodContaining(kind: ReportKind, ts: number): ReportPeriod {
-  const d = new Date(ts);
-  return makePeriod(kind, kind === 'week' ? weekStart(d) : new Date(d.getFullYear(), d.getMonth(), 1));
-}
-
-/** Période décalée de `delta` semaines ou mois. */
-export function shiftPeriod(period: ReportPeriod, delta: number): ReportPeriod {
-  const start = new Date(period.start);
-  if (period.kind === 'week') start.setDate(start.getDate() + 7 * delta);
-  else start.setMonth(start.getMonth() + delta, 1);
-  return makePeriod(period.kind, start);
-}
-
-/** Clé stable et triable : lundi « 2026-10-19 » pour une semaine, « 2026-10 » pour un mois. */
-export function periodKey(period: ReportPeriod): string {
-  const day = localDate(period.start.getTime());
-  return period.kind === 'week' ? day : day.slice(0, 7);
-}
-
-export function parsePeriodKey(kind: ReportKind, key: string): ReportPeriod | null {
-  const m = kind === 'week' ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(key) : /^(\d{4})-(\d{2})$/.exec(key);
-  if (!m) return null;
-  const start = new Date(Number(m[1]), Number(m[2]) - 1, kind === 'week' ? Number(m[3]) : 1);
-  const period = periodContaining(kind, start.getTime());
-  return periodKey(period) === key ? period : null;
-}
-
-/** Dernier jour de la période. */
-export function periodLastDay(period: ReportPeriod): Date {
-  const d = new Date(period.next);
-  d.setDate(d.getDate() - 1);
-  return d;
-}
-
-export function containsTime(period: Pick<ReportPeriod, 'start' | 'next'>, ts: number): boolean {
-  return ts >= period.start.getTime() && ts < period.next.getTime();
-}
-
-const DAY = new Intl.DateTimeFormat('fr-FR', { day: 'numeric' });
-const DAY_MONTH = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' });
-const DAY_MONTH_YEAR = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
-const MONTH_YEAR = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' });
 const WEEKDAY = new Intl.DateTimeFormat('fr-FR', { weekday: 'short' });
 const WEEKDAY_DAY_MONTH = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
-
-/** « du 19 au 25 oct. 2026 », « du 28 sept. au 4 oct. 2026 », « du 29 déc. 2025 au 4 janv. 2026 ». */
-function weekRange(period: ReportPeriod): string {
-  const { start } = period;
-  const end = periodLastDay(period);
-  const from =
-    start.getFullYear() !== end.getFullYear() ? DAY_MONTH_YEAR.format(start) : start.getMonth() !== end.getMonth() ? DAY_MONTH.format(start) : DAY.format(start);
-  return `du ${from} au ${DAY_MONTH_YEAR.format(end)}`;
-}
-
-/** « Semaine du 19 au 25 oct. 2026 », « Octobre 2026 ». */
-export function periodTitle(period: ReportPeriod): string {
-  if (period.kind === 'week') return `Semaine ${weekRange(period)}`;
-  const month = MONTH_YEAR.format(period.start);
-  return month.charAt(0).toUpperCase() + month.slice(1);
-}
-
-/** Objet du mail : « MyFitApp — Bilan semaine du 19 au 25 oct. 2026 », « MyFitApp — Bilan octobre 2026 ». */
-export function mailSubject(period: ReportPeriod): string {
-  return `MyFitApp — Bilan ${period.kind === 'week' ? `semaine ${weekRange(period)}` : MONTH_YEAR.format(period.start)}`;
-}
 
 export interface PeriodTotals {
   sessionCount: number;
@@ -267,7 +186,6 @@ function legCardioOf(sessions: readonly Session[], machines: readonly CardioMach
   return { minutes, weeks };
 }
 
-const inPeriod = (period: Pick<ReportPeriod, 'start' | 'next'>) => (s: Session) => s.state === 'done' && containsTime(period, sessionStartTime(s));
 
 function totalsOf(sessions: readonly Session[], period: Pick<ReportPeriod, 'start' | 'next'>): PeriodTotals {
   const list = sessions.filter(inPeriod(period));
@@ -424,7 +342,7 @@ export function lineText(line: ReportLine): string {
  * « à 20 kg », « avec 30 kg d’aide », « à 12 kg / haltère » (exercice aux haltères, version 1.30.2), précédé d'une
  * espace ; rien pour un exercice au poids du corps (0).
  */
-const load = (kg: number, assisted: boolean, dumbbell = false) => (kg === 0 ? '' : formatLoad(kg, assisted, dumbbell));
+export const load = (kg: number, assisted: boolean, dumbbell = false) => (kg === 0 ? '' : formatLoad(kg, assisted, dumbbell));
 
 /**
  * Ce à quoi la période est comparée : « à la semaine précédente », ou pour une période en cours la même portion de la
@@ -584,183 +502,4 @@ export function reportText(report: PeriodReport, name: (variantId: string) => st
 export function mailtoUrl(to: string, subject: string, body: string): string {
   const address = encodeURIComponent(to.trim()).replace(/%40/g, '@');
   return `mailto:${address}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body.replace(/\r?\n/g, '\r\n'))}`;
-}
-
-/** Réglages des bilans (§14), inclus dans l'export. */
-export interface ReportSettings {
-  /** Bandeau « Ton bilan de la semaine est prêt » sur l'accueil. */
-  weekBanner: boolean;
-  monthBanner: boolean;
-  /** Adresse préremplie dans le lien mailto, facultative. */
-  email: string;
-  /**
-   * Rappel de l'export pour le coach (version 1.47.0, §19.13) : bouton « Partager pour le coach » dans le bandeau du
-   * bilan de la semaine. Coché par défaut ; absent d'une sauvegarde antérieure : coché.
-   */
-  coachReminder: boolean;
-}
-
-export const DEFAULT_REPORT_SETTINGS: ReportSettings = { weekBanner: true, monthBanner: true, email: '', coachReminder: true };
-
-export function isValidEmail(email: string): boolean {
-  return email === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-export function sanitizeReportSettings(value: unknown): ReportSettings {
-  if (typeof value !== 'object' || value === null) return DEFAULT_REPORT_SETTINGS;
-  const v = value as Record<string, unknown>;
-  const email = typeof v.email === 'string' && isValidEmail(v.email.trim()) ? v.email.trim() : '';
-  return {
-    weekBanner: typeof v.weekBanner === 'boolean' ? v.weekBanner : true,
-    monthBanner: typeof v.monthBanner === 'boolean' ? v.monthBanner : true,
-    email,
-    coachReminder: typeof v.coachReminder === 'boolean' ? v.coachReminder : true,
-  };
-}
-
-/** Dernière période terminée déjà ouverte, par type de bilan (clés de `periodKey`). */
-export type ReportSeen = Partial<Record<ReportKind, string>>;
-
-export function sanitizeReportSeen(value: unknown): ReportSeen {
-  if (typeof value !== 'object' || value === null) return {};
-  const v = value as Record<string, unknown>;
-  const seen: ReportSeen = {};
-  if (typeof v.week === 'string' && parsePeriodKey('week', v.week)) seen.week = v.week;
-  if (typeof v.month === 'string' && parsePeriodKey('month', v.month)) seen.month = v.month;
-  return seen;
-}
-
-/**
- * Bilans à signaler sur l'accueil : la semaine écoulée à partir du lundi, le mois écoulé à partir du 1er,
- * s'ils contiennent au moins une séance, que leur bandeau est activé et qu'ils n'ont pas encore été ouverts.
- */
-export function pendingReports(sessions: readonly Session[], now: number, settings: ReportSettings, seen: ReportSeen): ReportPeriod[] {
-  const out: ReportPeriod[] = [];
-  for (const kind of ['week', 'month'] as const) {
-    if (!(kind === 'week' ? settings.weekBanner : settings.monthBanner)) continue;
-    const period = shiftPeriod(periodContaining(kind, now), -1);
-    const key = periodKey(period);
-    const last = seen[kind];
-    if (last !== undefined && last >= key) continue;
-    if (sessions.some(inPeriod(period))) out.push(period);
-  }
-  return out;
-}
-
-/** Bilan ouvert : une période terminée ne sera plus signalée ; une période en cours ne compte pas. */
-export function markSeen(seen: ReportSeen, period: ReportPeriod, now: number): ReportSeen {
-  if (now < period.next.getTime()) return seen;
-  const key = periodKey(period);
-  const last = seen[period.kind];
-  return last !== undefined && last >= key ? seen : { ...seen, [period.kind]: key };
-}
-
-/** Période ouverte par défaut : la période en cours si elle contient une séance, sinon la précédente. */
-export function defaultPeriod(kind: ReportKind, sessions: readonly Session[], now: number): ReportPeriod {
-  const current = periodContaining(kind, now);
-  return sessions.some(inPeriod(current)) ? current : shiftPeriod(current, -1);
-}
-
-/** Première période contenant une séance terminée : on ne remonte pas plus loin. */
-export function firstPeriod(kind: ReportKind, sessions: readonly Session[]): ReportPeriod | null {
-  const times = sessions.filter((s) => s.state === 'done').map(sessionStartTime);
-  return times.length > 0 ? periodContaining(kind, Math.min(...times)) : null;
-}
-
-/* ------------------------------------------------------------------------------------------------------------------
- * Écran du bilan (version 1.35.0) : tuiles, barres des groupes, calendrier du mois, échelles de cycle. Données pour
- * l'écran seulement, calculées à côté du bilan : `buildReport` et le texte du mail ne changent pas.
- * ---------------------------------------------------------------------------------------------------------------- */
-
-/** Cran d'une échelle de cycle : une cible, ou le passage au poids supérieur (« +kg », « −aide »). */
-export interface LadderStep {
-  label: string;
-  /** Ancienne cible (avant), nouvelle cible (maintenant), crans déjà franchis, crans à venir. */
-  state: 'before' | 'now' | 'done' | 'next';
-  weight?: true;
-}
-
-/** Nombre de crans de cible affichés quand la plage est plus longue (poids du corps, secondes, plage élargie). */
-export const LADDER_WINDOW = 5;
-
-/**
- * Échelle de cycle d'un palier validé : les cibles de la plage (8 · 9 · 10 · 11 · 12), puis « +kg » pour un exercice à
- * charge (« −aide » s'il est assisté). Plage de plus de 5 crans (poids du corps, secondes, plage élargie) : une fenêtre
- * de 5 crans autour de la nouvelle cible ; « +kg » seulement si la fenêtre atteint le haut de la plage, jamais au poids
- * du corps ni en secondes. Une cible hors plage (manuelle) élargit la plage.
- */
-export function ladderSteps(p: Pick<ReportProgression, 'kind' | 'from' | 'toReps' | 'assisted'>, cfg: { minReps: number; maxReps: number; step: number; bodyweight: boolean }): LadderStep[] {
-  const { step } = cfg;
-  const up = p.kind === 'weight_up';
-  const from = p.from.targetReps;
-  const lo = Math.min(cfg.minReps, from, up ? from : p.toReps);
-  const hi = Math.max(cfg.maxReps, from, up ? from : p.toReps);
-  const values: number[] = [];
-  for (let v = lo; v <= hi; v += step) values.push(v);
-  if (values[values.length - 1] !== hi) values.push(hi);
-  // Fenêtre autour de la nouvelle cible (en haut de la plage pour un passage au poids supérieur).
-  const target = up ? values.length - 1 : Math.max(0, values.indexOf(p.toReps));
-  const start = Math.max(0, Math.min(target - 2, values.length - LADDER_WINDOW));
-  const shown = values.slice(start, start + LADDER_WINDOW);
-  const steps: LadderStep[] = shown.map((v) => ({
-    label: String(v),
-    state: !up && v === p.toReps ? 'now' : v === from ? 'before' : up || v < p.toReps ? 'done' : 'next',
-  }));
-  if (!cfg.bodyweight && shown[shown.length - 1] === hi) steps.push({ label: p.assisted ? '−aide' : '+kg', state: up ? 'now' : 'next', weight: true });
-  return steps;
-}
-
-export interface ReportScreen {
-  /** Cardio (minutes) et activités confirmées (nombre) de la période et de l'intervalle comparé. */
-  cardio: { now: number; before: number };
-  activities: { now: number; before: number };
-  /**
-   * Longueur de la barre de chaque groupe, en séries (version 1.45.0), avec les règles du récapitulatif : séries du
-   * graphique « Séries par semaine », 3 par activité confirmée, 3 par semaine à 45 min de cardio pour les jambes.
-   */
-  bars: { group: MuscleGroup; sets: number }[];
-  /** Chaque jour de la période : séances à la salle, à la maison, activités confirmées. */
-  days: { date: string; gym: number; home: number; activities: number }[];
-  /** Échelle de cycle de chaque progression, dans l'ordre de `report.progressions`. */
-  ladders: LadderStep[][];
-}
-
-export function buildReportScreen(report: PeriodReport, input: ReportInput): ReportScreen {
-  const { period } = report;
-  const done = input.sessions.filter((s) => s.state === 'done');
-  const activities = doneActivities(input.activities ?? []);
-  const compared = report.compared;
-  const inside = (span: Pick<ReportPeriod, 'start' | 'next'>) => (t: number) => containsTime(span, t);
-  const cardioIn = (span: Pick<ReportPeriod, 'start' | 'next'>) =>
-    done.filter((s) => inside(span)(sessionStartTime(s))).reduce((n, s) => n + cardioMinutes(s), 0);
-  const activitiesIn = (span: Pick<ReportPeriod, 'start' | 'next'>) => activities.filter((a) => inside(span)(activityStart(a))).length;
-
-  const bars = report.groups.map((g) => ({ group: g.group, sets: g.sets }));
-
-  const days: ReportScreen['days'] = [];
-  for (let d = new Date(period.start); d < period.next; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)) {
-    const date = localDate(d.getTime());
-    const day = { start: d, next: new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1) };
-    const sessions = done.filter((s) => inside(day)(sessionStartTime(s)));
-    days.push({ date, gym: sessions.filter((s) => s.location !== 'maison').length, home: sessions.filter((s) => s.location === 'maison').length, activities: activitiesIn(day) });
-  }
-
-  const ladders = report.progressions.map((p) => {
-    const cfg = resolveConfig(input.settings, p.home ? `${p.variantId}${HOME_SUFFIX}` : p.variantId);
-    return ladderSteps(p, { minReps: cfg.minReps, maxReps: cfg.maxReps, step: repStep(cfg), bodyweight: !!cfg.bodyweight });
-  });
-
-  return {
-    cardio: { now: cardioIn(period), before: cardioIn(compared) },
-    activities: { now: activitiesIn(period), before: activitiesIn(compared) },
-    bars,
-    days,
-    ladders,
-  };
-}
-
-/** Ligne sous le nom d'une progression : « 3 séries · à 52 kg · 29 oct. », « 3 séries · poids du corps · 27 oct. ». */
-export function progressionMeta(p: ReportProgression, dumbbell = false): string {
-  const charge = p.seconds ? 'en secondes' : p.from.weightKg === 0 ? 'poids du corps' : load(p.from.weightKg, p.assisted, dumbbell).trim();
-  return `${plural(p.sets, 'série')} · ${charge} · ${formatShortDay(p.date)}`;
 }

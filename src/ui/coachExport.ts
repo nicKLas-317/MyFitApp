@@ -1,5 +1,5 @@
 import { coachExportText, coachFileName, coachShareTitle, coachWeek, hasCoachWeek } from '../analysis/coach';
-import type { ReportPeriod } from '../analysis/report';
+import type { ReportPeriod } from '../analysis/reportPeriod';
 import { useApp } from '../app/store';
 import { EMPTY_BODY } from '../body/model';
 import { useBody } from '../body/store';

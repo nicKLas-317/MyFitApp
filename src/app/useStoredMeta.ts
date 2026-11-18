@@ -6,7 +6,8 @@ import { useCallback, useMemo, useRef, useState, type MutableRefObject } from 'r
 import type { CardioMachine, SessionPlan } from '../domain/types';
 import { CARDIO_MACHINES_VERSION, sanitizeCardioMachines } from '../cardio/model';
 import { DEFAULT_RECAP_SETTINGS, type WeeklyRecapSettings } from '../analysis/weekly';
-import { DEFAULT_REPORT_SETTINGS, markSeen, periodKey, type ReportPeriod, type ReportSeen, type ReportSettings } from '../analysis/report';
+import { periodKey, type ReportPeriod } from '../analysis/reportPeriod';
+import { DEFAULT_REPORT_SETTINGS, markSeen, type ReportSeen, type ReportSettings } from '../analysis/reportSettings';
 import { ignoreAlert, type GroupAlert, type IgnoredAlerts } from '../analysis/groupAlerts';
 import { dismissSetsHint as dismissHint, type SetsHint, type SetsHintDismissed } from '../analysis/setsHint';
 import { answer, sanitizeHabits, type ActivityRecord, type Habit, type Occurrence } from '../activities/model';

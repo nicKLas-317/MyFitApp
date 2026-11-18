@@ -1,7 +1,8 @@
 import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
 import type { Exercise, Session } from '../../domain/types';
-import { buildReport, periodContaining, reportText } from '../../analysis/report';
+import { buildReport, reportText } from '../../analysis/report';
+import { periodContaining } from '../../analysis/reportPeriod';
 import { computeRecords, formatRecord } from '../../analysis/records';
 import { compactConfig, validateConfig } from '../../library/edit';
 import { buildEngineSettings, displayName, indexVariants } from '../../library/catalog';

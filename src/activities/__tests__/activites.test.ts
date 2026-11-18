@@ -5,7 +5,8 @@ import { rebuildProfile } from '../../engine';
 import { buildEngineSettings, displayName, indexVariants } from '../../library/catalog';
 import { SEED_EXERCISES } from '../../library/seed';
 import { recapCountLabel, recapTitle, weeklyRecap, type WeeklyRecap } from '../../analysis/weekly';
-import { buildReport, lineText, periodContaining, reportSections, reportText } from '../../analysis/report';
+import { buildReport, lineText, reportSections, reportText } from '../../analysis/report';
+import { periodContaining } from '../../analysis/reportPeriod';
 import { buildBackup, parseJsonImport, SCHEMA_VERSION } from '../../transfer/backup';
 import { openAppDb, Repository } from '../../storage/db';
 import {

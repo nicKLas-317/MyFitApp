@@ -7,7 +7,9 @@ import { buildEngineSettings, displayName, indexVariants } from '../../library/c
 import { SEED_EXERCISES } from '../../library/seed';
 import { legCardioSentence } from '../../ui/ReportVisuals';
 import { groupWeeklySets } from '../groups';
-import { buildReport, buildReportScreen, parsePeriodKey, reportSections, lineText, type ReportInput, type ReportPeriod } from '../report';
+import { buildReport, reportSections, lineText, type ReportInput } from '../report';
+import { parsePeriodKey, type ReportPeriod } from '../reportPeriod';
+import { buildReportScreen } from '../reportScreen';
 import { DEFAULT_RECAP_SETTINGS, weeklyRecap } from '../weekly';
 
 const LIB: Exercise[] = [...SEED_EXERCISES];

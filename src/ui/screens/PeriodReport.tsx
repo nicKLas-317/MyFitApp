@@ -2,22 +2,18 @@ import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../../app/store';
 import { navigateReplace } from '../../app/hooks';
 import { useBody } from '../../body/store';
+import { buildReport, inProgressNote, lineText, reportSections, reportText } from '../../analysis/report';
 import {
-  buildReport,
-  buildReportScreen,
   defaultPeriod,
   firstPeriod,
-  inProgressNote,
-  lineText,
   mailSubject,
   parsePeriodKey,
   periodKey,
   periodTitle,
-  reportSections,
-  reportText,
   shiftPeriod,
   type ReportKind,
-} from '../../analysis/report';
+} from '../../analysis/reportPeriod';
+import { buildReportScreen } from '../../analysis/reportScreen';
 import { displayName } from '../../library/catalog';
 import { perDumbbell } from '../../library/search';
 import { copyText, openMailto, sendByMail } from '../share';

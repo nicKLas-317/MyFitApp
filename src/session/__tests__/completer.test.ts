@@ -5,7 +5,8 @@ import { buildEngineSettings } from '../../library/catalog';
 import { SEED_EXERCISES } from '../../library/seed';
 import { addCardio } from '../../cardio/model';
 import { addPlanCardio, addToPlan, newPlan, plannedNotDone, sessionSteps, startFromPlan, unfinishedStep } from '../../plan/model';
-import { buildReport, periodContaining } from '../../analysis/report';
+import { buildReport } from '../../analysis/report';
+import { periodContaining } from '../../analysis/reportPeriod';
 import { buildBackup, parseJsonImport } from '../../transfer/backup';
 import {
   addExercise,

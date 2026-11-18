@@ -6,7 +6,8 @@ import type { CardioMachine, Exercise, Session, SessionPlan } from '../domain/ty
 import type { EngineSettings, ReplayResult } from '../engine';
 import type { VariantRef } from '../library/catalog';
 import type { WeeklyRecapSettings } from '../analysis/weekly';
-import type { ReportPeriod, ReportSeen, ReportSettings } from '../analysis/report';
+import type { ReportPeriod } from '../analysis/reportPeriod';
+import type { ReportSeen, ReportSettings } from '../analysis/reportSettings';
 import type { Records } from '../analysis/records';
 import type { GroupAlert, IgnoredAlerts } from '../analysis/groupAlerts';
 import type { SetsHint, SetsHintDismissed } from '../analysis/setsHint';

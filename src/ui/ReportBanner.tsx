@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../app/store';
 import { navigate, useNow } from '../app/hooks';
-import { pendingReports, periodKey, type ReportPeriod } from '../analysis/report';
+import { periodKey, type ReportPeriod } from '../analysis/reportPeriod';
+import { pendingReports } from '../analysis/reportSettings';
 import { useCoachExport } from './coachExport';
 
 /** Bilans remis à plus tard pendant cette ouverture de l'appli : ils reviennent à la prochaine. */

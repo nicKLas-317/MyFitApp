@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Exercise, MuscleGroup, Performance, Session } from '../../domain/types';
-import { buildReport, periodContaining, reportText } from '../report';
+import { buildReport, reportText } from '../report';
+import { periodContaining } from '../reportPeriod';
 import { rebuildProfile } from '../../engine';
 import { buildEngineSettings, displayName, indexVariants } from '../../library/catalog';
 import { SEED_EXERCISES } from '../../library/seed';

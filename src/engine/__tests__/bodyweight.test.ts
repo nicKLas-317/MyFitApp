@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Exercise, Session } from '../../domain/types';
-import { buildReport, periodContaining, reportText } from '../../analysis/report';
+import { buildReport, reportText } from '../../analysis/report';
+import { periodContaining } from '../../analysis/reportPeriod';
 import { computeRecords, formatRecord } from '../../analysis/records';
 import { correctPerformance } from '../../history/ops';
 import { compactConfig } from '../../library/edit';

@@ -6,15 +6,8 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { formatMinutes } from '../cardio/model';
 import type { Exercise, MuscleGroup } from '../domain/types';
-import {
-  comparedTo,
-  lineText,
-  progressionMeta,
-  type LadderStep,
-  type PeriodReport,
-  type ReportScreen,
-  type ReportSection,
-} from '../analysis/report';
+import { comparedTo, lineText, type PeriodReport, type ReportSection } from '../analysis/report';
+import { progressionMeta, type LadderStep, type ReportScreen } from '../analysis/reportScreen';
 import { LEG_CARDIO_MINUTES, LEG_CARDIO_SETS, setsLabel } from '../analysis/weekly';
 import { MUSCLE_GROUP_LABELS } from '../library/seed';
 import { parseIsoDay } from '../domain/calendar';

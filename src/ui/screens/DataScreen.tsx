@@ -12,7 +12,7 @@ import {
 } from '../../transfer/draft';
 import { EMPTY_BODY, planBodyImport } from '../../body/model';
 import { sanitizeRecapSettings } from '../../analysis/weekly';
-import { sanitizeReportSettings } from '../../analysis/report';
+import { sanitizeReportSettings } from '../../analysis/reportSettings';
 import { sanitizeCardioMachines, upgradeCardioMachines } from '../../cardio/model';
 import { doneActivities, mergeActivities, sanitizeHabits } from '../../activities/model';
 import { currentPlan, mergePlan, planExercises } from '../../plan/model';

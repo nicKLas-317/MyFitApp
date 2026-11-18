@@ -22,7 +22,8 @@ import {
 } from '../coach';
 import { groupAlert } from '../groupAlerts';
 import { groupIndex } from '../groups';
-import { buildReport, DEFAULT_REPORT_SETTINGS, reportText, sanitizeReportSettings } from '../report';
+import { buildReport, reportText } from '../report';
+import { DEFAULT_REPORT_SETTINGS, sanitizeReportSettings } from '../reportSettings';
 import { buildBackup, parseJsonImport } from '../../transfer/backup';
 import { DEFAULT_RECAP_SETTINGS, weeklyRecap } from '../weekly';
 import { alertHistory, ALERT_NOW } from './alertes-simulation';
