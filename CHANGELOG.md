@@ -4,6 +4,14 @@ Ce qui a changé à chaque version de MyFitApp, de la plus récente à la plus a
 
 Les commits sans changement de numéro (documentation, tests, workflow) sont rangés sous la version en cours à ce moment-là.
 
+## 1.52.1 — 18 nov. 2026
+
+- Alerte « groupe moins travaillé » : un seul bandeau cite tous les groupes en alerte, du plus bas au plus haut (à égalité, le plus bas la dernière semaine), sur l'onglet Séance comme dans Progrès. Un groupe : « Dos : 0 et 6 séries ces 2 semaines (sous 7) » ; plusieurs : « Dos, Pectoraux : sous 7 séries ces 2 semaines ». L'appui mène aux séries du premier groupe ; la croix masque tous les groupes cités, chacun jusqu'au lundi suivant (il revient si la nouvelle semaine terminée est encore sous le seuil). Version 1.51.0 : le groupe le plus bas seulement
+- Texte du bandeau en 13 px sous 340 px de large, pour garder « Démarrer » à l'écran à 320 px avec 3 groupes cités (§3.7). Deux raccourcis automatiques du titre du récapitulatif, acceptés : à 320 px, même sans cardio, il perd les noms de jours ; à 360 px avec le texte à 115 % et du cardio, il perd « · 50 min de cardio » ; avec 6 groupes cités à 360 px et texte à 115 %, « Démarrer » peut passer sous la barre d'onglets : limite acceptée
+- Bilan de la semaine (écran et mail) : pour une semaine terminée, sous les groupes travaillés, la ligne de l'alerte de cette semaine, même ignorée, au format du bandeau, avec les séries de chaque groupe quand il y en a plusieurs (« Dos, Pectoraux : sous 7 séries ces 2 semaines (Dos 0 et 6, Pectoraux 3 et 4) ») ; à l'écran, discrète, sans fond jaune. Rien dans le bilan du mois ni pour la semaine en cours
+- Export pour le coach : la règle décrit le bandeau unique et la croix ; tous les groupes cités sont marqués affichés ; le texte du bilan porte la ligne de l'alerte
+- Tests : 319 (unitaire et bout en bout), 225 (bandeau à six groupes, bilan de la semaine avec la ligne), 289, 290, 291, 310 ; 189, 191, 192 et 308 adaptés ; vraies données : aucune ligne au seuil de 6, celle du dos au seuil de 7
+
 ## 1.52.0 — 18 nov. 2026
 
 - Alerte « groupe moins travaillé » en bandeau, le même sur l'onglet Séance et dans Progrès : fond jaune (#f7d046, distinct de l'orange du récapitulatif), texte foncé (#1f1a00, contraste 11,7:1), coins arrondis comme les cartes, petit triangle d'avertissement à gauche. Même texte, appui toujours vers les séries du groupe

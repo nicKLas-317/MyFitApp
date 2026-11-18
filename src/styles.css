@@ -2259,6 +2259,17 @@ fieldset {
   text-decoration: none;
 }
 
+/*
+ * Écran étroit (sous 340 px de large, version 1.52.1, option validée par l'utilisateur) : texte du bandeau en 13 px,
+ * pour qu'un bandeau citant 3 groupes laisse « Démarrer » au-dessus de la barre d'onglets dans le cas le plus chargé
+ * (§3.7). Avec 6 groupes cités, à 360 px et texte à 115 %, il peut ne pas tenir : limite acceptée.
+ */
+@media (max-width: 340px) {
+  .group-alert {
+    font-size: var(--fs-1);
+  }
+}
+
 .group-alert-icon {
   flex: none;
   width: 18px;
@@ -3363,6 +3374,23 @@ fieldset.frame > legend + * {
   margin: var(--space-1) 0 0;
   font-size: var(--fs-2);
   color: var(--muted);
+}
+
+/*
+ * Bilan d'une semaine terminée (version 1.52.1) : l'alerte « groupe moins travaillé » de cette semaine, sous les groupes,
+ * au format du bandeau (icône, nom en gras, même texte) mais discrète : sans fond, gris clair comme la phrase du cardio.
+ */
+.groups-alert {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: var(--space-1) 0 0;
+  font-size: var(--fs-2);
+  color: var(--muted);
+}
+
+.groups-alert-name {
+  color: var(--text);
 }
 
 /* « Compte pour les jambes » (version 1.41.0) : sous le nom de la machine, sur toute la largeur. */

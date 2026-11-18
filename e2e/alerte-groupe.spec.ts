@@ -14,7 +14,7 @@ async function largeText(page: Page): Promise<() => Promise<void>> {
  * Données simulées, l'horloge au `now` donné ; bilans de la semaine et du mois déjà ouverts (seule l'alerte compte),
  * aucune alerte ignorée.
  */
-async function open(page: Page, scenario: AlertScenario = {}, now = ALERT_NOW): Promise<void> {
+async function open(page: Page, scenario: AlertScenario = {}, now = ALERT_NOW, transform: (s: Session[]) => Session[] = (s) => s): Promise<void> {
   await page.clock.setFixedTime(new Date(now));
   await page.goto('./');
   await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
@@ -32,10 +32,23 @@ async function open(page: Page, scenario: AlertScenario = {}, now = ALERT_NOW): 
         };
       }),
   );
-  await writeSessions(page, alertHistory(scenario));
+  await writeSessions(page, transform(alertHistory(scenario)));
   await reloadAfterWrites(page);
   await expect(page.getByTestId('weekly-recap')).toBeVisible();
 }
+
+/**
+ * Trois groupes en alerte aux noms les plus longs (version 1.52.1) : à partir du 26 oct., plus de pec deck, d'élévations
+ * latérales, d'extension triceps ni de développé épaules : épaules 1,5 et 1,5, triceps 1,5 et 1,5, pectoraux 3 et 3 ; le
+ * dos à 6 (sans baisse).
+ */
+const THREE_DOWN = (sessions: Session[]) =>
+  sessions.map((s) =>
+    s.date >= '2026-10-26'
+      ? { ...s, performances: s.performances.filter((p) => !['pec-deck', 'elevations-laterales', 'extension-triceps-poulie', 'developpe-epaules-machine'].includes(p.variantId)) }
+      : s,
+  );
+const THREE_TEXT = 'Épaules, Triceps, Pectoraux : sous 6 séries ces 2 semaines';
 
 const alerts = (page: Page) => page.getByTestId('group-alerts');
 
@@ -80,15 +93,16 @@ const SIZES = [[412, 915, false], [360, 800, false], [320, 711, false], [360, 80
 
 /**
  * Cas le plus chargé de l'accueil (version 1.40.0), mercredi 11 nov. 12 h : question du badminton de lundi, 7 groupes au
- * récapitulatif, une alerte (vacances les deux dernières semaines : tous les groupes sous le seuil, une seule ligne
- * depuis la version 1.51.0 ; avant, une ligne de résumé pour 3 groupes), séance du matin à compléter, séance pour compléter la
+ * récapitulatif, un bandeau d'alerte qui cite trois groupes (version 1.52.1 : épaules, triceps et pectoraux, les noms
+ * les plus longs ; versions 1.40.0 à 1.50.1, une ligne de résumé pour 3 groupes), séance du matin à compléter, séance pour compléter la
  * semaine, rappel de sauvegarde ; avec ou sans séance prévue. Version 1.45.0 : la séance du matin a quatre exercices de
  * jambes (12 séries : un nombre à deux chiffres dans la case, « Jambes (12 séries) · aujourd’hui »). `cardio` (version
  * 1.41.0) : 50 min de tapis en plus dans la séance du matin, « Jambes (15 séries · +50 min cardio) · aujourd’hui » et
  * « · 50 min de cardio » dans l'en-tête.
  */
 async function openLoaded(page: Page, withPlan: boolean, cardio = false): Promise<void> {
-  await open(page, { vacations: ['2026-10-26', '2026-11-02'], dosDown: [], pecDown: [] });
+  // Version 1.52.1 : trois groupes en alerte dans le bandeau, aux noms les plus longs.
+  await open(page, { dosDown: [] }, ALERT_NOW, THREE_DOWN);
   const t = new Date(2026, 10, 11, 8).getTime();
   const morning: Session = {
     id: 'matin-11', name: defaultSessionName(t), date: '2026-11-11', startedAt: t, endedAt: t + 3_600_000, createdAt: t, updatedAt: t, origin: 'app', state: 'done',
@@ -122,7 +136,7 @@ async function openLoaded(page: Page, withPlan: boolean, cardio = false): Promis
 }
 
 test.describe('Alerte « groupe moins travaillé »', () => {
-  test('291. Bandeau jaune sous le récapitulatif (version 1.52.0) et pastille sur Progrès ; un appui ouvre les séries du groupe ; croix « Ignorer » jusqu’à la semaine suivante encore sous le seuil, le groupe suivant à sa place ; une seule ligne ; une semaine terminée seulement : rien ; cas le plus chargé : « Démarrer » à l’écran sans défiler', async ({ page }) => {
+  test('291. Bandeau jaune sous le récapitulatif (version 1.52.0) et pastille sur Progrès ; un appui ouvre les séries du groupe ; croix « Ignorer » jusqu’à la semaine suivante encore sous le seuil ; plusieurs groupes dans un seul bandeau (version 1.52.1), la croix les masque tous ; une semaine terminée seulement : rien ; cas le plus chargé : « Démarrer » à l’écran sans défiler', async ({ page }) => {
     // Dos sous 6 séries 2 semaines, pectoraux 1 semaine seulement, vacances fin septembre : le dos seul.
     await open(page);
     const line = alerts(page).getByRole('listitem');
@@ -188,7 +202,8 @@ test.describe('Alerte « groupe moins travaillé »', () => {
       expect(l.minHeight).toBeGreaterThanOrEqual(48);
       expect(l.closest).toBeGreaterThanOrEqual(8);
       expect(l.overflow).toBeLessThanOrEqual(0);
-      expect(l.fontSize).toBe(big ? '17.25px' : '15px');
+      // Texte du bandeau en 13 px sous 340 px de large (version 1.52.1), 15 px sinon.
+      expect(l.fontSize).toBe(big ? '17.25px' : width < 340 ? '13px' : '15px');
       await restore?.();
     }
     await page.setViewportSize({ width: 412, height: 915 });
@@ -249,12 +264,14 @@ test.describe('Alerte « groupe moins travaillé »', () => {
     await expect(alerts(page).getByRole('link')).toHaveText('Dos : 3 et 3 séries ces 2 semaines (sous 6)');
     await expect(tabBar(page).getByTestId('group-alert-badge')).toBeVisible();
 
-    // Vacances les deux dernières semaines : tous les groupes sous le seuil, une seule ligne (version 1.51.0 ; avant, une
-    // ligne de résumé « 3 groupes sous ta moyenne ») : le plus bas, à égalité l'ordre des groupes, les pectoraux.
-    await open(page, { vacations: ['2026-10-26', '2026-11-02'], dosDown: [], pecDown: [] });
+    // Plusieurs groupes en alerte (version 1.52.1) : un seul bandeau les cite tous, du plus bas au plus haut, « sous 6
+    // séries ces 2 semaines » ; l'appui mène aux séries du premier, la croix les masque tous.
+    await open(page, { dosDown: [] }, ALERT_NOW, THREE_DOWN);
     await expect(page.getByTestId('group-alerts-summary')).toHaveCount(0);
     await expect(alerts(page).getByRole('listitem')).toHaveCount(1);
-    await expect(alerts(page).getByRole('link')).toHaveText('Pectoraux : 0 et 0 série ces 2 semaines (sous 6)');
+    await expect(alerts(page).getByRole('link')).toHaveText(THREE_TEXT);
+    await expect(alerts(page).getByRole('link')).toHaveAttribute('href', '#/bilan-groupes/epaules/series');
+    await expect(alerts(page).getByRole('link').locator('strong')).toHaveText('Épaules, Triceps, Pectoraux');
     for (const [width, height, big] of SIZES) {
       await page.setViewportSize({ width, height });
       const restore = big ? await largeText(page) : null;
@@ -263,13 +280,15 @@ test.describe('Alerte « groupe moins travaillé »', () => {
       expect(l.minHeight).toBeGreaterThanOrEqual(48);
       expect(l.closest).toBeGreaterThanOrEqual(8);
       expect(l.overflow).toBeLessThanOrEqual(0);
-      // « (sous 6) » d'un bloc : jamais « 6) » seul en fin de ligne.
+      // Version 1.52.1 : 13 px sous 340 px de large, 15 px sinon (texte agrandi : 115 %).
+      expect(l.fontSize, `${width} px`).toBe(big ? '17.25px' : width < 340 ? '13px' : '15px');
+      // « sous 6 séries » d'un bloc : jamais « séries » seul en début de ligne.
       const split = await alerts(page).getByRole('link').evaluateAll((links) =>
         links.filter((link) => {
-          const node = [...link.querySelectorAll('span')].flatMap((e) => [...e.childNodes]).find((n) => n.nodeType === 3 && n.textContent!.includes('(sous'))!;
+          const node = [...link.querySelectorAll('span')].flatMap((e) => [...e.childNodes]).find((n) => n.nodeType === 3 && n.textContent!.includes('sous'))!;
           const r = document.createRange();
-          r.setStart(node, node.textContent!.indexOf('(sous'));
-          r.setEnd(node, node.textContent!.length);
+          r.setStart(node, node.textContent!.indexOf('sous'));
+          r.setEnd(node, node.textContent!.indexOf('séries') + 'séries'.length);
           return new Set([...r.getClientRects()].map((c) => Math.round(c.top))).size > 1;
         }).length,
       );
@@ -277,15 +296,23 @@ test.describe('Alerte « groupe moins travaillé »', () => {
       await restore?.();
     }
     await page.setViewportSize({ width: 412, height: 915 });
-    // Onglet Progrès : la même ligne ; ignorée, le groupe suivant prend sa place (le dos), puis les épaules.
+    // Onglet Progrès : le même bandeau ; la croix masque l'alerte des trois groupes à la fois (méta `groupAlertsIgnored`).
     await tabBar(page).getByRole('link', { name: /^Progrès/ }).click();
     await expect(page.getByRole('heading', { name: 'Progrès', exact: true })).toBeVisible();
-    await expect(alerts(page).getByRole('link')).toHaveText('Pectoraux : 0 et 0 série ces 2 semaines (sous 6)');
-    await alerts(page).getByRole('button', { name: 'Ignorer l’alerte : Pectoraux' }).click();
-    await expect(alerts(page).getByRole('link')).toHaveText('Dos : 0 et 0 série ces 2 semaines (sous 6)');
-    await alerts(page).getByRole('button', { name: 'Ignorer l’alerte : Dos' }).click();
-    await expect(alerts(page).getByRole('link')).toHaveText('Épaules : 0 et 0 série ces 2 semaines (sous 6)');
-    await expect(tabBar(page).getByTestId('group-alert-badge')).toBeVisible();
+    await expect(alerts(page).getByRole('link')).toHaveText(THREE_TEXT);
+    await alerts(page).getByRole('button', { name: 'Ignorer l’alerte : Épaules, Triceps, Pectoraux' }).click();
+    await expect(alerts(page)).toHaveCount(0);
+    await expect(tabBar(page).getByTestId('group-alert-badge')).toHaveCount(0);
+    expect(await page.evaluate(() => new Promise((resolve) => {
+      const open = indexedDB.open('myfitapp');
+      open.onsuccess = () => {
+        const req = open.result.transaction('meta').objectStore('meta').get('groupAlertsIgnored');
+        req.onsuccess = () => (open.result.close(), resolve(req.result));
+      };
+    }))).toEqual({ epaules: '2026-11-02', triceps: '2026-11-02', pectoraux: '2026-11-02' });
+    // Vacances les deux dernières semaines : les six groupes dans le même bandeau (ni abdominaux, ni ligne de résumé).
+    await open(page, { vacations: ['2026-10-26', '2026-11-02'], dosDown: [], pecDown: [] });
+    await expect(alerts(page).getByRole('link')).toHaveText('Pectoraux, Dos, Épaules, Biceps, Triceps, Jambes : sous 6 séries ces 2 semaines');
     await page.setViewportSize({ width: 412, height: 915 });
     await page.goto('./');
     // Avec un bilan prêt en plus : une seule pastille, les deux raisons pour le lecteur d'écran.
@@ -324,7 +351,7 @@ test.describe('Alerte « groupe moins travaillé »', () => {
       await expect(page.locator('.activity-banner')).toContainText('Badminton lundi soir');
       await expect(page.getByTestId('weekly-recap').locator('.recap-cell[data-group]')).toHaveCount(7);
       await expect(page.getByTestId('weekly-recap').locator('[data-group="jambes"]')).toHaveText('Jambes (12\u00a0séries) · aujourd’hui');
-      await expect(alerts(page).getByRole('link')).toHaveText('Pectoraux : 0 et 0 série ces 2 semaines (sous 6)');
+      await expect(alerts(page).getByRole('link')).toHaveText(THREE_TEXT);
       await expect(page.getByRole('button', { name: 'Compléter la séance de ce matin' })).toBeVisible();
       await expect(page.getByTestId('week-suggestion')).toBeVisible();
       await expect(page.getByRole('status').filter({ hasText: 'Pense à sauvegarder tes séances.' })).toBeVisible();
@@ -356,7 +383,10 @@ test.describe('Alerte « groupe moins travaillé »', () => {
         const size = `avec cardio, ${withPlan ? 'avec' : 'sans'} séance prévue, ${width} × ${height} px${big ? ', texte à 115 %' : ''}`;
         const title = page.getByTestId('weekly-recap').getByRole('heading');
         // Forme attendue : la plus complète qui laisse « Démarrer » à l'écran.
+        // Version 1.52.1 : avec 3 groupes cités, à 360 px et texte à 115 %, le bandeau fait 3 lignes : le titre perd
+        // « · 50 min de cardio » (repli du §19.6, le cardio reste dans la case Jambes) pour garder « Démarrer » à l'écran.
         if (width === 320) await expect(title, size).not.toHaveAttribute('data-form', 'full');
+        else if (big) await expect(title, size).toHaveAttribute('data-form', 'noCardio');
         else await expect(title, size).toHaveAttribute('data-form', 'full');
         const form = await title.getAttribute('data-form');
         await expect(title, size).toHaveText(
@@ -377,13 +407,21 @@ test.describe('Alerte « groupe moins travaillé »', () => {
       }
       await page.setViewportSize({ width: 412, height: 915 });
     }
-    // Sans cardio, rien à raccourcir à 320 × 711 si « Démarrer » tient déjà : titre complet.
+    // Sans cardio, à 320 × 711 (version 1.52.1, choix de l'utilisateur) : avec 3 groupes cités, le bandeau fait 55 px et
+    // le titre perd les noms de jours (repli du §19.6) pour que « Démarrer » tienne ; complet à 412 et 360 px.
     await openLoaded(page, false);
     await page.setViewportSize({ width: 320, height: 711 });
-    await expect(page.getByTestId('weekly-recap').getByRole('heading')).toHaveAttribute('data-form', 'full');
+    const shortTitle = page.getByTestId('weekly-recap').getByRole('heading');
+    await expect(shortTitle).not.toHaveAttribute('data-form', 'full');
+    await expect(shortTitle).toHaveText(/^Semaine du 9 au 15\snov\.\s: 2\sséances$/);
+    expect(await layout(page)).toMatchObject({ startVisible: true });
+    for (const [width, height] of [[412, 915], [360, 800]] as const) {
+      await page.setViewportSize({ width, height });
+      await expect(shortTitle, `${width} px`).toHaveAttribute('data-form', 'full');
+    }
     await page.setViewportSize({ width: 412, height: 915 });
   });
-  test('319. Seuil de l’alerte réglable (6 par défaut, de 3 à 9), strictement sous le seuil les 2 semaines ; score du récapitulatif : une activité du groupe compte ; abdominaux jamais ; même bandeau sur l’accueil et dans Progrès (version 1.52.0)', async ({ page }) => {
+  test('319. Seuil de l’alerte réglable (6 par défaut, de 3 à 9), strictement sous le seuil les 2 semaines ; score du récapitulatif : une activité du groupe compte ; abdominaux jamais ; même bandeau sur l’accueil et dans Progrès (version 1.52.0) ; plusieurs groupes dans un seul bandeau, ligne du bilan de la semaine (version 1.52.1)', async ({ page }) => {
     await open(page);
     await expect(alerts(page).getByRole('link')).toHaveText('Dos : 3 et 3 séries ces 2 semaines (sous 6)');
     const readRecap = () =>
@@ -442,10 +480,11 @@ test.describe('Alerte « groupe moins travaillé »', () => {
       await restore?.();
     }
     await page.setViewportSize({ width: 412, height: 915 });
-    // À 9 : tous les groupes sont sous le seuil ; une seule ligne, le plus bas (le dos, 3 + 3).
+    // À 9 : tous les groupes sont sous le seuil ; un seul bandeau les cite tous, du plus bas au plus haut (version 1.52.1).
     await page.goto('./');
     await expect(alerts(page).getByRole('listitem')).toHaveCount(1);
-    await expect(alerts(page).getByRole('link')).toHaveText('Dos : 3 et 3 séries ces 2 semaines (sous 9)');
+    await expect(alerts(page).getByRole('link')).toHaveText('Dos, Pectoraux, Triceps, Jambes, Épaules, Biceps : sous 9 séries ces 2 semaines');
+    await expect(alerts(page).getByRole('link')).toHaveAttribute('href', '#/bilan-groupes/dos/series');
     // Même bandeau sur l'accueil et dans Progrès (version 1.52.0) : fond, texte, coins, icône et croix identiques.
     const look = () =>
       alerts(page).getByRole('listitem').evaluate((li) => {
@@ -457,13 +496,35 @@ test.describe('Alerte « groupe moins travaillé »', () => {
         };
       });
     const home = await look();
-    expect(home).toMatchObject({ icon: 1, cross: ['Ignorer l’alerte : Dos', '', 48, 48] });
+    expect(home).toMatchObject({ icon: 1, cross: ['Ignorer l’alerte : Dos, Pectoraux, Triceps, Jambes, Épaules, Biceps', '', 48, 48] });
     await tabBar(page).getByRole('link', { name: /^Progrès/ }).click();
     await expect(page.getByRole('heading', { name: 'Progrès', exact: true })).toBeVisible();
     expect(await look()).toEqual(home);
-    // La croix ignore l'alerte, comme le mot « Ignorer » avant : le groupe suivant prend la place (les pectoraux).
-    await alerts(page).getByRole('button', { name: 'Ignorer l’alerte : Dos' }).click();
-    await expect(alerts(page).getByRole('link')).toHaveText('Pectoraux : 6 et 3 séries ces 2 semaines (sous 9)');
+    // La croix masque l'alerte des six groupes à la fois.
+    await alerts(page).getByRole('button', { name: 'Ignorer l’alerte : Dos, Pectoraux, Triceps, Jambes, Épaules, Biceps' }).click();
+    await expect(alerts(page)).toHaveCount(0);
+    await expect(tabBar(page).locator('.tab-badge')).toHaveCount(0);
+
+    // Bilan de la semaine terminée du 2 nov. (version 1.52.1) : la ligne de l'alerte sous les groupes, même ignorée, sans
+    // fond jaune, au format du bandeau avec les séries de chaque groupe ; aussi dans le texte du mail.
+    await page.goto('./#/bilan-periode/semaine/2026-11-02');
+    const reportAlert = page.getByRole('region', { name: 'Groupes travaillés' }).getByTestId('groups-alert');
+    const detail = 'Dos, Pectoraux, Triceps, Jambes, Épaules, Biceps : sous 9 séries ces 2 semaines (Dos 3 et 3, Pectoraux 6 et 3, Triceps 6 et 6, Jambes 6 et 6, Épaules 7,5 et 7,5, Biceps 7,5 et 7,5)';
+    await expect(reportAlert).toHaveText(detail);
+    await expect(reportAlert.locator('strong')).toHaveText('Dos, Pectoraux, Triceps, Jambes, Épaules, Biceps');
+    await expect(reportAlert.locator('.group-alert-icon')).toHaveCount(1);
+    expect(await reportAlert.evaluate((p) => [getComputedStyle(p).backgroundColor, getComputedStyle(p).fontSize])).toEqual(['rgba(0, 0, 0, 0)', '15px']);
+    // Sous le tableau des groupes, dans la même section.
+    expect(await reportAlert.evaluate((p) => p.previousElementSibling?.matches('table, .groups-cardio'))).toBe(true);
+    await expect(page.getByTestId('report-text')).toContainText(`\n- ${detail}\n`);
+    // Rien pour la semaine en cours, ni dans le bilan du mois.
+    for (const route of ['semaine/2026-11-09', 'mois/2026-10', 'mois/2026-11']) {
+      await page.goto(`./#/bilan-periode/${route}`);
+      await expect(page.getByTestId('report-title')).toBeVisible();
+      await expect(page.getByTestId('groups-alert'), route).toHaveCount(0);
+      await expect(page.getByTestId('report-text'), route).not.toContainText('ces 2 semaines');
+    }
+
 
     // Score du récapitulatif (version 1.51.0) : une escalade (dos) chaque semaine en baisse, 3 + 3 = 6 séries, plus
     // d'alerte au seuil de 6 ; le graphique, lui, n'a que les séries (3 et 3).

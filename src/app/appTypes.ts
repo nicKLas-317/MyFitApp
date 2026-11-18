@@ -61,7 +61,7 @@ export interface AppValue {
   markCoachSent(period: ReportPeriod): Promise<void>;
   /** Alertes « groupe moins travaillé » ignorées (version 1.38.0), mémorisées sur l'appareil seulement. */
   ignoredAlerts: IgnoredAlerts;
-  ignoreGroupAlert(alert: GroupAlert): Promise<void>;
+  ignoreGroupAlerts(alerts: readonly GroupAlert[]): Promise<void>;
   /** Propositions d'ajuster le nombre de séries refusées (« Non », version 1.49.0), mémorisées sur l'appareil seulement. */
   setsHintDismissed: SetsHintDismissed;
   dismissSetsHint(hint: SetsHint): Promise<void>;

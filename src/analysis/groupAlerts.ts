@@ -1,14 +1,15 @@
 /**
  * Alerte « groupe moins travaillé » (§19.11). Version 1.51.0 : un groupe est en alerte quand son score de la semaine
  * (celui du récapitulatif, en séries : directes, indirectes ½, maison, activités, cardio des jambes) est sous le seuil
- * (6 séries par défaut, réglable de 3 à 9) sur chacune des 2 dernières semaines terminées ; une seule alerte affichée,
- * le groupe le plus bas. Avant (versions 1.38.0 à 1.50.1) : les 2 semaines sous la moyenne des semaines d'avant, avec
+ * (6 séries par défaut, réglable de 3 à 9) sur chacune des 2 dernières semaines terminées ; un seul bandeau, qui cite
+ * tous les groupes en alerte du plus bas au plus haut (version 1.52.1 ; 1.51.0 : le plus bas seulement). Avant (versions 1.38.0 à 1.50.1) : les 2 semaines sous la moyenne des semaines d'avant, avec
  * les séries du graphique. Calcul pur, refait à l'affichage à partir des séances terminées ; jamais stocké, aucun effet
  * sur le moteur.
  */
 import type { ActivityRecord } from '../activities/model';
 import { localDate, sessionStartTime } from '../domain/calendar';
 import type { CardioMachine, Exercise, MuscleGroup, Session } from '../domain/types';
+import { MUSCLE_GROUP_LABELS } from '../library/seed';
 import { formatDecimal } from '../session/format';
 import { GROUP_VIEW_GROUPS, SETS_ONLY_GROUPS } from './groups';
 import { periodContaining, shiftPeriod } from './reportPeriod';
@@ -16,8 +17,6 @@ import { groupScore, groupSeries, LEG_CARDIO_GROUP, legCardioWeek } from './week
 
 /** Semaines regardées : les dernières semaines terminées. */
 export const ALERT_RECENT_WEEKS = 2;
-/** Alertes affichées au plus (version 1.51.0 : une seule ; 3 avant). */
-export const ALERT_MAX = 1;
 
 export interface AlertInput {
   sessions: readonly Session[];
@@ -94,6 +93,27 @@ export function alertFigures(alert: GroupAlert): string {
   return `${shown.join(' et ')} ${word} ces ${ALERT_RECENT_WEEKS} semaines (sous ${alert.threshold})`;
 }
 
+/**
+ * Texte du bandeau (version 1.52.1), en deux parties : les noms (en gras) et le reste. Un groupe : « Dos » et « 0 et 6
+ * séries ces 2 semaines (sous 7) » ; plusieurs, du plus bas au plus haut : « Dos, Pectoraux » et « sous 7 séries ces 2
+ * semaines ».
+ */
+export function alertBanner(alerts: readonly GroupAlert[]): { names: string; rest: string } {
+  const names = alerts.map((a) => MUSCLE_GROUP_LABELS[a.group]).join(', ');
+  if (alerts.length === 1) return { names, rest: alertFigures(alerts[0]!) };
+  return { names, rest: `sous ${alerts[0]!.threshold} séries ces ${ALERT_RECENT_WEEKS} semaines` };
+}
+
+/**
+ * Ligne du bilan de la semaine (version 1.52.1), en texte simple : le texte du bandeau, et pour plusieurs groupes les
+ * séries de chacun : « Dos, Pectoraux : sous 7 séries ces 2 semaines (Dos 0 et 6, Pectoraux 3 et 4) ».
+ */
+export function alertReportText(alerts: readonly GroupAlert[]): string {
+  const { names, rest } = alertBanner(alerts);
+  const detail = alerts.length > 1 ? ` (${alerts.map((a) => `${MUSCLE_GROUP_LABELS[a.group]} ${a.recent.map(formatDecimal).join(' et ')}`).join(', ')})` : '';
+  return `${names} : ${rest}${detail}`.replace(/ /g, ' ');
+}
+
 /** Alertes ignorées sur l'appareil : groupe → dernière semaine terminée au moment de « Ignorer ». */
 export type IgnoredAlerts = Partial<Record<MuscleGroup, string>>;
 
@@ -107,17 +127,25 @@ export function sanitizeIgnoredAlerts(value: unknown): IgnoredAlerts {
 }
 
 /**
- * Alerte à afficher (une seule, version 1.51.0) : le groupe le plus bas, sans ceux ignorés pour la même dernière
- * semaine terminée (une nouvelle semaine encore sous le seuil fait revenir l'alerte) ; un groupe ignoré laisse la place
- * au suivant.
+ * Groupes cités par le bandeau (version 1.52.1 : tous, dans un seul bandeau ; 1.51.0 : le plus bas seulement), du plus
+ * bas au plus haut, sans ceux ignorés pour la même dernière semaine terminée (une nouvelle semaine encore sous le seuil
+ * fait revenir l'alerte du groupe).
  */
 export function groupAlerts(input: AlertInput, ignored: IgnoredAlerts = {}): GroupAlert[] {
-  return groupAlertCandidates(input)
-    .filter((a) => ignored[a.group] !== a.week)
-    .slice(0, ALERT_MAX);
+  return groupAlertCandidates(input).filter((a) => ignored[a.group] !== a.week);
 }
 
-/** Ignorer une alerte : jusqu'à la fin de la semaine suivante encore sous le seuil. */
+/**
+ * Ignorer (la croix) : chaque groupe cité est masqué tant que la dernière semaine terminée reste celle-ci, c'est-à-dire
+ * jusqu'au lundi 0 h 00 suivant ; il revient si la nouvelle semaine terminée est encore sous le seuil avec la précédente.
+ */
+export function ignoreAlerts(ignored: IgnoredAlerts, alerts: readonly GroupAlert[]): IgnoredAlerts {
+  const next = { ...ignored };
+  for (const a of alerts) next[a.group] = a.week;
+  return next;
+}
+
+/** Un seul groupe (tests, compatibilité). */
 export function ignoreAlert(ignored: IgnoredAlerts, alert: GroupAlert): IgnoredAlerts {
-  return { ...ignored, [alert.group]: alert.week };
+  return ignoreAlerts(ignored, [alert]);
 }

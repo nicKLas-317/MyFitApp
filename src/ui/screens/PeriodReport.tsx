@@ -42,7 +42,7 @@ export function PeriodReport({ kind, periodParam }: { kind: ReportKind; periodPa
   const weighIns = body.status === 'ready' ? body.data.weighIns : [];
   const [report, screen] = useMemo(
     () => {
-      const input = { sessions, exercises, evaluations: replay.evaluations, settings, groups: recapSettings.groups, weighIns, activities, machines: cardioMachines, now };
+      const input = { sessions, exercises, evaluations: replay.evaluations, settings, groups: recapSettings.groups, weighIns, activities, machines: cardioMachines, alertSets: recapSettings.alertSets, now };
       const built = buildReport(period, input);
       // Écran seulement (version 1.35.0) : tuiles, barres, calendrier, échelles ; le texte du mail n'en dépend pas.
       return [built, buildReportScreen(built, input)] as const;

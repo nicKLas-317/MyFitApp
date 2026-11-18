@@ -6,6 +6,7 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { formatMinutes } from '../cardio/model';
 import type { Exercise, MuscleGroup } from '../domain/types';
+import { alertBanner, type GroupAlert } from '../analysis/groupAlerts';
 import { comparedTo, lineText, type PeriodReport, type ReportSection } from '../analysis/report';
 import { progressionMeta, type LadderStep, type ReportScreen } from '../analysis/reportScreen';
 import { LEG_CARDIO_MINUTES, LEG_CARDIO_SETS, setsLabel } from '../analysis/weekly';
@@ -13,6 +14,7 @@ import { MUSCLE_GROUP_LABELS } from '../library/seed';
 import { parseIsoDay } from '../domain/calendar';
 import { formatDecimal, formatDurationLong, localDate, plural as pluralWith } from '../session/format';
 import { exerciseColorProps, groupColorProps } from './groupColors';
+import { WarningIcon } from './GroupAlerts';
 
 const NB = ' ';
 const plural = (n: number, one: string, many = `${one}s`) => pluralWith(n, one, many, NB);
@@ -310,7 +312,27 @@ export function ReportGroups({ report, screen }: { report: PeriodReport; screen:
         </tbody>
       </table>
       {legs?.cardio && <p className="groups-cardio" data-testid="groups-cardio">{legCardioSentence(legs.cardio, legs.cardioWeeks)}</p>}
+      {/* Version 1.52.1 : l'alerte « groupe moins travaillé » de cette semaine terminée, au format du bandeau, sans fond. */}
+      {report.alerts.length > 0 && <ReportAlert alerts={report.alerts} />}
     </section>
+  );
+}
+
+/**
+ * Alerte « groupe moins travaillé » d'une semaine terminée (version 1.52.1), sous les groupes : le texte du bandeau, et
+ * pour plusieurs groupes les séries de chacun (« Dos 0 et 6, Pectoraux 3 et 4 »), discrète, sans fond.
+ */
+function ReportAlert({ alerts }: { alerts: readonly GroupAlert[] }) {
+  const { names, rest } = alertBanner(alerts);
+  const detail = alerts.length > 1 ? ` (${alerts.map((a) => `${MUSCLE_GROUP_LABELS[a.group]}\u00a0${a.recent.map(formatDecimal).join('\u00a0et\u00a0')}`).join(', ')})` : '';
+  return (
+    <p className="groups-alert" data-testid="groups-alert" data-groups={alerts.map((a) => a.group).join(' ')}>
+      <WarningIcon />
+      <span>
+        <strong className="groups-alert-name">{names}</strong>
+        {`\u00a0: ${rest}${detail}`}
+      </span>
+    </p>
   );
 }
 

@@ -122,6 +122,8 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
         title: 'Séances',
         lines: ['0 séance, −3 par rapport à la semaine dernière', 'Durée en salle : 0 min, −3 h 00 par rapport à la semaine dernière'],
       },
+      // Version 1.52.1 : semaine terminée sans séance, des groupes sous 6 séries 2 semaines de suite : l'alerte seule.
+      { title: 'Groupes travaillés', lines: ['Pectoraux, Dos, Épaules, Triceps, Biceps : sous 6 séries ces 2 semaines (Pectoraux 0 et 0, Dos 0 et 0, Épaules 0 et 0, Triceps 0 et 0, Biceps 3 et 0)'] },
       { title: 'Poids', lines: ['80,2 kg le 19 oct. → 79,6 kg le 25 oct.'] },
     ]);
     const empty = report(WEEK, [], oct(26, 9));
@@ -202,6 +204,8 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
       'Biceps : 6 séries (1 séance, +2 indirect)',
       'Jambes : 9 séries (3 séances)',
       'Non travaillés : Épaules, Triceps',
+      // Version 1.52.1 : l'alerte de cette semaine terminée, tous les groupes sous 6 séries cette semaine et la précédente.
+      'Épaules, Triceps, Pectoraux : sous 6 séries ces 2 semaines (Épaules 0 et 0, Triceps 0 et 0, Pectoraux 0 et 3)',
     ]);
     // Moins de séances, autant, durée plus courte, séance importée sans heure (comptée pour 0, version 1.50.0).
     const fewer = report(WEEK, [...sessions.slice(0, 3), session(oct(20), [green('pec-deck', 30)], { minutes: 25 }), session(oct(22), [green('pec-deck', 30)], { noTime: true })], oct(26, 9));
@@ -284,6 +288,7 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
         '- Biceps : 6 séries (1 séance, +2 indirect)',
         '- Jambes : 9 séries (3 séances)',
         '- Non travaillés : Épaules, Triceps',
+        '- Épaules, Triceps, Pectoraux : sous 6 séries ces 2 semaines (Épaules 0 et 0, Triceps 0 et 0, Pectoraux 0 et 3)',
         '',
         'PROGRESSIONS',
         '- Curl biceps haltères : 3×8 → 3×9 à 12 kg (21 oct.)',

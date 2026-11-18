@@ -14,7 +14,8 @@ import { formatDurationLong, formatKg, formatLoad, formatShortDay, plural } from
 import { elapsedMs } from '../session/ops';
 import { isPalierValidated } from './progress';
 import { computeRecords, formatRecord, type RecordBreak } from './records';
-import { groupScore, groupSeries, groupWork, LEG_CARDIO_GROUP, legCardioWeek, setsLabel, workParts } from './weekly';
+import { alertReportText, groupAlertCandidates, type GroupAlert } from './groupAlerts';
+import { DEFAULT_RECAP_SETTINGS, groupScore, groupSeries, groupWork, LEG_CARDIO_GROUP, legCardioWeek, setsLabel, workParts } from './weekly';
 import { containsTime, inPeriod, mailSubject, periodLastDay, shiftPeriod, type ReportPeriod } from './reportPeriod';
 
 const WEEKDAY_DAY_MONTH = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
@@ -132,6 +133,12 @@ export interface PeriodReport {
    * (« Premier mois suivi ») ni dans le mail (« 11 séances, premier mois suivi »).
    */
   first: boolean;
+  /**
+   * Version 1.52.1 : bilan d'une semaine terminée seulement, les groupes en alerte « groupe moins travaillé » le lundi
+   * qui la suit (sous le seuil cette semaine et la précédente), du plus bas au plus haut, ignorés ou non ; vide sinon
+   * (mois, semaine en cours, aucun groupe sous le seuil).
+   */
+  alerts: GroupAlert[];
 }
 
 export interface ReportInput {
@@ -146,6 +153,8 @@ export interface ReportInput {
   activities?: readonly ActivityRecord[];
   /** Machines de cardio des réglages : celles qui comptent pour les jambes (version 1.41.0). */
   machines?: readonly CardioMachine[];
+  /** Seuil de l'alerte « groupe moins travaillé » (version 1.52.1, §19.11) ; 6 sans réglage. */
+  alertSets?: number;
   now: number;
 }
 
@@ -312,6 +321,13 @@ export function buildReport(period: ReportPeriod, input: ReportInput): PeriodRep
     weighIns: weighed.length > 1 ? [weighed[0]!, weighed[weighed.length - 1]!] : weighed,
     // La période contient la première séance, et la précédente est entièrement avant elle.
     first: firstSession !== null && shiftPeriod(period, -1).next.getTime() <= firstSession && firstSession < period.next.getTime(),
+    alerts:
+      period.kind === 'week' && !inProgress
+        ? groupAlertCandidates({
+            sessions, exercises, activities: done, machines: input.machines ?? [], groups: input.groups,
+            threshold: input.alertSets ?? DEFAULT_RECAP_SETTINGS.alertSets, now: period.next.getTime(),
+          })
+        : [],
   };
 }
 
@@ -412,7 +428,12 @@ export function reportSections(report: PeriodReport, variantName: (variantId: st
       return [`${MUSCLE_GROUP_LABELS[g.group]} : ${setsLabel(g.sets)}${d ? ` (${d})` : ''}`];
     });
     if (idle.length > 0) lines.push([em(`Non travaillés : ${idle.map((g) => MUSCLE_GROUP_LABELS[g.group]).join(', ')}`)]);
+    // Version 1.52.1 : l'alerte « groupe moins travaillé » de cette semaine terminée, au format du bandeau.
+    if (report.alerts.length > 0) lines.push([alertReportText(report.alerts)]);
     sections.push({ title: 'Groupes travaillés', lines });
+  } else if (report.alerts.length > 0) {
+    // Semaine sans séance ni activité (vacances) : la ligne de l'alerte seule.
+    sections.push({ title: 'Groupes travaillés', lines: [[alertReportText(report.alerts)]] });
   }
 
   if (totals.sessionCount > 0) {

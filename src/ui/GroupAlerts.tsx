@@ -1,8 +1,7 @@
 import { useMemo } from 'react';
 import { useApp } from '../app/store';
 import { routeHash, useNow } from '../app/hooks';
-import { alertFigures, groupAlerts, type GroupAlert } from '../analysis/groupAlerts';
-import { MUSCLE_GROUP_LABELS } from '../library/seed';
+import { alertBanner, groupAlerts, type GroupAlert } from '../analysis/groupAlerts';
 
 /**
  * Alerte « groupe moins travaillé » à afficher (§19.11 ; une seule depuis la version 1.51.0) : recalculée à
@@ -28,8 +27,8 @@ export function useGroupAlerts(): GroupAlert[] {
  * d'avertissement), le même sur les deux onglets, ni couleur de groupe, ni vert, orange ou rouge. Version 1.51.0 : une
  * seule alerte, donc plus de ligne de résumé sur l'onglet Séance (version 1.40.0, à partir de 2 groupes).
  */
-/** Petit triangle d'avertissement, décoratif (le texte dit tout). */
-function WarningIcon() {
+/** Petit triangle d'avertissement, décoratif (le texte dit tout) : bandeau, et ligne du bilan de la semaine (1.52.1). */
+export function WarningIcon() {
   return (
     <svg className="group-alert-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       <path d="M12 2.5 1.5 21h21L12 2.5z" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
@@ -41,28 +40,30 @@ function WarningIcon() {
 
 export function GroupAlerts() {
   const alerts = useGroupAlerts();
-  const { ignoreGroupAlert } = useApp();
+  const { ignoreGroupAlerts } = useApp();
   if (alerts.length === 0) return null;
+  // Version 1.52.1 : un seul bandeau cite tous les groupes en alerte, du plus bas au plus haut ; l'appui mène aux séries
+  // du premier, la croix masque l'alerte de tous les groupes cités.
+  const { names, rest } = alertBanner(alerts);
+  const first = alerts[0]!.group;
   return (
     <ul className="group-alerts" aria-label="Groupe moins travaillé" data-testid="group-alerts">
-      {alerts.map((a) => (
-        <li key={a.group} className="group-alert" data-group={a.group}>
-          <a className="link group-alert-link" href={routeHash('bilan-groupes', a.group, 'series')}>
-            <WarningIcon />
-            <span>
-              <strong className="group-alert-name">{MUSCLE_GROUP_LABELS[a.group]}</strong>
-              {`\u00a0: ${alertFigures(a)}`}
-            </span>
-          </a>
-          {/* Version 1.52.0 : une croix au lieu du mot « Ignorer » (le texte tient sur 2 lignes à 320 px, §3.7) ; même nom
-              pour le lecteur d'écran, zone d'appui de 48 px. */}
-          <button type="button" className="link group-alert-ignore" aria-label={`Ignorer l’alerte : ${MUSCLE_GROUP_LABELS[a.group]}`} onClick={() => void ignoreGroupAlert(a)}>
-            <svg className="group-alert-cross" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
-            </svg>
-          </button>
-        </li>
-      ))}
+      <li className="group-alert" data-group={first} data-groups={alerts.map((a) => a.group).join(' ')}>
+        <a className="link group-alert-link" href={routeHash('bilan-groupes', first, 'series')}>
+          <WarningIcon />
+          <span>
+            <strong className="group-alert-name">{names}</strong>
+            {`\u00a0: ${rest}`}
+          </span>
+        </a>
+        {/* Version 1.52.0 : une croix au lieu du mot « Ignorer » (le texte tient sur 2 lignes à 320 px, §3.7) ; nommée pour
+            le lecteur d'écran, zone d'appui de 48 px. */}
+        <button type="button" className="link group-alert-ignore" aria-label={`Ignorer l’alerte : ${names}`} onClick={() => void ignoreGroupAlerts(alerts)}>
+          <svg className="group-alert-cross" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
+          </svg>
+        </button>
+      </li>
     </ul>
   );
 }

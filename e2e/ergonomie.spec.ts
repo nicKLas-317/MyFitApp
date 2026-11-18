@@ -947,8 +947,8 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
   });
 
   test('225. Accueil avec une alerte', async ({ page }) => {
-    // Alerte « groupe moins travaillé » (version 1.51.0 : une seule ligne ; vacances les deux dernières semaines, tous les
-    // groupes sous le seuil, le plus bas affiché ; bandeau jaune avec la croix « Ignorer » depuis la version 1.52.0).
+    // Alerte « groupe moins travaillé » (vacances les deux dernières semaines, tous les groupes sous le seuil) : bandeau
+    // jaune avec la croix « Ignorer » (version 1.52.0), qui cite les six groupes (version 1.52.1).
     await page.clock.setFixedTime(new Date(ALERT_NOW));
     await page.goto('./');
     await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
@@ -969,8 +969,8 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
       await page.setViewportSize({ width, height: 800 });
       await page.goto('./');
       await reloadAfterWrites(page);
-        // Onglet Séance : une seule ligne, le groupe le plus bas (version 1.51.0 ; plus de ligne de résumé).
-        await expect(page.getByTestId('group-alerts').getByRole('link')).toHaveText('Pectoraux : 0 et 0 série ces 2 semaines (sous 6)');
+        // Onglet Séance : un seul bandeau, qui cite les six groupes (version 1.52.1 ; plus de ligne de résumé).
+        await expect(page.getByTestId('group-alerts').getByRole('link')).toHaveText('Pectoraux, Dos, Épaules, Biceps, Triceps, Jambes : sous 6 séries ces 2 semaines');
       const restore = scale > 1 ? await largeText(page) : null;
       await toTop(page);
       await expectClean(page, `Accueil avec une alerte à ${width} px${scale > 1 ? ', texte à 115 %' : ''}`, scale);
@@ -1006,6 +1006,37 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
       const restore = scale > 1 ? await largeText(page) : null;
       await toTop(page);
       await expectClean(page, `Progrès avec une alerte à ${width} px${scale > 1 ? ', texte à 115 %' : ''}`, scale);
+      await restore?.();
+    }
+  });
+
+  test('225. Bilan de la semaine avec l’alerte « groupe moins travaillé »', async ({ page }) => {
+    // Version 1.52.1 : semaine terminée du 2 nov., dos et pectoraux sous 6 séries cette semaine et la précédente : la
+    // ligne de l'alerte sous le tableau des groupes, avec les séries de chaque groupe.
+    await page.clock.setFixedTime(new Date(ALERT_NOW));
+    await page.goto('./');
+    await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve, reject) => {
+          const open = indexedDB.open('myfitapp');
+          open.onsuccess = () => {
+            const tx = open.result.transaction('sessions', 'readwrite');
+            tx.objectStore('sessions').clear();
+            tx.oncomplete = () => (open.result.close(), resolve());
+            tx.onerror = () => reject(tx.error);
+          };
+        }),
+    );
+    await writeSessions(page, alertHistory({ pecDown: ['2026-10-26', '2026-11-02'] }));
+    for (const [width, scale] of SIZES_225) {
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto('./#/bilan-periode/semaine/2026-11-02');
+      await reloadAfterWrites(page);
+        await expect(page.getByTestId('groups-alert')).toHaveText('Pectoraux, Dos : sous 6 séries ces 2 semaines (Pectoraux 3 et 3, Dos 3 et 3)');
+      const restore = scale > 1 ? await largeText(page) : null;
+      await page.getByTestId('groups-alert').scrollIntoViewIfNeeded();
+      await expectClean(page, `Bilan de la semaine avec l’alerte à ${width} px${scale > 1 ? ', texte à 115 %' : ''}`, scale);
       await restore?.();
     }
   });

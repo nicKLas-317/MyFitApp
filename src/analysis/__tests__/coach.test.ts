@@ -242,17 +242,18 @@ describe('Export pour le coach (version 1.46.0)', () => {
     ]);
     expect(data.contexte.seuil_alerte_series).toBe(6);
     expect(data.regles.find((r) => r.startsWith('Alerte'))).toBe(
-      'Alerte « groupe moins travaillé » : un groupe du récapitulatif (jamais les abdominaux) est en alerte quand ses séries de la semaine (même calcul que ci-dessus) sont sous 6 sur chacune des 2 dernières semaines terminées (seuil réglé par l’utilisateur, 6 par défaut). L’appli n’en affiche qu’une : le groupe le plus bas sur les 2 semaines (à égalité, le plus bas la dernière semaine).',
+      'Alerte « groupe moins travaillé » : un groupe du récapitulatif (jamais les abdominaux) est en alerte quand ses séries de la semaine (même calcul que ci-dessus) sont sous 6 sur chacune des 2 dernières semaines terminées (seuil réglé par l’utilisateur, 6 par défaut). L’appli les cite tous dans un seul bandeau, du plus bas au plus haut sur les 2 semaines (à égalité, le plus bas la dernière semaine) ; masquer le bandeau (« Ignorer ») les masque tous jusqu’au lundi suivant, et chacun revient si la nouvelle semaine terminée est encore sous le seuil.',
     );
     // Ignorée sur l'appareil : signalée, et plus affichée.
     const week = groupAlertCandidates(alertInput)[0]!.week;
     expect(buildCoachExport(input(sessions, { now, activities: [], ignoredAlerts: { dos: week } })).signaux.alertes_groupe_moins_travaille).toEqual([
       { groupe: 'Dos', series_2_dernieres_semaines: [3, 3], seuil: 6, texte: 'Dos : 3 et 3 séries ces 2 semaines (sous 6)', ignoree_sur_l_appareil: true },
     ]);
-    // Seuil réglé à 9 : tous les groupes en dessous, du plus bas au plus haut, le dos seul affiché ; la règle suit le seuil.
+    // Seuil réglé à 9 : tous les groupes en dessous, du plus bas au plus haut, tous cités par le bandeau (version 1.52.1) ;
+    // la règle suit le seuil.
     const nine = buildCoachExport(input(sessions, { now, activities: [], recap: { ...RECAP, alertSets: 9 } }));
     expect(nine.signaux.alertes_groupe_moins_travaille.map((a) => [a.groupe, a.series_2_dernieres_semaines, 'affichee_dans_l_appli' in a])).toEqual([
-      ['Dos', [3, 3], true], ['Pectoraux', [6, 3], false], ['Triceps', [6, 6], false], ['Jambes', [6, 6], false], ['Épaules', [7.5, 7.5], false], ['Biceps', [7.5, 7.5], false],
+      ['Dos', [3, 3], true], ['Pectoraux', [6, 3], true], ['Triceps', [6, 6], true], ['Jambes', [6, 6], true], ['Épaules', [7.5, 7.5], true], ['Biceps', [7.5, 7.5], true],
     ]);
     expect(nine.regles.find((r) => r.startsWith('Alerte'))).toContain('sont sous 9 sur chacune');
 

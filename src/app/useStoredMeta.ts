@@ -8,7 +8,7 @@ import { CARDIO_MACHINES_VERSION, sanitizeCardioMachines } from '../cardio/model
 import { DEFAULT_RECAP_SETTINGS, type WeeklyRecapSettings } from '../analysis/weekly';
 import { periodKey, type ReportPeriod } from '../analysis/reportPeriod';
 import { DEFAULT_REPORT_SETTINGS, markSeen, type ReportSeen, type ReportSettings } from '../analysis/reportSettings';
-import { ignoreAlert, type GroupAlert, type IgnoredAlerts } from '../analysis/groupAlerts';
+import { ignoreAlerts, type GroupAlert, type IgnoredAlerts } from '../analysis/groupAlerts';
 import { dismissSetsHint as dismissHint, type SetsHint, type SetsHintDismissed } from '../analysis/setsHint';
 import { answer, sanitizeHabits, type ActivityRecord, type Habit, type Occurrence } from '../activities/model';
 import type { StoredData } from './stored';
@@ -150,9 +150,10 @@ export function useStoredMeta(writeMeta: WriteMeta, localChanges: MutableRefObje
     [writeMeta, localChanges],
   );
 
-  const ignoreGroupAlert = useCallback(
-    async (alert: GroupAlert): Promise<void> => {
-      const next = ignoreAlert(ignoredAlertsRef.current, alert);
+  // La croix du bandeau (version 1.52.1) : tous les groupes cités à la fois.
+  const ignoreGroupAlerts = useCallback(
+    async (alerts: readonly GroupAlert[]): Promise<void> => {
+      const next = ignoreAlerts(ignoredAlertsRef.current, alerts);
       ignoredAlertsRef.current = next;
       setIgnoredAlerts(next);
       // Une relecture de la base commencée avant ne doit pas rétablir l'ancienne valeur.
@@ -199,7 +200,7 @@ export function useStoredMeta(writeMeta: WriteMeta, localChanges: MutableRefObje
       coachSent,
       markCoachSent,
       ignoredAlerts,
-      ignoreGroupAlert,
+      ignoreGroupAlerts,
       setsHintDismissed,
       dismissSetsHint,
       habits,

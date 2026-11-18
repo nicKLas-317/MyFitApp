@@ -261,6 +261,7 @@ export function buildCoachExport(input: CoachInput) {
     weighIns,
     activities,
     machines: input.machines,
+    alertSets: input.recap.alertSets,
     now: input.now,
   };
   const report = buildReport(period, reportInput);
@@ -387,16 +388,16 @@ export function buildCoachExport(input: CoachInput) {
   };
 
   // Signaux.
-  // Version 1.51.0 : tous les groupes sous le seuil les 2 dernières semaines (la semaine exportée et la précédente), du
-  // plus bas au plus haut ; l'appli n'en affiche qu'un (« affichee_dans_l_appli »).
+  // Tous les groupes sous le seuil les 2 dernières semaines (la semaine exportée et la précédente), du plus bas au plus
+  // haut ; version 1.52.1 : l'appli les cite tous dans un seul bandeau, sauf ceux ignorés (« affichee_dans_l_appli »).
   const alertInput = { sessions, exercises: input.exercises, activities, machines: input.machines, groups: input.recap.groups, threshold: input.recap.alertSets, now: end };
-  const shownAlert = groupAlerts(alertInput, input.ignoredAlerts)[0];
+  const shown = new Set(groupAlerts(alertInput, input.ignoredAlerts).map((a) => a.group));
   const alertes = groupAlertCandidates(alertInput).map((a) => ({
     groupe: groupLabel(a.group),
     series_2_dernieres_semaines: a.recent.map(round1),
     seuil: a.threshold,
     texte: `${groupLabel(a.group)} : ${alertFigures(a)}`.replace(/ | /g, ' '),
-    ...(shownAlert?.group === a.group ? { affichee_dans_l_appli: true } : {}),
+    ...(shown.has(a.group) ? { affichee_dans_l_appli: true } : {}),
     ...(input.ignoredAlerts[a.group] === a.week ? { ignoree_sur_l_appareil: true } : {}),
   }));
   const difficulty = analyzeProgress(replay.evaluations, replay.profile)

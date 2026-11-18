@@ -96,6 +96,8 @@ describe('Bilans en séries (§19.7, version 1.45.0)', () => {
       'Triceps : 5,5 séries (1 séance)',
       'Jambes : 9 séries (1 séance, +1 indirect, +50 min cardio)',
       'Non travaillés : Dos, Biceps',
+      // Version 1.52.1 : l'alerte de cette semaine terminée, tous les groupes sous 6 séries cette semaine et la précédente.
+      'Dos, Biceps, Épaules, Triceps : sous 6 séries ces 2 semaines (Dos 0 et 0, Biceps 0 et 0, Épaules 0 et 5,5, Triceps 0 et 5,5)',
     ]);
     expect(lines.join('\n')).not.toMatch(/1×|½/);
     expect(legCardioSentence(50)).toBe('Jambes : +3 séries pour 50 min de cardio.');
