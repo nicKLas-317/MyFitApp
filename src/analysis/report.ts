@@ -17,7 +17,6 @@ import { computeRecords, formatRecord, type RecordBreak } from './records';
 import { groupScore, groupSeries, groupWork, LEG_CARDIO_GROUP, legCardioWeek, setsLabel, workParts } from './weekly';
 import { containsTime, inPeriod, mailSubject, periodLastDay, shiftPeriod, type ReportPeriod } from './reportPeriod';
 
-const WEEKDAY = new Intl.DateTimeFormat('fr-FR', { weekday: 'short' });
 const WEEKDAY_DAY_MONTH = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
 
 export interface PeriodTotals {
@@ -29,34 +28,28 @@ export interface PeriodTotals {
   homeCount?: number;
   /** Durée totale des séances à la salle dont le début et la fin sont connus. */
   durationMs: number;
-  /** Séances à la salle sans heure de début ou de fin (import) : durée inconnue, jamais comptée pour 0 min. */
+  /**
+   * Séances à la salle sans heure de début ou de fin (import) : durée inconnue, signalée (« 2 séances sans durée ») ;
+   * dans la comparaison de durée, elles comptent pour 0 (version 1.50.0).
+   */
   unknownDuration: number;
 }
 
 /**
- * Intervalle de comparaison : la période précédente entière pour une période terminée ; pour une période en cours, la
- * même portion de la précédente (du lundi au même jour de la semaine, du 1er au même jour du mois).
+ * Intervalle de comparaison (version 1.50.0) : la période précédente entière, que la période soit terminée ou en cours
+ * (en début de mois ou de semaine, les écarts sont négatifs et se rattrapent au fil de la période). Avant, une période
+ * en cours était comparée à la même portion de la précédente (du 1er au même jour du mois).
  */
 export interface ComparedSpan {
   start: Date;
-  /** Lendemain du dernier jour compris, 0 h 00 (borne exclue). */
+  /** Premier jour de la période comparée suivante, 0 h 00 (borne exclue). */
   next: Date;
-  /** Seulement une portion de la période précédente. */
-  partial: boolean;
 }
 
-/** Portion de la période précédente à comparer avec `period`, arrêtée au jour `asOf`. */
-export function comparedSpan(period: ReportPeriod, asOf: Date, inProgress: boolean): ComparedSpan {
+/** Période précédente entière, comparée à `period`. */
+export function comparedSpan(period: ReportPeriod): ComparedSpan {
   const previous = shiftPeriod(period, -1);
-  if (!inProgress) return { start: previous.start, next: previous.next, partial: false };
-  // Jours entiers écoulés depuis le premier jour de la période, jour de `asOf` compris.
-  const day = new Date(asOf.getFullYear(), asOf.getMonth(), asOf.getDate());
-  const days = Math.max(1, Math.round((day.getTime() - period.start.getTime()) / 86_400_000) + 1);
-  const start = previous.start;
-  // Sans dépasser la fin de la période précédente : le 31 mars est comparé à tout février.
-  const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + days);
-  const next = end < previous.next ? end : previous.next;
-  return { start: previous.start, next, partial: next.getTime() < previous.next.getTime() };
+  return { start: previous.start, next: previous.next };
 }
 
 export interface ReportProgression {
@@ -301,7 +294,7 @@ export function buildReport(period: ReportPeriod, input: ReportInput): PeriodRep
   const firstSession = finished.length > 0 ? Math.min(...finished.map(sessionStartTime)) : null;
   const inProgress = now < period.next.getTime();
   const asOf = new Date(Math.min(now, period.next.getTime() - 1));
-  const compared = comparedSpan(period, asOf, inProgress);
+  const compared = comparedSpan(period);
   return {
     period,
     inProgress,
@@ -345,21 +338,11 @@ export function lineText(line: ReportLine): string {
 export const load = (kg: number, assisted: boolean, dumbbell = false) => (kg === 0 ? '' : formatLoad(kg, assisted, dumbbell));
 
 /**
- * Ce à quoi la période est comparée : « à la semaine précédente », ou pour une période en cours la même portion de la
- * précédente, « à lun.–ven. de la semaine dernière », « au 1er–23 du mois dernier ».
+ * Ce à quoi la période est comparée (version 1.50.0) : toujours la période précédente entière, « au mois dernier »,
+ * « à la semaine dernière », même pour une période en cours.
  */
 export function comparedTo(report: PeriodReport): { with: string; same: string } {
-  const { compared } = report;
-  const week = report.period.kind === 'week';
-  if (!compared.partial) return week ? { with: 'à la semaine précédente', same: 'la semaine précédente' } : { with: 'au mois précédent', same: 'le mois précédent' };
-  const last = new Date(compared.next);
-  last.setDate(last.getDate() - 1);
-  if (week) {
-    const days = last.getTime() === compared.start.getTime() ? WEEKDAY.format(last) : `${WEEKDAY.format(compared.start)}–${WEEKDAY.format(last)}`;
-    return { with: `à ${days} de la semaine dernière`, same: `${days} de la semaine dernière` };
-  }
-  const days = last.getDate() === 1 ? '1er' : `1er–${last.getDate()}`;
-  return { with: `au ${days} du mois dernier`, same: `le ${days} du mois dernier` };
+  return report.period.kind === 'week' ? { with: 'à la semaine dernière', same: 'la semaine dernière' } : { with: 'au mois dernier', same: 'le mois dernier' };
 }
 
 /** « +1 », « −2 », ou null à égalité. */
@@ -389,13 +372,15 @@ export function reportSections(report: PeriodReport, variantName: (variantId: st
   // Durée en salle : séances à la salle seulement (la durée à la maison n'a pas d'importance).
   const gym = totals.sessionCount - (totals.homeCount ?? 0);
   if (gym > 0 || previous.sessionCount - (previous.homeCount ?? 0) > 0) {
-    // Séances à heures connues seulement ; une séance importée sans heure ne compte jamais pour 0 min.
+    // Séances à heures connues seulement ; une séance importée sans heure est signalée, jamais affichée « 0 min ».
     const known = gym - totals.unknownDuration;
     const unknown = totals.unknownDuration > 0 ? ` (${plural(totals.unknownDuration, 'séance sans durée', 'séances sans durée')})` : '';
     const line: ReportLine = [`Durée en salle : ${known > 0 || gym === 0 ? formatDurationLong(totals.durationMs) : 'inconnue'}${unknown}`];
-    // Comparaison seulement si toutes les durées des deux périodes sont connues.
-    if (!report.first && totals.unknownDuration === 0 && previous.unknownDuration === 0) {
-      line.push(', ', em(compare(signed(Math.round((totals.durationMs - previous.durationMs) / 60_000), formatMinutes))));
+    // Toujours comparée (version 1.50.0) : somme des durées connues, une séance sans durée comptant pour 0 ; écart entre
+    // les durées affichées (arrondies à la minute), comme la tuile de l'écran.
+    if (!report.first) {
+      const minutes = (ms: number) => Math.round(ms / 60_000);
+      line.push(', ', em(compare(signed(minutes(totals.durationMs) - minutes(previous.durationMs), formatMinutes))));
     }
     sessionsLines.push(line);
   }

@@ -106,7 +106,7 @@ async function noOverflow(page: Page): Promise<void> {
 }
 
 test.describe('Bilan de la période, version 1.35.0', () => {
-  test('285. Tuiles comparées (même portion en cours, rien la première période), bâtons des groupes en séries, calendrier du mois, échelles de cycle ; texte du mail', async ({ page }) => {
+  test('285. Tuiles comparées (période précédente entière, même en cours ; rien la première période), bâtons des groupes en séries, calendrier du mois, échelles de cycle ; texte du mail', async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-11-02T09:00:00'));
     await page.goto('./');
     await writeSessions(page, SESSIONS);
@@ -115,7 +115,7 @@ test.describe('Bilan de la période, version 1.35.0', () => {
 
     // Semaine du 19 : tuiles comparées à la semaine précédente (une séance, 10 min de cardio, aucune activité).
     await page.goto('./#/bilan-periode/semaine/2026-10-19');
-    await expect(page.getByTestId('report-reference')).toHaveText('Par rapport à la semaine précédente');
+    await expect(page.getByTestId('report-reference')).toHaveText('Par rapport à la semaine dernière');
     await expect(tile(page, 'Séances')).toHaveText(/^Séances3dont\s2 à la maison▲ \+2$/);
     await expect(tile(page, 'Durée en salle')).toHaveText(/^Durée en salle1\sh\s00.*= autant$/);
     await expect(tile(page, 'Cardio')).toHaveText(/^Cardio20\smin.*▲ \+10\smin$/);
@@ -148,7 +148,7 @@ test.describe('Bilan de la période, version 1.35.0', () => {
     await expect(card('Planche').getByTestId('ladder')).toHaveAttribute('aria-hidden', 'true');
     // Le mail : phrases et comparaisons ; groupes en séries, puis le détail (version 1.45.0).
     const text = (await page.getByTestId('report-text').textContent())!;
-    expect(text).toContain('SÉANCES\n- 3 séances (dont 2 à la maison), +2 par rapport à la semaine précédente\n- Durée en salle : 1 h 00, autant que la semaine précédente\n- Cardio : 20 min (Tapis de marche 20 min)\n- Activités : Futsal ×1, 1 h 00\n');
+    expect(text).toContain('SÉANCES\n- 3 séances (dont 2 à la maison), +2 par rapport à la semaine dernière\n- Durée en salle : 1 h 00, autant que la semaine dernière\n- Cardio : 20 min (Tapis de marche 20 min)\n- Activités : Futsal ×1, 1 h 00\n');
     expect(text).toContain('- Pectoraux : 14 séries (1 séance, +11 séries maison)\n');
     await noOverflow(page);
     await test.info().attach('bilan-semaine', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
@@ -184,11 +184,11 @@ test.describe('Bilan de la période, version 1.35.0', () => {
     expect((await groupRow(page, 'pectoraux')).cells).toEqual(['2', '', '14']);
     await noOverflow(page);
 
-    // Semaine en cours (vendredi 30) : comparée à lun.–ven. de la semaine dernière ; pas de calendrier.
+    // Semaine en cours (vendredi 30) : comparée à toute la semaine dernière (version 1.50.0) ; pas de calendrier.
     await page.clock.setFixedTime(new Date('2026-10-30T21:00:00'));
     await page.goto('./#/bilan-periode/semaine/2026-10-26');
     await reloadAfterWrites(page);
-    await expect(page.getByTestId('report-reference')).toHaveText('Par rapport à lun.–ven. de la semaine dernière');
+    await expect(page.getByTestId('report-reference')).toHaveText('Par rapport à la semaine dernière');
     await expect(tile(page, 'Séances')).toHaveText(/^Séances1dont\s1 à la maison▼ −2$/);
     await expect(page.getByTestId('report-calendar')).toHaveCount(0);
     await noOverflow(page);

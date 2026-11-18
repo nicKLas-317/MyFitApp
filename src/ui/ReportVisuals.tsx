@@ -107,7 +107,10 @@ function MonthCalendar({ report, screen }: { report: PeriodReport; screen: Repor
   );
 }
 
-/** Séances : calendrier (mois), puis quatre tuiles comparées à la période précédente (même portion en cours). */
+/**
+ * Séances : calendrier (mois), puis quatre tuiles comparées à la période précédente entière, même en cours (version
+ * 1.50.0) ; durée en salle toujours comparée, une séance sans durée comptant pour 0.
+ */
 export function ReportSessions({ report, screen }: { report: PeriodReport; screen: ReportScreen }) {
   const { totals, previous } = report;
   const week = report.period.kind === 'week';
@@ -115,7 +118,6 @@ export function ReportSessions({ report, screen }: { report: PeriodReport; scree
   const gym = totals.sessionCount - (totals.homeCount ?? 0);
   const prevGym = previous.sessionCount - (previous.homeCount ?? 0);
   const known = gym - totals.unknownDuration;
-  const comparable = totals.unknownDuration === 0 && previous.unknownDuration === 0;
   const minutes = (ms: number) => Math.round(ms / 60_000);
   const reference = report.first ? (week ? 'Première semaine suivie' : 'Premier mois suivi') : `Par rapport ${comparedTo(report).with}`;
   return (
@@ -135,7 +137,7 @@ export function ReportSessions({ report, screen }: { report: PeriodReport; scree
             value={known > 0 || gym === 0 ? formatDurationLong(totals.durationMs) : 'inconnue'}
             sub={totals.unknownDuration > 0 ? `+ ${plural(totals.unknownDuration, 'séance sans durée', 'séances sans durée')}` : gym > 0 ? `${plural(gym, 'séance')} à la salle` : ''}
           >
-            {compare && (comparable ? <Delta diff={minutes(totals.durationMs) - minutes(previous.durationMs)} format={formatMinutes} /> : <span className="kpi-sub">pas de comparaison</span>)}
+            {compare && <Delta diff={minutes(totals.durationMs) - minutes(previous.durationMs)} format={formatMinutes} />}
           </Tile>
         )}
         {(totals.sessionCount > 0 || screen.cardio.before > 0) && (

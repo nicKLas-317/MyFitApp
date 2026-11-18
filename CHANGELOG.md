@@ -4,6 +4,14 @@ Ce qui a changé à chaque version de MyFitApp, de la plus récente à la plus a
 
 Les commits sans changement de numéro (documentation, tests, workflow) sont rangés sous la version en cours à ce moment-là.
 
+## 1.50.0 — 18 nov. 2026
+
+- Bilans de la semaine et du mois : une période en cours est comparée à la période précédente entière, comme une période terminée, pour tous les chiffres comparés (séances, durée en salle, cardio, activités), à l'écran comme dans le mail. Novembre au 17 : badminton ×1 contre futsal ×1 sur tout octobre, « = autant » ; en début de mois ou de semaine, les écarts sont négatifs et se rattrapent au fil de la période
+- Libellé simple, sans date : « Par rapport au mois dernier » / « Par rapport à la semaine dernière » à l'écran ; « par rapport au mois dernier », « autant que la semaine dernière »… dans le mail, aussi pour une période terminée
+- Durée en salle toujours comparée, sur la somme des durées connues ; une séance sans durée (importée sans heure) compte pour 0 et reste signalée (« 2 séances sans durée »). Plus de « pas de comparaison ». Dans le mail, l'écart est désormais celui des durées affichées, arrondies à la minute, comme à l'écran (« 4 h 02 » contre « 4 h 14 » : −12 min, et non −13)
+- Historique : de la version 1.21.3 à la version 1.49.3, une période en cours était comparée à la même portion de la précédente (« par rapport au 1er–17 du mois dernier », « à lun.–ven. de la semaine dernière »), une période terminée « à la semaine précédente » / « au mois précédent », et la durée n'était pas comparée dès qu'une séance des deux intervalles était sans durée
+- Tests : 318 (unitaire et bout en bout) ; 191, 237, 256, 284, 194 et 285 adaptés ; 225 : bilan de la semaine avec une séance sans durée
+
 ## 1.49.3 — 18 nov. 2026
 
 - Découpage de `src/analysis/report.ts` (766 lignes), sans changement de comportement : périodes des bilans (semaine, mois, clés, titres, objet du mail, période par défaut) dans `src/analysis/reportPeriod.ts`, réglages des bilans et bilans à signaler dans `src/analysis/reportSettings.ts`, données de l'écran du bilan (tuiles, bâtons, calendrier, échelles) dans `src/analysis/reportScreen.ts` ; `report.ts` (504 lignes) garde le calcul du bilan, ses sections et le texte du mail. Préalable à la version 1.50.0 (règle des gros fichiers, CLAUDE.md §0) ; `report.ts` sort de la liste

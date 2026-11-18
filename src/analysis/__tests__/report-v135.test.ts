@@ -64,9 +64,9 @@ describe('Écran du bilan, version 1.35.0', () => {
     const w19 = screenOf(week('2026-10-19'));
     expect(w19.report.first).toBe(false);
     expect(w19.screen).toMatchObject({ cardio: { now: 20, before: 10 }, activities: { now: 1, before: 0 } });
-    // Semaine en cours (vendredi 23 au soir) : comparée à lun.–ven. de la semaine précédente (même portion).
+    // Semaine en cours (vendredi 23 au soir) : comparée à toute la semaine précédente (version 1.50.0).
     const inProgress = screenOf(week('2026-10-19'), oct(23, 22));
-    expect(inProgress.report.compared.partial).toBe(true);
+    expect(inProgress.report.compared).toEqual(w19.report.compared);
     expect(inProgress.report.first).toBe(false);
     expect(inProgress.screen).toMatchObject({ cardio: { now: 20, before: 10 }, activities: { now: 1, before: 0 } });
 
@@ -94,7 +94,7 @@ describe('Écran du bilan, version 1.35.0', () => {
     expect(oc.screen.ladders).toHaveLength(oc.report.progressions.length);
 
     // Le texte du mail ne dépend pas de l'écran (première période : test 286).
-    expect(reportText(w19.report, name)).toContain('- 3 séances (dont 2 à la maison), +2 par rapport à la semaine précédente\n');
+    expect(reportText(w19.report, name)).toContain('- 3 séances (dont 2 à la maison), +2 par rapport à la semaine dernière\n');
 
     // Échelles : exercice à charge, toute la plage puis « +kg » (« −aide » s'il est assisté).
     const loaded = { minReps: 8, maxReps: 12, step: 1, bodyweight: false };
@@ -134,19 +134,19 @@ describe('Écran du bilan, version 1.35.0', () => {
     const before = reportText({ ...oc, first: false }, name).split('\n');
     const diff = text.split('\n').map((l, i) => [l, before[i]]).filter(([a, b]) => a !== b);
     expect(diff).toEqual([
-      ['- 5 séances (dont 3 à la maison), premier mois suivi', '- 5 séances (dont 3 à la maison), +5 par rapport au mois précédent'],
-      ['- Durée en salle : 2 h 00', '- Durée en salle : 2 h 00, +2 h 00 par rapport au mois précédent'],
+      ['- 5 séances (dont 3 à la maison), premier mois suivi', '- 5 séances (dont 3 à la maison), +5 par rapport au mois dernier'],
+      ['- Durée en salle : 2 h 00', '- Durée en salle : 2 h 00, +2 h 00 par rapport au mois dernier'],
     ]);
     // Semaine du 12 (première), en cours ou terminée.
     expect(reportText(screenOf(week('2026-10-12')).report, name)).toContain('- 1 séance, première semaine suivie\n- Durée en salle : 1 h 00\n');
     expect(reportText(screenOf(week('2026-10-12'), oct(14, 20)).report, name)).toContain('(Semaine en cours, arrêtée au mer. 14 oct.)\n\nSÉANCES\n- 1 séance, première semaine suivie\n');
     // Une semaine entièrement avant la première séance n'est pas « suivie » : comparaison comme avant.
     expect(screenOf(week('2026-10-05')).report.first).toBe(false);
-    expect(reportText(screenOf(week('2026-10-05')).report, name)).toContain('- 0 séance, autant que la semaine précédente\n');
+    expect(reportText(screenOf(week('2026-10-05')).report, name)).toContain('- 0 séance, autant que la semaine dernière\n');
     // La semaine suivante est comparée, comme avant ; sans aucune séance, jamais « première ».
     expect(screenOf(week('2026-10-19')).report.first).toBe(false);
     const empty = buildReport(week('2026-10-19'), { sessions: [], exercises: LIB, evaluations: [], settings: SETTINGS, groups: DEFAULT_RECAP_SETTINGS.groups, weighIns: [], now: oct(30) });
     expect(empty.first).toBe(false);
-    expect(reportText(empty, name)).toContain('- 0 séance, autant que la semaine précédente\n');
+    expect(reportText(empty, name)).toContain('- 0 séance, autant que la semaine dernière\n');
   });
 });

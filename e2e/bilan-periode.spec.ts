@@ -115,7 +115,7 @@ test.describe('Bilans de la semaine et du mois (§19.7)', () => {
     const section = (title: string) => page.getByRole('region', { name: title });
     // Version 1.35.0 : séances en tuiles comparées à la semaine précédente, groupes en barres, progressions en échelles.
     const tile = (label: string) => section('Séances').locator(`[data-testid="report-tile"][data-label="${label}"]`);
-    await expect(page.getByTestId('report-reference')).toHaveText('Par rapport à la semaine précédente');
+    await expect(page.getByTestId('report-reference')).toHaveText('Par rapport à la semaine dernière');
     await expect(tile('Séances')).toHaveText(/^Séances4.*▲ \+1$/);
     await expect(tile('Cardio')).toContainText('40\u00a0min');
     await expect(tile('Cardio')).toContainText('Tapis de marche 30\u00a0min · Rameur 10\u00a0min');
@@ -171,9 +171,9 @@ test.describe('Bilans de la semaine et du mois (§19.7)', () => {
     await page.getByRole('button', { name: 'Semaine suivante' }).click();
     await expect(page.getByTestId('report-title')).toHaveText('Semaine du 26 oct. au 1 nov. 2026');
     await expect(page.locator('.report-heading')).toContainText('Semaine en cours, arrêtée au lun. 26 oct.');
-    // Semaine en cours : comparée à la même portion de la précédente (le lundi seul ; la séance du 20 n'y est pas).
-    await expect(page.getByTestId('report-reference')).toHaveText('Par rapport à lun. de la semaine dernière');
-    await expect(tile('Séances')).toHaveText(/^Séances0.*= autant$/);
+    // Semaine en cours : comparée à toute la semaine précédente (version 1.50.0) ; le lundi, l'écart est négatif.
+    await expect(page.getByTestId('report-reference')).toHaveText('Par rapport à la semaine dernière');
+    await expect(tile('Séances')).toHaveText(/^Séances0.*▼ −4$/);
     await expect(page.getByRole('button', { name: 'Semaine suivante' })).toHaveCount(0);
     // Onglet Mois : mois en cours (il contient des séances), comparé au mois précédent.
     await page.getByRole('button', { name: 'Mois', exact: true }).click();

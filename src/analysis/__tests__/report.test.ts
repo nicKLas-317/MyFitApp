@@ -120,12 +120,12 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
     expect(textSections(r)).toEqual([
       {
         title: 'Séances',
-        lines: ['0 séance, −3 par rapport à la semaine précédente', 'Durée en salle : 0 min, −3 h 00 par rapport à la semaine précédente'],
+        lines: ['0 séance, −3 par rapport à la semaine dernière', 'Durée en salle : 0 min, −3 h 00 par rapport à la semaine dernière'],
       },
       { title: 'Poids', lines: ['80,2 kg le 19 oct. → 79,6 kg le 25 oct.'] },
     ]);
     const empty = report(WEEK, [], oct(26, 9));
-    expect(textSections(empty)).toEqual([{ title: 'Séances', lines: ['0 séance, autant que la semaine précédente'] }]);
+    expect(textSections(empty)).toEqual([{ title: 'Séances', lines: ['0 séance, autant que la semaine dernière'] }]);
     // Une seule pesée : une seule valeur.
     expect(linesOf(report(WEEK, [], oct(26, 9), [{ date: '2026-10-22', weightKg: 80 }]), 'Poids')).toEqual(['80 kg le 22 oct.']);
   });
@@ -191,8 +191,8 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
     const sessions = octoberHistory();
     const r = report(WEEK, sessions, oct(26, 9));
     expect(linesOf(r, 'Séances')).toEqual([
-      '4 séances, +1 par rapport à la semaine précédente',
-      'Durée en salle : 4 h 00, +1 h 00 par rapport à la semaine précédente',
+      '4 séances, +1 par rapport à la semaine dernière',
+      'Durée en salle : 4 h 00, +1 h 00 par rapport à la semaine dernière',
       'Cardio : 40 min (Tapis de marche 30 min, Rameur 10 min)',
     ]);
     // Version 1.45.0 : total en séries (directes, indirectes ÷ 2), puis le détail en séances.
@@ -203,21 +203,21 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
       'Jambes : 9 séries (3 séances)',
       'Non travaillés : Épaules, Triceps',
     ]);
-    // Moins de séances, autant, durée plus courte, séance importée sans heure.
+    // Moins de séances, autant, durée plus courte, séance importée sans heure (comptée pour 0, version 1.50.0).
     const fewer = report(WEEK, [...sessions.slice(0, 3), session(oct(20), [green('pec-deck', 30)], { minutes: 25 }), session(oct(22), [green('pec-deck', 30)], { noTime: true })], oct(26, 9));
     expect(linesOf(fewer, 'Séances')!.slice(0, 2)).toEqual([
-      '2 séances, −1 par rapport à la semaine précédente',
-      'Durée en salle : 25 min (1 séance sans durée)',
+      '2 séances, −1 par rapport à la semaine dernière',
+      'Durée en salle : 25 min (1 séance sans durée), −2 h 35 par rapport à la semaine dernière',
     ]);
     const same = report(WEEK, [...sessions.slice(0, 3), ...[20, 21, 22].map((d) => session(oct(d), [green('pec-deck', 30)]))], oct(26, 9));
     expect(linesOf(same, 'Séances')!.slice(0, 3)).toEqual([
-      '3 séances, autant que la semaine précédente',
-      'Durée en salle : 3 h 00, autant que la semaine précédente',
+      '3 séances, autant que la semaine dernière',
+      'Durée en salle : 3 h 00, autant que la semaine dernière',
       'Cardio : aucun',
     ]);
     // Mois : séries et séances par groupe sur tout le mois, comparaison avec le mois précédent.
     const month = report(periodContaining('month', oct(1)), [session(at(9, 30), [green('pec-deck', 30)]), ...sessions], at(11, 2));
-    expect(linesOf(month, 'Séances')![0]).toBe('7 séances, +6 par rapport au mois précédent');
+    expect(linesOf(month, 'Séances')![0]).toBe('7 séances, +6 par rapport au mois dernier');
     expect(linesOf(month, 'Groupes travaillés')).toEqual([
       'Pectoraux : 3 séries (1 séance)',
       'Dos : 6 séries (2 séances)',
@@ -227,51 +227,43 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
     ]);
   });
 
-  it('237. Durées inconnues jamais comptées pour 0 min ; période en cours comparée à la même portion de la précédente ; période terminée à la précédente entière', () => {
+  it('237. Durées inconnues signalées, jamais affichées 0 min, comptées pour 0 dans la comparaison ; période en cours comparée à la précédente entière (version 1.50.0)', () => {
     // Cas réel : semaine précédente avec deux séances importées sans heure (lun. 12, jeu. 15) et une de 40 min (sam. 17).
     const imported = [session(oct(12), [green('pec-deck', 30)], { noTime: true }), session(oct(15), [green('pec-deck', 30)], { noTime: true }), session(oct(17), [green('pec-deck', 30)], { minutes: 40 })];
     const current = [...imported, session(oct(20), [green('pec-deck', 30)], { minutes: 62 })];
-    // Vendredi 23 en cours : comparé à lun.–ven. de la semaine dernière (12 et 15, pas le 17) ; durée sans comparaison.
+    // Vendredi 23 en cours : comparé à toute la semaine dernière (12, 15 et 17) ; durée comparée, les séances importées
+    // sans heure comptant pour 0 : 1 h 02 contre 40 min.
     const friday = report(WEEK, current, oct(23, 12, 40));
-    expect(friday.compared).toEqual({ start: new Date(2026, 9, 12), next: new Date(2026, 9, 17), partial: true });
-    expect(linesOf(friday, 'Séances')).toEqual(['1 séance, −1 par rapport à lun.–ven. de la semaine dernière', 'Durée en salle : 1 h 02', 'Cardio : aucun']);
+    expect(friday.compared).toEqual({ start: new Date(2026, 9, 12), next: new Date(2026, 9, 19) });
+    expect(linesOf(friday, 'Séances')).toEqual(['1 séance, −2 par rapport à la semaine dernière', 'Durée en salle : 1 h 02, +22 min par rapport à la semaine dernière', 'Cardio : aucun']);
     // Le mail suit les mêmes règles.
-    expect(reportText(friday, name)).toContain('\n- 1 séance, −1 par rapport à lun.–ven. de la semaine dernière\n- Durée en salle : 1 h 02\n');
-    // Semaine terminée : comparée à toute la semaine précédente ; toujours pas de comparaison de durée.
+    expect(reportText(friday, name)).toContain('\n- 1 séance, −2 par rapport à la semaine dernière\n- Durée en salle : 1 h 02, +22 min par rapport à la semaine dernière\n');
+    // Semaine terminée : la même comparaison.
     const finished = report(WEEK, current, oct(26, 9));
-    expect(finished.compared).toEqual({ start: new Date(2026, 9, 12), next: new Date(2026, 9, 19), partial: false });
-    expect(linesOf(finished, 'Séances')!.slice(0, 2)).toEqual(['1 séance, −2 par rapport à la semaine précédente', 'Durée en salle : 1 h 02']);
-    // Séance sans durée dans la période : signalée, jamais 0 min ; toutes inconnues : « inconnue ».
+    expect(finished.compared).toEqual(friday.compared);
+    expect(linesOf(finished, 'Séances')!.slice(0, 2)).toEqual(linesOf(friday, 'Séances')!.slice(0, 2));
+    // Séance sans durée dans la période : signalée, jamais 0 min ; toutes inconnues : « inconnue » ; durée comparée.
     const withImport = report(WEEK, [...current, session(oct(21), [green('pec-deck', 30)], { noTime: true })], oct(23, 12, 40));
-    expect(linesOf(withImport, 'Séances')!.slice(0, 2)).toEqual(['2 séances, autant que lun.–ven. de la semaine dernière', 'Durée en salle : 1 h 02 (1 séance sans durée)']);
+    expect(linesOf(withImport, 'Séances')!.slice(0, 2)).toEqual(['2 séances, −1 par rapport à la semaine dernière', 'Durée en salle : 1 h 02 (1 séance sans durée), +22 min par rapport à la semaine dernière']);
     const allUnknown = report(WEEK, [...imported, ...[21, 22].map((d) => session(oct(d), [green('pec-deck', 30)], { noTime: true }))], oct(26, 9));
-    expect(linesOf(allUnknown, 'Séances')!.slice(0, 2)).toEqual(['2 séances, −1 par rapport à la semaine précédente', 'Durée en salle : inconnue (2 séances sans durée)']);
+    expect(linesOf(allUnknown, 'Séances')!.slice(0, 2)).toEqual(['2 séances, −1 par rapport à la semaine dernière', 'Durée en salle : inconnue (2 séances sans durée), −40 min par rapport à la semaine dernière']);
 
-    // Toutes les durées connues des deux côtés : durée comparée, sur la même portion ; mise en évidence.
+    // Durées connues des deux côtés : mise en évidence de la comparaison.
     const known = [session(oct(13), [green('pec-deck', 30)]), session(oct(17), [green('pec-deck', 30)]), session(oct(20), [green('pec-deck', 30)], { minutes: 62 })];
-    const partial = report(WEEK, known, oct(23, 12, 40));
-    expect(linesOf(partial, 'Séances')!.slice(0, 2)).toEqual([
-      '1 séance, autant que lun.–ven. de la semaine dernière',
-      'Durée en salle : 1 h 02, +2 min par rapport à lun.–ven. de la semaine dernière',
+    const inProgress = report(WEEK, known, oct(23, 12, 40));
+    expect(linesOf(inProgress, 'Séances')!.slice(0, 2)).toEqual(['1 séance, −1 par rapport à la semaine dernière', 'Durée en salle : 1 h 02, −58 min par rapport à la semaine dernière']);
+    expect(reportSections(inProgress, name)[0]!.lines[1]).toEqual(['Durée en salle : 1 h 02', ', ', { em: '−58 min par rapport à la semaine dernière' }]);
+    // Lundi soir sans séance : écart négatif, rattrapé au fil de la semaine.
+    expect(linesOf(report(WEEK, known.slice(0, 2), oct(19, 20)), 'Séances')!.slice(0, 2)).toEqual([
+      '0 séance, −2 par rapport à la semaine dernière',
+      'Durée en salle : 0 min, −2 h 00 par rapport à la semaine dernière',
     ]);
-    expect(reportSections(partial, name)[0]!.lines[1]).toEqual(['Durée en salle : 1 h 02', ', ', { em: '+2 min par rapport à lun.–ven. de la semaine dernière' }]);
-    expect(linesOf(report(WEEK, known, oct(26, 9)), 'Séances')!.slice(0, 2)).toEqual([
-      '1 séance, −1 par rapport à la semaine précédente',
-      'Durée en salle : 1 h 02, −58 min par rapport à la semaine précédente',
-    ]);
-    // Lundi : un seul jour ; dimanche : la semaine précédente entière.
-    expect(linesOf(report(WEEK, [session(oct(12), [green('pec-deck', 30)]), session(oct(19), [green('pec-deck', 30)])], oct(19, 20)), 'Séances')![0]).toBe(
-      '1 séance, autant que lun. de la semaine dernière',
-    );
-    expect(linesOf(report(WEEK, known, oct(25, 12)), 'Séances')![0]).toBe('1 séance, −1 par rapport à la semaine précédente');
 
-    // Mois en cours : du 1er au même jour du mois dernier ; le 31 octobre est comparé à tout septembre (30 jours).
+    // Mois en cours : comparé à tout le mois dernier, le 1er comme le 23 ou le 31.
     const OCTOBER = periodContaining('month', oct(1));
     const months = [at(9, 1), at(9, 5), at(9, 20), at(9, 28), oct(1), oct(2)].map((t) => session(t, [green('pec-deck', 30)]));
-    expect(linesOf(report(OCTOBER, months, oct(23, 12)), 'Séances')![0]).toBe('2 séances, −1 par rapport au 1er–23 du mois dernier');
-    expect(linesOf(report(OCTOBER, months.slice(0, 5), oct(1, 20)), 'Séances')![0]).toBe('1 séance, autant que le 1er du mois dernier');
-    expect(linesOf(report(OCTOBER, months, oct(31, 12)), 'Séances')![0]).toBe('2 séances, −2 par rapport au mois précédent');
-    expect(linesOf(report(OCTOBER, months, at(11, 2)), 'Séances')![0]).toBe('2 séances, −2 par rapport au mois précédent');
+    expect(linesOf(report(OCTOBER, months.slice(0, 5), oct(1, 20)), 'Séances')![0]).toBe('1 séance, −3 par rapport au mois dernier');
+    for (const now of [oct(23, 12), oct(31, 12), at(11, 2)]) expect(linesOf(report(OCTOBER, months, now), 'Séances')![0]).toBe('2 séances, −2 par rapport au mois dernier');
   });
 
   it('192. Texte du mail : objet, titres, listes simples, sans HTML ; lien mailto prérempli', () => {
@@ -282,8 +274,8 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
         'MyFitApp — Bilan semaine du 19 au 25 oct. 2026',
         '',
         'SÉANCES',
-        '- 4 séances, +1 par rapport à la semaine précédente',
-        '- Durée en salle : 4 h 00, +1 h 00 par rapport à la semaine précédente',
+        '- 4 séances, +1 par rapport à la semaine dernière',
+        '- Durée en salle : 4 h 00, +1 h 00 par rapport à la semaine dernière',
         '- Cardio : 40 min (Tapis de marche 30 min, Rameur 10 min)',
         '',
         'GROUPES TRAVAILLÉS',
@@ -326,7 +318,7 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
       reportSections(r, name).map((s) => [s.title, s.lines.flatMap((l) => l.flatMap((p) => (typeof p === 'string' ? [] : [p.em])))]),
     );
     expect(emphasized).toEqual({
-      Séances: ['+1 par rapport à la semaine précédente', '+1 h 00 par rapport à la semaine précédente'],
+      Séances: ['+1 par rapport à la semaine dernière', '+1 h 00 par rapport à la semaine dernière'],
       'Groupes travaillés': ['Non travaillés : Épaules, Triceps'],
       Progressions: ['3×8 → 3×9 à 12 kg', 'poids supérieur, 3×8', 'moins d’aide, 3×8'],
       Records: [],
@@ -337,7 +329,7 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
     expect(reportText(r, name)).not.toMatch(/[*_<]/);
     // « Autant que » est aussi mis en évidence.
     const same = report(WEEK, [], oct(26, 9));
-    expect(reportSections(same, name)[0]!.lines[0]).toEqual(['0 séance, ', { em: 'autant que la semaine précédente' }]);
+    expect(reportSections(same, name)[0]!.lines[0]).toEqual(['0 séance, ', { em: 'autant que la semaine dernière' }]);
   });
 
   it('193. Bandeau : à partir du lundi ou du 1er, une seule fois par période, seulement avec des séances, désactivable', () => {

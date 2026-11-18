@@ -492,6 +492,19 @@ const SCREENS_225: [string, (page: Page) => Promise<void>][] = [
       await page.goto('./#/bilan-periode/mois/2026-10');
       await expect(page.getByTestId('groups-cardio')).toBeVisible();
     }],
+    // Durée en salle toujours comparée (version 1.50.0) : une séance importée sans heure (jeudi 15) dans la semaine,
+    // « + 1 séance sans durée » et l'écart dans la même tuile.
+    ['Bilan de la semaine, séance sans durée', async (page: Page) => {
+      await page.goto('./');
+      const sessions = await readSessions(page);
+      const thursday = sessions.find((x) => x.id === 'sim-2026-10-15')!;
+      await writeSessions(page, [{ ...thursday, origin: 'import', startedAt: null, endedAt: null }]);
+      await reloadAfterWrites(page);
+      await page.goto('./#/bilan-periode/semaine/2026-10-12');
+      const duration = page.locator('[data-testid="report-tile"][data-label="Durée en salle"]');
+      await expect(duration).toContainText('1 séance sans durée');
+      await expect(duration.locator('.kpi-delta')).toBeVisible();
+    }],
   ];
 
 test.describe('Ergonomie de la saisie et harmonisation du style', () => {
