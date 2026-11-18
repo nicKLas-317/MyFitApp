@@ -1,111 +1,173 @@
 import { describe, expect, it } from 'vitest';
+import type { ActivityRecord } from '../../activities/model';
+import { DEFAULT_CARDIO_MACHINES } from '../../cardio/model';
 import type { Exercise, MuscleGroup, Session } from '../../domain/types';
 import { SEED_EXERCISES } from '../../library/seed';
+import { buildBackup, parseJsonImport } from '../../transfer/backup';
+import { ALERT_MAX, alertFigures, groupAlert, groupAlertCandidates, groupAlerts, ignoreAlert, sanitizeIgnoredAlerts, type AlertInput } from '../groupAlerts';
 import { groupWeeklySets } from '../groups';
-import { ALERT_MAX, alertFigures, groupAlert, groupAlerts, ignoreAlert, sanitizeIgnoredAlerts } from '../groupAlerts';
-import { DEFAULT_RECAP_SETTINGS } from '../weekly';
+import { ALERT_SETS_MAX, ALERT_SETS_MIN, DEFAULT_RECAP_SETTINGS, sanitizeRecapSettings, weeklyRecap } from '../weekly';
 import { ALERT_NOW, alertHistory } from './alertes-simulation';
 
 const LIB: Exercise[] = [...SEED_EXERCISES];
 const GROUPS = DEFAULT_RECAP_SETTINGS.groups;
 const ALL: MuscleGroup[] = ['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes', 'abdominaux'];
 const at = (y: number, m: number, d: number, h = 12, min = 0) => new Date(y, m - 1, d, h, min).getTime();
-const alertsOf = (sessions: Session[], now = ALERT_NOW, groups: readonly MuscleGroup[] = GROUPS) => groupAlerts(sessions, LIB, groups, now).map((a) => a.group);
+const input = (sessions: Session[], extra: Partial<AlertInput> = {}): AlertInput => ({
+  sessions, exercises: LIB, activities: [], machines: DEFAULT_CARDIO_MACHINES, groups: GROUPS, threshold: 6, now: ALERT_NOW, ...extra,
+});
+const alertsOf = (sessions: Session[], extra: Partial<AlertInput> = {}) => groupAlertCandidates(input(sessions, extra)).map((a) => a.group);
+/** Exercice de 3 séries ajouté à la séance du lundi des semaines données. */
+const withExercise = (sessions: Session[], variantId: string, mondays: string[]) =>
+  sessions.map((s) => (mondays.includes(s.date) ? { ...s, performances: [...s.performances, { ...s.performances[0]!, variantId }] } : s));
+const withoutVariant = (sessions: Session[], variantId: string, from: string) =>
+  sessions.map((s) => (s.date >= from ? { ...s, performances: s.performances.filter((p) => p.variantId !== variantId) } : s));
+function activity(name: string, date: string, groups: MuscleGroup[]): ActivityRecord {
+  return { id: `act-${name}-${date}`, habitId: name, date, name, start: '10:00', end: '11:00', groups, status: 'done', answeredAt: 0 };
+}
 
 /** Sources de l'application, hors tests. */
 const APP_SOURCES = import.meta.glob<string>(['../../**/*.{ts,tsx}', '!../../**/__tests__/**'], { query: '?raw', import: 'default', eager: true });
 
-describe('Alerte « groupe moins travaillé », version 1.38.0', () => {
-  it('289. Deux semaines terminées sous la moyenne des semaines d’avant (4 au moins), 6 semaines terminées au total ; vacances comptées, une seule semaine en baisse ou historique trop court : rien', () => {
+describe('Alerte « groupe moins travaillé » (§19.11)', () => {
+  it('289. Données simulées (version 1.51.0) : le dos sous 6 séries les 2 dernières semaines terminées, alerte ; les pectoraux une seule semaine, rien ; semaines terminées seulement ; séance en cours non comptée', () => {
     const sessions = alertHistory();
-    // Dos en baisse 2 semaines : 3 et 3 séries, sous la moyenne des 8 semaines d'avant, vacances comprises (6 × 7 ÷ 8).
-    expect(groupAlert(sessions, LIB, 'dos', ALERT_NOW)).toEqual({ group: 'dos', week: '2026-11-02', recent: [3, 3], average: 5.25 });
-    // Mêmes séries que le graphique « Séries par semaine » (semaine en cours exclue).
-    const graph = groupWeeklySets(sessions, LIB, 'dos', ALERT_NOW).weeks;
-    expect(graph.slice(-3, -1).map((w) => w.total)).toEqual([3, 3]);
-    expect(graph.at(-1)).toMatchObject({ start: '2026-11-09', total: 0 });
-    // Pectoraux en baisse une seule semaine (6 puis 3) : pas d'alerte. Les autres groupes, réguliers : rien.
+    // Dos en baisse 2 semaines : 3 et 3 séries (plus de lombaires), sous le seuil de 6.
+    expect(groupAlert(input(sessions), 'dos')).toEqual({ group: 'dos', week: '2026-11-02', recent: [3, 3], threshold: 6 });
+    // Pectoraux sous le seuil une seule semaine (6 puis 3) : pas d'alerte. Les autres groupes, à 6 ou plus : rien.
     expect(groupWeeklySets(sessions, LIB, 'pectoraux', ALERT_NOW).weeks.slice(-3, -1).map((w) => w.total)).toEqual([6, 3]);
-    expect(groupAlert(sessions, LIB, 'pectoraux', ALERT_NOW)).toBeNull();
-    expect(alertsOf(sessions, ALERT_NOW, ALL)).toEqual(['dos']);
-
-    // Vacances : la semaine vide compte dans la moyenne (comme la moyenne du graphique) ; sans elle, 6.
-    expect(groupAlert(alertHistory({ vacations: [] }), LIB, 'dos', ALERT_NOW)).toMatchObject({ average: 6 });
-    // Vacances les 2 dernières semaines : tous les groupes sous leur moyenne ; 3 lignes au plus, à égalité dans l'ordre des groupes.
-    const away = alertHistory({ vacations: ['2026-10-26', '2026-11-02'], dosDown: [], pecDown: [] });
-    expect(GROUPS.map((g) => groupAlert(away, LIB, g, ALERT_NOW)?.recent)).toEqual(GROUPS.map(() => [0, 0]));
-    expect(alertsOf(away)).toEqual(['pectoraux', 'dos', 'epaules']);
-    expect(ALERT_MAX).toBe(3);
-
-    // Strictement sous la moyenne : une semaine égale à la moyenne n'alerte pas (sans vacances, moyenne du dos 6).
-    expect(groupAlert(alertHistory({ vacations: [], dosDown: ['2026-11-02'] }), LIB, 'dos', ALERT_NOW)).toBeNull();
-
-    // Historique trop court : 5 semaines terminées (du 5 oct. au 2 nov.), le dos en baisse 2 semaines : rien.
-    expect(alertsOf(alertHistory({ from: '2026-10-05' }), ALERT_NOW, ALL)).toEqual([]);
-    // 6 semaines terminées (du 28 sept.), 4 de référence : l'alerte apparaît.
-    expect(groupAlert(alertHistory({ from: '2026-09-28' }), LIB, 'dos', ALERT_NOW)).toMatchObject({ average: 6 });
-    // Groupe commencé tard : moins de 4 semaines de référence (jambes depuis le 12 oct. : 2), rien, même en baisse.
-    const lateLegs = alertHistory().map((s) =>
-      s.date < '2026-10-12' || s.date >= '2026-10-26' ? { ...s, performances: s.performances.filter((p) => p.variantId !== 'presse-a-cuisses') } : s,
-    );
-    expect(groupWeeklySets(lateLegs, LIB, 'jambes', ALERT_NOW).weeks.slice(-3, -1).map((w) => w.total)).toEqual([0, 0]);
-    expect(groupAlert(lateLegs, LIB, 'jambes', ALERT_NOW)).toBeNull();
+    expect(groupAlert(input(sessions), 'pectoraux')).toBeNull();
+    expect(alertsOf(sessions, { groups: ALL })).toEqual(['dos']);
+    // Semaine ordinaire (12 oct.) : aucun groupe sous 6.
+    expect(weeklyRecap(sessions, LIB, at(2026, 10, 18, 23), DEFAULT_RECAP_SETTINGS).cells.map((c) => [c.group, c.score])).toEqual([
+      ['pectoraux', 6], ['dos', 6], ['triceps', 6], ['jambes', 6], ['epaules', 7.5], ['biceps', 7.5],
+    ]);
 
     // Semaines terminées seulement : le dimanche 8 nov. au soir, la semaine du 2 nov. n'est pas finie (19 oct. et
-    // 26 oct. comparés : 6 puis 3) ; le lundi 9 nov. à 0 h 00, l'alerte apparaît.
-    expect(groupAlert(sessions, LIB, 'dos', at(2026, 11, 8, 23, 59))).toBeNull();
-    expect(groupAlert(sessions, LIB, 'dos', at(2026, 11, 9, 0, 0))).toMatchObject({ week: '2026-11-02' });
-    // Une séance en cours ne compte pas : la séance du jeudi 5 nov. encore ouverte ne change rien (le dos reste à 3).
+    // 26 oct. : 6 puis 3) ; le lundi 9 nov. à 0 h 00, l'alerte apparaît.
+    expect(groupAlert(input(sessions, { now: at(2026, 11, 8, 23, 59) }), 'dos')).toBeNull();
+    expect(groupAlert(input(sessions, { now: at(2026, 11, 9, 0, 0) }), 'dos')).toMatchObject({ week: '2026-11-02' });
+    // Une séance en cours ne compte pas : la séance du jeudi 5 nov. encore ouverte, le dos à 0 cette semaine-là.
     const ongoing = sessions.map((s) => (s.date === '2026-11-05' ? { ...s, state: 'active' as const, endedAt: null } : s));
-    expect(groupAlert(ongoing, LIB, 'dos', ALERT_NOW)).toMatchObject({ recent: [3, 0] });
-
-    // Aujourd'hui (3 nov. 2026) avec une première séance en octobre : moins de 6 semaines terminées, aucune alerte.
-    expect(alertsOf(alertHistory({ from: '2026-10-05', until: '2026-11-02' }), at(2026, 11, 3), ALL)).toEqual([]);
+    expect(groupAlert(input(ongoing), 'dos')).toMatchObject({ recent: [3, 0] });
 
     // Données simulées jamais chargées par l'application.
     expect(Object.keys(APP_SOURCES).length).toBeGreaterThan(50);
     expect(Object.entries(APP_SOURCES).filter(([, source]) => source.includes('alertes-simulation')).map(([file]) => file)).toEqual([]);
   });
 
-  it('290. « Ignorer » : masquée jusqu’à une nouvelle semaine encore sous la moyenne ; groupes du récapitulatif ; le plus en retrait d’abord ; mémoire de l’appareil contrôlée', () => {
+  it('290. « Ignorer » : masquée jusqu’à une nouvelle semaine encore sous le seuil, le groupe suivant affiché à sa place ; groupes du récapitulatif ; chiffres ; mémoire de l’appareil contrôlée', () => {
     const sessions = alertHistory();
-    const dos = groupAlerts(sessions, LIB, GROUPS, ALERT_NOW)[0]!;
+    const dos = groupAlerts(input(sessions))[0]!;
     const ignored = ignoreAlert({}, dos);
     expect(ignored).toEqual({ dos: '2026-11-02' });
-    expect(groupAlerts(sessions, LIB, GROUPS, ALERT_NOW, ignored)).toEqual([]);
+    expect(groupAlerts(input(sessions), ignored)).toEqual([]);
     // Toujours ignorée pendant la semaine du 9 nov., même le dimanche soir.
-    expect(groupAlerts(sessions, LIB, GROUPS, at(2026, 11, 15, 23, 59), ignored)).toEqual([]);
-    // Une semaine de plus sous la moyenne (9 nov. : 3 séries) : l'alerte revient, pour la semaine du 9 nov.
+    expect(groupAlerts(input(sessions, { now: at(2026, 11, 15, 23, 59) }), ignored)).toEqual([]);
+    // Une semaine de plus sous le seuil (9 nov. : 3 séries) : l'alerte revient, pour la semaine du 9 nov.
     const longer = alertHistory({ until: '2026-11-16', dosDown: ['2026-10-26', '2026-11-02', '2026-11-09'] });
-    expect(groupAlerts(longer, LIB, GROUPS, at(2026, 11, 18), ignored).map((a) => [a.group, a.week])).toEqual([['dos', '2026-11-09']]);
+    expect(groupAlerts(input(longer, { now: at(2026, 11, 18) }), ignored).map((a) => [a.group, a.week])).toEqual([['dos', '2026-11-09']]);
     // Le dos se reprend (6 séries le 9 nov.) : plus d'alerte, ignorée ou non.
-    expect(groupAlerts(alertHistory({ until: '2026-11-16' }), LIB, GROUPS, at(2026, 11, 18))).toEqual([]);
+    expect(groupAlerts(input(alertHistory({ until: '2026-11-16' }), { now: at(2026, 11, 18) }))).toEqual([]);
+    // Deux groupes sous le seuil : le plus bas affiché ; ignoré, le suivant prend sa place.
+    const both = alertHistory({ pecDown: ['2026-10-26', '2026-11-02'] });
+    const deeper = withoutVariant(both, 'tirage-vertical', '2026-11-02');
+    expect(groupAlerts(input(deeper)).map((a) => a.group)).toEqual(['dos']);
+    expect(groupAlerts(input(deeper), ignoreAlert({}, groupAlerts(input(deeper))[0]!)).map((a) => a.group)).toEqual(['pectoraux']);
 
-    // Seulement les groupes du récapitulatif : sans le dos, rien ; abdominaux seulement s'ils y sont.
-    expect(alertsOf(sessions, ALERT_NOW, ['pectoraux', 'biceps'])).toEqual([]);
-    const abs = sessions.map((s) => (s.date < '2026-10-26' ? { ...s, performances: [...s.performances, { ...s.performances[0]!, variantId: 'crunch-sol', weightKg: 0 }] } : s));
-    expect(alertsOf(abs, ALERT_NOW, GROUPS)).toEqual(['dos']);
-    expect(alertsOf(abs, ALERT_NOW, [...GROUPS, 'abdominaux'])).toEqual(['abdominaux', 'dos']);
+    // Seulement les groupes du récapitulatif : sans le dos, rien.
+    expect(alertsOf(sessions, { groups: ['pectoraux', 'biceps'] })).toEqual([]);
 
-    // Le plus en retrait d'abord (rapport des 2 semaines à la moyenne), puis l'ordre des groupes.
-    const both = alertHistory({ dosDown: ['2026-10-26', '2026-11-02'], pecDown: ['2026-10-26', '2026-11-02'], vacations: [] });
-    // Pectoraux 3 et 3 sur 6 (½), dos 3 et 3 sur 6 (½) : ordre des groupes ; puis le dos à 0.
-    expect(alertsOf(both)).toEqual(['pectoraux', 'dos']);
-    const deeper = both.map((s) => (s.date >= '2026-10-26' ? { ...s, performances: s.performances.filter((p) => p.variantId !== 'tirage-vertical') } : s));
-    expect(alertsOf(deeper)).toEqual(['dos', 'pectoraux', 'biceps']);
-
-    // Chiffres de l'alerte (version 1.38.1) : séries des 2 semaines (en moyenne) et moyenne de l'alerte, une décimale.
-    expect(alertFigures(dos)).toBe('3\u00a0séries par semaine depuis 2\u00a0semaines (ta\u00a0moyenne\u00a0:\u00a05,3)');
-    const figures = (recent: number[], average: number) => alertFigures({ group: 'dos', week: '2026-11-02', recent, average });
-    expect(figures([4, 2], 6)).toBe('3\u00a0séries par semaine depuis 2\u00a0semaines (ta\u00a0moyenne\u00a0:\u00a06)');
-    expect(figures([4.5, 4], 4.75)).toBe('4,3\u00a0séries par semaine depuis 2\u00a0semaines (ta\u00a0moyenne\u00a0:\u00a04,8)');
-    expect(figures([1.5, 0], 1.98)).toBe('0,8\u00a0série par semaine depuis 2\u00a0semaines (ta\u00a0moyenne\u00a0:\u00a02)');
-    expect(figures([0, 0], 1)).toBe('0\u00a0série par semaine depuis 2\u00a0semaines (ta\u00a0moyenne\u00a0:\u00a01)');
-    expect(figures([1.5, 2.5], 3)).toBe('2\u00a0séries par semaine depuis 2\u00a0semaines (ta\u00a0moyenne\u00a0:\u00a03)');
+    // Chiffres de l'alerte (version 1.51.0) : les 2 semaines, la plus ancienne d'abord, et le seuil ; une décimale.
+    expect(alertFigures(dos)).toBe('3 et 3 séries ces 2 semaines (sous 6)');
+    const figures = (recent: number[], threshold = 6) => alertFigures({ group: 'dos', week: '2026-11-02', recent, threshold });
+    expect(figures([4.5, 2])).toBe('4,5 et 2 séries ces 2 semaines (sous 6)');
+    expect(figures([4, 1.5], 5)).toBe('4 et 1,5 séries ces 2 semaines (sous 5)');
+    expect(figures([1.5, 0])).toBe('1,5 et 0 série ces 2 semaines (sous 6)');
+    expect(figures([0, 0], 3)).toBe('0 et 0 série ces 2 semaines (sous 3)');
 
     // Mémoire de l'appareil contrôlée : groupes du sélecteur et lundis seulement.
     expect(sanitizeIgnoredAlerts({ dos: '2026-11-02', quadriceps: '2026-11-02', biceps: 'hier', triceps: 3 })).toEqual({ dos: '2026-11-02' });
     expect(sanitizeIgnoredAlerts(null)).toEqual({});
     expect(sanitizeIgnoredAlerts(['dos'])).toEqual({});
+  });
+
+  it('319. Version 1.51.0 : sous le seuil (6 séries, réglable de 3 à 9) sur chacune des 2 dernières semaines terminées, au score du récapitulatif (activités, cardio des jambes, maison) ; abdominaux jamais ; dès 2 semaines terminées ; une seule alerte, le groupe le plus bas', () => {
+    const sessions = alertHistory();
+
+    // Seuil : strictement sous ; le dos à 3 et 3 n'est pas sous 3, il l'est sous 4. Bornes du réglage.
+    expect(alertsOf(sessions, { threshold: 3 })).toEqual([]);
+    expect(alertsOf(sessions, { threshold: 4 })).toEqual(['dos']);
+    // Seuil de 9 : tous les groupes, le plus bas d'abord : dos 3 + 3, pectoraux 6 + 3, triceps et jambes 6 + 6, épaules
+    // et biceps 7,5 + 7,5 ; à égalité, l'ordre des groupes.
+    expect(alertsOf(sessions, { threshold: 9 })).toEqual(['dos', 'pectoraux', 'triceps', 'jambes', 'epaules', 'biceps']);
+    expect([ALERT_SETS_MIN, ALERT_SETS_MAX, DEFAULT_RECAP_SETTINGS.alertSets]).toEqual([3, 9, 6]);
+    expect(sanitizeRecapSettings({ groups: GROUPS, redSets: 10 }).alertSets).toBe(6);
+    expect(sanitizeRecapSettings({ groups: GROUPS, redSets: 10, alertSets: 3 }).alertSets).toBe(3);
+    expect(sanitizeRecapSettings({ groups: GROUPS, redSets: 10, alertSets: 9 }).alertSets).toBe(9);
+    for (const bad of [2, 10, 4.5, '5', null]) expect(sanitizeRecapSettings({ groups: GROUPS, redSets: 10, alertSets: bad }).alertSets).toBe(6);
+    // Sauvegarde : le réglage est gardé ; une sauvegarde antérieure, sans lui, prend 6.
+    const backup = buildBackup({ sessions, exercises: LIB, settings: { weeklyRecap: { groups: GROUPS, redSets: 10, alertSets: 4 } } }, ALERT_NOW);
+    const restored = parseJsonImport(JSON.stringify(backup), LIB, '2026-11-11');
+    if (restored.kind !== 'backup') throw new Error('sauvegarde illisible');
+    expect(sanitizeRecapSettings(restored.backup.settings.weeklyRecap)).toEqual({ groups: GROUPS, redSets: 10, alertSets: 4 });
+
+    // Même score que le récapitulatif, semaine par semaine : séries directes, indirectes ½, maison, activités, cardio.
+    for (const monday of ['2026-10-26', '2026-11-02']) {
+      const [y, m, d] = monday.split('-').map(Number) as [number, number, number];
+      const cells = weeklyRecap(sessions, LIB, new Date(y, m - 1, d + 6, 23).getTime(), DEFAULT_RECAP_SETTINGS, [], DEFAULT_CARDIO_MACHINES).cells;
+      const i = monday === '2026-10-26' ? 0 : 1;
+      expect(groupAlert(input(sessions), 'dos')!.recent[i]).toBe(cells.find((c) => c.group === 'dos')!.score);
+    }
+    // Activités : une escalade (dos) chaque semaine en baisse : 3 + 3 = 6, plus d'alerte.
+    const climbing = [activity('Escalade', '2026-10-28', ['dos']), activity('Escalade', '2026-11-04', ['dos'])];
+    expect(alertsOf(sessions, { activities: climbing })).toEqual([]);
+    // Une seule escalade (semaine du 2 nov.) : 3 puis 6, plus d'alerte non plus (il faut les 2 semaines sous le seuil).
+    expect(alertsOf(sessions, { activities: climbing.slice(1) })).toEqual([]);
+    // Maison : 3 séries de tirage à la maison la semaine du 26 oct. et celle du 2 nov. : 6 et 6, plus d'alerte.
+    const home = [at(2026, 10, 27, 8), at(2026, 11, 3, 8)].map((start, i): Session => ({
+      ...sessions[0]!, id: `maison-${i}`, date: i === 0 ? '2026-10-27' : '2026-11-03', location: 'maison', startedAt: start, endedAt: start + 30 * 60_000,
+      performances: [{ ...sessions[0]!.performances[0]!, variantId: 'rowing-haltere', weightKg: 8 }],
+    }));
+    expect(alertsOf([...sessions, ...home])).toEqual([]);
+    // Indirect ½ : un face pull (dos en secondaire, 1,5) chaque semaine en baisse : 4,5 et 4,5, toujours sous 6.
+    expect(groupAlert(input(withExercise(sessions, 'face-pull', ['2026-10-26', '2026-11-02'])), 'dos')).toMatchObject({ recent: [4.5, 4.5] });
+    // Cardio des jambes : plus de leg extension les 2 dernières semaines (jambes 3 et 3) : alerte ; avec 50 min de tapis
+    // chaque semaine, 3 séries de plus pour les jambes (6), plus d'alerte ; avec le rameur (exclu des jambes), toujours.
+    const legsDown = withoutVariant(alertHistory({ dosDown: [] }), 'leg-extension', '2026-10-26');
+    expect(alertsOf(legsDown)).toEqual(['jambes']);
+    const withCardio = (machineId: string, machine: string) =>
+      legsDown.map((s) => (s.date >= '2026-10-26' && new Date(s.startedAt!).getDay() === 1 ? { ...s, cardio: [{ id: `c-${s.date}`, machineId, machine, minutes: 50 }] } : s));
+    expect(alertsOf(withCardio('tapis', 'Tapis de marche'))).toEqual([]);
+    expect(alertsOf(withCardio('rameur', 'Rameur'))).toEqual(['jambes']);
+
+    // Abdominaux jamais concernés, même au récapitulatif et à 0.
+    expect(alertsOf(sessions, { groups: ALL, threshold: 9 })).not.toContain('abdominaux');
+    expect(groupAlert(input(sessions, { groups: ALL }), 'abdominaux')).toBeNull();
+
+    // Dès 2 semaines terminées (plus de 6 semaines ni de 4 semaines de référence) : première séance le 26 oct., le dos
+    // à 3 et 3 : alerte le 11 nov. ; première séance le 2 nov. : une seule semaine terminée, rien.
+    expect(alertsOf(alertHistory({ from: '2026-10-26' }))).toEqual(['dos']);
+    expect(alertsOf(alertHistory({ from: '2026-11-02' }))).toEqual([]);
+    // Un groupe toujours bas (jambes à 3 chaque semaine, donc à sa moyenne) est en alerte : la règle ne compare plus à
+    // la moyenne (versions 1.38.0 à 1.50.1 : jamais d'alerte pour un groupe régulier).
+    expect(alertsOf(withoutVariant(alertHistory({ dosDown: [] }), 'leg-extension', '2026-08-31'))).toEqual(['jambes']);
+
+    // Une seule alerte affichée : le plus bas sur les 2 semaines. Vacances les 2 dernières semaines : tous à 0 et 0,
+    // à égalité, l'ordre des groupes ; une seule ligne.
+    const away = alertHistory({ vacations: ['2026-10-26', '2026-11-02'], dosDown: [], pecDown: [] });
+    expect(alertsOf(away)).toEqual(['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes']);
+    expect(groupAlerts(input(away)).map((a) => a.group)).toEqual(['pectoraux']);
+    expect(ALERT_MAX).toBe(1);
+    // Pectoraux 3 et 3 (6), dos 3 et 3 (6) : à égalité, l'ordre des groupes ; le dos à 3 puis 0 (3) passe devant.
+    const both = alertHistory({ pecDown: ['2026-10-26', '2026-11-02'] });
+    expect(groupAlerts(input(both)).map((a) => a.group)).toEqual(['pectoraux']);
+    expect(groupAlerts(input(withoutVariant(both, 'tirage-vertical', '2026-11-02'))).map((a) => a.group)).toEqual(['dos']);
+    // Même somme, la dernière semaine départage : dos 4,5 puis 1,5 (face pull les deux semaines, plus de tirage la
+    // dernière) contre pectoraux 3 et 3 : le dos, plus bas la dernière semaine.
+    const tie = withoutVariant(withExercise(both, 'face-pull', ['2026-10-26', '2026-11-02']), 'tirage-vertical', '2026-11-02');
+    expect(groupAlert(input(tie), 'dos')).toMatchObject({ recent: [4.5, 1.5] });
+    expect(groupAlert(input(tie), 'pectoraux')).toMatchObject({ recent: [3, 3] });
+    expect(groupAlerts(input(tie)).map((a) => a.group)).toEqual(['dos']);
   });
 });

@@ -211,17 +211,17 @@ describe('Séance pour compléter la semaine en séries, version 1.45.0', () => 
     expect(suggest(sessions)!.exercises.map((e) => e.group)).toEqual(['jambes', 'jambes', 'epaules', 'triceps', 'biceps']);
     // Seuil à 6 : seul le biceps (4,5) est sous l'objectif ; son curl l'y porte (7,5). Aucun autre exercice de biceps
     // déjà fait : pas de 2ᵉ exercice, même sous 4 exercices.
-    const six = suggest(sessions, WEEK_NOW, { ...DEFAULT_RECAP_SETTINGS, redSets: 6 })!;
+    const six = suggest(sessions, WEEK_NOW, { ...DEFAULT_RECAP_SETTINGS, redSets: 6, alertSets: 6 })!;
     expect(ids(six)).toEqual(['curl-biceps-halteres']);
     expect(six.reached).toEqual(['biceps']);
     expect(six.remaining).toEqual(['dos']);
     // Seuil à 20 : tous sous l'objectif, pectoraux et dos écartés ; rien n'atteint 20.
-    const twenty = suggest(sessions, WEEK_NOW, { ...DEFAULT_RECAP_SETTINGS, redSets: 20 })!;
+    const twenty = suggest(sessions, WEEK_NOW, { ...DEFAULT_RECAP_SETTINGS, redSets: 20, alertSets: 6 })!;
     expect(twenty.reached).toEqual([]);
     expect(twenty.remaining).toEqual(DEFAULT_RECAP_SETTINGS.groups);
 
     // 2 exercices au plus par groupe : jambes à 0 avec trois exercices déjà faits → deux, encore sous l'objectif (6).
-    const legsOnly: WeeklyRecapSettings = { groups: ['pectoraux', 'jambes'], redSets: 10 };
+    const legsOnly: WeeklyRecapSettings = { groups: ['pectoraux', 'jambes'], redSets: 10, alertSets: 6 };
     const legHistory = [
       daySession({ date: '2026-11-02', variants: ['presse-a-cuisses', 'leg-extension', 'leg-curl'] }),
       daySession({ date: '2026-11-09', variants: ['pec-deck'] }),
@@ -256,7 +256,7 @@ describe('Séance pour compléter la semaine en séries, version 1.45.0', () => 
 
     // 4 exercices au moins : dos et jambes à 3, seuil à 6 ; un exercice chacun suffit (6), un 2ᵉ chacun pour
     // atteindre 4 exercices (déjà faits cette semaine, faute d'autres).
-    const small: WeeklyRecapSettings = { groups: ['dos', 'jambes'], redSets: 6 };
+    const small: WeeklyRecapSettings = { groups: ['dos', 'jambes'], redSets: 6, alertSets: 6 };
     const four = suggest(
       [...weekHistory([]), daySession({ date: '2026-11-09', variants: ['tirage-vertical', 'leg-extension'] })],
       at(11, 11, 9),
@@ -267,7 +267,7 @@ describe('Séance pour compléter la semaine en séries, version 1.45.0', () => 
 
     // Séries standard de chaque exercice dans la séance projetée : pectoraux à 3 (pec deck à la maison, jamais proposé
     // à la salle), seuil à 6 ; les pompes (2 séries) les portent à 5 : encore sous l'objectif.
-    const chestOnly: WeeklyRecapSettings = { groups: ['pectoraux'], redSets: 6 };
+    const chestOnly: WeeklyRecapSettings = { groups: ['pectoraux'], redSets: 6, alertSets: 6 };
     const pushHistory = [
       daySession({ date: '2026-11-02', hour: 10, variants: ['pompes'], home: true }),
       daySession({ date: '2026-11-09', variants: ['tirage-vertical'] }),

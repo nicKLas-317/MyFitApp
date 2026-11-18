@@ -3,10 +3,12 @@
  * l'application (vérifié par le test 289). Deux séances par semaine à 18 h, du lundi 31 août 2026 au lundi 9 novembre
  * (semaine en cours si l'on se place le mercredi 11 novembre) :
  * - lundi : chest press et pec deck (pectoraux 6 séries ; triceps et épaules ½ × 3), élévations latérales (épaules 3),
- *   extension triceps poulie (triceps 3) ;
- * - jeudi : tirage vertical (dos 3 ; biceps ½ × 3), lombaires au banc (dos 3), curl haltères (biceps 3), presse à
- *   cuisses (jambes 3).
- * Totaux d'une semaine ordinaire : pectoraux 6, dos 6, épaules 4,5, biceps 4,5, triceps 4,5, jambes 3.
+ *   extension triceps poulie (triceps 3), développé épaules machine (épaules 3 ; triceps ½ × 3) ;
+ * - jeudi : tirage vertical (dos 3 ; biceps ½ × 3), lombaires au banc (dos 3), curl haltères (biceps 3), curl marteau
+ *   (biceps 3), presse à cuisses (jambes 3), leg extension (jambes 3).
+ * Totaux d'une semaine ordinaire : pectoraux 6, dos 6, épaules 7,5, biceps 7,5, triceps 6, jambes 6 : aucun groupe sous
+ * le seuil de l'alerte (6 séries, version 1.51.0 ; avant, les épaules, les biceps et les triceps à 4,5 et les jambes à 3
+ * étaient sous ce seuil chaque semaine).
  * Scénario par défaut :
  * - vacances la semaine du 21 septembre (aucune séance) ;
  * - dos en baisse 2 semaines (26 oct. et 2 nov. : plus de lombaires, 3 séries) ;
@@ -66,11 +68,11 @@ export function alertHistory(scenario: AlertScenario = {}): Session[] {
   for (const monday = new Date(y, m - 1, d); iso(monday) <= s.until; monday.setDate(monday.getDate() + 7)) {
     const week = iso(monday);
     if (s.vacations.includes(week)) continue;
-    sessions.push(session(monday, ['chest-press', ...(s.pecDown.includes(week) ? [] : ['pec-deck']), 'elevations-laterales', 'extension-triceps-poulie']));
+    sessions.push(session(monday, ['chest-press', ...(s.pecDown.includes(week) ? [] : ['pec-deck']), 'elevations-laterales', 'extension-triceps-poulie', 'developpe-epaules-machine']));
     if (week === s.until) continue;
     const thursday = new Date(monday);
     thursday.setDate(thursday.getDate() + 3);
-    sessions.push(session(thursday, ['tirage-vertical', ...(s.dosDown.includes(week) ? [] : ['lombaires-banc']), 'curl-biceps-halteres', 'presse-a-cuisses']));
+    sessions.push(session(thursday, ['tirage-vertical', ...(s.dosDown.includes(week) ? [] : ['lombaires-banc']), 'curl-biceps-halteres', 'curl-marteau', 'presse-a-cuisses', 'leg-extension']));
   }
   return sessions;
 }

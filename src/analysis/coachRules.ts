@@ -7,7 +7,7 @@ import type { CardioMachine } from '../domain/types';
 import { SUGGEST_MAX } from '../plan/suggest';
 import { ACTIVITY_SETS, LEG_CARDIO_MINUTES, LEG_CARDIO_SETS, ORANGE_SETS, type WeeklyRecapSettings } from './weekly';
 
-/** Règles utiles à l'interprétation, avec le réglage actuel du seuil du rouge. */
+/** Règles utiles à l'interprétation, avec les réglages actuels du seuil du rouge et de l'alerte (version 1.51.0). */
 export function coachRules(recap: WeeklyRecapSettings, machines: readonly CardioMachine[]): string[] {
   const noLegs = machines.filter((m) => !machineCountsForLegs(m)).map((m) => m.name.toLowerCase());
   return [
@@ -19,7 +19,7 @@ export function coachRules(recap: WeeklyRecapSettings, machines: readonly Cardio
     `Séries par semaine (lundi – dimanche) et par groupe : chaque série d’un exercice dont c’est le groupe principal compte 1, groupe secondaire ½ ; salle et maison comptent pareil ; chaque activité confirmée (badminton…) compte ${ACTIVITY_SETS} séries pour chacun de ses groupes ; ${LEG_CARDIO_MINUTES} min de cardio ou plus dans la semaine comptent ${LEG_CARDIO_SETS} séries pour les jambes, une fois par semaine${noLegs.length > 0 ? ` (sauf ${noLegs.join(', ')})` : ''}.`,
     `Couleur du récapitulatif de la semaine, par groupe, d’après ses séries : vert sous ${ORANGE_SETS}, orange de ${ORANGE_SETS} jusqu’au seuil du rouge, rouge à partir de ${recap.redSets} séries (réglage actuel de l’utilisateur, 10 par défaut). Ici, rouge = volume de la semaine atteint, vert = groupe peu ou pas travaillé : ces couleurs ne jugent pas la qualité, contrairement aux statuts des performances.`,
     'Indice de progression d’un groupe (base 100) : force estimée (formule d’Epley, sur la moins bonne série) de chaque exercice dont c’est le groupe principal, rapportée à sa première séance complète, puis moyenne des exercices ; séances à la salle seulement ; exercices assistés : charge réelle = poids du corps − aide. L’appli ne l’affiche qu’à partir de 6 séances sur 3 semaines (« indice_seuil_atteint »). Pas d’indice pour les abdominaux.',
-    'Alerte « groupe moins travaillé » : les séries des 2 dernières semaines terminées sont toutes les deux sous la moyenne des semaines d’avant (4 semaines de référence au moins).',
+    `Alerte « groupe moins travaillé » : un groupe du récapitulatif (jamais les abdominaux) est en alerte quand ses séries de la semaine (même calcul que ci-dessus) sont sous ${recap.alertSets} sur chacune des 2 dernières semaines terminées (seuil réglé par l’utilisateur, 6 par défaut). L’appli n’en affiche qu’une : le groupe le plus bas sur les 2 semaines (à égalité, le plus bas la dernière semaine).`,
     `Séance pour compléter la semaine : proposée par l’appli pour amener les groupes du récapitulatif à ${recap.redSets} séries, avec des exercices déjà faits à la salle ; ${SUGGEST_MAX} exercices au plus, 2 par groupe, les groupes travaillés à la salle la veille écartés, les abdominaux en bonus.`,
     'Ressentis : très bien, bien, moyen, mal, très mal, non renseigné (« symbole » : symbole d’origine d’une séance importée de notes, « += » = moyen). Une performance « partielle » (importée, charge sans répétitions) n’a pas de statut.',
   ];

@@ -113,7 +113,7 @@ test.describe('Seuil du rouge en séries (§19.6, version 1.45.0)', () => {
     await expect(minus).toBeDisabled();
     await expect(plus).toBeEnabled();
     await waitForWrites(page);
-    expect(await readRecapMeta(page)).toEqual({ groups: ['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes'], redSets: 6 });
+    expect(await readRecapMeta(page)).toEqual({ groups: ['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes'], redSets: 6, alertSets: 6 });
     for (let v = 7; v <= 20; v++) {
       await plus.click();
       await expect(value).toHaveText(String(v));
@@ -149,7 +149,7 @@ test.describe('Seuil du rouge en séries (§19.6, version 1.45.0)', () => {
     // Le fichier exporté est relu par l'appli (zone de saisie de l'import), comme au test 43.
     await page.getByLabel('Fichier à importer').setInputFiles(await download.path());
     const backup = JSON.parse(await importedText(page));
-    expect(backup.settings.weeklyRecap).toEqual({ groups: ['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes'], redSets: 10 });
+    expect(backup.settings.weeklyRecap).toEqual({ groups: ['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes'], redSets: 10, alertSets: 6 });
     expect(backup.settings.weeklyRecap).not.toHaveProperty('redThreshold');
 
     // `redThreshold: 3` → 15 séries : les pectoraux (10) redeviennent orange, les triceps (15) restent rouges.

@@ -4,6 +4,16 @@ Ce qui a changé à chaque version de MyFitApp, de la plus récente à la plus a
 
 Les commits sans changement de numéro (documentation, tests, workflow) sont rangés sous la version en cours à ce moment-là.
 
+## 1.51.0 — 18 nov. 2026
+
+- Alerte « groupe moins travaillé », nouvelle règle : un groupe est en alerte quand son score de la semaine (celui du récapitulatif : séries directes, indirectes ½, maison, activités, cardio des jambes) est sous 6 séries sur chacune des 2 dernières semaines terminées. Plus de comparaison à la moyenne, plus de condition de 6 semaines terminées ni de 4 semaines de référence : l'alerte est possible dès 2 semaines terminées. Abdominaux jamais concernés
+- Seuil réglable : Réglages › Récapitulatif de la semaine, « Alerte « moins travaillé » sous (séries) », de 3 à 9, 6 par défaut (champ `alertSets`, dans la sauvegarde ; 6 pour un réglage antérieur)
+- Une seule alerte affichée à la fois, sur l'onglet Séance comme sur l'onglet Progrès : le groupe le plus bas sur les 2 semaines (à égalité, le plus bas la dernière semaine) ; un groupe ignoré laisse la place au suivant. Plus de ligne de résumé « 3 groupes sous ta moyenne » sur l'onglet Séance
+- Texte de la ligne : « Dos : 4 et 2 séries ces 2 semaines (sous 6) » (avant : « Dos : 3 séries par semaine depuis 2 semaines (ta moyenne : 5,3) ») ; pastille « Progrès : groupe moins travaillé » (avant : « groupe sous ta moyenne »). « Ignorer » inchangé
+- Export pour le coach : règle de l'alerte avec le seuil réglé, `contexte.seuil_alerte_series`, et dans les signaux tous les groupes sous le seuil avec leurs 2 scores et le seuil (`seuil` au lieu de `moyenne_avant`), celle affichée dans l'appli marquée
+- Vraies données (sauvegarde du 17/11) : aucune alerte ne se serait déclenchée ; sous 6 une seule semaine : triceps (19 oct., 4,5 séries), dos (2 nov., 0)
+- Tests : 319 (unitaire et bout en bout) ; 289, 290, 291, 296, 307, 310, 112 et 225 adaptés ; données simulées des alertes complétées (chaque groupe à 6 séries au moins une semaine ordinaire)
+
 ## 1.50.1 — 18 nov. 2026
 
 - Découpage de `src/analysis/coach.ts` (656 lignes), sans changement de comportement : semaine exportée, libellé, nom du fichier, titre du partage et semaine envoyée dans `src/analysis/coachPeriod.ts`, mise en forme des valeurs (heures, ressentis, types, charges, cibles, recommandations) dans `src/analysis/coachFormat.ts`, règles dans `src/analysis/coachRules.ts`, JSON compact dans `src/analysis/coachJson.ts` ; `coach.ts` (474 lignes) garde la construction de l'export. Préalable à la version 1.51.0 (règle des gros fichiers, CLAUDE.md §0) ; `coach.ts` sort de la liste

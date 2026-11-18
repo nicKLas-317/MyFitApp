@@ -92,7 +92,7 @@ export function TabBar({ active }: { active: Tab }) {
   const reports = usePendingReports();
   // Pastille : un bilan prêt (§19.7) ou un groupe moins travaillé (version 1.38.0) ; un seul point.
   const alerts = useGroupAlerts();
-  const notes = [...(reports.length > 0 ? ['bilan prêt'] : []), ...(alerts.length > 0 ? ['groupe sous ta moyenne'] : [])];
+  const notes = [...(reports.length > 0 ? ['bilan prêt'] : []), ...(alerts.length > 0 ? ['groupe moins travaillé'] : [])];
   return (
     <nav className="tab-bar" aria-label="Onglets">
       {TABS.map((t) => (

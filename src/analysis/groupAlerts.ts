@@ -1,67 +1,97 @@
 /**
- * Alerte « groupe moins travaillé » (version 1.38.0, §19.11) : un groupe dont les séries des 2 dernières semaines
- * terminées sont toutes les deux sous sa moyenne. Calcul pur, refait à l'affichage à partir des séances terminées,
- * avec les séries du graphique « Séries par semaine » (§19.10) ; jamais stocké, aucun effet sur le moteur.
+ * Alerte « groupe moins travaillé » (§19.11). Version 1.51.0 : un groupe est en alerte quand son score de la semaine
+ * (celui du récapitulatif, en séries : directes, indirectes ½, maison, activités, cardio des jambes) est sous le seuil
+ * (6 séries par défaut, réglable de 3 à 9) sur chacune des 2 dernières semaines terminées ; une seule alerte affichée,
+ * le groupe le plus bas. Avant (versions 1.38.0 à 1.50.1) : les 2 semaines sous la moyenne des semaines d'avant, avec
+ * les séries du graphique. Calcul pur, refait à l'affichage à partir des séances terminées ; jamais stocké, aucun effet
+ * sur le moteur.
  */
-import type { MuscleGroup, Exercise, Session } from '../domain/types';
-import { GROUP_VIEW_GROUPS, groupWeeklySets } from './groups';
+import type { ActivityRecord } from '../activities/model';
+import { localDate, sessionStartTime } from '../domain/calendar';
+import type { CardioMachine, Exercise, MuscleGroup, Session } from '../domain/types';
 import { formatDecimal } from '../session/format';
+import { GROUP_VIEW_GROUPS, SETS_ONLY_GROUPS } from './groups';
+import { periodContaining, shiftPeriod } from './reportPeriod';
+import { groupScore, groupSeries, LEG_CARDIO_GROUP, legCardioWeek } from './weekly';
 
-/** Semaines terminées au total (depuis la semaine de la première séance) avant toute alerte. */
-export const ALERT_MIN_FINISHED_WEEKS = 6;
-/** Semaines de référence au moins (semaines terminées avant les 2 dernières, où le groupe a été travaillé). */
-export const ALERT_MIN_REFERENCE_WEEKS = 4;
-/** Semaines comparées à la moyenne : les dernières semaines terminées. */
+/** Semaines regardées : les dernières semaines terminées. */
 export const ALERT_RECENT_WEEKS = 2;
-/** Alertes affichées au plus. */
-export const ALERT_MAX = 3;
+/** Alertes affichées au plus (version 1.51.0 : une seule ; 3 avant). */
+export const ALERT_MAX = 1;
+
+export interface AlertInput {
+  sessions: readonly Session[];
+  exercises: readonly Exercise[];
+  activities?: readonly ActivityRecord[];
+  machines?: readonly CardioMachine[];
+  /** Groupes du récapitulatif (§19.6) : ceux qui peuvent être en alerte, et ceux qui reçoivent les sous-groupes. */
+  groups: readonly MuscleGroup[];
+  /** Seuil, en séries : alerte quand chacune des 2 semaines est strictement en dessous. */
+  threshold: number;
+  now: number;
+}
 
 export interface GroupAlert {
   group: MuscleGroup;
   /** Lundi de la dernière semaine terminée (« YYYY-MM-DD ») : la clé de « Ignorer ». */
   week: string;
-  /** Totaux des 2 dernières semaines terminées (directes + indirectes ÷ 2), la plus ancienne d'abord. */
+  /** Scores des 2 dernières semaines terminées (séries, comme le récapitulatif), la plus ancienne d'abord. */
   recent: number[];
-  /** Moyenne des semaines de référence. */
-  average: number;
+  /** Seuil en vigueur. */
+  threshold: number;
 }
 
 /**
- * Alerte d'un groupe, ou null. Mêmes semaines que le graphique (lundi – dimanche, depuis la semaine de la première
- * séance, 12 au plus, semaine en cours comprise mais jamais comptée) :
- * - au moins 6 semaines terminées au total, sinon rien ;
- * - les 2 dernières semaines terminées sont comparées à la moyenne des semaines terminées d'avant, de la première
- *   où le groupe a des séries (vacances comprises, comme la moyenne du graphique), 4 au moins ;
- * - alerte si les deux sont strictement sous cette moyenne.
+ * Groupes concernés : ceux du récapitulatif qui ont un graphique « Séries par semaine » (§19.10 : l'alerte y mène),
+ * jamais les abdominaux.
  */
-export function groupAlert(sessions: readonly Session[], exercises: readonly Exercise[], group: MuscleGroup, now: number): GroupAlert | null {
-  const { weeks } = groupWeeklySets(sessions, exercises, group, now);
-  const finished = weeks.slice(0, -1);
-  if (finished.length < ALERT_MIN_FINISHED_WEEKS) return null;
-  const recent = finished.slice(-ALERT_RECENT_WEEKS);
-  const before = finished.slice(0, -ALERT_RECENT_WEEKS);
-  const firstActive = before.findIndex((w) => w.direct + w.indirect > 0);
-  if (firstActive < 0) return null;
-  const reference = before.slice(firstActive);
-  if (reference.length < ALERT_MIN_REFERENCE_WEEKS) return null;
-  const average = reference.reduce((a, w) => a + w.total, 0) / reference.length;
-  if (!recent.every((w) => w.total < average)) return null;
-  return { group, week: recent.at(-1)!.start, recent: recent.map((w) => w.total), average };
+export function alertGroups(groups: readonly MuscleGroup[]): MuscleGroup[] {
+  return GROUP_VIEW_GROUPS.filter((g) => groups.includes(g) && !SETS_ONLY_GROUPS.includes(g));
 }
 
-/** Nombre arrondi à une décimale, à la française (« 5,3 », « 3 »). */
+/**
+ * Tous les groupes en alerte, du plus bas au plus haut : somme des 2 semaines, puis la dernière semaine, puis l'ordre
+ * des groupes. Rien tant qu'il n'y a pas 2 semaines terminées depuis la semaine de la première séance terminée ; la
+ * semaine en cours n'entre jamais dans le calcul (l'alerte change le lundi à 0 h 00).
+ */
+export function groupAlertCandidates(input: AlertInput): GroupAlert[] {
+  const done = input.sessions.filter((s) => s.state === 'done');
+  if (done.length === 0) return [];
+  const first = Math.min(...done.map(sessionStartTime));
+  const current = periodContaining('week', input.now);
+  const weeks = Array.from({ length: ALERT_RECENT_WEEKS }, (_, i) => shiftPeriod(current, i - ALERT_RECENT_WEEKS));
+  if (weeks[0]!.start.getTime() < periodContaining('week', first).start.getTime()) return [];
+  const scores = weeks.map((w) => {
+    const inWeek = (t: number) => t >= w.start.getTime() && t < w.next.getTime();
+    const series = groupSeries(done, input.exercises, input.groups, inWeek, input.activities ?? []);
+    const legCardio = legCardioWeek(done, input.machines ?? [], inWeek);
+    return (g: MuscleGroup) =>
+      groupScore({ sets: series.sets.get(g) ?? 0, activities: series.activities.get(g)?.length ?? 0, cardioWeeks: g === LEG_CARDIO_GROUP && legCardio > 0 ? 1 : 0 });
+  });
+  const week = localDate(weeks.at(-1)!.start.getTime());
+  const order = alertGroups(input.groups);
+  const sum = (a: GroupAlert) => a.recent.reduce((s, x) => s + x, 0);
+  return order
+    .map((group) => ({ group, week, recent: scores.map((score) => score(group)), threshold: input.threshold }))
+    .filter((a) => a.recent.every((x) => x < input.threshold))
+    .sort((a, b) => sum(a) - sum(b) || a.recent.at(-1)! - b.recent.at(-1)! || order.indexOf(a.group) - order.indexOf(b.group));
+}
+
+/** Alerte d'un groupe, ou null. */
+export function groupAlert(input: AlertInput, group: MuscleGroup): GroupAlert | null {
+  return groupAlertCandidates(input).find((a) => a.group === group) ?? null;
+}
 
 /**
- * Chiffres de l'alerte (version 1.38.1), après le nom du groupe : « 3 séries par semaine depuis 2 semaines (ta
- * moyenne : 5,3) ». Séries des 2 semaines en moyenne (choix signalé : 4 puis 2 donnent 3), moyenne de référence de
- * l'alerte (pas celle du graphique, qui compte aussi ces 2 semaines), arrondies à une décimale ; « série » au
- * singulier sous 2. Espaces insécables : ni « : » ni unité en début de ligne, « (ta moyenne : 5,3) » d’un bloc.
+ * Chiffres de l'alerte, après le nom du groupe : « 4 et 2 séries ces 2 semaines (sous 6) », la plus ancienne semaine
+ * d'abord. Court pour tenir sur 2 lignes à 320 px à côté de « Ignorer » (« Démarrer » à l'écran sans défiler, §3.7).
+ * Une décimale au plus ; « série » au singulier quand les deux sont sous 2. Espaces insécables : ni « : » ni unité en
+ * début de ligne, « (sous 6) » d'un bloc.
  */
 export function alertFigures(alert: GroupAlert): string {
-  const recent = alert.recent.reduce((a, x) => a + x, 0) / alert.recent.length;
-  const shown = formatDecimal(recent);
-  const word = Number(shown.replace(',', '.')) < 2 ? 'série' : 'séries';
-  return `${shown}\u00a0${word} par semaine depuis ${ALERT_RECENT_WEEKS}\u00a0semaines (ta\u00a0moyenne\u00a0:\u00a0${formatDecimal(alert.average)})`;
+  const shown = alert.recent.map(formatDecimal);
+  const word = alert.recent.every((x) => Number(formatDecimal(x).replace(',', '.')) < 2) ? 'série' : 'séries';
+  return `${shown.join(' et ')} ${word} ces ${ALERT_RECENT_WEEKS} semaines (sous ${alert.threshold})`;
 }
 
 /** Alertes ignorées sur l'appareil : groupe → dernière semaine terminée au moment de « Ignorer ». */
@@ -77,27 +107,17 @@ export function sanitizeIgnoredAlerts(value: unknown): IgnoredAlerts {
 }
 
 /**
- * Alertes à afficher : groupes suivis au récapitulatif qui ont un graphique (§19.10), sans celles ignorées pour la
- * même dernière semaine terminée (une nouvelle semaine encore sous la moyenne la fait revenir) ; le plus en retrait
- * d'abord (rapport des 2 semaines à la moyenne), puis l'ordre des groupes ; 3 au plus.
+ * Alerte à afficher (une seule, version 1.51.0) : le groupe le plus bas, sans ceux ignorés pour la même dernière
+ * semaine terminée (une nouvelle semaine encore sous le seuil fait revenir l'alerte) ; un groupe ignoré laisse la place
+ * au suivant.
  */
-export function groupAlerts(
-  sessions: readonly Session[],
-  exercises: readonly Exercise[],
-  groups: readonly MuscleGroup[],
-  now: number,
-  ignored: IgnoredAlerts = {},
-): GroupAlert[] {
-  const shown = GROUP_VIEW_GROUPS.filter((g) => groups.includes(g));
-  const ratio = (a: GroupAlert) => a.recent.reduce((s, x) => s + x, 0) / (a.recent.length * a.average);
-  return shown
-    .map((g) => groupAlert(sessions, exercises, g, now))
-    .filter((a): a is GroupAlert => a !== null && ignored[a.group] !== a.week)
-    .sort((a, b) => ratio(a) - ratio(b) || shown.indexOf(a.group) - shown.indexOf(b.group))
+export function groupAlerts(input: AlertInput, ignored: IgnoredAlerts = {}): GroupAlert[] {
+  return groupAlertCandidates(input)
+    .filter((a) => ignored[a.group] !== a.week)
     .slice(0, ALERT_MAX);
 }
 
-/** Ignorer une alerte : jusqu'à la fin de la semaine suivante encore sous la moyenne. */
+/** Ignorer une alerte : jusqu'à la fin de la semaine suivante encore sous le seuil. */
 export function ignoreAlert(ignored: IgnoredAlerts, alert: GroupAlert): IgnoredAlerts {
   return { ...ignored, [alert.group]: alert.week };
 }

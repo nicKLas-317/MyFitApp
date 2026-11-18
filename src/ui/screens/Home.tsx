@@ -84,8 +84,8 @@ export function Home() {
       <h1 className="brand visually-hidden">MyFitApp</h1>
       <ActivityBanner />
       <WeeklyRecapBlock />
-      {/* Groupe moins travaillé (version 1.38.0) : une ligne par groupe, ou une ligne de résumé à partir de 2 (1.40.0). */}
-      <GroupAlerts compact />
+      {/* Groupe moins travaillé (version 1.38.0) : une seule ligne depuis la version 1.51.0. */}
+      <GroupAlerts />
       {active ? (
         <button type="button" className="btn primary huge" data-home-start="" onClick={() => navigate('seance')}>
           Reprendre la séance

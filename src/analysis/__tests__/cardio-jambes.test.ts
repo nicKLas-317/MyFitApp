@@ -5,7 +5,6 @@ import { rebuildProfile } from '../../engine';
 import { buildEngineSettings, displayName, indexVariants } from '../../library/catalog';
 import { SEED_EXERCISES } from '../../library/seed';
 import { weekSuggestion } from '../../plan/suggest';
-import { groupAlerts } from '../groupAlerts';
 import { groupIndex, groupWeeklySets } from '../groups';
 import { buildReport, reportText, type ReportInput } from '../report';
 import { parsePeriodKey, type ReportPeriod } from '../reportPeriod';
@@ -153,14 +152,14 @@ describe('Cardio pour les jambes, version 1.41.0', () => {
     const changed = MACHINES.map((m) => (m.id === 'tapis' ? { ...m, legs: false } : m));
     expect(legsOf(reportOf(parsePeriodKey('month', '2026-10')!, changed)).group).toEqual({ group: 'jambes', count: 1, indirect: 0, sets: 3 });
 
-    // Aucun effet sur les séries par semaine, l'indice par groupe, l'alerte ni le moteur : identiques sans cardio.
+    // Aucun effet sur les séries par semaine, l'indice par groupe ni le moteur : identiques sans cardio. L'alerte « groupe
+    // moins travaillé » en tient compte depuis la version 1.51.0 (score du récapitulatif, test 319).
     const noCardio = sessions.map((s) => ({ ...s, cardio: undefined }));
     const now = new Date(2026, 10, 3, 9).getTime();
     for (const g of ['jambes', 'pectoraux'] as MuscleGroup[]) {
       expect(groupWeeklySets(sessions, LIB, g, now)).toEqual(groupWeeklySets(noCardio, LIB, g, now));
       expect(groupIndex(sessions, LIB, SETTINGS, g)).toEqual(groupIndex(noCardio, LIB, SETTINGS, g));
     }
-    expect(groupAlerts(sessions, LIB, DEFAULT_RECAP_SETTINGS.groups, now, {})).toEqual(groupAlerts(noCardio, LIB, DEFAULT_RECAP_SETTINGS.groups, now, {}));
     expect(rebuildProfile(sessions, SETTINGS).profile).toEqual(rebuildProfile(noCardio, SETTINGS).profile);
   });
 

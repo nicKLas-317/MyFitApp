@@ -11,7 +11,7 @@ import { weekSuggestion } from '../../plan/suggest';
 import { buildCoachExport, coachExportText, type CoachInput } from '../coach';
 import { coachJson } from '../coachJson';
 import { coachFileName, coachShareTitle, coachWeek, coachWeekLabel, hasCoachWeek, sanitizeCoachSent } from '../coachPeriod';
-import { groupAlert } from '../groupAlerts';
+import { groupAlertCandidates } from '../groupAlerts';
 import { groupIndex } from '../groups';
 import { buildReport, reportText } from '../report';
 import { DEFAULT_REPORT_SETTINGS, sanitizeReportSettings } from '../reportSettings';
@@ -231,18 +231,30 @@ describe('Export pour le coach (version 1.46.0)', () => {
   });
 
   it('310. Alertes « groupe moins travaillé » de la semaine exportée, ignorées signalées ; aucune séance proposée : la raison', () => {
-    // Données des alertes (§19.11) : le dos sous sa moyenne les 2 dernières semaines terminées.
+    // Données des alertes (§19.11, version 1.51.0) : le dos sous 6 séries les 2 dernières semaines terminées.
     const sessions = alertHistory();
     const now = ALERT_NOW;
     const data = buildCoachExport(input(sessions, { now, activities: [] }));
-    const expected = GROUPS.map((g) => groupAlert(sessions, LIB, g, coachWeek(now).next.getTime())).filter((a) => a !== null);
-    expect(expected.map((a) => a.group)).toContain('dos');
-    expect(data.signaux.alertes_groupe_moins_travaille.map((a) => a.groupe)).toEqual(expected.map((a) => MUSCLE_GROUP_LABELS[a.group]));
-    const dos = data.signaux.alertes_groupe_moins_travaille.find((a) => a.groupe === 'Dos')!;
-    expect(dos.texte).toMatch(/^Dos : 3 séries par semaine depuis 2 semaines \(ta moyenne : 5,3\)$/);
-    expect(dos).not.toHaveProperty('ignoree_sur_l_appareil');
-    const week = expected.find((a) => a.group === 'dos')!.week;
-    expect(buildCoachExport(input(sessions, { now, activities: [], ignoredAlerts: { dos: week } })).signaux.alertes_groupe_moins_travaille.find((a) => a.groupe === 'Dos')).toMatchObject({ ignoree_sur_l_appareil: true });
+    const alertInput = { sessions, exercises: LIB, activities: [], machines: DEFAULT_CARDIO_MACHINES, groups: GROUPS, threshold: 6, now: coachWeek(now).next.getTime() };
+    expect(groupAlertCandidates(alertInput).map((a) => a.group)).toEqual(['dos']);
+    expect(data.signaux.alertes_groupe_moins_travaille).toEqual([
+      { groupe: 'Dos', series_2_dernieres_semaines: [3, 3], seuil: 6, texte: 'Dos : 3 et 3 séries ces 2 semaines (sous 6)', affichee_dans_l_appli: true },
+    ]);
+    expect(data.contexte.seuil_alerte_series).toBe(6);
+    expect(data.regles.find((r) => r.startsWith('Alerte'))).toBe(
+      'Alerte « groupe moins travaillé » : un groupe du récapitulatif (jamais les abdominaux) est en alerte quand ses séries de la semaine (même calcul que ci-dessus) sont sous 6 sur chacune des 2 dernières semaines terminées (seuil réglé par l’utilisateur, 6 par défaut). L’appli n’en affiche qu’une : le groupe le plus bas sur les 2 semaines (à égalité, le plus bas la dernière semaine).',
+    );
+    // Ignorée sur l'appareil : signalée, et plus affichée.
+    const week = groupAlertCandidates(alertInput)[0]!.week;
+    expect(buildCoachExport(input(sessions, { now, activities: [], ignoredAlerts: { dos: week } })).signaux.alertes_groupe_moins_travaille).toEqual([
+      { groupe: 'Dos', series_2_dernieres_semaines: [3, 3], seuil: 6, texte: 'Dos : 3 et 3 séries ces 2 semaines (sous 6)', ignoree_sur_l_appareil: true },
+    ]);
+    // Seuil réglé à 9 : tous les groupes en dessous, du plus bas au plus haut, le dos seul affiché ; la règle suit le seuil.
+    const nine = buildCoachExport(input(sessions, { now, activities: [], recap: { ...RECAP, alertSets: 9 } }));
+    expect(nine.signaux.alertes_groupe_moins_travaille.map((a) => [a.groupe, a.series_2_dernieres_semaines, 'affichee_dans_l_appli' in a])).toEqual([
+      ['Dos', [3, 3], true], ['Pectoraux', [6, 3], false], ['Triceps', [6, 6], false], ['Jambes', [6, 6], false], ['Épaules', [7.5, 7.5], false], ['Biceps', [7.5, 7.5], false],
+    ]);
+    expect(nine.regles.find((r) => r.startsWith('Alerte'))).toContain('sont sous 9 sur chacune');
 
     // Semaine sans séance à la salle : pas de séance proposée, et pourquoi.
     const empty = buildCoachExport(input(simulatedHistory('2026-10-15'), { activities: [] }));

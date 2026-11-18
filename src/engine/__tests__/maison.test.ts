@@ -198,7 +198,7 @@ describe('Salle et maison : deux suivis pour un exercice à charge (version 1.26
       perf(0, 15, [15, 15], 'bien', { variantId: 'crunch-sol', plannedSets: 2 }),
     ], true);
     const now = new Date(2026, 9, 27, 20).getTime();
-    const withAbs = { groups: ['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes', 'abdominaux'] as const, redSets: 10 };
+    const withAbs = { groups: ['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes', 'abdominaux'] as const, redSets: 10, alertSets: 6 };
     const recap = weeklyRecap([morning], LIB, now, { ...withAbs, groups: [...withAbs.groups] });
     const cell = (g: string) => recap.cells.find((c) => c.group === g)!;
     // Pectoraux : 3 séries, orange ; abdos : 2 séries, vert ; « aujourd'hui ».

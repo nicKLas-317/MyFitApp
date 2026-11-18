@@ -57,6 +57,7 @@ describe('Bibliothèque version 11 : abdominaux au poids du corps (§4.0)', () =
     const recap = weeklyRecap([done('releves-jambes-allonge', '2026-10-27', 0)], LIB, new Date('2026-10-28T12:00:00').getTime(), {
       groups: ['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes', 'abdominaux'],
       redSets: 10,
+      alertSets: 6,
     });
     expect(recap.cells.find((c) => c.group === 'abdominaux')).toMatchObject({ count: 1, indirect: 0, score: 3 });
     expect(recap.cells.find((c) => c.group === 'jambes')).toMatchObject({ count: 0, indirect: 0, score: 0 });

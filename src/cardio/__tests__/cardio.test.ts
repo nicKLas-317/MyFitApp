@@ -296,7 +296,7 @@ describe('Cardio : sauvegarde, migration et réglages', () => {
     expect(parsed.backup.sessions).toEqual([old]);
     expect(parsed.backup.settings).toEqual({ weeklyRecap: { groups: ['dos'], redThreshold: 3 } });
     // Restauré, l'ancien seuil en séances est converti en séries (version 1.45.0 : 3 séances → 15 séries).
-    expect(sanitizeRecapSettings(parsed.backup.settings.weeklyRecap)).toEqual({ groups: ['dos'], redSets: 15 });
+    expect(sanitizeRecapSettings(parsed.backup.settings.weeklyRecap)).toEqual({ groups: ['dos'], redSets: 15, alertSets: 6 });
     // Format plus récent : refusé, rien n'est importé.
     expect(parseJsonImport(JSON.stringify({ ...v2, schemaVersion: SCHEMA_VERSION + 1 }), LIB, TODAY).kind).toBe('error');
 

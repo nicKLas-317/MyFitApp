@@ -6,7 +6,7 @@ import { useBody } from '../../body/store';
 import type { CardioMachine } from '../../domain/types';
 import { machineCountsForLegs, machineListErrors, newMachine, type MachineListError } from '../../cardio/model';
 import { isValidEmail } from '../../analysis/reportSettings';
-import { RED_SETS_MAX, RED_SETS_MIN } from '../../analysis/weekly';
+import { ALERT_SETS_MAX, ALERT_SETS_MIN, RED_SETS_MAX, RED_SETS_MIN } from '../../analysis/weekly';
 import { HABIT_GROUPS, WEEKDAY_LABELS, WEEKDAYS, habitErrors, newHabit, type Habit, type HabitError, type Weekday } from '../../activities/model';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
 import { Stepper } from '../ExerciseCard';
@@ -118,7 +118,10 @@ function HeightField() {
 
 const RECAP_CHOICES = MAIN_GROUPS;
 
-/** Récapitulatif hebdomadaire de l'accueil (§19.6) : groupes affichés et seuil du rouge, en séries (6 à 20, version 1.45.0). */
+/**
+ * Récapitulatif hebdomadaire de l'accueil (§19.6) : groupes affichés et seuil du rouge, en séries (6 à 20, version
+ * 1.45.0) ; seuil de l'alerte « groupe moins travaillé » (3 à 9, version 1.51.0, §19.11).
+ */
 function RecapSettingsField() {
   const { recapSettings, setRecapSettings } = useApp();
   const [failed, setFailed] = useState(false);
@@ -152,6 +155,14 @@ function RecapSettingsField() {
         min={RED_SETS_MIN}
         max={RED_SETS_MAX}
         onChange={(redSets) => void save({ ...recapSettings, redSets })}
+      />
+      {/* Version 1.51.0 (§19.11) : alerte quand un groupe est sous ce nombre de séries 2 semaines terminées de suite. */}
+      <Stepper
+        label="Alerte « moins travaillé » sous (séries)"
+        value={recapSettings.alertSets}
+        min={ALERT_SETS_MIN}
+        max={ALERT_SETS_MAX}
+        onChange={(alertSets) => void save({ ...recapSettings, alertSets })}
       />
       {failed && (
         <p className="field-error" role="alert">

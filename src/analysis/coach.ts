@@ -31,7 +31,7 @@ import { coachRules } from './coachRules';
 import { formatLoad } from '../session/format';
 import { elapsedMs } from '../session/ops';
 import { sessionTitle } from '../session/title';
-import { alertFigures, groupAlert, type IgnoredAlerts } from './groupAlerts';
+import { alertFigures, groupAlertCandidates, groupAlerts, type IgnoredAlerts } from './groupAlerts';
 import { GROUP_VIEW_GROUPS, groupIndex, SETS_ONLY_GROUPS } from './groups';
 import { analyzeProgress } from './progress';
 import { computeRecords, formatRecordWithDate } from './records';
@@ -274,6 +274,7 @@ export function buildCoachExport(input: CoachInput) {
     semaines_suivies: firstSession === null ? 0 : Math.round((period.start.getTime() - weekStart(new Date(firstSession)).getTime()) / (7 * 86_400_000)) + 1,
     groupes_du_recapitulatif: input.recap.groups.map(groupLabel),
     seuil_rouge_series: input.recap.redSets,
+    seuil_alerte_series: input.recap.alertSets,
     habitudes: input.habits.map((h) => ({ nom: h.name, jour: WEEKDAY_LABELS[h.weekday], debut: h.start, fin: h.end, groupes: h.groups.map(groupLabel), active: h.enabled })),
     taille_cm: input.heightCm,
     dernieres_pesees: weighIns.slice(-COACH_WEIGH_INS).map((w) => ({ date: w.date, kg: w.weightKg })),
@@ -386,17 +387,18 @@ export function buildCoachExport(input: CoachInput) {
   };
 
   // Signaux.
-  const alertes = input.recap.groups
-    .filter((g) => GROUP_VIEW_GROUPS.includes(g))
-    .map((g) => groupAlert(sessions, input.exercises, g, end))
-    .filter((a) => a !== null)
-    .map((a) => ({
-      groupe: groupLabel(a.group),
-      series_2_dernieres_semaines: a.recent.map(round1),
-      moyenne_avant: round1(a.average),
-      texte: `${groupLabel(a.group)} : ${alertFigures(a)}`.replace(/ | /g, ' '),
-      ...(input.ignoredAlerts[a.group] === a.week ? { ignoree_sur_l_appareil: true } : {}),
-    }));
+  // Version 1.51.0 : tous les groupes sous le seuil les 2 dernières semaines (la semaine exportée et la précédente), du
+  // plus bas au plus haut ; l'appli n'en affiche qu'un (« affichee_dans_l_appli »).
+  const alertInput = { sessions, exercises: input.exercises, activities, machines: input.machines, groups: input.recap.groups, threshold: input.recap.alertSets, now: end };
+  const shownAlert = groupAlerts(alertInput, input.ignoredAlerts)[0];
+  const alertes = groupAlertCandidates(alertInput).map((a) => ({
+    groupe: groupLabel(a.group),
+    series_2_dernieres_semaines: a.recent.map(round1),
+    seuil: a.threshold,
+    texte: `${groupLabel(a.group)} : ${alertFigures(a)}`.replace(/ | /g, ' '),
+    ...(shownAlert?.group === a.group ? { affichee_dans_l_appli: true } : {}),
+    ...(input.ignoredAlerts[a.group] === a.week ? { ignoree_sur_l_appareil: true } : {}),
+  }));
   const difficulty = analyzeProgress(replay.evaluations, replay.profile)
     .filter((v) => v.category === 'difficulty')
     .map((v) => {

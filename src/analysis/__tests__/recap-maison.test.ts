@@ -10,7 +10,7 @@ import { recapCountLabel, weeklyRecap } from '../weekly';
 const LIB: Exercise[] = [...SEED_EXERCISES];
 const settings = buildEngineSettings(LIB);
 const GROUPS: MuscleGroup[] = ['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes', 'abdominaux'];
-const RECAP = { groups: GROUPS, redSets: 10 };
+const RECAP = { groups: GROUPS, redSets: 10, alertSets: 6 };
 const NOW = new Date(2026, 9, 30, 20).getTime(); // vendredi 30 octobre 2026
 
 const p = (variantId: string, reps: number[], weightKg = 0): Performance => ({

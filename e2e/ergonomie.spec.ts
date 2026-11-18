@@ -946,8 +946,9 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
 
   });
 
-  test('225. Accueil avec des alertes', async ({ page }) => {
-    // Alertes « groupe moins travaillé » (version 1.38.0) : trois lignes (vacances les deux dernières semaines).
+  test('225. Accueil avec une alerte', async ({ page }) => {
+    // Alerte « groupe moins travaillé » (version 1.51.0 : une seule ligne ; vacances les deux dernières semaines, tous les
+    // groupes sous le seuil, le plus bas affiché avec « Ignorer »).
     await page.clock.setFixedTime(new Date(ALERT_NOW));
     await page.goto('./');
     await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
@@ -968,17 +969,18 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
       await page.setViewportSize({ width, height: 800 });
       await page.goto('./');
       await reloadAfterWrites(page);
-        // Onglet Séance (version 1.40.0) : une ligne de résumé.
-        await expect(page.getByTestId('group-alerts-summary')).toHaveText('3 groupes sous ta moyenne : Pectoraux, Dos, Épaules');
+        // Onglet Séance : une seule ligne, le groupe le plus bas (version 1.51.0 ; plus de ligne de résumé).
+        await expect(page.getByTestId('group-alerts').getByRole('link')).toHaveText('Pectoraux : 0 et 0 série ces 2 semaines (sous 6)');
       const restore = scale > 1 ? await largeText(page) : null;
       await toTop(page);
-      await expectClean(page, `Accueil avec des alertes à ${width} px${scale > 1 ? ', texte à 115 %' : ''}`, scale);
+      await expectClean(page, `Accueil avec une alerte à ${width} px${scale > 1 ? ', texte à 115 %' : ''}`, scale);
       await restore?.();
     }
   });
 
-  test('225. Progrès avec des alertes', async ({ page }) => {
-    // Alertes « groupe moins travaillé » (version 1.38.0) : trois lignes (vacances les deux dernières semaines).
+  test('225. Progrès avec une alerte', async ({ page }) => {
+    // Alerte « groupe moins travaillé » (version 1.51.0) : une seule ligne avec « Ignorer » (vacances les deux dernières
+    // semaines).
     await page.clock.setFixedTime(new Date(ALERT_NOW));
     await page.goto('./');
     await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
@@ -999,11 +1001,11 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
       await page.setViewportSize({ width, height: 800 });
       await page.goto('./#/progres');
       await reloadAfterWrites(page);
-        // Onglet Progrès : une ligne par groupe.
-        await expect(page.getByTestId('group-alerts').getByRole('listitem')).toHaveCount(3);
+        // Onglet Progrès : la même ligne, seule.
+        await expect(page.getByTestId('group-alerts').getByRole('listitem')).toHaveCount(1);
       const restore = scale > 1 ? await largeText(page) : null;
       await toTop(page);
-      await expectClean(page, `Progrès avec des alertes à ${width} px${scale > 1 ? ', texte à 115 %' : ''}`, scale);
+      await expectClean(page, `Progrès avec une alerte à ${width} px${scale > 1 ? ', texte à 115 %' : ''}`, scale);
       await restore?.();
     }
   });

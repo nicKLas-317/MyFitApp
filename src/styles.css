@@ -2216,8 +2216,9 @@ fieldset {
 }
 
 /*
- * Alerte « groupe moins travaillé » (version 1.38.0) : une ligne discrète par groupe sous le récapitulatif (et en haut
- * de l'onglet Progrès), neutre ; le texte ouvre le graphique, « Ignorer » à droite, 8 px entre les deux.
+ * Alerte « groupe moins travaillé » (version 1.38.0 ; une seule ligne depuis la version 1.51.0) : sous le
+ * récapitulatif (et en haut de l'onglet Progrès), neutre ; le texte ouvre le graphique, « Ignorer » à droite, 8 px
+ * entre les deux.
  */
 .group-alerts {
   list-style: none;
@@ -2226,18 +2227,8 @@ fieldset {
 }
 
 /* Collées au récapitulatif : elles en sont la suite. */
-.weekly-recap:has(+ .group-alerts),
-.weekly-recap:has(+ .group-alerts-summary) {
+.weekly-recap:has(+ .group-alerts) {
   margin-bottom: var(--space-1);
-}
-
-/* Onglet Séance, 2 groupes ou plus (version 1.40.0) : une ligne de résumé, qui mène à l'onglet Progrès. */
-.group-alerts-summary {
-  display: flex;
-  margin: 0 0 var(--space-2);
-  font-size: var(--fs-2);
-  color: var(--muted);
-  text-decoration: none;
 }
 
 .group-alert {

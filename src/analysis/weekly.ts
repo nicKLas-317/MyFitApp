@@ -25,16 +25,22 @@ export interface WeeklyRecapSettings {
   groups: MuscleGroup[];
   /** Séries de la semaine à partir desquelles un groupe est rouge (version 1.45.0 ; avant, `redThreshold` en séances). */
   redSets: number;
+  /** Alerte « groupe moins travaillé » (version 1.51.0, §19.11) : sous ce nombre de séries 2 semaines terminées de suite. */
+  alertSets: number;
 }
 
 export const DEFAULT_RECAP_SETTINGS: WeeklyRecapSettings = {
   groups: ['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes'],
   redSets: 10,
+  alertSets: 6,
 };
 
 /** Seuil du rouge réglable, en séries (version 1.45.0). */
 export const RED_SETS_MIN = 6;
 export const RED_SETS_MAX = 20;
+/** Seuil de l'alerte « groupe moins travaillé », réglable en séries (version 1.51.0). */
+export const ALERT_SETS_MIN = 3;
+export const ALERT_SETS_MAX = 9;
 /** Séries à partir desquelles un groupe est orange (fixe) : un exercice de 3 séries. */
 export const ORANGE_SETS = 3;
 /** Séries comptées pour une activité confirmée, par groupe sollicité (version 1.45.0). */
@@ -385,7 +391,9 @@ export function sanitizeRecapSettings(value: unknown): WeeklyRecapSettings {
     : isInt(v.redThreshold, 2, 7)
       ? Math.min(RED_SETS_MAX, v.redThreshold * SETS_PER_SESSION)
       : DEFAULT_RECAP_SETTINGS.redSets;
-  return { groups: groups.length > 0 ? groups : DEFAULT_RECAP_SETTINGS.groups, redSets };
+  // Version 1.51.0 : seuil de l'alerte « groupe moins travaillé », absent d'un réglage antérieur (6).
+  const alertSets = isInt(v.alertSets, ALERT_SETS_MIN, ALERT_SETS_MAX) ? v.alertSets : DEFAULT_RECAP_SETTINGS.alertSets;
+  return { groups: groups.length > 0 ? groups : DEFAULT_RECAP_SETTINGS.groups, redSets, alertSets };
 }
 
 const DAY = new Intl.DateTimeFormat('fr-FR', { day: 'numeric' });

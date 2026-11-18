@@ -148,19 +148,19 @@ describe('Récapitulatif en séries (version 1.45.0)', () => {
   it('307. Seuil du rouge en séries : ancien réglage en séances converti (2 → 10, 3 → 15, 4 et plus → 20), 6 à 20 gardé, sinon 10 ; sauvegarde ancienne restaurée convertie, export en séries', () => {
     const groups = DEFAULT_RECAP_SETTINGS.groups;
     expect(DEFAULT_RECAP_SETTINGS.redSets).toBe(10);
-    expect(sanitizeRecapSettings({ groups, redThreshold: 2 })).toEqual({ groups, redSets: 10 });
-    expect(sanitizeRecapSettings({ groups, redThreshold: 3 })).toEqual({ groups, redSets: 15 });
-    expect(sanitizeRecapSettings({ groups, redThreshold: 4 })).toEqual({ groups, redSets: 20 });
-    expect(sanitizeRecapSettings({ groups, redThreshold: 7 })).toEqual({ groups, redSets: 20 });
-    expect(sanitizeRecapSettings({ groups, redSets: 6 })).toEqual({ groups, redSets: 6 });
-    expect(sanitizeRecapSettings({ groups, redSets: 20 })).toEqual({ groups, redSets: 20 });
+    expect(sanitizeRecapSettings({ groups, redThreshold: 2 })).toEqual({ groups, redSets: 10, alertSets: 6 });
+    expect(sanitizeRecapSettings({ groups, redThreshold: 3 })).toEqual({ groups, redSets: 15, alertSets: 6 });
+    expect(sanitizeRecapSettings({ groups, redThreshold: 4 })).toEqual({ groups, redSets: 20, alertSets: 6 });
+    expect(sanitizeRecapSettings({ groups, redThreshold: 7 })).toEqual({ groups, redSets: 20, alertSets: 6 });
+    expect(sanitizeRecapSettings({ groups, redSets: 6 })).toEqual({ groups, redSets: 6, alertSets: 6 });
+    expect(sanitizeRecapSettings({ groups, redSets: 20 })).toEqual({ groups, redSets: 20, alertSets: 6 });
     // Hors de 6 à 20, ou invalide : 10 par défaut.
     for (const redSets of [5, 21, 7.5, '10', null]) expect(sanitizeRecapSettings({ groups, redSets }).redSets, String(redSets)).toBe(10);
     for (const redThreshold of [1, 8, 2.5, 'x']) expect(sanitizeRecapSettings({ groups, redThreshold }).redSets, String(redThreshold)).toBe(10);
     // Un seuil en séries valide l'emporte sur un ancien seuil resté à côté.
-    expect(sanitizeRecapSettings({ groups, redSets: 8, redThreshold: 4 })).toEqual({ groups, redSets: 8 });
+    expect(sanitizeRecapSettings({ groups, redSets: 8, redThreshold: 4 })).toEqual({ groups, redSets: 8, alertSets: 6 });
     expect(sanitizeRecapSettings(undefined)).toEqual(DEFAULT_RECAP_SETTINGS);
-    expect(sanitizeRecapSettings({ groups: ['dos'], redThreshold: 3 })).toEqual({ groups: ['dos'], redSets: 15 });
+    expect(sanitizeRecapSettings({ groups: ['dos'], redThreshold: 3 })).toEqual({ groups: ['dos'], redSets: 15, alertSets: 6 });
 
     // Sauvegarde ancienne (format 7, seuil en séances) : lue telle quelle, restaurée avec le seuil converti
     // (l'écran Importer / exporter passe le réglage par `sanitizeRecapSettings`).
@@ -168,14 +168,14 @@ describe('Récapitulatif en séries (version 1.45.0)', () => {
     expect(old.schemaVersion).toBe(7);
     const parsed = parseJsonImport(JSON.stringify(old), LIB, '2026-10-12');
     if (parsed.kind !== 'backup') throw new Error(parsed.kind);
-    expect(sanitizeRecapSettings(parsed.backup.settings.weeklyRecap)).toEqual({ groups: ['pectoraux', 'dos'], redSets: 10 });
+    expect(sanitizeRecapSettings(parsed.backup.settings.weeklyRecap)).toEqual({ groups: ['pectoraux', 'dos'], redSets: 10, alertSets: 6 });
 
     // Export : le seuil en séries, plus de `redThreshold`.
     const exported = JSON.parse(JSON.stringify(buildBackup({ sessions: [], exercises: LIB, settings: { weeklyRecap: sanitizeRecapSettings({ groups, redThreshold: 3 }) } }, at(12))));
-    expect(exported.settings.weeklyRecap).toEqual({ groups, redSets: 15 });
+    expect(exported.settings.weeklyRecap).toEqual({ groups, redSets: 15, alertSets: 6 });
     expect(exported.settings.weeklyRecap).not.toHaveProperty('redThreshold');
     const again = parseJsonImport(JSON.stringify(exported), LIB, '2026-10-12');
     if (again.kind !== 'backup') throw new Error(again.kind);
-    expect(sanitizeRecapSettings(again.backup.settings.weeklyRecap)).toEqual({ groups, redSets: 15 });
+    expect(sanitizeRecapSettings(again.backup.settings.weeklyRecap)).toEqual({ groups, redSets: 15, alertSets: 6 });
   });
 });
