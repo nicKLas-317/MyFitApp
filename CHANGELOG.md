@@ -4,6 +4,12 @@ Ce qui a changé à chaque version de MyFitApp, de la plus récente à la plus a
 
 Les commits sans changement de numéro (documentation, tests, workflow) sont rangés sous la version en cours à ce moment-là.
 
+## 1.55.0 — 19 nov. 2026
+
+- Export pour le coach (§19.13) : nouvelle section `bibliotheque`, tous les exercices disponibles dans l'appli (bibliothèque et exercices personnalisés, marqués `personnalise`), même jamais faits, par groupe principal, une ligne par exercice : variantes, type, groupes secondaires, sous-groupes et articulations avec leurs poids (« dos épaisseur 1, épaules arrière ½, biceps brachial ½ », « épaule ½, coude ½ »), `deja_fait` (jusqu'au dimanche de la semaine exportée) et `variantes_faites` quand seules certaines variantes l'ont été. Exercices et variantes archivés exclus. Même bouton « Partager pour le coach » ; la règle en tête de l'export explique chaque champ
+- Vraies données (sauvegarde du 19/11) : la bibliothèque fait 11 Ko sur 71 Ko (56 exercices, 36 déjà faits, 5 personnalisés) ; « Lat pulldown machine » est marqué jamais fait (aucune séance ne l'utilise)
+- Tests : 328 (unitaire, avec quatre contre-tests), 311 (bout en bout : la bibliothèque dans le fichier partagé), 310 adapté ; la sauvegarde du 19/11 ajoutée au test de l'export sur les vraies données
+
 ## 1.54.0 — 19 nov. 2026
 
 - Sous-groupes musculaires (§19.15) pour les 7 groupes : pectoraux haut, milieu, bas ; dos largeur, épaisseur, lombaires ; épaules avant, côté, arrière ; biceps longue, courte, brachial ; triceps longue, latérale, médiale ; jambes quadriceps, ischio-jambiers, fessiers, adducteurs, mollets ; abdominaux grand droit, obliques, transverse. Chaque série compte 1 pour le sous-groupe visé, ½ pour un sous-groupe sollicité moins directement (correspondance de la bibliothèque validée, groupes secondaires compris : ½ à un seul sous-groupe) ; salle et maison pareil ; ni activités ni cardio ; une répartition, pas une décomposition exacte des séries du groupe

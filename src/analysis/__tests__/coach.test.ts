@@ -111,7 +111,7 @@ describe('Export pour le coach (version 1.46.0)', () => {
     expect(hasCoachWeek(history(), NOW)).toBe(true);
 
     const data = buildCoachExport(input());
-    expect(Object.keys(data)).toEqual(['export', 'version_format', 'version_appli', 'genere_le', 'periode', 'regles', 'contexte', 'semaine', 'recapitulatif', 'exercices', 'tendance', 'signaux']);
+    expect(Object.keys(data)).toEqual(['export', 'version_format', 'version_appli', 'genere_le', 'periode', 'regles', 'contexte', 'semaine', 'recapitulatif', 'exercices', 'tendance', 'signaux', 'bibliotheque']);
     expect(data.periode).toMatchObject({ titre: 'Semaine du 19 au 25 oct. 2026', du: '2026-10-19', au: '2026-10-25' });
     expect(data.genere_le).toBe('2026-10-26 09:00');
     // Aucun identifiant interne.
@@ -295,5 +295,78 @@ describe('Export pour le coach (version 1.46.0)', () => {
     // Semaine envoyée : un lundi valide, sinon rien.
     expect(sanitizeCoachSent('2026-11-09')).toBe('2026-11-09');
     for (const bad of ['2026-11-10', '2026-11', 42, null, undefined, {}]) expect(sanitizeCoachSent(bad), String(bad)).toBeNull();
+  });
+
+  it('328. Bibliothèque : tous les exercices disponibles, même jamais faits, personnalisés compris, archivés exclus ; type, groupes, sous-groupes et articulations avec leurs poids ; « déjà fait » arrêté au dimanche ; une ligne par exercice', () => {
+    const custom = (id: string, name: string, primaryGroup: MuscleGroup, secondaryGroups: MuscleGroup[] = [], extra: Partial<Exercise> = {}): Exercise => ({
+      id, name, synonyms: [], primaryGroup, secondaryGroups, equipment: 'machine', variants: [{ id, name: 'Standard', synonyms: [], archived: false }], archived: false, ...extra,
+    });
+    const roue = custom('perso-roue', 'Roue abdominale', 'abdominaux', [], { equipment: 'poids du corps', variants: [{ id: 'perso-roue', name: 'Standard', synonyms: [], archived: false, config: { bodyweight: true, minReps: 10, maxReps: 40 } }] });
+    const cable = custom('perso-elevations-cable', 'Élévations latérales câble', 'epaules');
+    const sissy = custom('perso-sissy', 'Machine Technogym 7', 'quadriceps', ['fessiers']);
+    const archived = custom('perso-ancien', 'Ancien exercice', 'dos', [], { archived: true });
+    // Le curl pupitre perd sa variante standard (archivée) au profit d'une variante « Machine ».
+    const lib = [
+      ...LIB.map((e) => (e.id === 'curl-pupitre' ? { ...e, variants: [{ ...e.variants[0]!, archived: true }, { id: 'curl-pupitre--machine', name: 'Machine', synonyms: [], archived: false }] } : e)),
+      roue, cable, sissy, archived,
+    ];
+    // Shrugs faits le mercredi 21, mollets assis le lundi 26 seulement (après la semaine exportée).
+    const extra = [
+      plain('shrugs-21', 21, 18, { performances: [{ variantId: 'shrugs', weightKg: 20, targetReps: 10, plannedSets: 3, reps: [10, 10, 10], feeling: 'bien' }] }),
+      plain('mollets-26', 26, 18, { performances: [{ variantId: 'mollets-machine--assis', weightKg: 40, targetReps: 10, plannedSets: 3, reps: [10, 10, 10], feeling: 'bien' }] }),
+    ];
+    const data = buildCoachExport(input([...history(), ...extra], { exercises: lib, settings: buildEngineSettings(lib) }));
+    const bib = data.bibliotheque as Record<string, Record<string, unknown>[]>;
+    // Par groupe principal, dans l'ordre des groupes ; tous les exercices non archivés, une fois chacun.
+    expect(Object.keys(bib)).toEqual(['Pectoraux', 'Dos', 'Épaules', 'Biceps', 'Triceps', 'Jambes', 'Abdominaux']);
+    const all = Object.values(bib).flat();
+    const names = all.map((e) => e.nom);
+    expect(new Set(names).size).toBe(names.length);
+    expect(names).toHaveLength(LIB.filter((e) => !e.archived).length + 3);
+    expect(names).not.toContain('Ancien exercice');
+    expect(bib['Dos']!.map((e) => e.nom)).toEqual([...bib['Dos']!.map((e) => e.nom as string)].sort((a, b) => a.localeCompare(b, 'fr')));
+    const entry = (name: string) => all.find((e) => e.nom === name)!;
+
+    // Valeurs validées : type, secondaires, sous-groupes et articulations avec leurs poids (1 ou ½).
+    expect(entry('Tirage vertical')).toEqual({
+      nom: 'Tirage vertical', secondaires: ['Biceps'], type: 'charge', sous_groupes: 'dos largeur 1, biceps brachial ½', articulations: 'épaule 1, coude ½',
+      deja_fait: true, variantes: ['Prise moyenne', 'Prise très large', 'Prise serrée'], variantes_faites: ['Prise moyenne'],
+    });
+    expect(entry('Dips assistés')).toMatchObject({ type: 'assisté', sous_groupes: 'triceps latérale ½, triceps médiale ½, pectoraux bas ½, épaules avant ½', articulations: 'épaule 1, coude 1' });
+    expect(entry('Développé incliné')).toMatchObject({ type: 'Barre : charge ; Haltères : haltères', sous_groupes: 'pectoraux haut 1, épaules avant ½, triceps latérale ½', variantes: ['Barre', 'Haltères'], deja_fait: false });
+    expect(entry('Curl biceps haltères')).toMatchObject({ type: 'haltères', sous_groupes: 'biceps longue ½, biceps courte ½', articulations: 'coude 1', deja_fait: true });
+    expect(entry('Planche')).toMatchObject({ type: 'durée', sous_groupes: 'abdominaux transverse 1, abdominaux grand droit ½', articulations: 'aucune' });
+    expect(entry('Pompes')).toMatchObject({ type: 'poids du corps', variantes: ['Classiques', 'Sur les genoux'], deja_fait: false });
+    expect(entry('La chaise')).toMatchObject({ type: 'durée', sous_groupes: 'quadriceps 1, abdominaux transverse ½', articulations: 'genou 1' });
+    expect(entry('Pec deck')).not.toHaveProperty('variantes');
+    // Variante archivée absente.
+    expect(entry('Curl pupitre')).toMatchObject({ variantes: ['Machine'], deja_fait: false });
+    // Exercices personnalisés : correspondance exacte (roue), déduction par mots-clés (câble), par les groupes (sous-groupe des jambes).
+    expect(entry('Roue abdominale')).toEqual({ nom: 'Roue abdominale', personnalise: true, type: 'poids du corps', sous_groupes: 'abdominaux grand droit 1, abdominaux transverse ½', articulations: 'aucune', deja_fait: false });
+    expect(entry('Élévations latérales câble')).toMatchObject({ personnalise: true, sous_groupes: 'épaules côté 1', articulations: 'épaule 1' });
+    expect(bib['Jambes']!.find((e) => e.nom === 'Machine Technogym 7')).toEqual({
+      nom: 'Machine Technogym 7', groupe: 'Quadriceps', personnalise: true, secondaires: ['Fessiers'], type: 'charge', sous_groupes: 'quadriceps 1, fessiers ½', articulations: 'genou 1', deja_fait: false,
+    });
+    expect(entry('Chest press')).not.toHaveProperty('personnalise');
+    // Variante standard sans nom, à côté de variantes nommées : « Standard ».
+    const incline = buildCoachExport(input(undefined, { exercises: LIB.map((e) => (e.id === 'curl-biceps-banc-incline' ? { ...e, variants: [...e.variants, { id: 'curl-incline--70', name: '70°', synonyms: [], archived: false }] } : e)) }));
+    expect(Object.values(incline.bibliotheque).flat().find((e) => (e as { nom: string }).nom === 'Curl biceps banc incliné')).toMatchObject({ variantes: ['Standard', '70°'] });
+
+    // Déjà fait : jusqu'au dimanche de la semaine exportée (shrugs le 21 oui, mollets assis le 26 non), performance partielle comprise.
+    expect(entry('Shrugs').deja_fait).toBe(true);
+    expect(entry('Mollets machine')).toMatchObject({ deja_fait: false, variantes: ['Debout', 'Assis'] });
+    expect(entry('Mollets machine')).not.toHaveProperty('variantes_faites');
+    const partialOnly = buildCoachExport(input(history().filter((s) => s.id === 'import-23' || !s.performances.some((p) => p.variantId === 'rowing-haltere'))));
+    expect(Object.values(partialOnly.bibliotheque).flat().find((e) => (e as { nom: string }).nom === 'Rowing haltère')).toMatchObject({ deja_fait: true });
+    const neverRow = buildCoachExport(input(history().filter((s) => !s.performances.some((p) => p.variantId === 'rowing-haltere'))));
+    expect(Object.values(neverRow.bibliotheque).flat().find((e) => (e as { nom: string }).nom === 'Rowing haltère')).toMatchObject({ deja_fait: false });
+
+    // Format compact : une ligne par exercice, aucun identifiant interne, règle en tête.
+    const text = coachExportText(input([...history(), ...extra], { exercises: lib, settings: buildEngineSettings(lib) }));
+    const section = text.slice(text.indexOf('"bibliotheque"'));
+    expect(section.split('\n').filter((l) => l.trim().startsWith('{ "nom": '))).toHaveLength(names.length);
+    for (const id of ['perso-roue', 'perso-sissy', 'curl-pupitre--machine', 'mollets-machine--assis', 'tirage-vertical--prise-serree']) expect(text, id).not.toContain(id);
+    expect(section.length).toBeLessThan(12_000);
+    expect(data.regles.find((r) => r.startsWith('Bibliothèque'))).toContain('« deja_fait » : au moins une séance jusqu’au dimanche de la semaine exportée');
   });
 });

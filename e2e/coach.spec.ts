@@ -123,6 +123,13 @@ test.describe('Partager pour le coach (version 1.46.0)', () => {
     expect(file!.text.split('\n').filter((l) => l.trim().startsWith('{ "exercice": ')).length).toBeGreaterThanOrEqual(10);
     expect(data.tendance.semaines).toHaveLength(8);
     expect(data.exercices.length).toBeGreaterThan(5);
+    // Version 1.55.0 (test 328) : la bibliothèque, tous les exercices, même jamais faits, une ligne chacun.
+    const bib = Object.values(data.bibliotheque).flat() as { nom: string; deja_fait: boolean }[];
+    expect(Object.keys(data.bibliotheque)[0]).toBe('Pectoraux');
+    expect(bib.find((e) => e.nom === 'Chest press')).toMatchObject({ type: 'charge', sous_groupes: 'pectoraux milieu 1, épaules avant ½, triceps latérale ½', articulations: 'épaule 1, coude ½', deja_fait: true });
+    expect(bib.find((e) => e.nom === 'Hack squat')).toMatchObject({ deja_fait: false });
+    expect(bib.length).toBeGreaterThan(50);
+    expect(file!.text.split('\n').filter((l) => l.trim().startsWith('{ "nom": "') && l.includes('"deja_fait"')).length).toBe(bib.length);
 
     // Le texte du bilan est celui du mail de la semaine (écran « Bilan de la période »).
     await page.goto('./#/bilan-periode/semaine/2026-10-19');

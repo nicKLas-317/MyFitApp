@@ -27,6 +27,7 @@ import { weekSuggestion, SUGGEST_MAX, type SkipReason } from '../plan/suggest';
 import { coachWeek, DAY_MONTH_YEAR } from './coachPeriod';
 import { clock, FEELINGS, groupLabel, loadField, nextTargetText, rangeText, recommendationText, round1, typeOf, weekday } from './coachFormat';
 import { coachJson } from './coachJson';
+import { coachLibrary } from './coachLibrary';
 import { coachRules } from './coachRules';
 import { formatLoad } from '../session/format';
 import { elapsedMs } from '../session/ops';
@@ -493,6 +494,8 @@ export function buildCoachExport(input: CoachInput) {
     exercices,
     tendance,
     signaux,
+    // Version 1.55.0 : tous les exercices disponibles, même jamais faits (§19.13).
+    bibliotheque: coachLibrary(input.exercises, input.settings, sessions),
   };
 }
 
