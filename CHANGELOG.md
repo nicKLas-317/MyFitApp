@@ -4,6 +4,16 @@ Ce qui a changé à chaque version de MyFitApp, de la plus récente à la plus a
 
 Les commits sans changement de numéro (documentation, tests, workflow) sont rangés sous la version en cours à ce moment-là.
 
+## 1.54.0 — 19 nov. 2026
+
+- Sous-groupes musculaires (§19.15) pour les 7 groupes : pectoraux haut, milieu, bas ; dos largeur, épaisseur, lombaires ; épaules avant, côté, arrière ; biceps longue, courte, brachial ; triceps longue, latérale, médiale ; jambes quadriceps, ischio-jambiers, fessiers, adducteurs, mollets ; abdominaux grand droit, obliques, transverse. Chaque série compte 1 pour le sous-groupe visé, ½ pour un sous-groupe sollicité moins directement (correspondance de la bibliothèque validée, groupes secondaires compris : ½ à un seul sous-groupe) ; salle et maison pareil ; ni activités ni cardio ; une répartition, pas une décomposition exacte des séries du groupe
+- Les cinq exercices personnalisés de l'utilisateur ont leur correspondance exacte ; un futur exercice personnalisé est déduit des mots-clés de son nom, sinon de ses groupes, sinon réparti également ; aucun champ à remplir, sauvegarde inchangée
+- Progrès › Par groupe musculaire : sous « Séries par semaine », les barres des sous-groupes sur les 4 dernières semaines terminées, à la couleur du groupe ; un sous-groupe à 0 en gris, « pas travaillé »
+- Bilans de la semaine et du mois : section « Sous-groupes » repliable, fermée, seulement les groupes travaillés, en liste indentée (le groupe en gras, les sous-groupes avec un tiret, un 0 en gris) ; dans le mail, une ligne par groupe (« Épaules : avant 7, côté 1,5, arrière 0 »), les mêmes groupes
+- Export pour le coach : `sous_groupes` (la semaine) et `sous_groupes_4_semaines`, et la règle
+- Vraies données (export du 19/11) : les 39 exercices-variantes de l'historique ont leur correspondance ; sur les 4 dernières semaines terminées, l'arrière d'épaule à 6 (tirages horizontaux seulement), les lombaires et le haut des pectoraux à 0
+- Tests : 324 à 326 (unitaires), 327 (bout en bout), 225 (Par groupe pour les biceps et les jambes, bilan avec les sous-groupes ouverts) ; 192 et 195 adaptés
+
 ## 1.53.0 — 19 nov. 2026
 
 - Nouvelle alerte « articulation trop sollicitée » (épaule, coude, genou, §19.14). Chaque semaine, séries par articulation : 1 par série pour une articulation très sollicitée par l'exercice, ½ pour une articulation sollicitée moins directement (correspondance de la bibliothèque validée par l'utilisateur), salle et maison en entier ; 3 séries par activité confirmée pour chacune de ses articulations ; 3 séries pour le genou à partir de 15 min de footing dans la semaine. Exercices personnalisés et activités : articulations déduites de leurs groupes. En alerte quand la dernière semaine terminée atteint 1,5 fois la moyenne des 4 précédentes, avec au moins 5 séries de plus et au moins 10 séries ; muette tant qu'il n'y a pas 4 semaines terminées avant

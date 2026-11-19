@@ -7,7 +7,7 @@ import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { formatMinutes } from '../cardio/model';
 import type { Exercise, MuscleGroup } from '../domain/types';
 import { alertBanner, type GroupAlert } from '../analysis/groupAlerts';
-import { comparedTo, lineText, type PeriodReport, type ReportSection } from '../analysis/report';
+import { comparedTo, lineText, workedSubGroups, type PeriodReport, type ReportSection } from '../analysis/report';
 import { progressionMeta, type LadderStep, type ReportScreen } from '../analysis/reportScreen';
 import { LEG_CARDIO_MINUTES, LEG_CARDIO_SETS, setsLabel } from '../analysis/weekly';
 import { MUSCLE_GROUP_LABELS } from '../library/seed';
@@ -17,6 +17,7 @@ import { exerciseColorProps, groupColorProps } from './groupColors';
 import { WarningIcon } from './GroupAlerts';
 import { JointIcon } from './JointAlerts';
 import { jointReportText, type JointAlert } from '../analysis/jointAlerts';
+import { subGroupsOf } from '../analysis/subGroups';
 
 const NB = ' ';
 const plural = (n: number, one: string, many = `${one}s`) => pluralWith(n, one, many, NB);
@@ -337,6 +338,39 @@ function ReportAlert({ alerts }: { alerts: readonly GroupAlert[] }) {
         {`\u00a0: ${rest}${detail}`}
       </span>
     </p>
+  );
+}
+
+/**
+ * Sous-groupes de la période (version 1.54.0, §19.15) : section repliable, fermée à l'ouverture, seulement les groupes
+ * travaillés ; une liste indentée : le groupe en gras, puis ses sous-groupes avec un tiret, un sous-groupe à 0 en gris
+ * (choix de l'utilisateur). Le mail garde une ligne par groupe, les mêmes groupes.
+ */
+export function ReportSubGroups({ report }: { report: PeriodReport }) {
+  const worked = workedSubGroups(report);
+  return (
+    <details className="frame settings-section report-sub-groups" aria-label="Sous-groupes" data-testid="report-sub-groups">
+      <summary>
+        <span className="section-title">Sous-groupes</span>
+      </summary>
+      <ul className="sub-group-list">
+        {worked.map((g) => (
+          <li key={g.group} data-group={g.group}>
+            <strong>{`${MUSCLE_GROUP_LABELS[g.group]}\u00a0:`}</strong>
+            <ul className="sub-group-items">
+              {subGroupsOf(g.group).map((sub) => {
+                const sets = g.sets[sub.id] ?? 0;
+                return (
+                  <li key={sub.id} data-sub={sub.id} data-zero={sets === 0 ? '' : undefined}>
+                    {`–\u00a0${sub.short}\u00a0${formatDecimal(sets)}`}
+                  </li>
+                );
+              })}
+            </ul>
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }
 

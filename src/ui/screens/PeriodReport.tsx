@@ -17,7 +17,7 @@ import { buildReportScreen } from '../../analysis/reportScreen';
 import { displayName } from '../../library/catalog';
 import { perDumbbell } from '../../library/search';
 import { copyText, openMailto, sendByMail } from '../share';
-import { keepUnits, ReportGroups, ReportProgressions, ReportSessions } from '../ReportVisuals';
+import { keepUnits, ReportGroups, ReportProgressions, ReportSessions, ReportSubGroups } from '../ReportVisuals';
 
 const KIND_SEGMENTS: Record<ReportKind, string> = { week: 'semaine', month: 'mois' };
 const TABS: { kind: ReportKind; label: string }[] = [
@@ -119,6 +119,8 @@ export function PeriodReport({ kind, periodParam }: { kind: ReportKind; periodPa
       {sections.map((s) =>
         s.title === 'Séances' ? null : s.title === 'Groupes travaillés' ? (
           <ReportGroups key={s.title} report={report} screen={screen} />
+        ) : s.title === 'Sous-groupes' ? (
+          <ReportSubGroups key={s.title} report={report} />
         ) : s.title === 'Progressions' ? (
           <ReportProgressions key={s.title} report={report} screen={screen} section={s} exerciseOf={(id) => variants.get(id)?.exercise} name={name} dumbbell={dumbbell} />
         ) : (

@@ -3198,6 +3198,82 @@ fieldset.frame > legend + * {
   font-size: var(--fs-4);
 }
 
+/*
+ * Sous-groupes (version 1.54.0, §19.15) : une ligne par sous-groupe, nom et séries, puis la barre à la couleur du
+ * groupe (proportionnelle au plus travaillé) ; à 0, nom et chiffre en gris, « pas travaillé » à la place de la barre.
+ */
+.sub-groups {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sub-group + .sub-group {
+  margin-top: var(--space-2);
+}
+
+.sub-group-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-1);
+  font-size: var(--fs-2);
+}
+
+.sub-group-sets {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.sub-group[data-zero] .sub-group-name,
+.sub-group[data-zero] .sub-group-sets {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.sub-group-bar {
+  display: block;
+  height: 12px;
+  margin-top: var(--space-1);
+}
+
+.sub-group-bar > span {
+  display: block;
+  height: 100%;
+  min-width: 4px;
+  border-radius: 3px;
+  background: var(--group-color);
+}
+
+.sub-group-none {
+  display: block;
+  font-size: var(--fs-1);
+  color: var(--muted);
+}
+
+/*
+ * Sous-groupes du bilan de la période (version 1.54.0) : section repliable (modèle des réglages), fermée à l'ouverture ;
+ * le groupe en gras, puis ses sous-groupes avec un tiret, en retrait ; un sous-groupe à 0 en gris.
+ */
+.sub-group-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 var(--space-2);
+}
+
+.sub-group-list > li + li {
+  margin-top: var(--space-1);
+}
+
+.sub-group-items {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 var(--space-2);
+}
+
+.sub-group-items > li[data-zero] {
+  color: var(--muted);
+}
+
 .group-not-enough {
   color: var(--text);
   margin: var(--space-1) 0;

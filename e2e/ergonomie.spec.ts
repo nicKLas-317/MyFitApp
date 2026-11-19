@@ -303,10 +303,19 @@ const SCREENS_225: [string, (page: Page) => Promise<void>][] = [
       ['Par groupe', './#/bilan-groupes/triceps'],
       // Abdominaux (version 1.33.0) : séries seulement, avec le message sans indice.
       ['Par groupe, abdominaux', './#/bilan-groupes/abdominaux'],
+      // Sous-groupes (version 1.54.0) : les libellés les plus longs (biceps) et le plus de lignes (jambes).
+      ['Par groupe, biceps', './#/bilan-groupes/biceps'],
+      ['Par groupe, jambes', './#/bilan-groupes/jambes'],
       ['Mon poids', './#/poids'],
       ['Réglages', './#/reglages'],
       ['Données', './#/donnees'],
     ] as const).map(([screen, url]) => [screen, (page: Page) => page.goto(url).then(() => undefined)] as [string, (page: Page) => Promise<void>]),
+    // Sous-groupes du bilan de la semaine ouverts (version 1.54.0) : la liste indentée des groupes travaillés.
+    ['Bilan de la semaine, sous-groupes ouverts', async (page: Page) => {
+      await page.goto('./#/bilan-periode/semaine/2026-10-12');
+      await page.getByTestId('report-sub-groups').locator('summary').click();
+      await expect(page.getByTestId('report-sub-groups').locator('.sub-group-items').first()).toBeVisible();
+    }],
     // Bandeau du bilan de la semaine avec « Envoyé au coach ✓ » (version 1.47.0) ; avec le bouton « Partager pour le
     // coach », c'est l'écran « Progrès ».
     ['Progrès, envoyé au coach', async (page: Page) => {

@@ -15,7 +15,9 @@ import { elapsedMs } from '../session/ops';
 import { isPalierValidated } from './progress';
 import { computeRecords, formatRecord, type RecordBreak } from './records';
 import { alertReportText, groupAlertCandidates, type GroupAlert } from './groupAlerts';
+import { parentGroup } from '../domain/muscleGroups';
 import { jointAlertCandidates, jointReportText, type JointAlert } from './jointAlerts';
+import { subGroupLine, subGroupSets, SUB_GROUPS, type SubGroup } from './subGroups';
 import { DEFAULT_RECAP_SETTINGS, groupScore, groupSeries, groupWork, LEG_CARDIO_GROUP, legCardioWeek, setsLabel, workParts } from './weekly';
 import { containsTime, inPeriod, mailSubject, periodLastDay, shiftPeriod, type ReportPeriod } from './reportPeriod';
 
@@ -145,6 +147,11 @@ export interface PeriodReport {
    * sollicitée » pour cette semaine (§19.14), ignorées ou non ; vide sinon.
    */
   jointAlerts: JointAlert[];
+  /**
+   * Version 1.54.0 : séries de chaque sous-groupe sur la période (§19.15), pour chaque groupe du récapitulatif (les
+   * sous-groupes des jambes dans « jambes ») : une ligne de texte par groupe (« Épaules : avant 7, côté 1,5, arrière 0 »).
+   */
+  subGroups: { group: MuscleGroup; sets: Partial<Record<SubGroup, number>> }[];
 }
 
 export interface ReportInput {
@@ -208,6 +215,20 @@ function totalsOf(sessions: readonly Session[], period: Pick<ReportPeriod, 'star
     else unknownDuration++;
   }
   return { sessionCount: list.length, ...(homeCount > 0 ? { homeCount } : {}), durationMs, unknownDuration };
+}
+
+/**
+ * Groupes travaillés dans la période (au moins un sous-groupe au-dessus de 0) : ceux de la section « Sous-groupes », à
+ * l'écran comme dans le mail (choix de l'utilisateur).
+ */
+export function workedSubGroups(report: Pick<PeriodReport, 'subGroups'>): PeriodReport['subGroups'] {
+  return report.subGroups.filter((g) => Object.values(g.sets).some((x) => (x ?? 0) > 0));
+}
+
+/** Sous-groupes des groupes du récapitulatif (un groupe principal une fois, dans l'ordre du récapitulatif). */
+function subGroupsOf(groups: readonly MuscleGroup[], sets: ReadonlyMap<SubGroup, number>): PeriodReport['subGroups'] {
+  const main = [...new Set(groups.map(parentGroup))].filter((g) => SUB_GROUPS[g]);
+  return main.map((group) => ({ group, sets: Object.fromEntries(SUB_GROUPS[group]!.map((s) => [s.id, sets.get(s.id) ?? 0])) }));
 }
 
 export function buildReport(period: ReportPeriod, input: ReportInput): PeriodReport {
@@ -334,6 +355,7 @@ export function buildReport(period: ReportPeriod, input: ReportInput): PeriodRep
             threshold: input.alertSets ?? DEFAULT_RECAP_SETTINGS.alertSets, now: period.next.getTime(),
           })
         : [],
+    subGroups: subGroupsOf(input.groups, subGroupSets(sessions, exercises, (t) => containsTime(period, t))),
     jointAlerts:
       period.kind === 'week' && !inProgress
         ? jointAlertCandidates({ sessions, exercises, activities: done, machines: input.machines ?? [], now: period.next.getTime() })
@@ -440,12 +462,19 @@ export function reportSections(report: PeriodReport, variantName: (variantId: st
     if (idle.length > 0) lines.push([em(`Non travaillés : ${idle.map((g) => MUSCLE_GROUP_LABELS[g.group]).join(', ')}`)]);
     // Version 1.52.1 : l'alerte « groupe moins travaillé » de cette semaine terminée, au format du bandeau.
     if (report.alerts.length > 0) lines.push([alertReportText(report.alerts)]);
-    // Version 1.53.0 : l'alerte « articulation trop sollicitée » de cette semaine terminée, sans conseil.
+    // Version 1.53.0 : l'alerte « articulation trop sollicitée » de cette semaine terminée, avec le conseil.
     if (report.jointAlerts.length > 0) lines.push([jointReportText(report.jointAlerts)]);
     sections.push({ title: 'Groupes travaillés', lines });
   } else if (report.alerts.length > 0) {
     // Semaine sans séance ni activité (vacances) : la ligne de l'alerte seule (aucune articulation en hausse).
     sections.push({ title: 'Groupes travaillés', lines: [[alertReportText(report.alerts)]] });
+  }
+
+  // Version 1.54.0 : une ligne par groupe travaillé dans la période, ses sous-groupes (zéros compris).
+  const worked = workedSubGroups(report);
+  if (totals.sessionCount > 0 && worked.length > 0) {
+    const sets = (g: PeriodReport['subGroups'][number]) => new Map(Object.entries(g.sets) as [SubGroup, number][]);
+    sections.push({ title: 'Sous-groupes', lines: worked.map((g) => [`${MUSCLE_GROUP_LABELS[g.group]} : ${subGroupLine(g.group, sets(g))}`]) });
   }
 
   if (totals.sessionCount > 0) {

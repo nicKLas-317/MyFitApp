@@ -32,6 +32,7 @@ import { formatLoad } from '../session/format';
 import { elapsedMs } from '../session/ops';
 import { sessionTitle } from '../session/title';
 import { alertFigures, groupAlertCandidates, groupAlerts, type IgnoredAlerts } from './groupAlerts';
+import { recentSubGroups, subGroupsOf } from './subGroups';
 import { JOINT_LABELS, jointAlerts, jointFigures, jointReportText, type IgnoredJointAlerts } from './jointAlerts';
 import { GROUP_VIEW_GROUPS, groupIndex, SETS_ONLY_GROUPS } from './groups';
 import { analyzeProgress } from './progress';
@@ -297,6 +298,12 @@ export function buildCoachExport(input: CoachInput) {
     seuil_rouge_series: input.recap.redSets,
     seances: { salle: weekSessions.filter((s) => s.location !== 'maison').length, maison: weekSessions.filter((s) => s.location === 'maison').length },
     groupes: recapGroups(input, sessions, activities, period),
+    // Version 1.54.0 : répartition par sous-groupe (§19.15), la semaine exportée et les 4 semaines terminées qu'elle clôt
+    // (celles de « Par groupe musculaire » le lundi suivant).
+    sous_groupes: Object.fromEntries(report.subGroups.map((g) => [groupLabel(g.group), Object.fromEntries(subGroupsOf(g.group).map((sub) => [sub.label.toLowerCase(), round1(g.sets[sub.id] ?? 0)]))])),
+    sous_groupes_4_semaines: Object.fromEntries(
+      report.subGroups.map((g) => [groupLabel(g.group), Object.fromEntries(recentSubGroups(sessions, input.exercises, g.group, end).rows.map((r) => [r.label.toLowerCase(), round1(r.sets)]))]),
+    ),
     texte_du_bilan: reportText(report, name, dumbbell).split('\n'),
   };
 

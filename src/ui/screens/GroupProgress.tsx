@@ -5,6 +5,8 @@ import { navigateReplace, useNow } from '../../app/hooks';
 import type { WeighIn } from '../../body/model';
 import type { MuscleGroup } from '../../domain/types';
 import { GROUP_VIEW_GROUPS, type GroupSets, groupIndex, groupWeeklySets, notEnoughForIndex, notEnoughForSets, SETS_ONLY_GROUPS, SETS_WEEKS } from '../../analysis/groups';
+import { recentSubGroups, SUB_GROUP_WEEKS } from '../../analysis/subGroups';
+import { localDate } from '../../domain/calendar';
 import { displayName } from '../../library/catalog';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
 import { formatDecimal, formatShortDay } from '../../session/format';
@@ -48,6 +50,7 @@ export function GroupProgress({ group, toSets = false }: { group: MuscleGroup; t
   const week = Math.floor(now / 3_600_000);
   const index = useMemo(() => groupIndex(sessions, exercises, settings, group, weighIns), [sessions, exercises, settings, group, weighIns]);
   const sets = useMemo(() => groupWeeklySets(sessions, exercises, group, Date.now()), [sessions, exercises, group, week]);
+  const subs = useMemo(() => recentSubGroups(sessions, exercises, group, Date.now()), [sessions, exercises, group, week]);
   const label = MUSCLE_GROUP_LABELS[group];
   // Ouvert depuis une alerte « groupe moins travaillé » (version 1.38.0) : directement sur les séries par semaine.
   useEffect(() => {
@@ -132,7 +135,48 @@ export function GroupProgress({ group, toSets = false }: { group: MuscleGroup; t
             </p>
           )}
         </section>
+
+        {/* Sous-groupes (version 1.54.0, §19.15) : les 4 dernières semaines terminées, une barre par sous-groupe. */}
+        <SubGroupBars rows={subs.rows} from={localDate(subs.from.getTime())} to={localDate(subs.to.getTime())} group={group} />
       </ErrorBoundary>
     </main>
+  );
+}
+
+/**
+ * Barres horizontales des sous-groupes (version 1.54.0, option A validée) : nom et séries sur une ligne, la barre dessous,
+ * à la couleur du groupe, proportionnelle au plus travaillé ; un sous-groupe à 0 en gris, « pas travaillé ».
+ */
+function SubGroupBars({ rows, from, to, group }: { rows: ReturnType<typeof recentSubGroups>['rows']; from: string; to: string; group: MuscleGroup }) {
+  const max = Math.max(...rows.map((r) => r.sets), 0);
+  return (
+    <section className="frame group-chart" aria-label="Sous-groupes" data-testid="sub-groups" {...groupColorProps(group)}>
+      <h2 className="section-title">Sous-groupes</h2>
+      <p className="muted small" data-testid="sub-groups-period">
+        {`${SUB_GROUP_WEEKS}\u00a0dernières semaines terminées (du ${formatShortDay(from)} au ${formatShortDay(to)})`}
+      </p>
+      <ul className="sub-groups">
+        {rows.map((r) => (
+          <li key={r.id} className="sub-group" data-sub={r.id} data-zero={r.sets === 0 ? '' : undefined}>
+            <span className="sub-group-head">
+              <span className="sub-group-name">{r.label}</span>
+              <span className="sub-group-sets">
+                {fmt(r.sets)}
+                <span className="visually-hidden">{r.sets === 0 ? ' série, pas travaillé' : r.sets < 2 ? ' série' : ' séries'}</span>
+              </span>
+            </span>
+            {r.sets > 0 ? (
+              <span className="sub-group-bar" aria-hidden="true">
+                <span style={{ width: `${(r.sets / max) * 100}%` }} />
+              </span>
+            ) : (
+              <span className="sub-group-none" aria-hidden="true">
+                pas travaillé
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

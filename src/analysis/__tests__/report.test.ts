@@ -290,6 +290,13 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
         '- Non travaillés : Épaules, Triceps',
         '- Épaules, Triceps, Pectoraux : sous 6 séries ces 2 semaines (Épaules 0 et 0, Triceps 0 et 0, Pectoraux 0 et 3)',
         '',
+        // Version 1.54.0 : une ligne par groupe travaillé (ni épaules ni triceps cette semaine), zéros compris.
+        'SOUS-GROUPES',
+        '- Pectoraux : haut 0, milieu 3, bas 0',
+        '- Dos : largeur 6, épaisseur 0, lombaires 0',
+        '- Biceps : longue 1,5, courte 1,5, brachial 3',
+        '- Jambes : quadriceps 9, ischio-jambiers 0, fessiers 1,5, adducteurs 0, mollets 0',
+        '',
         'PROGRESSIONS',
         '- Curl biceps haltères : 3×8 → 3×9 à 12 kg (21 oct.)',
         '- Leg extension : 3×12 à 40 kg validé → poids supérieur, 3×8 (23 oct.)',
@@ -325,6 +332,8 @@ describe('Bilans de la semaine et du mois (§19.7)', () => {
     expect(emphasized).toEqual({
       Séances: ['+1 par rapport à la semaine dernière', '+1 h 00 par rapport à la semaine dernière'],
       'Groupes travaillés': ['Non travaillés : Épaules, Triceps'],
+      // Version 1.54.0 : les sous-groupes en texte simple.
+      'Sous-groupes': [],
       Progressions: ['3×8 → 3×9 à 12 kg', 'poids supérieur, 3×8', 'moins d’aide, 3×8'],
       Records: [],
       'En difficulté': ['poids inférieur recommandé'],
