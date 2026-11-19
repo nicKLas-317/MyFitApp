@@ -9,6 +9,7 @@ import { DEFAULT_RECAP_SETTINGS, type WeeklyRecapSettings } from '../analysis/we
 import { periodKey, type ReportPeriod } from '../analysis/reportPeriod';
 import { DEFAULT_REPORT_SETTINGS, markSeen, type ReportSeen, type ReportSettings } from '../analysis/reportSettings';
 import { ignoreAlerts, type GroupAlert, type IgnoredAlerts } from '../analysis/groupAlerts';
+import { ignoreJointAlerts as ignoreJoints, type IgnoredJointAlerts, type JointAlert } from '../analysis/jointAlerts';
 import { dismissSetsHint as dismissHint, type SetsHint, type SetsHintDismissed } from '../analysis/setsHint';
 import { answer, sanitizeHabits, type ActivityRecord, type Habit, type Occurrence } from '../activities/model';
 import type { StoredData } from './stored';
@@ -26,6 +27,8 @@ export function useStoredMeta(writeMeta: WriteMeta, localChanges: MutableRefObje
   const [coachSent, setCoachSent] = useState<string | null>(null);
   const [ignoredAlerts, setIgnoredAlerts] = useState<IgnoredAlerts>({});
   const ignoredAlertsRef = useRef<IgnoredAlerts>({});
+  const [ignoredJointAlerts, setIgnoredJointAlerts] = useState<IgnoredJointAlerts>({});
+  const ignoredJointAlertsRef = useRef<IgnoredJointAlerts>({});
   const [setsHintDismissed, setSetsHintDismissed] = useState<SetsHintDismissed>({});
   const setsHintDismissedRef = useRef<SetsHintDismissed>({});
   const [habits, setHabitsState] = useState<Habit[]>(() => sanitizeHabits(undefined));
@@ -49,6 +52,8 @@ export function useStoredMeta(writeMeta: WriteMeta, localChanges: MutableRefObje
     setCoachSent(stored.coachSent);
     ignoredAlertsRef.current = stored.ignoredAlerts;
     setIgnoredAlerts(keep(stored.ignoredAlerts));
+    ignoredJointAlertsRef.current = stored.ignoredJointAlerts;
+    setIgnoredJointAlerts(keep(stored.ignoredJointAlerts));
     setsHintDismissedRef.current = stored.setsHintDismissed;
     setSetsHintDismissed(keep(stored.setsHintDismissed));
     setHabitsState(keep(stored.habits));
@@ -164,6 +169,20 @@ export function useStoredMeta(writeMeta: WriteMeta, localChanges: MutableRefObje
     [writeMeta, localChanges],
   );
 
+  // La croix du bandeau « articulation trop sollicitée » (version 1.53.0) : toutes les articulations citées.
+  const ignoreJointAlerts = useCallback(
+    async (alerts: readonly JointAlert[]): Promise<void> => {
+      const next = ignoreJoints(ignoredJointAlertsRef.current, alerts);
+      ignoredJointAlertsRef.current = next;
+      setIgnoredJointAlerts(next);
+      // Une relecture de la base commencée avant ne doit pas rétablir l'ancienne valeur.
+      localChanges.current++;
+      // Un échec est sans gravité : l'alerte réapparaîtra à la prochaine ouverture.
+      await writeMeta([['jointAlertsIgnored', next]], () => {});
+    },
+    [writeMeta, localChanges],
+  );
+
   const dismissSetsHint = useCallback(
     async (hint: SetsHint): Promise<void> => {
       const next = dismissHint(setsHintDismissedRef.current, hint);
@@ -201,6 +220,8 @@ export function useStoredMeta(writeMeta: WriteMeta, localChanges: MutableRefObje
       markCoachSent,
       ignoredAlerts,
       ignoreGroupAlerts,
+      ignoredJointAlerts,
+      ignoreJointAlerts,
       setsHintDismissed,
       dismissSetsHint,
       habits,

@@ -4,6 +4,16 @@ Ce qui a changé à chaque version de MyFitApp, de la plus récente à la plus a
 
 Les commits sans changement de numéro (documentation, tests, workflow) sont rangés sous la version en cours à ce moment-là.
 
+## 1.53.0 — 19 nov. 2026
+
+- Nouvelle alerte « articulation trop sollicitée » (épaule, coude, genou, §19.14). Chaque semaine, séries par articulation : 1 par série pour une articulation très sollicitée par l'exercice, ½ pour une articulation sollicitée moins directement (correspondance de la bibliothèque validée par l'utilisateur), salle et maison en entier ; 3 séries par activité confirmée pour chacune de ses articulations ; 3 séries pour le genou à partir de 15 min de footing dans la semaine. Exercices personnalisés et activités : articulations déduites de leurs groupes. En alerte quand la dernière semaine terminée atteint 1,5 fois la moyenne des 4 précédentes, avec au moins 5 séries de plus et au moins 10 séries ; muette tant qu'il n'y a pas 4 semaines terminées avant
+- Bandeau lavande (#c4b5fd, texte #1e1036, contraste 9,6:1), même forme que le bandeau jaune, avec un cercle d'avertissement, sur l'onglet Séance (sous le bandeau jaune) et dans Progrès, avec la pastille de l'onglet Progrès. Texte court : « Coude : 18 séries contre 11 d’habitude » (moyenne arrondie à l'entier), « Épaule, Coude : forte hausse » pour plusieurs. Pas de lien. La croix masque toutes les articulations citées jusqu'au lundi suivant ; chacune revient si la nouvelle semaine terminée est encore en hausse
+- Bilan de la semaine terminée (écran et mail), même ignorée : « Coude : forte hausse cette semaine (18 séries contre 11 d’habitude). Échauffe-toi bien et surveille les douleurs. » ; rien pour le mois ni la semaine en cours
+- Export pour le coach : la règle, et dans les signaux les séries de chaque articulation, la moyenne des 4 semaines précédentes, la hausse (affichée ou ignorée)
+- Cas le plus chargé de l'accueil (§3.7) : avec la phrase complète, « Démarrer » passait 49 px sous la barre d'onglets à 320 px ; avec le texte court, il reste à l'écran aux quatre tailles. Les deux bandeaux ensemble : limite acceptée
+- Vraies données (sauvegarde du 17/11) : aucune alerte (muette jusqu'au 9 novembre ; le 16, épaule 21 contre 21,5, coude 20 contre 20,75, genou 6 contre 6)
+- Tests : 320, 321, 322 (unitaires), 323 (bout en bout), 225 (accueil et Progrès avec les deux bandeaux, bilan avec les deux lignes) ; outils communs du cas le plus chargé sortis du test 291 dans `e2e/alertes-accueil.ts`
+
 ## 1.52.1 — 18 nov. 2026
 
 - Alerte « groupe moins travaillé » : un seul bandeau cite tous les groupes en alerte, du plus bas au plus haut (à égalité, le plus bas la dernière semaine), sur l'onglet Séance comme dans Progrès. Un groupe : « Dos : 0 et 6 séries ces 2 semaines (sous 7) » ; plusieurs : « Dos, Pectoraux : sous 7 séries ces 2 semaines ». L'appui mène aux séries du premier groupe ; la croix masque tous les groupes cités, chacun jusqu'au lundi suivant (il revient si la nouvelle semaine terminée est encore sous le seuil). Version 1.51.0 : le groupe le plus bas seulement

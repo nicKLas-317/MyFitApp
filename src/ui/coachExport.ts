@@ -23,7 +23,7 @@ export interface CoachExport {
  * mémorisée sur l'appareil (« Envoyé au coach ✓ » dans le bandeau) ; un partage annulé ne change rien.
  */
 export function useCoachExport(): CoachExport {
-  const { sessions, exercises, settings, recapSettings, activities, habits, cardioMachines, ignoredAlerts, markCoachSent } = useApp();
+  const { sessions, exercises, settings, recapSettings, activities, habits, cardioMachines, ignoredAlerts, ignoredJointAlerts, markCoachSent } = useApp();
   const body = useBody();
   const now = Date.now();
   const period = coachWeek(now);
@@ -46,6 +46,7 @@ export function useCoachExport(): CoachExport {
         weighIns: data.weighIns,
         heightCm: data.heightCm,
         ignoredAlerts,
+        ignoredJointAlerts,
         appVersion: __APP_VERSION__,
         now: at,
       });

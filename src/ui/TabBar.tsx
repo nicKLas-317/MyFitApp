@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { usePendingReports } from './ReportBanner';
 import { useGroupAlerts } from './GroupAlerts';
+import { useJointAlerts } from './JointAlerts';
 
 export type Tab = 'seance' | 'historique' | 'progres' | 'plus';
 
@@ -92,7 +93,13 @@ export function TabBar({ active }: { active: Tab }) {
   const reports = usePendingReports();
   // Pastille : un bilan prêt (§19.7) ou un groupe moins travaillé (version 1.38.0) ; un seul point.
   const alerts = useGroupAlerts();
-  const notes = [...(reports.length > 0 ? ['bilan prêt'] : []), ...(alerts.length > 0 ? ['groupe moins travaillé'] : [])];
+  // Version 1.53.0 : une articulation trop sollicitée aussi.
+  const joints = useJointAlerts();
+  const notes = [
+    ...(reports.length > 0 ? ['bilan prêt'] : []),
+    ...(alerts.length > 0 ? ['groupe moins travaillé'] : []),
+    ...(joints.length > 0 ? ['articulation trop sollicitée'] : []),
+  ];
   return (
     <nav className="tab-bar" aria-label="Onglets">
       {TABS.map((t) => (
@@ -100,7 +107,7 @@ export function TabBar({ active }: { active: Tab }) {
           <span className="tab-icon-box">
             {t.icon}
             {t.id === 'progres' && notes.length > 0 && (
-              <span className="tab-badge" data-testid={reports.length > 0 ? 'report-badge' : 'group-alert-badge'} data-alert={alerts.length > 0 ? '' : undefined} />
+              <span className="tab-badge" data-testid={reports.length > 0 ? 'report-badge' : 'group-alert-badge'} data-alert={alerts.length > 0 ? '' : undefined} data-joint-alert={joints.length > 0 ? '' : undefined} />
             )}
           </span>
           <span className="tab-label">{t.label}</span>

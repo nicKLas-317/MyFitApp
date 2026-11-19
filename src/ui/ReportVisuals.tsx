@@ -15,6 +15,8 @@ import { parseIsoDay } from '../domain/calendar';
 import { formatDecimal, formatDurationLong, localDate, plural as pluralWith } from '../session/format';
 import { exerciseColorProps, groupColorProps } from './groupColors';
 import { WarningIcon } from './GroupAlerts';
+import { JointIcon } from './JointAlerts';
+import { jointReportText, type JointAlert } from '../analysis/jointAlerts';
 
 const NB = ' ';
 const plural = (n: number, one: string, many = `${one}s`) => pluralWith(n, one, many, NB);
@@ -314,6 +316,8 @@ export function ReportGroups({ report, screen }: { report: PeriodReport; screen:
       {legs?.cardio && <p className="groups-cardio" data-testid="groups-cardio">{legCardioSentence(legs.cardio, legs.cardioWeeks)}</p>}
       {/* Version 1.52.1 : l'alerte « groupe moins travaillé » de cette semaine terminée, au format du bandeau, sans fond. */}
       {report.alerts.length > 0 && <ReportAlert alerts={report.alerts} />}
+      {/* Version 1.53.0 : l'alerte « articulation trop sollicitée » de cette semaine terminée, sans conseil. */}
+      {report.jointAlerts.length > 0 && <ReportJointAlert alerts={report.jointAlerts} />}
     </section>
   );
 }
@@ -331,6 +335,25 @@ function ReportAlert({ alerts }: { alerts: readonly GroupAlert[] }) {
       <span>
         <strong className="groups-alert-name">{names}</strong>
         {`\u00a0: ${rest}${detail}`}
+      </span>
+    </p>
+  );
+}
+
+/**
+ * Alerte « articulation trop sollicitée » d'une semaine terminée (version 1.53.0), sous celle des groupes, même style :
+ * « Coude : forte hausse cette semaine (18 séries contre 11 d’habitude). Échauffe-toi bien et surveille les douleurs. »
+ * (la phrase complète, avec le conseil, qui n’a pas de place sur le bandeau).
+ */
+function ReportJointAlert({ alerts }: { alerts: readonly JointAlert[] }) {
+  const text = jointReportText(alerts, true);
+  const cut = text.indexOf('\u00a0: ');
+  return (
+    <p className="groups-alert" data-testid="joints-alert" data-joints={alerts.map((a) => a.joint).join(' ')}>
+      <JointIcon />
+      <span>
+        <strong className="groups-alert-name">{text.slice(0, cut)}</strong>
+        {`\u00a0: ${text.slice(cut + 3)}`}
       </span>
     </p>
   );

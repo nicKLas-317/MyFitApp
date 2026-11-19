@@ -31,6 +31,10 @@
      récapitulatif (--orange), texte foncé (11,7:1). */
   --alert-bg: #f7d046;
   --alert-text: #1f1a00;
+  /* Bandeau « articulation trop sollicitée » (version 1.53.0, choix de l'utilisateur) : lavande, texte foncé (9,6:1),
+     distinct du jaune de l'alerte « groupe moins travaillé » ; proche du violet du dos (#c79bff), signalé. */
+  --joint-bg: #c4b5fd;
+  --joint-text: #1e1036;
   --frame-width: 2px;
   --tap: 48px;
   /*
@@ -2296,6 +2300,28 @@ fieldset {
   outline-color: var(--alert-text);
 }
 
+/*
+ * Alerte « articulation trop sollicitée » (version 1.53.0, §19.14) : même bandeau que l'alerte « groupe moins
+ * travaillé », fond lavande, texte foncé ; pas de lien (texte simple), la croix à droite. Sous le bandeau jaune, collée
+ * à lui (8 px) quand les deux sont affichés.
+ */
+.joint-alert {
+  --alert-bg: var(--joint-bg);
+  --alert-text: var(--joint-text);
+}
+
+.group-alerts:has(+ .joint-alerts) {
+  margin-bottom: var(--space-1);
+}
+
+.joint-alert-text {
+  display: flex;
+  flex: 1 1 12em;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--tap);
+}
+
 /* Résumé de la semaine : une phrase, pas un titre de section. */
 .recap-title {
   font-size: var(--fs-2);
@@ -3391,6 +3417,11 @@ fieldset.frame > legend + * {
 
 .groups-alert-name {
   color: var(--text);
+}
+
+/* Version 1.53.0 : l'alerte « articulation trop sollicitée » de la semaine, sous la précédente, même style. */
+.groups-alert + .groups-alert {
+  margin-top: var(--space-1);
 }
 
 /* « Compte pour les jambes » (version 1.41.0) : sous le nom de la machine, sur toute la largeur. */

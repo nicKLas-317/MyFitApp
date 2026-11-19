@@ -8,6 +8,7 @@ import { sanitizeRecapSettings, type WeeklyRecapSettings } from '../analysis/wee
 import { sanitizeReportSeen, sanitizeReportSettings, type ReportSeen, type ReportSettings } from '../analysis/reportSettings';
 import { sanitizeCoachSent } from '../analysis/coachPeriod';
 import { sanitizeIgnoredAlerts, type IgnoredAlerts } from '../analysis/groupAlerts';
+import { sanitizeIgnoredJointAlerts, type IgnoredJointAlerts } from '../analysis/jointAlerts';
 import { sanitizeSetsHintDismissed, type SetsHintDismissed } from '../analysis/setsHint';
 import { sanitizeActivities, sanitizeHabits, type ActivityRecord, type Habit } from '../activities/model';
 import { sanitizePlan } from '../plan/model';
@@ -39,6 +40,8 @@ export interface StoredData {
   reportSeen: ReportSeen;
   coachSent: string | null;
   ignoredAlerts: IgnoredAlerts;
+  /** Articulations ignorées (version 1.53.0, §19.14) : mémoire de l'appareil, pas dans la sauvegarde. */
+  ignoredJointAlerts: IgnoredJointAlerts;
   setsHintDismissed: SetsHintDismissed;
   habits: Habit[];
   activities: ActivityRecord[];
@@ -46,7 +49,7 @@ export interface StoredData {
 }
 
 export async function loadStored(repo: Repository): Promise<StoredData> {
-  const [sessions, exercises, exportedAt, recap, machines, machinesVersion, reports, seen, habits, activities, plan, ignored, coachSent, setsHints] = await Promise.all([
+  const [sessions, exercises, exportedAt, recap, machines, machinesVersion, reports, seen, habits, activities, plan, ignored, coachSent, setsHints, ignoredJoints] = await Promise.all([
     repo.loadSessions(),
     repo.loadExercises(),
     repo.getMeta<number>('lastExportAt'),
@@ -61,6 +64,7 @@ export async function loadStored(repo: Repository): Promise<StoredData> {
     repo.getMeta<unknown>('groupAlertsIgnored'),
     repo.getMeta<unknown>('coachSent'),
     repo.getMeta<unknown>('setsHintDismissed'),
+    repo.getMeta<unknown>('jointAlertsIgnored'),
   ]);
   // Installation antérieure au cardio : aucune liste enregistrée, la liste par défaut s'applique.
   // Liste enregistrée par une version antérieure : les nouvelles machines sont ajoutées une seule fois.
@@ -77,6 +81,7 @@ export async function loadStored(repo: Repository): Promise<StoredData> {
     reportSeen: sanitizeReportSeen(seen),
     coachSent: sanitizeCoachSent(coachSent),
     ignoredAlerts: sanitizeIgnoredAlerts(ignored),
+    ignoredJointAlerts: sanitizeIgnoredJointAlerts(ignoredJoints),
     setsHintDismissed: sanitizeSetsHintDismissed(setsHints),
     habits: sanitizeHabits(habits),
     activities: sanitizeActivities(activities),

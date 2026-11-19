@@ -32,6 +32,7 @@ import { formatLoad } from '../session/format';
 import { elapsedMs } from '../session/ops';
 import { sessionTitle } from '../session/title';
 import { alertFigures, groupAlertCandidates, groupAlerts, type IgnoredAlerts } from './groupAlerts';
+import { JOINT_LABELS, jointAlerts, jointFigures, jointReportText, type IgnoredJointAlerts } from './jointAlerts';
 import { GROUP_VIEW_GROUPS, groupIndex, SETS_ONLY_GROUPS } from './groups';
 import { analyzeProgress } from './progress';
 import { computeRecords, formatRecordWithDate } from './records';
@@ -70,6 +71,8 @@ export interface CoachInput {
   heightCm: number | null;
   /** Alertes ignorées sur l'appareil (§19.11) : signalées comme telles. */
   ignoredAlerts: IgnoredAlerts;
+  /** Articulations ignorées sur l'appareil (§19.14, version 1.53.0) : signalées comme telles. */
+  ignoredJointAlerts?: IgnoredJointAlerts;
   appVersion: string;
   now: number;
 }
@@ -400,6 +403,22 @@ export function buildCoachExport(input: CoachInput) {
     ...(shown.has(a.group) ? { affichee_dans_l_appli: true } : {}),
     ...(input.ignoredAlerts[a.group] === a.week ? { ignoree_sur_l_appareil: true } : {}),
   }));
+  // Version 1.53.0 : articulations (§19.14), la semaine exportée contre la moyenne des 4 précédentes ; celles en hausse
+  // sont citées par le bandeau, sauf celles ignorées.
+  const jointInput = { sessions, exercises: input.exercises, activities, machines: input.machines, now: end };
+  const ignoredJoints = input.ignoredJointAlerts ?? {};
+  const jointShown = new Set(jointAlerts(jointInput, ignoredJoints).map((a) => a.joint));
+  const figures = jointFigures(jointInput);
+  const articulations = figures
+    ? figures.map((f) => ({
+        articulation: JOINT_LABELS[f.joint],
+        series: round1(f.sets),
+        moyenne_4_semaines_avant: round1(f.average),
+        ...(f.alert ? { forte_hausse: true, texte: jointReportText([f]) } : {}),
+        ...(jointShown.has(f.joint) ? { affichee_dans_l_appli: true } : {}),
+        ...(f.alert && ignoredJoints[f.joint] === f.week ? { ignoree_sur_l_appareil: true } : {}),
+      }))
+    : 'alerte muette : moins de 4 semaines terminées avant la semaine exportée';
   const difficulty = analyzeProgress(replay.evaluations, replay.profile)
     .filter((v) => v.category === 'difficulty')
     .map((v) => {
@@ -441,6 +460,7 @@ export function buildCoachExport(input: CoachInput) {
       };
   const signaux = {
     alertes_groupe_moins_travaille: alertes,
+    articulations_trop_sollicitees: articulations,
     en_difficulte_cette_semaine: report.reds.length > 0 ? (sections.get('En difficulté') ?? []) : [],
     series_de_rouges_en_cours: difficulty,
     paliers_valides: report.progressions.length > 0 ? (sections.get('Progressions') ?? []) : [],

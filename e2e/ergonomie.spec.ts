@@ -3,6 +3,8 @@ import { formalForms } from '../src/ui/__tests__/vouvoiement';
 import type { Session, SessionPlan } from '../src/domain/types';
 import { simulatedHistory } from '../src/analysis/__tests__/simulation';
 import { ALERT_NOW, alertHistory } from '../src/analysis/__tests__/alertes-simulation';
+import { withExercises } from '../src/analysis/__tests__/articulations-simulation';
+import { THREE_DOWN } from './alertes-accueil';
 import { weekHistory, WEEK_NOW } from '../src/plan/__tests__/completer-simulation';
 import { activeSession, addExercise, cardAction, doExercise, finishSheet, openSettingsSection, readSessions, reloadAfterWrites, startSession, validateSets, waitForWrites, writeSessions } from './helpers';
 
@@ -1037,6 +1039,64 @@ test.describe('Ergonomie de la saisie et harmonisation du style', () => {
       const restore = scale > 1 ? await largeText(page) : null;
       await page.getByTestId('groups-alert').scrollIntoViewIfNeeded();
       await expectClean(page, `Bilan de la semaine avec l’alerte à ${width} px${scale > 1 ? ', texte à 115 %' : ''}`, scale);
+      await restore?.();
+    }
+  });
+
+  /**
+   * Version 1.53.0 : les deux alertes ensemble (cas limite accepté, §3.7), données du test 291 : épaules, triceps et
+   * pectoraux sous 6 séries, et le jeudi 5 nov. quatre exercices de plus pour le coude, 21 séries contre 12 d'habitude.
+   */
+  async function openBothAlerts(page: Page): Promise<void> {
+    await page.clock.setFixedTime(new Date(ALERT_NOW));
+    await page.goto('./');
+    await expect(page.getByRole('heading', { name: 'MyFitApp' })).toBeVisible();
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve, reject) => {
+          const open = indexedDB.open('myfitapp');
+          open.onsuccess = () => {
+            const tx = open.result.transaction('sessions', 'readwrite');
+            tx.objectStore('sessions').clear();
+            tx.oncomplete = () => (open.result.close(), resolve());
+            tx.onerror = () => reject(tx.error);
+          };
+        }),
+    );
+    const extra = ['curl-biceps-barre-droite', 'curl-biceps-poulie-corde', 'barre-au-front', 'curl-pupitre'];
+    await writeSessions(page, withExercises(THREE_DOWN(alertHistory({ dosDown: [] })), '2026-11-05', extra));
+  }
+
+  for (const [route, label] of [['./', 'Accueil'], ['./#/progres', 'Progrès']] as const) {
+    test(`225. ${label} avec les alertes « groupe moins travaillé » et « articulation trop sollicitée »`, async ({ page }) => {
+      await openBothAlerts(page);
+      for (const [width, scale] of SIZES_225) {
+        await page.setViewportSize({ width, height: 800 });
+        await page.goto(route);
+        await reloadAfterWrites(page);
+        await expect(page.getByTestId('group-alerts').getByRole('listitem')).toHaveCount(1);
+        await expect(page.getByTestId('joint-alerts').getByRole('listitem')).toHaveText('Coude : 21 séries contre 12 d’habitude');
+        const restore = scale > 1 ? await largeText(page) : null;
+        await toTop(page);
+        await expectClean(page, `${label} avec les deux alertes à ${width} px${scale > 1 ? ', texte à 115 %' : ''}`, scale);
+        await restore?.();
+      }
+    });
+  }
+
+  test('225. Bilan de la semaine avec les deux alertes', async ({ page }) => {
+    // Version 1.53.0 : sous le tableau des groupes, la ligne « groupe moins travaillé » puis la ligne « articulation trop
+    // sollicitée », avec le conseil.
+    await openBothAlerts(page);
+    for (const [width, scale] of SIZES_225) {
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto('./#/bilan-periode/semaine/2026-11-02');
+      await reloadAfterWrites(page);
+      await expect(page.getByTestId('joints-alert')).toHaveText('Coude : forte hausse cette semaine (21 séries contre 12 d’habitude). Échauffe-toi bien et surveille les douleurs.');
+      await expect(page.getByTestId('groups-alert')).toHaveCount(1);
+      const restore = scale > 1 ? await largeText(page) : null;
+      await page.getByTestId('joints-alert').scrollIntoViewIfNeeded();
+      await expectClean(page, `Bilan de la semaine avec les deux alertes à ${width} px${scale > 1 ? ', texte à 115 %' : ''}`, scale);
       await restore?.();
     }
   });

@@ -10,6 +10,7 @@ import type { ReportPeriod } from '../analysis/reportPeriod';
 import type { ReportSeen, ReportSettings } from '../analysis/reportSettings';
 import type { Records } from '../analysis/records';
 import type { GroupAlert, IgnoredAlerts } from '../analysis/groupAlerts';
+import type { IgnoredJointAlerts, JointAlert } from '../analysis/jointAlerts';
 import type { SetsHint, SetsHintDismissed } from '../analysis/setsHint';
 import type { ActivityRecord, Habit, Occurrence } from '../activities/model';
 import type { RemovedPerformance, VariantContext } from '../session/ops';
@@ -62,6 +63,9 @@ export interface AppValue {
   /** Alertes « groupe moins travaillé » ignorées (version 1.38.0), mémorisées sur l'appareil seulement. */
   ignoredAlerts: IgnoredAlerts;
   ignoreGroupAlerts(alerts: readonly GroupAlert[]): Promise<void>;
+  /** Articulations ignorées sur l'appareil (§19.14, version 1.53.0). */
+  ignoredJointAlerts: IgnoredJointAlerts;
+  ignoreJointAlerts(alerts: readonly JointAlert[]): Promise<void>;
   /** Propositions d'ajuster le nombre de séries refusées (« Non », version 1.49.0), mémorisées sur l'appareil seulement. */
   setsHintDismissed: SetsHintDismissed;
   dismissSetsHint(hint: SetsHint): Promise<void>;

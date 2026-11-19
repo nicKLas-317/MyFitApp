@@ -13,6 +13,7 @@ import { ActivityBanner } from '../ActivityBanner';
 import { ActivityEntry } from '../ActivityEntry';
 import { WeeklyRecapBlock } from '../WeeklyRecap';
 import { GroupAlerts } from '../GroupAlerts';
+import { JointAlerts } from '../JointAlerts';
 import { WeekSuggestionCard } from '../WeekSuggestion';
 
 export function Home() {
@@ -86,6 +87,8 @@ export function Home() {
       <WeeklyRecapBlock />
       {/* Groupe moins travaillé (version 1.38.0) : une seule ligne depuis la version 1.51.0. */}
       <GroupAlerts />
+      {/* Articulation trop sollicitée (version 1.53.0, §19.14) : sous l'alerte « groupe moins travaillé ». */}
+      <JointAlerts />
       {active ? (
         <button type="button" className="btn primary huge" data-home-start="" onClick={() => navigate('seance')}>
           Reprendre la séance

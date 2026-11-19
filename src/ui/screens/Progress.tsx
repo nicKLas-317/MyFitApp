@@ -4,6 +4,7 @@ import { coachWeekLabel } from '../../analysis/coachPeriod';
 import { formatKg, formatShortDay, localDate } from '../../session/format';
 import { ReportBanner } from '../ReportBanner';
 import { GroupAlerts } from '../GroupAlerts';
+import { JointAlerts } from '../JointAlerts';
 import { useCoachExport } from '../coachExport';
 import { WeighInForm } from './BodyScreen';
 
@@ -22,6 +23,8 @@ export function Progress() {
       <ReportBanner />
       {/* Les mêmes alertes que l'onglet Séance : la pastille de l'onglet y mène. */}
       <GroupAlerts />
+      {/* Articulation trop sollicitée (version 1.53.0, §19.14) : sous l'alerte « groupe moins travaillé ». */}
+      <JointAlerts />
       <nav className="hub-links" aria-label="Bilans">
         <a className="btn big" href="#/bilan">
           Bilan de progression

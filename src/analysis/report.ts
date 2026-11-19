@@ -15,6 +15,7 @@ import { elapsedMs } from '../session/ops';
 import { isPalierValidated } from './progress';
 import { computeRecords, formatRecord, type RecordBreak } from './records';
 import { alertReportText, groupAlertCandidates, type GroupAlert } from './groupAlerts';
+import { jointAlertCandidates, jointReportText, type JointAlert } from './jointAlerts';
 import { DEFAULT_RECAP_SETTINGS, groupScore, groupSeries, groupWork, LEG_CARDIO_GROUP, legCardioWeek, setsLabel, workParts } from './weekly';
 import { containsTime, inPeriod, mailSubject, periodLastDay, shiftPeriod, type ReportPeriod } from './reportPeriod';
 
@@ -139,6 +140,11 @@ export interface PeriodReport {
    * (mois, semaine en cours, aucun groupe sous le seuil).
    */
   alerts: GroupAlert[];
+  /**
+   * Version 1.53.0 : bilan d'une semaine terminée seulement, les articulations en alerte « articulation trop
+   * sollicitée » pour cette semaine (§19.14), ignorées ou non ; vide sinon.
+   */
+  jointAlerts: JointAlert[];
 }
 
 export interface ReportInput {
@@ -328,6 +334,10 @@ export function buildReport(period: ReportPeriod, input: ReportInput): PeriodRep
             threshold: input.alertSets ?? DEFAULT_RECAP_SETTINGS.alertSets, now: period.next.getTime(),
           })
         : [],
+    jointAlerts:
+      period.kind === 'week' && !inProgress
+        ? jointAlertCandidates({ sessions, exercises, activities: done, machines: input.machines ?? [], now: period.next.getTime() })
+        : [],
   };
 }
 
@@ -430,9 +440,11 @@ export function reportSections(report: PeriodReport, variantName: (variantId: st
     if (idle.length > 0) lines.push([em(`Non travaillés : ${idle.map((g) => MUSCLE_GROUP_LABELS[g.group]).join(', ')}`)]);
     // Version 1.52.1 : l'alerte « groupe moins travaillé » de cette semaine terminée, au format du bandeau.
     if (report.alerts.length > 0) lines.push([alertReportText(report.alerts)]);
+    // Version 1.53.0 : l'alerte « articulation trop sollicitée » de cette semaine terminée, sans conseil.
+    if (report.jointAlerts.length > 0) lines.push([jointReportText(report.jointAlerts)]);
     sections.push({ title: 'Groupes travaillés', lines });
   } else if (report.alerts.length > 0) {
-    // Semaine sans séance ni activité (vacances) : la ligne de l'alerte seule.
+    // Semaine sans séance ni activité (vacances) : la ligne de l'alerte seule (aucune articulation en hausse).
     sections.push({ title: 'Groupes travaillés', lines: [[alertReportText(report.alerts)]] });
   }
 
