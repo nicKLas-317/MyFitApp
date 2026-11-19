@@ -1,5 +1,7 @@
 # PROMPT CLAUDE CODE — Application PWA de suivi sportif « MyFitApp »
 
+**Toujours répondre à l'utilisateur en français** (comptes rendus, questions, messages d'attente, sans exception ; précision validée le 19 novembre 2026, après des réponses en anglais).
+
 ## 0. Mode de travail
 
 Ce document est la référence complète du projet : les règles en vigueur, sans leur historique (ce qui a changé à chaque version, et ce qui n'est plus vrai : `CHANGELOG.md`). Relis-le avant chaque demande.
