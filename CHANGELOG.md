@@ -4,6 +4,10 @@ Ce qui a changé à chaque version de MyFitApp, de la plus récente à la plus a
 
 Les commits sans changement de numéro (documentation, tests, workflow) sont rangés sous la version en cours à ce moment-là.
 
+## 1.55.1 — 20 nov. 2026
+
+- Découpage de `src/transfer/backup.ts` sans changement de comportement (règle des gros fichiers, §0), préalable à la version 1.56.0 : format de la sauvegarde (`backupFormat.ts`), validation stricte (`backupValidate.ts`), lecture d'un JSON simple (`simpleJson.ts`), plan d'import (`importPlan.ts`), rappel de sauvegarde (`backupReminder.ts`), contrôles de type (`jsonGuards.ts`) ; `backup.ts` garde l'export, la migration et l'analyse d'un contenu JSON. Seuls les chemins d'import changent ailleurs ; `backup.ts` sort de la liste des gros fichiers (reste `draft.ts`)
+
 ## 1.55.0 — 19 nov. 2026
 
 - Export pour le coach (§19.13) : nouvelle section `bibliotheque`, tous les exercices disponibles dans l'appli (bibliothèque et exercices personnalisés, marqués `personnalise`), même jamais faits, par groupe principal, une ligne par exercice : variantes, type, groupes secondaires, sous-groupes et articulations avec leurs poids (« dos épaisseur 1, épaules arrière ½, biceps brachial ½ », « épaule ½, coude ½ »), `deja_fait` (jusqu'au dimanche de la semaine exportée) et `variantes_faites` quand seules certaines variantes l'ont été. Exercices et variantes archivés exclus. Même bouton « Partager pour le coach » ; la règle en tête de l'export explique chaque champ

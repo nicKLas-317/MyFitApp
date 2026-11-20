@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useApp } from '../../app/store';
 import { formatDay, localDate, plural } from '../../session/format';
-import { parseJsonImport, planImport, type Backup } from '../../transfer/backup';
+import { parseJsonImport, type Backup } from '../../transfer/backup';
+import { planImport } from '../../transfer/importPlan';
 import {
   draftFromNotes,
   draftProblems,

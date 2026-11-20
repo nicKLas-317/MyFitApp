@@ -6,7 +6,7 @@ import { displayName } from '../../library/catalog';
 import { formatCardio } from '../../cardio/model';
 import { startFromPlan } from '../../plan/model';
 import { formatDuration } from '../../session/format';
-import { needsBackupReminder } from '../../transfer/backup';
+import { needsBackupReminder } from '../../transfer/backupReminder';
 import { useBody } from '../../body/store';
 import { downloadBackup } from '../download';
 import { ActivityBanner } from '../ActivityBanner';

@@ -7,13 +7,9 @@ import { buildEngineSettings } from '../../library/catalog';
 import { SEED_EXERCISES } from '../../library/seed';
 import { addExercise, finishSession, recordSet, setFeeling, startSession } from '../../session/ops';
 import { openAppDb, Repository } from '../../storage/db';
-import {
-  BACKUP_REMINDER_MS,
-  buildBackup,
-  needsBackupReminder,
-  parseJsonImport,
-  planImport,
-} from '../backup';
+import { buildBackup, parseJsonImport } from '../backup';
+import { BACKUP_REMINDER_MS, needsBackupReminder } from '../backupReminder';
+import { planImport } from '../importPlan';
 import { draftFromNotes, draftProblems, finalizeDrafts, hasBlockingProblems, previewEvaluations, setDraftDate } from '../draft';
 import { NOTES_11_3, withExampleChoices } from './fixtures';
 

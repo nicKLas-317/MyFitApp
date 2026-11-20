@@ -4,7 +4,8 @@ import type { Exercise } from '../../domain/types';
 import { rebuildProfile } from '../../engine';
 import { buildEngineSettings } from '../../library/catalog';
 import { SEED_EXERCISES } from '../../library/seed';
-import { parseJsonImport, planImport } from '../../transfer/backup';
+import { parseJsonImport } from '../../transfer/backup';
+import { planImport } from '../../transfer/importPlan';
 import { checkImportFile, MAX_IMPORT_BYTES } from '../../transfer/file';
 import { analyzeProgress, chartSeries } from '../progress';
 

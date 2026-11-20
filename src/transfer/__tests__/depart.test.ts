@@ -4,7 +4,8 @@ import departJson from '../../../docs/exemples/depart-exemple.json?raw';
 import { rebuildProfile, resolveConfig } from '../../engine';
 import { buildEngineSettings } from '../../library/catalog';
 import { openAppDb, Repository } from '../../storage/db';
-import { parseJsonImport, planImport } from '../backup';
+import { parseJsonImport } from '../backup';
+import { planImport } from '../importPlan';
 
 /** Code de l'application (hors tests), pour vérifier qu'aucun fichier ne charge les données de départ. */
 const APP_SOURCES = import.meta.glob<string>(['../../**/*.{ts,tsx}', '!../../**/__tests__/**', '../../../index.html'], {

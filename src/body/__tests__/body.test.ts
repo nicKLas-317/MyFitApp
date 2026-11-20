@@ -5,7 +5,8 @@ import { DEFAULT_ENGINE_SETTINGS } from '../../engine/__tests__/helpers';
 import { green, history } from '../../engine/__tests__/helpers';
 import { SEED_EXERCISES } from '../../library/seed';
 import { openAppDb, Repository } from '../../storage/db';
-import { buildBackup, parseJsonImport, planImport } from '../../transfer/backup';
+import { buildBackup, parseJsonImport } from '../../transfer/backup';
+import { planImport } from '../../transfer/importPlan';
 import { BodyRepository, openBodyDb } from '../db';
 import { availablePeriods, EMPTY_BODY, inPeriod, parseHeight, parseWeighIn, planBodyImport, type WeighIn } from '../model';
 

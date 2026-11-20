@@ -10,7 +10,8 @@ import { buildSearchIndex } from '../search';
 import { searchExercises } from './helpers';
 import { GRIPS, gripOf, MEDIUM_GRIP } from '../text';
 import { openAppDb, Repository } from '../../storage/db';
-import { parseJsonImport, planImport } from '../../transfer/backup';
+import { parseJsonImport } from '../../transfer/backup';
+import { planImport } from '../../transfer/importPlan';
 import { draftFromNotes } from '../../transfer/draft';
 import { matchExercise } from '../../transfer/match';
 

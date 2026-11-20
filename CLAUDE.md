@@ -18,7 +18,7 @@ Les six phases d'origine (moteur, séance, import et export, bibliothèque, anal
 
 **Gros fichiers : découpés au fil de l'eau (précision validée, 13 novembre 2026)**. Quand une demande doit modifier l'un de ces fichiers, il est d'abord découpé, dans une version corrective séparée (1.x.y+1), publiée avant la version de la demande :
 
-- `src/transfer/backup.ts`, `src/transfer/draft.ts` (`src/app/store.tsx` découpé en version 1.48.2, `src/analysis/report.ts` en version 1.49.3, `src/analysis/coach.ts` en version 1.50.1) ;
+- `src/transfer/draft.ts` (`src/app/store.tsx` découpé en version 1.48.2, `src/analysis/report.ts` en version 1.49.3, `src/analysis/coach.ts` en version 1.50.1, `src/transfer/backup.ts` en version 1.55.1 : format dans `backupFormat.ts`, validation dans `backupValidate.ts`, JSON simple dans `simpleJson.ts`, plan d'import dans `importPlan.ts`, rappel de sauvegarde dans `backupReminder.ts`, contrôles de type dans `jsonGuards.ts`) ;
 - découpage seul, **sans changement de comportement** : mêmes calculs, mêmes écrans, mêmes données, même sauvegarde ; les tests existants passent sans autre modification que leurs chemins d'import ;
 - tests complets (étape 4 : types, unitaires, bout en bout à l'heure de Paris et en UTC) et tests sur les vraies données (§22), puis publication comme toute version (étape 6) ;
 - ensuite seulement, la demande, dans sa propre version, sans attendre de validation entre les deux ; un seul compte rendu pour les deux versions. Une demande qui modifie plusieurs de ces fichiers les découpe dans la même version corrective ;
