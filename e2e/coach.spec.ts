@@ -70,6 +70,23 @@ function readMeta(page: Page, key: string): Promise<unknown> {
   );
 }
 
+/** Réglages des bilans écrits en base (bandeaux de la semaine et du mois, rappel de l'export coach). */
+function writeReports(page: Page, reports: { weekBanner: boolean; monthBanner: boolean; coachReminder: boolean }): Promise<void> {
+  return page.evaluate(
+    (r) =>
+      new Promise<void>((resolve, reject) => {
+        const open = indexedDB.open('myfitapp');
+        open.onsuccess = () => {
+          const tx = open.result.transaction('meta', 'readwrite');
+          tx.objectStore('meta').put({ ...r, email: '' }, 'reports');
+          tx.oncomplete = () => (open.result.close(), resolve());
+          tx.onerror = () => reject(tx.error);
+        };
+      }),
+    reports,
+  );
+}
+
 test.describe('Partager pour le coach (version 1.46.0)', () => {
   test('311. Onglet Progrès : « Partager pour le coach » exporte la dernière semaine terminée (partage du fichier, sinon téléchargement) ; rien sans séance passée', async ({ page }) => {
     await mockShare(page);
@@ -85,6 +102,8 @@ test.describe('Partager pour le coach (version 1.46.0)', () => {
     await expect(page.getByRole('button', { name: /Partager pour le coach/ })).toHaveCount(0);
 
     await writeSessions(page, sessions());
+    // Version 1.57.0 : sans bandeau de bilan, qui proposerait déjà l'envoi (le bouton sous « Cardio » serait masqué, test 343).
+    await writeReports(page, { weekBanner: false, monthBanner: false, coachReminder: true });
     await reloadAfterWrites(page);
     const button = page.locator('.coach-share').getByRole('button', { name: /^Partager pour le coach/ });
     await expect(button).toBeVisible();
@@ -168,9 +187,11 @@ test.describe('Partager pour le coach (version 1.46.0)', () => {
 
   test('313. Bandeau du bilan de la semaine : « Partager pour le coach », puis « Envoyé au coach ✓ » mémorisé pour la semaine ; réglage « Rappel de l’export coach » ; le bouton sous « Cardio » ne change pas', async ({ page }) => {
     await mockShare(page);
-    // Lundi 26 octobre : le bilan de la semaine du 19 au 25 est prêt (et celui de septembre).
+    // Lundi 26 octobre : le bilan de la semaine du 19 au 25 est prêt (celui du mois n'est pas signalé : version 1.57.0,
+    // les deux ensemble font un seul bandeau, test 343).
     await page.clock.setFixedTime(new Date('2026-10-26T09:30:00'));
     await page.goto('./');
+    await writeReports(page, { weekBanner: true, monthBanner: false, coachReminder: true });
     await writeSessions(page, [...sessions(), pecDeck('mardi-3', '2026-11-03')]);
     await reloadAfterWrites(page);
     await page.goto('./#/progres');
@@ -244,11 +265,16 @@ test.describe('Partager pour le coach (version 1.46.0)', () => {
     await expect(week.getByTestId('coach-sent')).toHaveText('Envoyé au coach ✓');
     expect(await readMeta(page, 'coachSent')).toBe('2026-10-26');
 
-    // Lundi 9 novembre : envoyé par le bouton sous « Cardio », le bandeau l'affiche aussi.
+    // Lundi 9 novembre : le bouton sous « Cardio » masqué tant que le bandeau propose l'envoi (version 1.57.0) ; bandeau
+    // remis à plus tard, envoyé par le bouton sous « Cardio » : à la réouverture, le bandeau l'affiche aussi.
     await page.clock.setFixedTime(new Date('2026-11-09T09:30:00'));
     await page.reload();
     await expect(remind).toBeVisible();
+    await expect(page.locator('.coach-share')).toHaveCount(0);
+    await week.getByRole('button', { name: 'Plus tard' }).click();
     await page.locator('.coach-share').getByRole('button').click();
+    await expect.poll(() => readMeta(page, 'coachSent')).toBe('2026-11-02');
+    await page.reload();
     await expect(week.getByTestId('coach-sent')).toHaveText('Envoyé au coach ✓');
     // « Voir » : le bilan ouvert, le bandeau disparaît comme avant.
     await week.getByRole('button', { name: 'Voir' }).click();

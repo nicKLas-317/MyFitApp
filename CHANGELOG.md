@@ -4,6 +4,18 @@ Ce qui a changé à chaque version de MyFitApp, de la plus récente à la plus a
 
 Les commits sans changement de numéro (documentation, tests, workflow) sont rangés sous la version en cours à ce moment-là.
 
+## 1.57.0 — 20 nov. 2026
+
+Ergonomie et visuel de l'audit du 20 novembre 2026.
+- Après la dernière série (ou « Valider les 3 séries »), la carte défile jusqu'au ressenti, au-dessus de la barre du pouce et du message « Séries enregistrées » ; avant, à 360 px, il était sous la ligne de flottaison, parfois caché par le message
+- Liste d'ajout : en tête, seulement les favoris compatibles avec le lieu (déjà faits là, ou jamais faits) ; les abdos faits à la maison n'occupent plus le premier écran à la salle. Lignes compactes : la charge sous le nom (« Pectoraux · 30 kg »), nom sur 2 lignes au plus ; 6 exercices au moins au premier écran
+- Séries à venir lisibles en plein soleil (contraste de 2,7:1 à plus de 4,5:1) ; carte amenée sous l'en-tête de la séance (son nom n'est plus caché) ; « Dernière fois » : la pastille reste avec la date ; volet de fin : « Ressenti manquant » en texte neutre, plus en orange
+- Progrès : les bilans de la semaine et du mois prêts ensemble dans un seul bandeau ; « Partager pour le coach » une seule fois à l'écran
+- « Enregistrer la pesée » partout ; date et poids côte à côte dès 360 px (le lundi, sous le bandeau du bilan, le bouton passait sous la barre d'onglets)
+- Séries à venir moins hautes (40 px, pas des éléments tactiles) : « Valider les 3 séries » reste au-dessus de la barre du pouce à 360 px
+- Bilan de progression, « Dernières évolutions » : un nom long (« Tirage horizontal machine (appui pectoral) — Prise moyenne ») faisait déborder toute la page de 191 px à 360 px ; corrigé
+- Tests 338 à 347 ; 230 et 245 aussi à 360 × 800 px, chaque élément tapé non recouvert ; 311 et 313 adaptés
+
 ## 1.56.0 — 20 nov. 2026
 
 Fiabilité et bugs de l'audit du 20 novembre 2026.

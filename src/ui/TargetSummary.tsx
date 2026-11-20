@@ -236,17 +236,18 @@ export function TargetSummary({
             <span className="last-values">
               {assisted && 'aide '}
               {/* Chaque élément reste entier ; la ligne passe à la ligne entre deux éléments plutôt que d'être tronquée. */}
-              {[...(bodyweight ? [] : [formatKg(last.weightKg, perDumbbell)]), ...(last.reps.length ? last.reps.map((r) => formatReps(r, seconds)) : ['—']), ...(lastDate ? [formatNumericDay(lastDate)] : [])].map((part, i) => (
+              {/* Version 1.57.0 : la pastille de statut reste avec le dernier élément (la date), jamais seule à la ligne. */}
+              {[...(bodyweight ? [] : [formatKg(last.weightKg, perDumbbell)]), ...(last.reps.length ? last.reps.map((r) => formatReps(r, seconds)) : ['—']), ...(lastDate ? [formatNumericDay(lastDate)] : [])].map((part, i, all) => (
                 <Fragment key={i}>
                   {i > 0 && ' '}
                   <span className="last-part">
                     {i > 0 && '· '}
                     {part}
+                    {i === all.length - 1 && <StatusBadge status={state.lastStatus} />}
                   </span>
                 </Fragment>
               ))}
             </span>
-            <StatusBadge status={state.lastStatus} />
           </>
         ) : (
           <span className="last-values">jamais réalisé</span>

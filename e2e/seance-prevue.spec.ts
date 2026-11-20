@@ -297,94 +297,108 @@ test.describe('Séance prévue (§5.9)', () => {
     await expect(steps(page)).toHaveText([/^Pec deck/, /^Prévu Tapis de marche/, /^Leg extension/]);
   });
 
-  test('245. Appuis pour une séance de 5 exercices : sans plan, puis avec plan (aucun défilement)', async ({ page }) => {
-    const five = ['pec-deck', 'chest-press', 'leg-curl', 'leg-extension', 'curl-biceps-halteres'] as const;
-    await seed(page, [past(12, five.map((id) => [id, 20, 8] as [string, number, number]))], '2026-10-20T09:00:00');
-    const names = ['Pec deck', 'Chest press', 'Leg curl', 'Leg extension', 'Curl biceps haltères'];
-    let taps = 0;
-    const tap = async (target: Locator) => {
-      await expect(target).toBeInViewport();
-      await target.click();
-      taps++;
-    };
-    const bar = page.getByRole('navigation', { name: 'Actions de la séance' });
-    const finish = async () => {
-      await page.evaluate(() => window.scrollTo(0, 0));
-      await tap(bar.getByRole('button', { name: 'Terminer la séance' }));
-      await tap(finishSheet(page).getByRole('button', { name: 'Oui, terminer' }));
-      await expect(page.getByRole('heading', { name: 'Séance terminée' })).toBeVisible();
-    };
+  // Version 1.57.0 : aussi à 360 × 800 px, la taille du téléphone de l'utilisateur.
+  for (const size of [null, { width: 360, height: 800 }]) {
+    test(`245. Appuis pour une séance de 5 exercices : sans plan, puis avec plan (aucun défilement)${size ? ' (360 × 800 px)' : ''}`, async ({ page }) => {
+      if (size) await page.setViewportSize(size);
+      const five = ['pec-deck', 'chest-press', 'leg-curl', 'leg-extension', 'curl-biceps-halteres'] as const;
+      await seed(page, [past(12, five.map((id) => [id, 20, 8] as [string, number, number]))], '2026-10-20T09:00:00');
+      const names = ['Pec deck', 'Chest press', 'Leg curl', 'Leg extension', 'Curl biceps haltères'];
+      let taps = 0;
+      const tap = async (target: Locator) => {
+        await expect(target).toBeInViewport();
+        // Version 1.57.0 : rien ne le recouvre (barre du pouce, en-tête, message « Annuler ») : son centre reçoit l'appui.
+        await expect
+          .poll(() =>
+            target.evaluate((el) => {
+              const r = el.getBoundingClientRect();
+              const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+              return hit && (hit === el || el.contains(hit)) ? 'ok' : `${el.outerHTML.slice(0, 100)} | ${hit?.outerHTML.slice(0, 140)} | ${Math.round(r.top)}-${Math.round(r.bottom)}`;
+            }),
+          )
+          .toBe('ok');
+        await target.click();
+        taps++;
+      };
+      const bar = page.getByRole('navigation', { name: 'Actions de la séance' });
+      const finish = async () => {
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await tap(bar.getByRole('button', { name: 'Terminer la séance' }));
+        await tap(finishSheet(page).getByRole('button', { name: 'Oui, terminer' }));
+        await expect(page.getByRole('heading', { name: 'Séance terminée' })).toBeVisible();
+      };
 
-    // Sans plan : démarrer 1 ; par exercice : ajouter 2 (« + Exercice », l'exercice récent), séries 1, ressenti 1 ; terminer 2.
-    await tap(main(page).getByRole('button', { name: 'Démarrer une séance' }));
-    for (const name of names) {
-      await tap(bar.getByRole('link', { name: 'Ajouter un exercice' }));
-      await tap(page.getByRole('button', { name: new RegExp(`^${name}`) }).first());
-      const card = exerciseCard(page, name);
-      await tap(card.getByRole('button', { name: 'Valider les 3 séries' }));
-      await tap(card.getByRole('button', { name: 'Bien', exact: true }));
-    }
-    await finish();
-    expect(taps).toBe(1 + 5 * 4 + 2); // 23 (série par série, comme avant : 33)
+      // Sans plan : démarrer 1 ; par exercice : ajouter 2 (« + Exercice », l'exercice récent), séries 1, ressenti 1 ; terminer 2.
+      await tap(main(page).getByRole('button', { name: 'Démarrer une séance' }));
+      for (const name of names) {
+        await tap(bar.getByRole('link', { name: 'Ajouter un exercice' }));
+        await tap(page.getByRole('button', { name: new RegExp(`^${name}`) }).first());
+        const card = exerciseCard(page, name);
+        await tap(card.getByRole('button', { name: 'Valider les 3 séries' }));
+        await tap(card.getByRole('button', { name: 'Bien', exact: true }));
+      }
+      await finish();
+      expect(taps).toBe(1 + 5 * 4 + 2); // 23 (série par série, comme avant : 33)
 
-    // Avec plan, préparé au calme (non compté) : démarrer 1 ; par exercice : séries 1, ressenti 1 (le ressenti ouvre
-    // l'exercice suivant et l'amène à l'écran : 0 appui pour l'ouvrir) ; terminer 2.
-    await page.goto('./#/seance-prevue');
-    for (const name of names) await planExercise(page, name.toLowerCase(), name);
-    await page.goto('./');
-    taps = 0;
-    await tap(main(page).getByRole('button', { name: 'Démarrer la séance prévue' }));
-    for (const name of names) {
-      const card = exerciseCard(page, name);
-      await expect(card).toHaveClass(/open/);
-      await tap(card.getByRole('button', { name: 'Valider les 3 séries' }));
-      await tap(card.getByRole('button', { name: 'Bien', exact: true }));
-    }
-    // Tout est terminé : rien d'autre ne s'ouvre, le dernier exercice reste ouvert.
-    await expect(page.locator('article.exercise-card.open')).toHaveCount(1);
-    await expect(exerciseCard(page, 'Curl biceps haltères')).toHaveClass(/open/);
-    await finish();
-    expect(taps).toBe(1 + 5 * 2 + 2); // 13 (17 en 1.23.0)
+      // Avec plan, préparé au calme (non compté) : démarrer 1 ; par exercice : séries 1, ressenti 1 (le ressenti ouvre
+      // l'exercice suivant et l'amène à l'écran : 0 appui pour l'ouvrir) ; terminer 2.
+      await page.goto('./#/seance-prevue');
+      for (const name of names) await planExercise(page, name.toLowerCase(), name);
+      await page.goto('./');
+      taps = 0;
+      await tap(main(page).getByRole('button', { name: 'Démarrer la séance prévue' }));
+      for (const name of names) {
+        const card = exerciseCard(page, name);
+        await expect(card).toHaveClass(/open/);
+        await tap(card.getByRole('button', { name: 'Valider les 3 séries' }));
+        await tap(card.getByRole('button', { name: 'Bien', exact: true }));
+      }
+      // Tout est terminé : rien d'autre ne s'ouvre, le dernier exercice reste ouvert.
+      await expect(page.locator('article.exercise-card.open')).toHaveCount(1);
+      await expect(exerciseCard(page, 'Curl biceps haltères')).toHaveClass(/open/);
+      await finish();
+      expect(taps).toBe(1 + 5 * 2 + 2); // 13 (17 en 1.23.0)
 
-    // Avec plan et cardio, en tête et entre deux exercices : chaque élément s'ouvre à son tour, cardio compris ;
-    // cardio prévu 1 appui. Démarrer 1, cardio 1 + 1, exercices 5 × 2, terminer 2.
-    const block = (id: string, machineId: string, machine: string): CardioBlock =>
-      machineId === 'tapis' ? { id, machineId, machine, incline: 'neutre', minutes: 10 } : { id, machineId, machine, minutes: 10 };
-    const exercise = (variantId: string) => ({ kind: 'exercise', variantId }) as const;
-    await page.goto('./');
-    await writePlan(page, {
-      id: 'plan-cardio', createdAt: 0, updatedAt: 0,
-      items: [
-        { kind: 'cardio', block: block('debut', 'tapis', 'Tapis de marche') },
-        exercise('pec-deck'),
-        exercise('chest-press'),
-        { kind: 'cardio', block: block('milieu', 'velo', 'Vélo') },
-        exercise('leg-curl'),
-        exercise('leg-extension'),
-        exercise('curl-biceps-halteres'),
-      ],
-    } satisfies SessionPlan);
-    taps = 0;
-    await tap(main(page).getByRole('button', { name: 'Démarrer la séance prévue' }));
-    const validateCardio = async (text: string) => {
-      const item = page.locator('.planned-cardio', { hasText: text });
-      await expect(item).toHaveAttribute('aria-current', 'step');
-      await expect(page.locator('article.exercise-card.open')).toHaveCount(0);
-      await tap(item.getByRole('button', { name: `Valider le cardio prévu : ${text}` }));
-    };
-    await validateCardio('Tapis de marche · inclinaison neutre · 10 min');
-    for (const name of names) {
-      if (name === 'Leg curl') await validateCardio('Vélo · 10 min');
-      const card = exerciseCard(page, name);
-      await expect(card).toHaveClass(/open/);
-      await tap(card.getByRole('button', { name: 'Valider les 3 séries' }));
-      await tap(card.getByRole('button', { name: 'Bien', exact: true }));
-    }
-    await expect(page.locator('article.exercise-card.open')).toHaveCount(1);
-    await finish();
-    expect(taps).toBe(1 + 2 + 5 * 2 + 2); // 15 : les 13 de la séance prévue, plus 1 par cardio prévu
-    const sessions = await readSessions(page);
-    expect(sessions.filter((s) => s.state === 'done' && s.date === '2026-10-20').map((s) => s.performances.length)).toEqual([5, 5, 5]);
-    expect(sessions.find((s) => s.fromPlan?.planId === 'plan-cardio')?.cardio?.map((b) => b.id)).toEqual(['debut', 'milieu']);
-  });
+      // Avec plan et cardio, en tête et entre deux exercices : chaque élément s'ouvre à son tour, cardio compris ;
+      // cardio prévu 1 appui. Démarrer 1, cardio 1 + 1, exercices 5 × 2, terminer 2.
+      const block = (id: string, machineId: string, machine: string): CardioBlock =>
+        machineId === 'tapis' ? { id, machineId, machine, incline: 'neutre', minutes: 10 } : { id, machineId, machine, minutes: 10 };
+      const exercise = (variantId: string) => ({ kind: 'exercise', variantId }) as const;
+      await page.goto('./');
+      await writePlan(page, {
+        id: 'plan-cardio', createdAt: 0, updatedAt: 0,
+        items: [
+          { kind: 'cardio', block: block('debut', 'tapis', 'Tapis de marche') },
+          exercise('pec-deck'),
+          exercise('chest-press'),
+          { kind: 'cardio', block: block('milieu', 'velo', 'Vélo') },
+          exercise('leg-curl'),
+          exercise('leg-extension'),
+          exercise('curl-biceps-halteres'),
+        ],
+      } satisfies SessionPlan);
+      taps = 0;
+      await tap(main(page).getByRole('button', { name: 'Démarrer la séance prévue' }));
+      const validateCardio = async (text: string) => {
+        const item = page.locator('.planned-cardio', { hasText: text });
+        await expect(item).toHaveAttribute('aria-current', 'step');
+        await expect(page.locator('article.exercise-card.open')).toHaveCount(0);
+        await tap(item.getByRole('button', { name: `Valider le cardio prévu : ${text}` }));
+      };
+      await validateCardio('Tapis de marche · inclinaison neutre · 10 min');
+      for (const name of names) {
+        if (name === 'Leg curl') await validateCardio('Vélo · 10 min');
+        const card = exerciseCard(page, name);
+        await expect(card).toHaveClass(/open/);
+        await tap(card.getByRole('button', { name: 'Valider les 3 séries' }));
+        await tap(card.getByRole('button', { name: 'Bien', exact: true }));
+      }
+      await expect(page.locator('article.exercise-card.open')).toHaveCount(1);
+      await finish();
+      expect(taps).toBe(1 + 2 + 5 * 2 + 2); // 15 : les 13 de la séance prévue, plus 1 par cardio prévu
+      const sessions = await readSessions(page);
+      expect(sessions.filter((s) => s.state === 'done' && s.date === '2026-10-20').map((s) => s.performances.length)).toEqual([5, 5, 5]);
+      expect(sessions.find((s) => s.fromPlan?.planId === 'plan-cardio')?.cardio?.map((b) => b.id)).toEqual(['debut', 'milieu']);
+    });
+  }
 });

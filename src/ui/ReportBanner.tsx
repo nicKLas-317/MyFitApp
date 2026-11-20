@@ -38,48 +38,87 @@ export function usePendingReports(): ReportPeriod[] {
 }
 
 /**
+ * Rappel de l'export pour le coach dans le bandeau de la semaine (version 1.47.0, §19.13) : la semaine signalée, le
+ * réglage coché, l'export possible pour cette semaine ; `sent` : déjà partagé ou téléchargé.
+ */
+function useCoachReminder(pending: readonly ReportPeriod[]) {
+  const { reportSettings, coachSent } = useApp();
+  const coach = useCoachExport();
+  const week = pending.find((p) => p.kind === 'week');
+  const shown = !!week && reportSettings.coachReminder && coach.available && periodKey(week) === periodKey(coach.period);
+  return { coach, shown, sent: shown && coachSent === periodKey(week) };
+}
+
+/**
+ * Le bandeau propose « Partager pour le coach » (pas encore envoyé) : le bouton sous « Cardio » est alors masqué, un
+ * seul bouton à l'écran (version 1.57.0) ; il revient une fois l'envoi fait (« Envoyé au coach ✓ »), pour repartager.
+ */
+export function useCoachInBanner(): boolean {
+  const pending = usePendingReports();
+  const { shown, sent } = useCoachReminder(pending);
+  return shown && !sent;
+}
+
+/**
  * Bandeau en haut de l'onglet Progrès : « Ton bilan de la semaine est prêt », « Voir » ou « Plus tard ». Celui de la
  * semaine porte aussi le rappel de l'export pour le coach (version 1.47.0, §19.13) : « Partager pour le coach », puis
  * « Envoyé au coach ✓ » une fois le fichier partagé ou téléchargé ; masqué par le réglage « Rappel de l'export coach ».
+ * Version 1.57.0 : les deux bilans prêts ensemble (le lundi d'un début de mois), un seul bandeau, « Tes bilans de la
+ * semaine et du mois sont prêts », « Voir la semaine », « Voir le mois », « Plus tard » (les deux).
  */
 export function ReportBanner() {
   const pending = usePendingReports();
-  const { reportSettings, coachSent } = useApp();
-  const coach = useCoachExport();
+  const { coach, shown, sent } = useCoachReminder(pending);
   if (pending.length === 0) return null;
+  const open = (p: ReportPeriod) => navigate('bilan-periode', p.kind === 'week' ? 'semaine' : 'mois', periodKey(p));
+  const reminder =
+    shown &&
+    (sent ? (
+      <span className="coach-sent" data-testid="coach-sent">
+        Envoyé au coach ✓
+      </span>
+    ) : (
+      <button type="button" className="btn coach-reminder" onClick={() => void coach.share()}>
+        Partager pour le coach
+      </button>
+    ));
+  const week = pending.find((p) => p.kind === 'week');
+  const month = pending.find((p) => p.kind === 'month');
+  if (week && month) {
+    return (
+      <div className="banner info report-banner" role="status" data-report="both">
+        <span>Tes bilans de la semaine et du mois sont prêts</span>
+        <span className="row">
+          <button type="button" className="btn primary" onClick={() => open(week)}>
+            Voir la semaine
+          </button>
+          <button type="button" className="btn primary" onClick={() => open(month)}>
+            Voir le mois
+          </button>
+          <button type="button" className="btn" onClick={() => (postpone(week), postpone(month))}>
+            Plus tard
+          </button>
+        </span>
+        {reminder}
+      </div>
+    );
+  }
   return (
     <>
-      {pending.map((p) => {
-        // Le bilan signalé est celui de la dernière semaine terminée : la semaine de l'export.
-        const reminder = p.kind === 'week' && reportSettings.coachReminder && coach.available && periodKey(p) === periodKey(coach.period);
-        return (
-          <div key={idOf(p)} className="banner info report-banner" role="status" data-report={p.kind}>
-            <span>{TEXTS[p.kind]}</span>
-            <span className="row">
-              <button type="button" className="btn primary" onClick={() => navigate('bilan-periode', p.kind === 'week' ? 'semaine' : 'mois', periodKey(p))}>
-                Voir
-              </button>
-              <button
-                type="button"
-                className="btn"
-                onClick={() => postpone(p)}
-              >
-                Plus tard
-              </button>
-            </span>
-            {reminder &&
-              (coachSent === periodKey(p) ? (
-                <span className="coach-sent" data-testid="coach-sent">
-                  Envoyé au coach ✓
-                </span>
-              ) : (
-                <button type="button" className="btn coach-reminder" onClick={() => void coach.share()}>
-                  Partager pour le coach
-                </button>
-              ))}
-          </div>
-        );
-      })}
+      {pending.map((p) => (
+        <div key={idOf(p)} className="banner info report-banner" role="status" data-report={p.kind}>
+          <span>{TEXTS[p.kind]}</span>
+          <span className="row">
+            <button type="button" className="btn primary" onClick={() => open(p)}>
+              Voir
+            </button>
+            <button type="button" className="btn" onClick={() => postpone(p)}>
+              Plus tard
+            </button>
+          </span>
+          {p.kind === 'week' && reminder}
+        </div>
+      ))}
     </>
   );
 }

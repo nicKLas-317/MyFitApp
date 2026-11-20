@@ -35,6 +35,10 @@ const memory: { sessionId: string | null; openId: string | undefined; cardio: Ca
   cardio: { current: null },
 };
 
+
+/** Hauteur de l'en-tête fixe de la séance (une carte amenée à l'écran s'arrête dessous, à 8 px). */
+const headerHeight = () => document.querySelector('.session-header')?.getBoundingClientRect().height ?? 0;
+
 /**
  * Mode salle (§5.8) : écran plein, sans barre d'onglets. En haut le chronomètre et la liste compacte des exercices
  * (un seul ouvert à la fois) ; en bas une barre fixe dans la zone du pouce : « + Exercice », « + Cardio »,
@@ -68,10 +72,12 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
     if (!openVariantId) return;
     memory.openId = openVariantId;
     setOpenIdState(openVariantId);
-    // Amène l'exercice ouvert à l'écran (ajout ou exercice déjà présent).
-    requestAnimationFrame(() =>
-      document.querySelector(`article[data-variant="${CSS.escape(openVariantId)}"]`)?.scrollIntoView({ block: 'start' }),
-    );
+    // Amène l'exercice ouvert à l'écran (ajout ou exercice déjà présent), sous l'en-tête (version 1.57.0 : avant, son
+    // haut, vignette et nom, passait sous l'en-tête fixe).
+    requestAnimationFrame(() => {
+      const card = document.querySelector(`article[data-variant="${CSS.escape(openVariantId)}"]`);
+      if (card) window.scrollTo({ top: card.getBoundingClientRect().top + window.scrollY - headerHeight() - 8 });
+    });
   }, [openVariantId]);
 
   if (!active) {
@@ -120,8 +126,7 @@ export function SessionScreen({ openVariantId }: { openVariantId: string | undef
         next.kind === 'cardio' ? `[data-cardio="${CSS.escape(next.block.id)}"]` : `article[data-variant="${CSS.escape(next.key)}"]`,
       );
       if (!card) return;
-      const header = document.querySelector('.session-header')?.getBoundingClientRect().height ?? 0;
-      window.scrollTo({ top: card.getBoundingClientRect().top + window.scrollY - header - 8, behavior: 'smooth' });
+      window.scrollTo({ top: card.getBoundingClientRect().top + window.scrollY - headerHeight() - 8, behavior: 'smooth' });
     });
   }
 

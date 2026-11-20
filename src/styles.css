@@ -137,6 +137,19 @@ fieldset.frame > legend {
   padding: var(--space-2) var(--space-2) calc(96px + env(safe-area-inset-bottom));
 }
 
+/*
+ * Séance (version 1.57.0) : le ressenti, amené à l'écran après la dernière série, reste au-dessus de la barre du pouce
+ * et du message « Séries enregistrées » (au plus 140 px du bas) ; la page a la marge pour cela, même pour le dernier
+ * exercice de la liste.
+ */
+.feeling-anchor {
+  scroll-margin-bottom: calc(152px + env(safe-area-inset-bottom));
+}
+
+.screen.session {
+  padding-bottom: calc(160px + env(safe-area-inset-bottom));
+}
+
 .muted {
   color: var(--muted);
 }
@@ -693,6 +706,9 @@ div.card-header {
 .last-zone .status {
   width: 16px;
   height: 16px;
+  vertical-align: -3px;
+  /* Dans le bloc de la date (version 1.57.0) : écart par une marge, le texte lu reste le même. */
+  margin-left: 6px;
 }
 
 .next-zone {
@@ -839,8 +855,16 @@ input[aria-invalid='true'] {
   color: var(--muted);
 }
 
+/*
+ * Séries à venir (version 1.57.0) : sans fond, un contour discret, texte gris clair lisible (au moins 4,5:1, plein
+ * soleil à la salle) ; avant, toute la ligne à 55 % d'opacité (2,7:1).
+ */
 .set.todo {
-  opacity: 0.55;
+  background: none;
+  box-shadow: inset 0 0 0 1px var(--border);
+  color: var(--muted);
+  /* Pas un élément tactile : moins haute (40 px), « Valider les 3 séries » reste au-dessus de la barre du pouce à 360 px. */
+  min-height: 40px;
 }
 
 .set .check {
@@ -1357,6 +1381,28 @@ input[aria-invalid='true'] {
   flex-direction: column;
 }
 
+/*
+ * Liste d'ajout d'un exercice (version 1.57.0) : lignes compactes, pour voir plus d'exercices sur le premier écran à
+ * la salle. La charge passe sous le nom, avec le groupe (« Pectoraux · 73 kg ») ; le nom tient sur 2 lignes au plus.
+ */
+.pick-list.compact .pick-button {
+  min-height: 56px;
+  gap: var(--space-1);
+  padding: var(--space-1);
+}
+
+.pick-list.compact .pick-name strong {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.pick-load-inline {
+  white-space: nowrap;
+}
+
 .pick-meta {
   display: flex;
   align-items: center;
@@ -1508,8 +1554,9 @@ input[aria-invalid='true'] {
   color: var(--danger);
 }
 
+/* Version 1.57.0 : texte neutre en gras ; l'orange est réservé aux statuts (§8). */
 .missing-feelings > p {
-  color: var(--orange);
+  font-weight: 700;
 }
 
 /* Données : import et export */
@@ -2160,9 +2207,23 @@ fieldset {
   font-weight: 400;
 }
 
-/* Date et poids côte à côte, l'un sous l'autre si l'écran est étroit ou le texte agrandi. */
+/*
+ * Date et poids côte à côte, l'un sous l'autre si l'écran est étroit ou le texte agrandi. Version 1.57.0 : la date plus
+ * large que le poids (10 em et 6 em), sur une ligne dès 360 px (deux colonnes de 9 em ne tenaient qu'à 412 px : à
+ * 360 px, avec le bandeau du bilan, « Enregistrer la pesée » passait sous la barre d'onglets) ; date jamais coupée.
+ */
 .weigh-in-form .field-grid {
-  grid-template-columns: repeat(auto-fit, minmax(9em, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.weigh-in-form .field-grid > :first-child {
+  flex: 1 1 10em;
+}
+
+.weigh-in-form .field-grid > :last-child {
+  flex: 1 1 6em;
 }
 
 /*
@@ -3384,7 +3445,17 @@ fieldset.frame > legend + * {
   margin: 0;
   padding: 0;
   display: grid;
+  /*
+   * Version 1.57.0 : colonne bornée à la largeur du cadre. Sans elle, la colonne prenait la largeur du nom le plus
+   * long (« Tirage horizontal machine (appui pectoral) — Prise moyenne », jamais coupé dans le calcul de la largeur) :
+   * toute la page débordait de 191 px à 360 px, l'évolution hors du cadre.
+   */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-1);
+}
+
+.change-lead {
+  margin: 0 0 var(--space-1);
 }
 
 /*

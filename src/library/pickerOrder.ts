@@ -31,12 +31,25 @@ export function recentAt(sessions: readonly Session[], home: boolean): string[] 
 }
 
 /**
+ * Favori compatible avec le lieu de la séance (version 1.57.0) : déjà fait à ce lieu (`recent`), ou jamais fait nulle
+ * part. Un favori fait seulement à l'autre lieu (`elsewhere` : les abdos faits à la maison, en séance à la salle)
+ * passe dans « Tous les exercices », et ne départage plus une recherche.
+ */
+export function favoriteHere(ref: VariantRef, here: ReadonlySet<string>, elsewhere: ReadonlySet<string>): boolean {
+  return !!ref.variant.favorite && (here.has(ref.variant.id) || !elsewhere.has(ref.variant.id));
+}
+
+/**
  * Répartit une liste déjà ordonnée (bibliothèque par groupe, liste complète ou filtrée, sans texte) : favoris dans
  * cet ordre, puis les autres exercices faits, du plus récent au plus ancien (`recent`), puis le reste dans cet ordre.
- * Chaque exercice-variante une seule fois ; seules les parts non vides sont renvoyées.
+ * Chaque exercice-variante une seule fois ; seules les parts non vides sont renvoyées. Version 1.57.0 : seulement les
+ * favoris compatibles avec le lieu (`favoriteHere`) en tête ; un autre favori est classé comme les autres exercices.
  */
-export function pickerTiers<T>(items: readonly T[], refOf: (item: T) => VariantRef, recent: readonly string[]): { tier: PickTier; items: T[] }[] {
+export function pickerTiers<T>(items: readonly T[], refOf: (item: T) => VariantRef, recent: readonly string[], elsewhere: readonly string[] = []): { tier: PickTier; items: T[] }[] {
   const rank = new Map(recent.map((id, i) => [id, i]));
+  const here = new Set(recent);
+  const away = new Set(elsewhere);
+  const fav = (item: T) => favoriteHere(refOf(item), here, away);
   const seen = new Set<string>();
   const unique = items.filter((item) => {
     const id = refOf(item).variant.id;
@@ -44,11 +57,11 @@ export function pickerTiers<T>(items: readonly T[], refOf: (item: T) => VariantR
     seen.add(id);
     return true;
   });
-  const favoris = unique.filter((item) => refOf(item).variant.favorite);
+  const favoris = unique.filter(fav);
   const recents = unique
-    .filter((item) => !refOf(item).variant.favorite && rank.has(refOf(item).variant.id))
+    .filter((item) => !fav(item) && rank.has(refOf(item).variant.id))
     .sort((a, b) => rank.get(refOf(a).variant.id)! - rank.get(refOf(b).variant.id)!);
-  const tous = unique.filter((item) => !refOf(item).variant.favorite && !rank.has(refOf(item).variant.id));
+  const tous = unique.filter((item) => !fav(item) && !rank.has(refOf(item).variant.id));
   return (
     [
       { tier: 'favoris', items: favoris },
@@ -74,15 +87,24 @@ export function libraryOrder(refs: readonly VariantRef[]): VariantRef[] {
  * favoris, puis les exercices faits au lieu de la séance, du plus récent au plus ancien (`recent`), puis l'ordre de la
  * recherche (nom, variante standard d'abord). Sans texte, l'ordre « Favoris / Récents / Tous » (`pickerTiers`) reste.
  */
-export function pickerSearchOrder<T>(results: readonly T[], refOf: (item: T) => VariantRef, scoreOf: (item: T) => number, recent: readonly string[]): T[] {
+export function pickerSearchOrder<T>(
+  results: readonly T[],
+  refOf: (item: T) => VariantRef,
+  scoreOf: (item: T) => number,
+  recent: readonly string[],
+  elsewhere: readonly string[] = [],
+): T[] {
   const rank = new Map(recent.map((id, i) => [id, i]));
+  const here = new Set(recent);
+  const away = new Set(elsewhere);
+  const fav = (item: T) => Number(favoriteHere(refOf(item), here, away));
   const recency = (item: T) => rank.get(refOf(item).variant.id) ?? Number.POSITIVE_INFINITY;
   return results
     .map((item, i) => ({ item, i }))
     .sort(
       (a, b) =>
         scoreOf(b.item) - scoreOf(a.item) ||
-        Number(!!refOf(b.item).variant.favorite) - Number(!!refOf(a.item).variant.favorite) ||
+        fav(b.item) - fav(a.item) ||
         (recency(a.item) === recency(b.item) ? 0 : recency(a.item) < recency(b.item) ? -1 : 1) ||
         a.i - b.i,
     )

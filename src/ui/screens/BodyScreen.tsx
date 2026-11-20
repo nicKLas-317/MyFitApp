@@ -42,7 +42,7 @@ export function BodyScreen() {
           <section className="frame" aria-label="Nouvelle pesée">
             <WeighInForm
               today={today}
-              submitLabel="Enregistrer"
+              submitLabel="Enregistrer la pesée"
               existing={data.weighIns}
               onSubmit={async (w) => {
                 const ok = await saveWeighIn(w);

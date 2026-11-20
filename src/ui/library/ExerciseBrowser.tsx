@@ -56,11 +56,14 @@ export function ExerciseBrowser({ query, onPick, below, aside, note, createHref,
   const { results, ignored } = useMemo(() => searchWithInfo(index, query), [index, query]);
   const [chosen, setChosen] = useState<MuscleGroup | null>(memory.group);
   const trimmed = query.trim();
-  const shared = { onPick, below, aside, note, home };
+  // Version 1.57.0 : lignes compactes dans la liste d'ajout (charge sous le nom, nom sur 2 lignes au plus).
+  const shared = { onPick, below, aside, note, home, compact: pickerOrder };
   const recentHere = useMemo(() => (pickerOrder ? recentAt(sessions, home) : []), [pickerOrder, sessions, home]);
+  // Version 1.57.0 : exercices faits à l'autre lieu ; un favori fait seulement là-bas ne passe pas en tête.
+  const recentElsewhere = useMemo(() => (pickerOrder ? recentAt(sessions, !home) : []), [pickerOrder, sessions, home]);
 
   const list = (items: Listed[], label?: string) => (
-    <ul className="pick-list" aria-label={label}>
+    <ul className={`pick-list${pickerOrder ? ' compact' : ''}`} aria-label={label}>
       {groupGrips(items).map((e) =>
         e.kind === 'single' ? (
           <ExerciseItem key={e.item.ref.variant.id} ref_={e.item.ref} via={e.item.via} {...shared} />
@@ -73,7 +76,7 @@ export function ExerciseBrowser({ query, onPick, below, aside, note, createHref,
 
   /** Ajout d'un exercice : favoris, récents du lieu, puis les autres, chacun sous son intertitre discret (§5.16). */
   const tiered = (items: Listed[]) =>
-    pickerTiers(items, (i) => i.ref, recentHere).map((t) => (
+    pickerTiers(items, (i) => i.ref, recentHere, recentElsewhere).map((t) => (
       <section key={t.tier} className="pick-tier-section" data-tier={t.tier}>
         <h2 className="pick-tier">{PICK_TIER_TITLES[t.tier]}</h2>
         {list(t.items, PICK_TIER_TITLES[t.tier])}
@@ -82,7 +85,7 @@ export function ExerciseBrowser({ query, onPick, below, aside, note, createHref,
 
   if (trimmed) {
     // Ajout d'un exercice (version 1.49.1) : la pertinence d'abord, favoris puis récents du lieu à pertinence égale.
-    const ordered = pickerOrder ? pickerSearchOrder(results, (r) => r.entry, (r) => r.score, recentHere) : results;
+    const ordered = pickerOrder ? pickerSearchOrder(results, (r) => r.entry, (r) => r.score, recentHere, recentElsewhere) : results;
     const found: Listed[] = ordered.map((r) => ({ ref: { exercise: r.entry.exercise, variant: r.entry.variant }, via: r.via }));
     return results.length > 0 ? (
       <>
@@ -174,13 +177,15 @@ interface ItemProps {
   aside?(ref: VariantRef): ReactNode;
   note?(ref: VariantRef): string | null;
   home: boolean;
+  /** Ligne compacte (liste d'ajout, version 1.57.0) : la charge sous le nom, avec le groupe. */
+  compact?: boolean;
 }
 
 const secondaryOf = (exercise: Exercise, via?: MatchField) =>
   via === 'secondary' ? exercise.secondaryGroups.map((g) => MUSCLE_GROUP_LABELS[g]).join(', ') : null;
 
 /** Un exercice-variante : pictogramme, nom, variante, groupe principal, dernier poids et statut. */
-function ExerciseItem({ ref_: ref, via, onPick, below, aside, note, home }: ItemProps) {
+function ExerciseItem({ ref_: ref, via, onPick, below, aside, note, home, compact = false }: ItemProps) {
   const { ctxFor } = useApp();
   const { state } = ctxFor(ref.variant.id, home);
   const extra = note?.(ref);
@@ -195,12 +200,19 @@ function ExerciseItem({ ref_: ref, via, onPick, below, aside, note, home }: Item
             <span className="muted small">
               {variantLabel(ref) && <span className="variant-tag">{variantLabel(ref)}</span>}
               {MUSCLE_GROUP_LABELS[ref.exercise.primaryGroup]}
+              {compact && state && state.palier.weightKg > 0 && (
+                <span className="pick-load-inline">
+                  {' · '}
+                  {formatKg(state.palier.weightKg)}
+                  {perDumbbell(ref) && ' / haltère'}
+                </span>
+              )}
               {secondary && ` · secondaire : ${secondary}`}
               {extra && ` · ${extra}`}
             </span>
           </span>
           <span className="pick-meta">
-            {state && state.palier.weightKg > 0 && (
+            {!compact && state && state.palier.weightKg > 0 && (
               <span className="small pick-load">
                 {formatKg(state.palier.weightKg)}
                 {/* Aux haltères (§4.4) : « / haltère » sous la charge, pour laisser la place au nom. */}

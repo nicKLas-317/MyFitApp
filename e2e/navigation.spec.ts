@@ -229,95 +229,109 @@ test.describe('Barre d’onglets, mode salle et bouton retour (§3.4, §5.8)', (
     await expect.poll(async () => (await readSessions(page)).find((s) => s.state === 'done' && !s.id.startsWith('p'))?.name).toBe('Pectoraux');
   });
 
-  test('230. Nombre d’appuis : aucune action de saisie n’en demande plus qu’avant, et sans défilement', async ({ page }) => {
-    await page.clock.setFixedTime(new Date('2026-10-20T09:00:00'));
-    await seed(page, [pecDeck(12), pecDeck(15)]);
-    let taps = 0;
-    /** Un appui : l'élément doit déjà être à l'écran (aucun défilement). */
-    const tap = async (target: Locator) => {
-      await expect(target).toBeInViewport();
-      await target.click();
-      taps++;
-    };
-    const count = async (action: () => Promise<void>) => {
-      taps = 0;
-      await action();
-      return taps;
-    };
+  // Version 1.57.0 : aussi à 360 × 800 px, la taille du téléphone de l'utilisateur.
+  for (const size of [null, { width: 360, height: 800 }]) {
+    test(`230. Nombre d’appuis : aucune action de saisie n’en demande plus qu’avant, et sans défilement${size ? ' (360 × 800 px)' : ''}`, async ({ page }) => {
+      if (size) await page.setViewportSize(size);
+      await page.clock.setFixedTime(new Date('2026-10-20T09:00:00'));
+      await seed(page, [pecDeck(12), pecDeck(15)]);
+      let taps = 0;
+      /** Un appui : l'élément doit déjà être à l'écran (aucun défilement). */
+      const tap = async (target: Locator) => {
+        await expect(target).toBeInViewport();
+        // Version 1.57.0 : rien ne le recouvre (barre du pouce, en-tête, message « Annuler ») : son centre reçoit l'appui.
+        await expect
+          .poll(() =>
+            target.evaluate((el) => {
+              const r = el.getBoundingClientRect();
+              const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+              return hit && (hit === el || el.contains(hit)) ? 'ok' : `${el.outerHTML.slice(0, 100)} | ${hit?.outerHTML.slice(0, 140)} | ${Math.round(r.top)}-${Math.round(r.bottom)}`;
+            }),
+          )
+          .toBe('ok');
+        await target.click();
+        taps++;
+      };
+      const count = async (action: () => Promise<void>) => {
+        taps = 0;
+        await action();
+        return taps;
+      };
 
-    // Démarrer une séance : 1 (avant : 1).
-    expect(await count(() => tap(page.getByRole('button', { name: 'Démarrer une séance' })))).toBe(1);
-    // Ajouter un exercice récent : 2, sans défilement (avant : 2, après défilement jusqu'au bouton).
-    expect(
-      await count(async () => {
-        await tap(sessionBar(page).getByRole('link', { name: 'Ajouter un exercice' }));
-        await tap(page.getByRole('button', { name: /^Pec deck/ }).first());
-      }),
-    ).toBe(2);
-    const pec = page.locator('article[aria-label="Pec deck"]');
-    // Une série : 1 ; le ressenti : 1 (avant : idem).
-    expect(await count(() => tap(pec.getByRole('button', { name: 'Valider', exact: true })))).toBe(1);
-    await validateSets(pec, 2);
-    expect(await count(() => tap(pec.getByRole('button', { name: 'Bien', exact: true })))).toBe(1);
-    // Six exercices : la barre reste à l'écran.
-    for (const n of ['Chest press', 'Leg extension', 'Leg curl', 'Crunch machine', 'Curl biceps haltères']) await addExercise(page, n.toLowerCase(), n, '20');
-    // Passer à l'exercice suivant : 0 (avant : 1). Le ressenti du dernier ajouté (curl) ouvre le suivant non terminé dans
-    // l'ordre de la séance, en reprenant au début : le chest press (le pec deck est terminé), amené à l'écran.
-    const curl = page.locator('article[aria-label="Curl biceps haltères"]');
-    expect(
-      await count(async () => {
-        await tap(curl.getByRole('button', { name: 'Valider les 3 séries' }));
-        await tap(curl.getByRole('button', { name: 'Bien', exact: true }));
-      }),
-    ).toBe(2);
-    const chest = page.locator('article[aria-label="Chest press"]');
-    await expect(chest).toHaveClass(/open/);
-    await expect(curl).not.toHaveClass(/open/);
-    await expect(chest.getByRole('button', { name: 'Valider les 3 séries' })).toBeInViewport();
-    // Changer ensuite le ressenti du curl ne déplace rien.
-    await curl.locator('.card-header').click();
-    await curl.getByRole('button', { name: 'Très bien', exact: true }).click();
-    await expect(curl).toHaveClass(/open/);
-    // Cardio : 2 et la durée (avant : 2, après défilement).
-    expect(
-      await count(async () => {
-        await tap(sessionBar(page).getByRole('button', { name: 'Ajouter du cardio' }));
-        await page.getByRole('form', { name: 'Cardio' }).getByLabel('Durée (min)').fill('10');
-        await tap(page.getByRole('form', { name: 'Cardio' }).getByRole('button', { name: 'Valider', exact: true }));
-      }),
-    ).toBe(2);
-    // Terminer : 2, sans défilement (avant : 2, après défilement jusqu'en bas).
-    await page.evaluate(() => window.scrollTo(0, 0));
-    expect(
-      await count(async () => {
-        await tap(sessionBar(page).getByRole('button', { name: 'Terminer la séance' }));
-        await tap(finishSheet(page).getByRole('button', { name: /^(Oui, terminer|Terminer sans compléter)$/ }));
-      }),
-    ).toBe(2);
-    await expect(page.getByRole('heading', { name: 'Séance terminée' })).toBeVisible();
-    // Retour à l'accueil : 1.
-    expect(await count(() => tap(page.getByRole('button', { name: 'Garder ce nom' })))).toBe(1);
-    // Pesée : onglet Progrès puis « Enregistrer la pesée » : 2 et le poids (avant : « Mon poids » puis « Enregistrer »).
-    expect(
-      await count(async () => {
-        await tap(tab(page, 'Progrès'));
-        await page.getByRole('region', { name: 'Mon poids' }).getByLabel('Poids (kg)').fill('78,4');
-        await tap(page.getByRole('button', { name: 'Enregistrer la pesée' }));
-      }),
-    ).toBe(2);
-    await expect(page.getByTestId('last-weigh-in')).toContainText('78,4 kg');
-    // Corriger une séance passée : Historique, la séance, « Corriger » : 3 (avant : 3).
-    expect(
-      await count(async () => {
-        await tap(tab(page, 'Historique'));
-        await tap(page.locator('a.session-link').first());
-        await tap(page.getByRole('button', { name: 'Corriger' }).first());
-      }),
-    ).toBe(3);
-    // Reprendre une séance : 1 (avant : 1).
-    await page.goto('./');
-    await page.getByRole('button', { name: 'Démarrer une séance' }).click();
-    await page.getByRole('link', { name: 'Accueil' }).click();
-    expect(await count(() => tap(page.getByRole('button', { name: /^Reprendre la séance/ })))).toBe(1);
-  });
+      // Démarrer une séance : 1 (avant : 1).
+      expect(await count(() => tap(page.getByRole('button', { name: 'Démarrer une séance' })))).toBe(1);
+      // Ajouter un exercice récent : 2, sans défilement (avant : 2, après défilement jusqu'au bouton).
+      expect(
+        await count(async () => {
+          await tap(sessionBar(page).getByRole('link', { name: 'Ajouter un exercice' }));
+          await tap(page.getByRole('button', { name: /^Pec deck/ }).first());
+        }),
+      ).toBe(2);
+      const pec = page.locator('article[aria-label="Pec deck"]');
+      // Une série : 1 ; le ressenti : 1 (avant : idem).
+      expect(await count(() => tap(pec.getByRole('button', { name: 'Valider', exact: true })))).toBe(1);
+      await validateSets(pec, 2);
+      expect(await count(() => tap(pec.getByRole('button', { name: 'Bien', exact: true })))).toBe(1);
+      // Six exercices : la barre reste à l'écran.
+      for (const n of ['Chest press', 'Leg extension', 'Leg curl', 'Crunch machine', 'Curl biceps haltères']) await addExercise(page, n.toLowerCase(), n, '20');
+      // Passer à l'exercice suivant : 0 (avant : 1). Le ressenti du dernier ajouté (curl) ouvre le suivant non terminé dans
+      // l'ordre de la séance, en reprenant au début : le chest press (le pec deck est terminé), amené à l'écran.
+      const curl = page.locator('article[aria-label="Curl biceps haltères"]');
+      expect(
+        await count(async () => {
+          await tap(curl.getByRole('button', { name: 'Valider les 3 séries' }));
+          await tap(curl.getByRole('button', { name: 'Bien', exact: true }));
+        }),
+      ).toBe(2);
+      const chest = page.locator('article[aria-label="Chest press"]');
+      await expect(chest).toHaveClass(/open/);
+      await expect(curl).not.toHaveClass(/open/);
+      await expect(chest.getByRole('button', { name: 'Valider les 3 séries' })).toBeInViewport();
+      // Changer ensuite le ressenti du curl ne déplace rien.
+      await curl.locator('.card-header').click();
+      await curl.getByRole('button', { name: 'Très bien', exact: true }).click();
+      await expect(curl).toHaveClass(/open/);
+      // Cardio : 2 et la durée (avant : 2, après défilement).
+      expect(
+        await count(async () => {
+          await tap(sessionBar(page).getByRole('button', { name: 'Ajouter du cardio' }));
+          await page.getByRole('form', { name: 'Cardio' }).getByLabel('Durée (min)').fill('10');
+          await tap(page.getByRole('form', { name: 'Cardio' }).getByRole('button', { name: 'Valider', exact: true }));
+        }),
+      ).toBe(2);
+      // Terminer : 2, sans défilement (avant : 2, après défilement jusqu'en bas).
+      await page.evaluate(() => window.scrollTo(0, 0));
+      expect(
+        await count(async () => {
+          await tap(sessionBar(page).getByRole('button', { name: 'Terminer la séance' }));
+          await tap(finishSheet(page).getByRole('button', { name: /^(Oui, terminer|Terminer sans compléter)$/ }));
+        }),
+      ).toBe(2);
+      await expect(page.getByRole('heading', { name: 'Séance terminée' })).toBeVisible();
+      // Retour à l'accueil : 1.
+      expect(await count(() => tap(page.getByRole('button', { name: 'Garder ce nom' })))).toBe(1);
+      // Pesée : onglet Progrès puis « Enregistrer la pesée » : 2 et le poids (avant : « Mon poids » puis « Enregistrer »).
+      expect(
+        await count(async () => {
+          await tap(tab(page, 'Progrès'));
+          await page.getByRole('region', { name: 'Mon poids' }).getByLabel('Poids (kg)').fill('78,4');
+          await tap(page.getByRole('button', { name: 'Enregistrer la pesée' }));
+        }),
+      ).toBe(2);
+      await expect(page.getByTestId('last-weigh-in')).toContainText('78,4 kg');
+      // Corriger une séance passée : Historique, la séance, « Corriger » : 3 (avant : 3).
+      expect(
+        await count(async () => {
+          await tap(tab(page, 'Historique'));
+          await tap(page.locator('a.session-link').first());
+          await tap(page.getByRole('button', { name: 'Corriger' }).first());
+        }),
+      ).toBe(3);
+      // Reprendre une séance : 1 (avant : 1).
+      await page.goto('./');
+      await page.getByRole('button', { name: 'Démarrer une séance' }).click();
+      await page.getByRole('link', { name: 'Accueil' }).click();
+      expect(await count(() => tap(page.getByRole('button', { name: /^Reprendre la séance/ })))).toBe(1);
+    });
+  }
 });

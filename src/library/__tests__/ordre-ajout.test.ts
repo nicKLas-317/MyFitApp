@@ -91,3 +91,29 @@ describe('Ordre de la liste d’ajout d’un exercice (version 1.49.0)', () => {
     expect(search(SEED_EXERCISES, 'curl biceps', [])).toEqual(searchWithInfo(buildSearchIndex(SEED_EXERCISES), 'curl biceps').results.map((r) => r.entry.variant.id));
   });
 });
+
+describe('Favoris compatibles avec le lieu (version 1.57.0)', () => {
+  it('339. En tête, seulement les favoris faits à ce lieu ou jamais faits ; un favori fait seulement à l’autre lieu passe dans « Tous les exercices » et ne départage plus une recherche', () => {
+    // Favoris : crunch au sol (fait seulement à la maison), pec deck (fait à la salle), leg curl (jamais fait).
+    const exs = favorite(SEED_EXERCISES, ['crunch-sol', 'pec-deck', 'leg-curl']);
+    const list = libraryOrder([...indexVariants(exs).values()]);
+    const done = [session('a', '2026-11-02', ['pec-deck', 'chest-press']), session('b', '2026-11-03', ['crunch-sol', 'curl-biceps-halteres'], 'maison')];
+    const gym = pickerTiers(list, (r) => r, recentAt(done, false), recentAt(done, true));
+    expect(ids(gym[0]!.items)).toEqual(['pec-deck', 'leg-curl']);
+    expect(ids(gym.find((t) => t.tier === 'tous')!.items)).toContain('crunch-sol');
+    // À la maison : le crunch en tête, le pec deck (fait seulement à la salle) dans « Tous les exercices ».
+    const home = pickerTiers(list, (r) => r, recentAt(done, true), recentAt(done, false));
+    expect(ids(home[0]!.items)).toEqual(['leg-curl', 'crunch-sol']);
+    expect(ids(home.find((t) => t.tier === 'tous')!.items)).toContain('pec-deck');
+    // Recherche « crunch » à la salle : le crunch au sol ne passe plus devant à pertinence égale.
+    const idx = buildSearchIndex(exs);
+    const { results } = searchWithInfo(idx, 'crunch');
+    const byScore = (r: (typeof results)[number]) => r.score;
+    const score = new Map(results.map((r) => [r.entry.variant.id, r.score]));
+    const ordered = pickerSearchOrder(results, (r) => r.entry, byScore, recentAt(done, false), recentAt(done, true)).map((r) => r.entry.variant.id);
+    const tied = ordered.filter((id) => score.get(id) === score.get('crunch-sol'));
+    expect(tied.indexOf('crunch-sol')).toBe(results.filter((r) => r.score === score.get('crunch-sol')).findIndex((r) => r.entry.variant.id === 'crunch-sol'));
+    // Contre-test : sans l'autre lieu (règle d'avant), le crunch au sol reste un favori en tête à la salle.
+    expect(ids(pickerTiers(list, (r) => r, recentAt(done, false))[0]!.items)).toContain('crunch-sol');
+  });
+});

@@ -109,17 +109,17 @@ test.describe('Historique, analyse et Mon poids', () => {
     await expect(page.getByText('Aucune pesée. Elle n’est jamais obligatoire.')).toBeVisible();
 
     await page.getByLabel('Poids (kg)').fill('7a8');
-    await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
+    await page.getByRole('button', { name: 'Enregistrer la pesée', exact: true }).click();
     await expect(page.getByRole('alert')).toContainText('Poids invalide');
     expect((await readBody(page)).weighIns).toEqual([]);
     expect(await readSessions(page)).toEqual(SESSIONS);
 
     await page.getByLabel('Date').fill('2026-09-01');
     await page.getByLabel('Poids (kg)').fill('80,4');
-    await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
+    await page.getByRole('button', { name: 'Enregistrer la pesée', exact: true }).click();
     await page.getByLabel('Date').fill('2026-10-01');
     await page.getByLabel('Poids (kg)').fill('79,2');
-    await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
+    await page.getByRole('button', { name: 'Enregistrer la pesée', exact: true }).click();
     await expect(page.getByRole('list', { name: 'Historique des pesées' }).getByRole('listitem')).toHaveCount(2);
     await expect(page.getByTestId('body-chart')).toHaveAttribute('data-points', '2');
     expect((await readBody(page)).weighIns).toEqual([
@@ -178,7 +178,7 @@ test.describe('Historique, analyse et Mon poids', () => {
     await page.goto('./#/poids');
     await page.getByLabel('Date').fill('2026-10-01');
     await page.getByLabel('Poids (kg)').fill('79,2');
-    await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
+    await page.getByRole('button', { name: 'Enregistrer la pesée', exact: true }).click();
     await expect(page.getByRole('list', { name: 'Historique des pesées' }).getByRole('listitem')).toHaveCount(1);
 
     await page.goto('./#/donnees');

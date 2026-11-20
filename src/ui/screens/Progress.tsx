@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useBody } from '../../body/store';
 import { coachWeekLabel } from '../../analysis/coachPeriod';
 import { formatKg, formatShortDay, localDate } from '../../session/format';
-import { ReportBanner } from '../ReportBanner';
+import { ReportBanner, useCoachInBanner } from '../ReportBanner';
 import { GroupAlerts } from '../GroupAlerts';
 import { JointAlerts } from '../JointAlerts';
 import { useCoachExport } from '../coachExport';
@@ -81,8 +81,10 @@ export function Progress() {
  */
 function CoachShare() {
   const coach = useCoachExport();
+  const inBanner = useCoachInBanner();
   const [message, setMessage] = useState<string | null>(null);
-  if (!coach.available) return null;
+  // Version 1.57.0 : le bandeau du lundi le propose déjà, pas deux boutons à l'écran.
+  if (!coach.available || inBanner) return null;
 
   async function share() {
     const result = await coach.share();

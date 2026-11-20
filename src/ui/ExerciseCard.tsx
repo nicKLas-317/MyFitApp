@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Performance, Session } from '../domain/types';
 import { useApp } from '../app/store';
 import { displayName } from '../library/catalog';
@@ -84,6 +84,16 @@ export function ExerciseCard({ session, performance: p, open, locked = false, on
   // Toutes les séries faites à la cible et mieux que le record des séances précédentes (jamais pour une première fois).
   const newRecord = beatsRecord(p, records.current.get(trackKey(settings, p.variantId, home)), ctx.cfg.assisted);
   const nextValue = Math.min(draft ?? target, target);
+
+  // Version 1.57.0 : la dernière série enregistrée (ou les séries d'un coup), le ressenti est amené au-dessus de la barre
+  // du pouce et du message « Séries enregistrées » (marge `scroll-margin-bottom`) ; avant, à 360 px, il restait dessous.
+  const feelingRef = useRef<HTMLDivElement>(null);
+  const complete = open && planned > 0 && done >= planned && p.feeling === 'inconnu';
+  const wasComplete = useRef(complete);
+  useEffect(() => {
+    if (complete && !wasComplete.current) feelingRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+    wasComplete.current = complete;
+  }, [complete]);
 
   return (
     <article
@@ -271,6 +281,7 @@ export function ExerciseCard({ session, performance: p, open, locked = false, on
           )}
 
           {done > 0 && (
+            <div ref={feelingRef} className="feeling-anchor">
             <FeelingPicker
               legend="Ressenti global"
               value={p.feeling}
@@ -281,6 +292,7 @@ export function ExerciseCard({ session, performance: p, open, locked = false, on
                 if (p.feeling === 'inconnu' && done >= planned) onFinished?.();
               }}
             />
+            </div>
           )}
 
         </div>
