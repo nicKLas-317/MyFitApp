@@ -142,7 +142,7 @@ test.describe('Bilan de la période, version 1.35.0', () => {
     const card = (name: string) => section(page, 'Progressions').getByTestId('report-progression').filter({ hasText: name });
     expect(await rungs(card('Chest press'))).toBe('8:rung-done 9:rung-done 10:rung-before 11:rung-now 12:rung-next +kg:rung-next');
     expect(await rungs(card('Planche'))).toBe('20:rung-before 25:rung-now 30:rung-next 35:rung-next 40:rung-next');
-    await expect(card('Planche').locator('.prog-meta')).toHaveText('3 séries · en secondes · 22 oct.');
+    await expect(card('Planche').locator('.prog-meta')).toHaveText('3 séries · en secondes · validé le 22 oct.');
     // Lecteur d'écran : la phrase du mail ; l'échelle est masquée.
     await expect(card('Planche').locator('.visually-hidden')).toHaveText('Planche : 3×20 s → 3×25 s (22 oct.)');
     await expect(card('Planche').getByTestId('ladder')).toHaveAttribute('aria-hidden', 'true');

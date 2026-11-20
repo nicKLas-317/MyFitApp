@@ -6,7 +6,7 @@ import { useBody } from '../../body/store';
 import type { CardioMachine } from '../../domain/types';
 import { machineCountsForLegs, machineListErrors, newMachine, type MachineListError } from '../../cardio/model';
 import { isValidEmail } from '../../analysis/reportSettings';
-import { ALERT_SETS_MAX, ALERT_SETS_MIN, RED_SETS_MAX, RED_SETS_MIN } from '../../analysis/weekly';
+import { ALERT_SETS_MIN, alertSetsMax, RED_SETS_MAX, RED_SETS_MIN } from '../../analysis/weekly';
 import { HABIT_GROUPS, WEEKDAY_LABELS, WEEKDAYS, habitErrors, newHabit, type Habit, type HabitError, type Weekday } from '../../activities/model';
 import { MUSCLE_GROUP_LABELS } from '../../library/seed';
 import { Stepper } from '../ExerciseCard';
@@ -19,7 +19,8 @@ const PERSIST_LABELS = {
 } as const;
 
 export function Settings() {
-  const { persist } = useApp();
+  const { persist, askPersistence } = useApp();
+  const [asked, setAsked] = useState(false);
   return (
     <main className="screen settings">
       <header className="simple-header">
@@ -51,6 +52,19 @@ export function Settings() {
       <dl className="settings-list frame">
         <dt>Stockage persistant</dt>
         <dd data-testid="persist-state">{persist ? PERSIST_LABELS[persist] : '…'}</dd>
+        {/* Version 1.56.0 : redemander, sans attendre le prochain lancement ; Chrome décide seul, sans question. */}
+        {persist === 'denied' && (
+          <dd className="persist-ask">
+            <button type="button" className="btn" onClick={() => void askPersistence().then(() => setAsked(true))}>
+              Redemander au navigateur
+            </button>
+            {asked && (
+              <span className="small muted" role="status">
+                Toujours refusé : pense à sauvegarder régulièrement (Importer / exporter).
+              </span>
+            )}
+          </dd>
+        )}
         <dt>Version</dt>
         <dd>{__APP_VERSION__}</dd>
       </dl>
@@ -154,14 +168,14 @@ function RecapSettingsField() {
         value={recapSettings.redSets}
         min={RED_SETS_MIN}
         max={RED_SETS_MAX}
-        onChange={(redSets) => void save({ ...recapSettings, redSets })}
+        onChange={(redSets) => void save({ ...recapSettings, redSets, alertSets: Math.min(recapSettings.alertSets, alertSetsMax(redSets)) })}
       />
       {/* Version 1.51.0 (§19.11) : alerte quand un groupe est sous ce nombre de séries 2 semaines terminées de suite. */}
       <Stepper
         label="Alerte « moins travaillé » sous (séries)"
         value={recapSettings.alertSets}
         min={ALERT_SETS_MIN}
-        max={ALERT_SETS_MAX}
+        max={alertSetsMax(recapSettings.redSets)}
         onChange={(alertSets) => void save({ ...recapSettings, alertSets })}
       />
       {failed && (

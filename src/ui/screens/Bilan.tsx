@@ -142,6 +142,8 @@ export function Bilan() {
       {filter === 'all' && changes.length > 0 && (
         <section aria-label="Dernières évolutions" className="frame">
           <h2 className="section-title">Dernières évolutions</h2>
+          {/* Version 1.56.0 : sens de la date (les bilans datent un palier du jour où il est validé). */}
+          <p className="small muted change-lead">Date : première séance au nouveau palier.</p>
           <ul className="change-list">
             {changes.map((c) => (
               <li key={`${c.sessionId}-${c.variantId}${c.home ? '@maison' : ''}`} className="change-line">

@@ -257,7 +257,13 @@ export function deduceSubGroups(exercise: Pick<Exercise, 'name' | 'primaryGroup'
     if (g === primary || !SUB_GROUPS[g]) continue;
     const found = byKeywords(g, text);
     if (Object.keys(found).length > 0) add(out, found, H);
-    else add(out, { [SECONDARY_SUB_GROUP[g]!]: 1 }, H);
+    else {
+      // Version 1.56.0 : un sous-groupe des jambes déclaré en secondaire (ischio-jambiers, fessiers…) compte pour
+      // lui-même ; avant, ramené à « jambes », il comptait pour les quadriceps.
+      const legs = g === 'jambes' ? exercise.secondaryGroups.filter((x) => LEG_SUBGROUPS.includes(x)) : [];
+      if (legs.length > 0) for (const x of legs) add(out, { [x as SubGroup]: 1 }, H);
+      else add(out, { [SECONDARY_SUB_GROUP[g]!]: 1 }, H);
+    }
   }
   return out;
 }

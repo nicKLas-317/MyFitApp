@@ -91,6 +91,8 @@ export function coachLibrary(exercises: readonly Exercise[], settings: EngineSet
     const secondary = [...new Set(e.secondaryGroups)].filter((g) => g !== e.primaryGroup).map(groupLabel);
     const named = labels.some((l) => l !== null);
     const madeIdx = variants.map((v, i) => (done.has(v.id) ? i : -1)).filter((i) => i >= 0);
+    // Version 1.56.0 : déjà fait aussi par une variante archivée (absente de `variantes`).
+    const made = e.variants.some((v) => done.has(v.id));
     const entry = {
       nom: e.name,
       ...(primary !== e.primaryGroup ? { groupe: groupLabel(e.primaryGroup) } : {}),
@@ -99,7 +101,7 @@ export function coachLibrary(exercises: readonly Exercise[], settings: EngineSet
       type: perVariant(refs.map((r, i) => ({ label: label(i), value: typeOf(resolveConfig(settings, r.variant.id), r) })), ' : '),
       sous_groupes: perVariant(variants.map((v, i) => ({ label: label(i), value: subGroupsText(subGroupWeights(e, v), primary) })), ' : '),
       articulations: jointsText(e),
-      deja_fait: madeIdx.length > 0,
+      deja_fait: made,
       ...(named ? { variantes: labels.map((_, i) => label(i)) } : {}),
       ...(named && madeIdx.length > 0 && madeIdx.length < variants.length ? { variantes_faites: madeIdx.map(label) } : {}),
     };

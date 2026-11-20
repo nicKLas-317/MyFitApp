@@ -23,7 +23,7 @@ import {
 } from '../engine';
 import { displayName, indexVariants, variantLabel, type VariantRef } from '../library/catalog';
 import { perDumbbell } from '../library/search';
-import { weekSuggestion, SUGGEST_MAX, type SkipReason } from '../plan/suggest';
+import { suggestionAbsence, weekSuggestion, SUGGEST_MAX, type SkipReason } from '../plan/suggest';
 import { coachWeek, DAY_MONTH_YEAR } from './coachPeriod';
 import { clock, FEELINGS, groupLabel, loadField, nextTargetText, rangeText, recommendationText, round1, typeOf, weekday } from './coachFormat';
 import { coachJson } from './coachJson';
@@ -301,9 +301,10 @@ export function buildCoachExport(input: CoachInput) {
     groupes: recapGroups(input, sessions, activities, period),
     // Version 1.54.0 : répartition par sous-groupe (§19.15), la semaine exportée et les 4 semaines terminées qu'elle clôt
     // (celles de « Par groupe musculaire » le lundi suivant).
-    sous_groupes: Object.fromEntries(report.subGroups.map((g) => [groupLabel(g.group), Object.fromEntries(subGroupsOf(g.group).map((sub) => [sub.label.toLowerCase(), round1(g.sets[sub.id] ?? 0)]))])),
+    // Version 1.56.0 : sous leur groupe, les noms courts des sous-groupes, ceux du mail (« longue », « latérale »).
+    sous_groupes: Object.fromEntries(report.subGroups.map((g) => [groupLabel(g.group), Object.fromEntries(subGroupsOf(g.group).map((sub) => [sub.short, round1(g.sets[sub.id] ?? 0)]))])),
     sous_groupes_4_semaines: Object.fromEntries(
-      report.subGroups.map((g) => [groupLabel(g.group), Object.fromEntries(recentSubGroups(sessions, input.exercises, g.group, end).rows.map((r) => [r.label.toLowerCase(), round1(r.sets)]))]),
+      report.subGroups.map((g) => [groupLabel(g.group), Object.fromEntries(recentSubGroups(sessions, input.exercises, g.group, end).rows.map((r) => [r.short, round1(r.sets)]))]),
     ),
     texte_du_bilan: reportText(report, name, dumbbell).split('\n'),
   };
@@ -436,8 +437,11 @@ export function buildCoachExport(input: CoachInput) {
       const load = type === 'poids du corps' || type === 'durée' ? '' : formatLoad(state.palier.weightKg, type === 'assisté', type === 'haltères');
       return `${name(v.variantId)}${v.home ? ' (maison)' : ''} : série en cours de ${v.redStreak} rouges${load}`;
     });
-  const suggestion = weekSuggestion({ sessions, exercises: input.exercises, settings: input.settings, recap: input.recap, activities, machines: input.machines, now: end - 1 });
-  const lastGym = weekSessions.filter((s) => s.location !== 'maison').at(-1);
+  const suggestionInput = { sessions, exercises: input.exercises, settings: input.settings, recap: input.recap, activities, machines: input.machines, now: end - 1 };
+  const suggestion = weekSuggestion(suggestionInput);
+  // Version 1.56.0 : la raison donnée par le calcul de la suggestion (avant, devinée : « tous à l'objectif » quand les
+  // groupes en retard avaient tous été écartés).
+  const absence = suggestion ? null : suggestionAbsence(suggestionInput);
   const seance_pour_completer = suggestion
     ? {
         proposee_pour: suggestion.day,
@@ -460,11 +464,15 @@ export function buildCoachExport(input: CoachInput) {
       }
     : {
         proposee_pour: null,
-        raison: !lastGym
-          ? 'aucune séance à la salle cette semaine'
-          : lastGym.date === lastDay
-            ? 'séance à la salle le dimanche : la séance proposée tomberait la semaine suivante'
-            : 'tous les groupes du récapitulatif à l’objectif (hors abdominaux)',
+        raison:
+          absence?.reason === 'aucune_salle'
+            ? 'aucune séance à la salle cette semaine'
+            : absence?.reason === 'semaine_suivante'
+              ? 'séance à la salle le dimanche : la séance proposée tomberait la semaine suivante'
+              : absence?.reason === 'ecartes'
+                ? 'des groupes sont encore sous l’objectif, mais aucun exercice ne peut être proposé pour eux'
+                : 'tous les groupes du récapitulatif à l’objectif (hors abdominaux)',
+        ...(absence?.reason === 'ecartes' ? { ecartes: absence.skipped.map((x) => ({ groupe: groupLabel(x.group), raison: SKIP_REASONS[x.reason] })) } : {}),
       };
   const signaux = {
     alertes_groupe_moins_travaille: alertes,

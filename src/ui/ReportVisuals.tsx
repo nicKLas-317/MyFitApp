@@ -252,6 +252,16 @@ export function ReportGroups({ report, screen }: { report: PeriodReport; screen:
   );
   const idleOf = (g: PeriodReport['groups'][number]) => g.count === 0 && g.indirect === 0 && !g.home && !g.cardio && g.sets === 0;
   const legs = report.groups.find((g) => g.cardio);
+  // Version 1.56.0 : semaine sans séance ni activité (vacances), section affichée pour la seule ligne de l'alerte, comme
+  // le mail : ni bâtons ni tableau, tous vides.
+  if (report.totals.sessionCount === 0 && report.activities.length === 0) {
+    return (
+      <section className="frame report-section" aria-label="Groupes travaillés">
+        <h3 className="section-title">Groupes travaillés</h3>
+        {report.alerts.length > 0 && <ReportAlert alerts={report.alerts} />}
+      </section>
+    );
+  }
   return (
     <section className="frame report-section" aria-label="Groupes travaillés">
       <h3 className="section-title">Groupes travaillés</h3>

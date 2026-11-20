@@ -12,7 +12,7 @@ import { sanitizeIgnoredJointAlerts, type IgnoredJointAlerts } from '../analysis
 import { sanitizeSetsHintDismissed, type SetsHintDismissed } from '../analysis/setsHint';
 import { sanitizeActivities, sanitizeHabits, type ActivityRecord, type Habit } from '../activities/model';
 import { sanitizePlan } from '../plan/model';
-import type { PersistState, Repository } from '../storage/db';
+import type { Repository } from '../storage/db';
 
 export function upsert<T extends { id: string }>(list: readonly T[], items: readonly T[]): T[] {
   const byId = new Map(items.map((x) => [x.id, x]));
@@ -87,14 +87,4 @@ export async function loadStored(repo: Repository): Promise<StoredData> {
     activities: sanitizeActivities(activities),
     plan: sanitizePlan(plan),
   };
-}
-
-export async function currentPersistState(): Promise<PersistState> {
-  const storage = navigator.storage;
-  if (!storage?.persisted) return 'unsupported';
-  try {
-    return (await storage.persisted()) ? 'granted' : 'denied';
-  } catch {
-    return 'denied';
-  }
 }

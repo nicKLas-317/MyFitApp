@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../../app/store';
-import { navigateReplace } from '../../app/hooks';
+import { navigateReplace, useNow } from '../../app/hooks';
+import { localDate } from '../../session/format';
 import { useBody } from '../../body/store';
 import { buildReport, inProgressNote, lineText, reportSections, reportText } from '../../analysis/report';
 import {
@@ -36,7 +37,10 @@ export function kindOfSegment(segment: string | undefined): ReportKind {
 export function PeriodReport({ kind, periodParam }: { kind: ReportKind; periodParam?: string }) {
   const { sessions, exercises, replay, settings, variants, recapSettings, reportSettings, markReportSeen, activities, cardioMachines } = useApp();
   const body = useBody();
-  const now = Date.now();
+  // Version 1.56.0 : heure rafraîchie (chaque minute, et au retour au premier plan) pour recalculer le bilan au
+  // changement de jour ; avant, ouvert le dimanche soir, il restait « Semaine en cours » après minuit.
+  const now = useNow(60_000);
+  const today = localDate(now);
   const period = (periodParam ? parsePeriodKey(kind, periodParam) : null) ?? defaultPeriod(kind, sessions, now);
   const key = periodKey(period);
   const weighIns = body.status === 'ready' ? body.data.weighIns : [];
@@ -47,8 +51,8 @@ export function PeriodReport({ kind, periodParam }: { kind: ReportKind; periodPa
       // Écran seulement (version 1.35.0) : tuiles, barres, calendrier, échelles ; le texte du mail n'en dépend pas.
       return [built, buildReportScreen(built, input)] as const;
     },
-    // `now` change à chaque rendu : la période (clé) et les données suffisent.
-    [key, kind, sessions, exercises, replay, settings, recapSettings, weighIns, activities, cardioMachines],
+    // `now` change chaque minute : la période (clé), le jour et les données suffisent.
+    [key, kind, today, sessions, exercises, replay, settings, recapSettings, weighIns, activities, cardioMachines],
   );
   const name = (id: string) => displayName(variants.get(id));
   // Exercice aux haltères : charges en « kg / haltère » (§4.4), à l'écran comme dans le mail.

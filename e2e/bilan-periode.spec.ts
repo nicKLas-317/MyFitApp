@@ -130,7 +130,7 @@ test.describe('Bilans de la semaine et du mois (§19.7)', () => {
     const curl = section('Progressions').getByTestId('report-progression').filter({ hasText: 'Curl biceps haltères' });
     await expect(curl.locator('.rung-before')).toHaveText('8');
     await expect(curl.locator('.rung-now')).toHaveText('9');
-    await expect(curl.locator('.prog-meta')).toHaveText('3\u00a0séries · à 12\u00a0kg\u00a0/\u00a0haltère · 21\u00a0oct.');
+    await expect(curl.locator('.prog-meta')).toHaveText('3\u00a0séries · à 12\u00a0kg\u00a0/\u00a0haltère · validé le 21\u00a0oct.');
     // Curl aux haltères (version 1.30.2) : « kg / haltère », dans le texte du mail aussi.
     await expect(page.getByTestId('report-text')).toContainText('3×8 → 3×9 à 12 kg / haltère');
     // Groupes non travaillés : barre vide, « non travaillé ».

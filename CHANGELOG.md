@@ -4,6 +4,18 @@ Ce qui a changé à chaque version de MyFitApp, de la plus récente à la plus a
 
 Les commits sans changement de numéro (documentation, tests, workflow) sont rangés sous la version en cours à ce moment-là.
 
+## 1.56.0 — 20 nov. 2026
+
+Fiabilité et bugs de l'audit du 20 novembre 2026.
+- Stockage persistant redemandé à chaque lancement tant qu'il n'est pas accordé, après chaque séance terminée, et par un bouton « Redemander au navigateur » dans les réglages. Jusqu'ici, il n'était demandé qu'une seule fois, au tout premier lancement, souvent dans un onglet avant l'installation (Chrome refuse alors), et plus jamais ensuite : c'est pourquoi les réglages affichaient « non accordé » sur le téléphone
+- Stockage refusé : rappel de sauvegarde sur l'accueil après 7 jours au lieu de 14, « Ton navigateur ne protège pas tes données. », avec le bouton « Exporter »
+- Séries par semaine : le contour de la semaine en cours est dessiné même vide, et « en cours » est sous sa colonne (avant, sous la barre de la semaine d'avant)
+- Export pour le coach : la vraie raison quand aucune séance pour compléter la semaine n'est proposée (groupes en retard travaillés la veille ou sans exercice récent : avant, « tous à l'objectif »), avec la liste des groupes écartés ; sous-groupes en noms courts, ceux du mail ; « déjà fait » compte aussi une variante archivée
+- Sous-groupes déduits d'un futur exercice personnalisé : un sous-groupe des jambes déclaré en secondaire (ischio-jambiers, fessiers) compte pour lui-même, plus pour les quadriceps
+- Réglages : le seuil de l'alerte « moins travaillé » reste sous le seuil du rouge (sinon un groupe pouvait être à la fois rouge et « moins travaillé »)
+- Bilans : semaine de vacances, la seule ligne de l'alerte, comme le mail ; performance partielle importée à la maison comptée comme une séance (« Dos : 0 série (1 séance) ») ; écran recalculé au changement de jour ; cartes de progression « validé le 4 nov. », et « Date : première séance au nouveau palier. » sous « Dernières évolutions » du bilan de progression
+- Tests : 329 à 337 (unitaires et bout en bout), 307, 326 et les attentes « validé le » adaptés
+
 ## 1.55.1 — 20 nov. 2026
 
 - Découpage de `src/transfer/backup.ts` sans changement de comportement (règle des gros fichiers, §0), préalable à la version 1.56.0 : format de la sauvegarde (`backupFormat.ts`), validation stricte (`backupValidate.ts`), lecture d'un JSON simple (`simpleJson.ts`), plan d'import (`importPlan.ts`), rappel de sauvegarde (`backupReminder.ts`), contrôles de type (`jsonGuards.ts`) ; `backup.ts` garde l'export, la migration et l'analyse d'un contenu JSON. Seuls les chemins d'import changent ailleurs ; `backup.ts` sort de la liste des gros fichiers (reste `draft.ts`)

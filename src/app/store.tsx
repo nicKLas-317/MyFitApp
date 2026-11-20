@@ -10,7 +10,7 @@ import { currentPlan } from '../plan/model';
 import { openAppDb, Repository, requestPersistence, type PersistState } from '../storage/db';
 import { PendingWrites } from '../storage/pending';
 import type { AppValue, FinishInfo, ImportData, SaveStatus, UndoEntry } from './appTypes';
-import { currentPersistState, loadStored, sameVersions, upsert, type StoredData } from './stored';
+import { loadStored, sameVersions, upsert, type StoredData } from './stored';
 import { useStoredMeta } from './useStoredMeta';
 
 // Types de l'état de l'appli (découpage de la version 1.48.2) : `appTypes.ts`.
@@ -125,10 +125,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         applyStored(stored);
         setLoad({ kind: 'ready', repo });
 
-        // §12 : stockage persistant demandé au premier lancement, état affiché ensuite.
-        const asked = await repo.getMeta<boolean>('persistRequested');
-        const state = asked ? await currentPersistState() : await requestPersistence();
-        if (!asked) await repo.setMeta('persistRequested', true);
+        // §12 : stockage persistant demandé à chaque lancement tant qu'il n'est pas accordé (version 1.56.0 : avant,
+        // une seule fois, au premier lancement, souvent dans un onglet avant l'installation de l'appli, où Chrome le
+        // refuse ; il n'était plus jamais redemandé). Chrome ne pose aucune question : il accorde ou refuse seul.
+        const state = await requestPersistence();
         if (!cancelled) setPersist(state);
       } catch (error) {
         if (!cancelled) setLoad({ kind: 'error', message: error instanceof Error ? error.message : String(error) });
@@ -374,6 +374,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [replay, settings],
   );
 
+  /** Redemande le stockage persistant (§12, version 1.56.0) : bouton des réglages, et après chaque séance terminée. */
+  const askPersistence = useCallback(async (): Promise<PersistState> => {
+    const state = await requestPersistence();
+    setPersist(state);
+    return state;
+  }, []);
+  const doneCount = sessions.filter((s) => s.state === 'done').length;
+  const lastDoneCount = useRef(0);
+  useEffect(() => {
+    // Une séance de plus terminée (ou importée) : l'engagement a augmenté, Chrome peut accorder ce qu'il a refusé.
+    if (doneCount > lastDoneCount.current && persist !== null && persist !== 'granted') void askPersistence();
+    lastDoneCount.current = doneCount;
+  }, [doneCount]);
+
   const value: AppValue = {
     sessions,
     exercises,
@@ -384,6 +398,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     active,
     save,
     persist,
+    askPersistence,
     undo,
     lastFinish,
     ...meta.values,

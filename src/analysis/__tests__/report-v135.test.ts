@@ -118,11 +118,11 @@ describe('Écran du bilan, version 1.35.0', () => {
 
     // Ligne sous le nom.
     const prog = (over: object) => ({ variantId: 'x', date: '2026-10-29', kind: 'reps_up' as const, sets: 3, from: { weightKg: 52, targetReps: 8 }, toReps: 9, assisted: false, ...over });
-    expect(progressionMeta(prog({}))).toBe('3 séries · à 52 kg · 29 oct.');
-    expect(progressionMeta(prog({ from: { weightKg: 12, targetReps: 8 } }), true)).toBe('3 séries · à 12 kg / haltère · 29 oct.');
-    expect(progressionMeta(prog({ assisted: true, from: { weightKg: 41, targetReps: 8 } }))).toBe('3 séries · avec 41 kg d’aide · 29 oct.');
-    expect(progressionMeta(prog({ sets: 2, from: { weightKg: 0, targetReps: 10 } }))).toBe('2 séries · poids du corps · 29 oct.');
-    expect(progressionMeta(prog({ seconds: true, from: { weightKg: 0, targetReps: 25 } }))).toBe('3 séries · en secondes · 29 oct.');
+    expect(progressionMeta(prog({}))).toBe('3 séries · à 52 kg · validé le 29 oct.');
+    expect(progressionMeta(prog({ from: { weightKg: 12, targetReps: 8 } }), true)).toBe('3 séries · à 12 kg / haltère · validé le 29 oct.');
+    expect(progressionMeta(prog({ assisted: true, from: { weightKg: 41, targetReps: 8 } }))).toBe('3 séries · avec 41 kg d’aide · validé le 29 oct.');
+    expect(progressionMeta(prog({ sets: 2, from: { weightKg: 0, targetReps: 10 } }))).toBe('2 séries · poids du corps · validé le 29 oct.');
+    expect(progressionMeta(prog({ seconds: true, from: { weightKg: 0, targetReps: 25 } }))).toBe('3 séries · en secondes · validé le 29 oct.');
   });
 
   it('286. Mail d’une première période suivie (version 1.35.1) : « premier mois suivi » ou « première semaine suivie » au lieu de l’écart, durée sans comparaison ; le reste identique', () => {

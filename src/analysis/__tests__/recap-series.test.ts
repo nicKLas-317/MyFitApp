@@ -152,7 +152,8 @@ describe('Récapitulatif en séries (version 1.45.0)', () => {
     expect(sanitizeRecapSettings({ groups, redThreshold: 3 })).toEqual({ groups, redSets: 15, alertSets: 6 });
     expect(sanitizeRecapSettings({ groups, redThreshold: 4 })).toEqual({ groups, redSets: 20, alertSets: 6 });
     expect(sanitizeRecapSettings({ groups, redThreshold: 7 })).toEqual({ groups, redSets: 20, alertSets: 6 });
-    expect(sanitizeRecapSettings({ groups, redSets: 6 })).toEqual({ groups, redSets: 6, alertSets: 6 });
+    // Version 1.56.0 : l'alerte reste sous le seuil du rouge (6 → 5).
+    expect(sanitizeRecapSettings({ groups, redSets: 6 })).toEqual({ groups, redSets: 6, alertSets: 5 });
     expect(sanitizeRecapSettings({ groups, redSets: 20 })).toEqual({ groups, redSets: 20, alertSets: 6 });
     // Hors de 6 à 20, ou invalide : 10 par défaut.
     for (const redSets of [5, 21, 7.5, '10', null]) expect(sanitizeRecapSettings({ groups, redSets }).redSets, String(redSets)).toBe(10);

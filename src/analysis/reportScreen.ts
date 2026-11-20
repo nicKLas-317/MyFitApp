@@ -102,5 +102,7 @@ export function buildReportScreen(report: PeriodReport, input: ReportInput): Rep
 /** Ligne sous le nom d'une progression : « 3 séries · à 52 kg · 29 oct. », « 3 séries · poids du corps · 27 oct. ». */
 export function progressionMeta(p: ReportProgression, dumbbell = false): string {
   const charge = p.seconds ? 'en secondes' : p.from.weightKg === 0 ? 'poids du corps' : load(p.from.weightKg, p.assisted, dumbbell).trim();
-  return `${plural(p.sets, 'série')} · ${charge} · ${formatShortDay(p.date)}`;
+  // Version 1.56.0 : la date est celle de la séance qui valide le palier (« Dernières évolutions » du bilan de
+  // progression date la première séance au nouveau palier) : dite en clair.
+  return `${plural(p.sets, 'série')} · ${charge} · validé le ${formatShortDay(p.date)}`;
 }

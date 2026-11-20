@@ -113,7 +113,8 @@ test.describe('Seuil du rouge en séries (§19.6, version 1.45.0)', () => {
     await expect(minus).toBeDisabled();
     await expect(plus).toBeEnabled();
     await waitForWrites(page);
-    expect(await readRecapMeta(page)).toEqual({ groups: ['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes'], redSets: 6, alertSets: 6 });
+    // Version 1.56.0 : l'alerte reste sous le rouge (6 → 5).
+    expect(await readRecapMeta(page)).toEqual({ groups: ['pectoraux', 'dos', 'epaules', 'biceps', 'triceps', 'jambes'], redSets: 6, alertSets: 5 });
     for (let v = 7; v <= 20; v++) {
       await plus.click();
       await expect(value).toHaveText(String(v));

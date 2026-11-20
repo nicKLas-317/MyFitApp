@@ -41,6 +41,11 @@ export const RED_SETS_MAX = 20;
 /** Seuil de l'alerte « groupe moins travaillé », réglable en séries (version 1.51.0). */
 export const ALERT_SETS_MIN = 3;
 export const ALERT_SETS_MAX = 9;
+/**
+ * Plus haut seuil de l'alerte permis avec ce seuil du rouge (version 1.56.0) : sous le rouge, sinon un groupe à
+ * 7 séries serait à la fois « volume atteint » (rouge à partir de 6) et « moins travaillé » (alerte sous 9).
+ */
+export const alertSetsMax = (redSets: number) => Math.min(ALERT_SETS_MAX, redSets - 1);
 /** Séries à partir desquelles un groupe est orange (fixe) : un exercice de 3 séries. */
 export const ORANGE_SETS = 3;
 /** Séries comptées pour une activité confirmée, par groupe sollicité (version 1.45.0). */
@@ -202,6 +207,9 @@ export function groupWork(
       for (const g of direct) {
         const sets = homeSets.get(g) ?? 0;
         if (counted && sets > 0) homes.set(g, (homes.get(g) ?? 0) + sets);
+        // Version 1.56.0 : seulement une performance partielle importée (aucune série) : une séance, comme à la salle
+        // (« Dos : 0 série (1 séance) »), et non « Non travaillés » alors que le récapitulatif dit « hier ».
+        else if (counted) counts.set(g, (counts.get(g) ?? 0) + 1);
         seen(g, sessionLastTime(s));
       }
       // Version 1.45.0 : ses groupes secondaires comptent pour moitié dans les séries, donc pour « hier » aussi.
@@ -392,7 +400,8 @@ export function sanitizeRecapSettings(value: unknown): WeeklyRecapSettings {
       ? Math.min(RED_SETS_MAX, v.redThreshold * SETS_PER_SESSION)
       : DEFAULT_RECAP_SETTINGS.redSets;
   // Version 1.51.0 : seuil de l'alerte « groupe moins travaillé », absent d'un réglage antérieur (6).
-  const alertSets = isInt(v.alertSets, ALERT_SETS_MIN, ALERT_SETS_MAX) ? v.alertSets : DEFAULT_RECAP_SETTINGS.alertSets;
+  // Version 1.56.0 : toujours sous le seuil du rouge (ramené au plus haut permis).
+  const alertSets = Math.min(alertSetsMax(redSets), isInt(v.alertSets, ALERT_SETS_MIN, ALERT_SETS_MAX) ? v.alertSets : DEFAULT_RECAP_SETTINGS.alertSets);
   return { groups: groups.length > 0 ? groups : DEFAULT_RECAP_SETTINGS.groups, redSets, alertSets };
 }
 

@@ -6,7 +6,7 @@ import { displayName } from '../../library/catalog';
 import { formatCardio } from '../../cardio/model';
 import { startFromPlan } from '../../plan/model';
 import { formatDuration } from '../../session/format';
-import { needsBackupReminder } from '../../transfer/backupReminder';
+import { backupReminderDelay, needsBackupReminder } from '../../transfer/backupReminder';
 import { useBody } from '../../body/store';
 import { downloadBackup } from '../download';
 import { ActivityBanner } from '../ActivityBanner';
@@ -17,9 +17,11 @@ import { JointAlerts } from '../JointAlerts';
 import { WeekSuggestionCard } from '../WeekSuggestion';
 
 export function Home() {
-  const { active, commit, sessions, exercises, variants, ctxFor, plan, lastExportAt, markExported, generalSettings, activities } = useApp();
+  const { active, commit, sessions, exercises, variants, ctxFor, plan, lastExportAt, markExported, generalSettings, activities, persist } = useApp();
   const now = useNow();
-  const remind = needsBackupReminder(sessions, lastExportAt, now);
+  // Version 1.56.0 : 7 jours au lieu de 14 quand le navigateur n'a pas accordé le stockage persistant (§12).
+  const unprotected = persist === 'denied' || persist === 'unsupported';
+  const remind = needsBackupReminder(sessions, lastExportAt, now, backupReminderDelay(persist));
   const body = useBody();
   // Lieu de la séance libre (version 1.26.0) : toujours la salle par défaut, jamais mémorisé.
   const [home, setHome] = useState(false);
@@ -144,7 +146,10 @@ export function Home() {
       </div>
       {remind && (
         <div className="banner info reminder" role="status">
-          <span>{lastExportAt ? 'Aucune sauvegarde depuis plus de 14 jours.' : 'Pense à sauvegarder tes séances.'}</span>
+          <span>
+            {lastExportAt ? `Aucune sauvegarde depuis plus de ${unprotected ? 7 : 14} jours.` : 'Pense à sauvegarder tes séances.'}
+            {unprotected && ' Ton navigateur ne protège pas tes données.'}
+          </span>
           <button type="button" className="btn" onClick={() => void exportNow()}>
             Exporter
           </button>

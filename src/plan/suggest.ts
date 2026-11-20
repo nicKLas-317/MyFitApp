@@ -103,6 +103,27 @@ const done = (s: Session) => s.state === 'done';
  * - ordre : pectoraux, dos, jambes, épaules, triceps, biceps, puis le bonus ; en tête, le cardio d'échauffement.
  */
 export function weekSuggestion(input: SuggestionInput): WeekSuggestion | null {
+  const result = suggest(input);
+  return 'suggestion' in result ? result.suggestion : null;
+}
+
+/**
+ * Pourquoi aucune séance n'est proposée (version 1.56.0), null quand il y en a une : aucune séance à la salle cette
+ * semaine ; séance à la salle le dimanche (la séance proposée tomberait la semaine suivante) ; tous les groupes du
+ * récapitulatif à l'objectif (hors abdos) ; ou des groupes encore sous l'objectif, mais tous écartés (travaillés à la
+ * salle la veille, ou sans exercice fait à la salle ces 6 dernières semaines), avec la raison de chacun. Avant, l'export
+ * pour le coach devinait la raison et écrivait « tous à l'objectif » dans le dernier cas.
+ */
+export type SuggestionAbsence =
+  | { reason: 'aucune_salle' | 'semaine_suivante' | 'objectif' }
+  | { reason: 'ecartes'; skipped: { group: MuscleGroup; reason: SkipReason }[] };
+
+export function suggestionAbsence(input: SuggestionInput): SuggestionAbsence | null {
+  const result = suggest(input);
+  return 'absence' in result ? result.absence : null;
+}
+
+function suggest(input: SuggestionInput): { suggestion: WeekSuggestion } | { absence: SuggestionAbsence } {
   const { sessions, exercises, settings, recap, activities = [], machines = [], now } = input;
   const today = localDate(now);
   const finished = sessions.filter(done);
@@ -110,9 +131,9 @@ export function weekSuggestion(input: SuggestionInput): WeekSuggestion | null {
   const day = gymToday ? shiftIsoDay(today, 1) : today;
   const { start: monday, next: nextMonday } = weekBounds(now);
   const week = monday.getTime();
-  if (weekStart(parseIsoDay(day, 0, 12)).getTime() !== week) return null;
+  if (weekStart(parseIsoDay(day, 0, 12)).getTime() !== week) return { absence: { reason: 'semaine_suivante' } };
   const inWeek = (s: Session) => sessionStartTime(s) >= week && sessionStartTime(s) < nextMonday.getTime();
-  if (!finished.some((s) => isGym(s) && inWeek(s))) return null;
+  if (!finished.some((s) => isGym(s) && inWeek(s))) return { absence: { reason: 'aucune_salle' } };
 
   const shown = new Set(recap.groups);
   const recapGroup = (g: MuscleGroup) => recapGroupOf(g, shown);
@@ -225,7 +246,10 @@ export function weekSuggestion(input: SuggestionInput): WeekSuggestion | null {
     else if (chosen.length >= SUGGEST_MAX) skipped.push({ group: g, reason: 'place' });
     else if (!choose(g)) skipped.push({ group: g, reason: 'aucun' });
   }
-  if (chosen.length === 0) return null;
+  if (chosen.length === 0) {
+    if (under.length === 0) return { absence: { reason: 'objectif' } };
+    return { absence: { reason: 'ecartes', skipped: skipped.sort((a, b) => order(a.group) - order(b.group)) } };
+  }
   // 2ᵉ passage : un 2ᵉ exercice aux groupes encore sous l'objectif avec le 1ᵉʳ, tant qu'il reste de la place.
   for (const g of targets) {
     if (chosen.length >= SUGGEST_MAX) break;
@@ -248,7 +272,7 @@ export function weekSuggestion(input: SuggestionInput): WeekSuggestion | null {
 
   const after = projectedScores(chosenIds());
   const below = recap.groups.filter((g) => (score.get(g) ?? 0) < objective);
-  return {
+  const suggestion: WeekSuggestion = {
     day,
     tomorrow: gymToday,
     cardio,
@@ -258,6 +282,7 @@ export function weekSuggestion(input: SuggestionInput): WeekSuggestion | null {
     reached: below.filter((g) => (after.get(g) ?? 0) >= objective),
     remaining: below.filter((g) => (after.get(g) ?? 0) < objective),
   };
+  return { suggestion };
 }
 
 /**

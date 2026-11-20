@@ -10,7 +10,9 @@ import { formatDecimal } from '../session/format';
  * Semaine en cours (`current`, la dernière barre) : mêmes teintes que les autres semaines (direct plein, indirect clair),
  * entourée d'un contour en pointillés à la couleur du groupe, à `OUTLINE_GAP` px de la barre, et « en cours » sous la
  * date, son total au-dessus du contour (version 1.49.2 : en 1.34.0, plus transparente, elle ressemblait à une barre
- * d'indirect).
+ * d'indirect). Version 1.56.0 : le contour est dessiné même quand la semaine en cours est vide (un cadre bas, posé sur
+ * l'axe), et la dernière date est alignée sur le bord droit de sa colonne : avant, sans barre ni contour, « 23 nov. en
+ * cours » se lisait sous la barre de la semaine précédente.
  */
 export interface BarDatum {
   /** Libellé court de l'abscisse (« 5 oct. »). */
@@ -42,6 +44,8 @@ const LINE = 16;
 const TOTAL_SLOT = 28;
 /** Écart entre la barre de la semaine en cours et son contour en pointillés (version 1.49.2). */
 const OUTLINE_GAP = 2.5;
+/** Hauteur du contour d'une semaine en cours encore vide (version 1.56.0). */
+const EMPTY_OUTLINE = 6;
 const fmt = formatDecimal;
 
 export function BarChart({ data, label, average = null, current = false, testId }: Props) {
@@ -87,14 +91,15 @@ export function BarChart({ data, label, average = null, current = false, testId 
           <g key={i} data-main={d.main} data-extra={d.extra} data-current={now || undefined}>
             {d.main > 0 && <rect className="bar-main" x={x} y={base - h(d.main)} width={width} height={h(d.main)} rx={2} />}
             {d.extra > 0 && <rect className="bar-extra" x={x} y={base - h(total)} width={width} height={h(d.extra)} rx={2} />}
-            {now && total > 0 && (
+            {now && (
               <rect
                 className="bar-outline"
                 x={x - OUTLINE_GAP}
-                y={base - h(total) - OUTLINE_GAP}
+                y={base - Math.max(h(total), EMPTY_OUTLINE) - OUTLINE_GAP}
                 width={width + 2 * OUTLINE_GAP}
-                height={h(total) + OUTLINE_GAP}
+                height={Math.max(h(total), EMPTY_OUTLINE) + OUTLINE_GAP}
                 rx={3}
+                data-empty={total > 0 ? undefined : true}
               />
             )}
           </g>
@@ -110,9 +115,11 @@ export function BarChart({ data, label, average = null, current = false, testId 
         </g>
       )}
       {data.map((d, i) => {
-        const x = xOf(i) + width / 2;
         const total = d.main + d.extra;
         const now = current && i === data.length - 1;
+        // Dernière date alignée à droite : sur le bord droit de sa barre (ou de son contour), pas sur son milieu.
+        const x = xOf(i) + width / 2;
+        const xText = anchor(i) === 'end' ? xOf(i) + width + (now ? OUTLINE_GAP : 0) : x;
         return (
           <g key={i} data-labels={i}>
             {total > 0 && totalShown(i) && (
@@ -121,12 +128,12 @@ export function BarChart({ data, label, average = null, current = false, testId 
               </text>
             )}
             {shown(i) && (
-              <text className="chart-label" x={x} y={base + M.bottom - 4} textAnchor={anchor(i)} data-date>
+              <text className="chart-label" x={xText} y={base + M.bottom - 4} textAnchor={anchor(i)} data-date>
                 {d.label}
               </text>
             )}
             {now && (
-              <text className="chart-label" x={x} y={height - 4} textAnchor={anchor(i)} data-testid="bar-current">
+              <text className="chart-label" x={xText} y={height - 4} textAnchor={anchor(i)} data-testid="bar-current">
                 en cours
               </text>
             )}

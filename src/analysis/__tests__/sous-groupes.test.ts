@@ -232,7 +232,7 @@ describe('Sous-groupes musculaires (§19.15, version 1.54.0)', () => {
       weighIns: [], heightCm: null, ignoredAlerts: {}, appVersion: 'test', now: at(11, 9, 9),
     });
     expect(coach.recapitulatif.sous_groupes['Épaules']).toEqual({ avant: 1.5, côté: 2, arrière: 0 });
-    expect(coach.recapitulatif.sous_groupes['Biceps']).toEqual({ 'longue portion': 1.5, 'courte portion': 0, 'brachial / avant-bras': 3 });
+    expect(coach.recapitulatif.sous_groupes['Biceps']).toEqual({ longue: 1.5, courte: 0, brachial: 3 });
     expect(coach.recapitulatif.sous_groupes_4_semaines['Pectoraux']).toEqual({ haut: 0, milieu: 6, bas: 0 });
     expect(coach.recapitulatif.texte_du_bilan).toContain('- Épaules : avant 1,5, côté 2, arrière 0');
     expect(coach.regles.some((r) => r.startsWith('Sous-groupes'))).toBe(true);

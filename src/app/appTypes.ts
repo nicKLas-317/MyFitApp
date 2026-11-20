@@ -41,6 +41,8 @@ export interface AppValue {
   active: Session | undefined;
   save: SaveStatus;
   persist: PersistState | null;
+  /** Redemande le stockage persistant au navigateur (§12, version 1.56.0) ; renvoie le nouvel état. */
+  askPersistence(): Promise<PersistState>;
   undo: UndoEntry | null;
   lastFinish: FinishInfo | null;
   /** Date du dernier export (ms epoch), null si jamais exporté. */
